@@ -46,18 +46,42 @@ defmodule Calendrical.Era do
   @doc false
   def define_era_module(calendar_module) do
     if Localize.Utils.Code.ensure_compiled?(calendar_module) &&
-         function_exported?(calendar_module, :cldr_calendar_type, 0) &&
-         !Code.ensure_loaded?(era_module(calendar_module.cldr_calendar_type())) do
+         function_exported?(calendar_module, :cldr_calendar_type, 0) do
       cldr_calendar = calendar_module.cldr_calendar_type()
       era_module = era_module(cldr_calendar)
 
-      cldr_calendar
-      |> eras_for_calendar()
-      |> eras_to_iso_days(cldr_calendar, calendar_module)
-      |> define_era_module(calendar_module, era_module)
+      unless Code.ensure_loaded?(era_module) || era_module_claimed?(era_module) do
+        claim_era_module(era_module)
+
+        cldr_calendar
+        |> eras_for_calendar()
+        |> eras_to_iso_days(cldr_calendar, calendar_module)
+        |> define_era_module(calendar_module, era_module)
+      end
     else
       :no_op
     end
+  end
+
+  # Use an ETS table to coordinate era module creation during parallel compilation.
+  # This prevents duplicate module definition when multiple calendars share the
+  # same cldr_calendar_type (e.g., Chinese and LunarJapanese both use :chinese).
+
+  @era_lock_table :calendrical_era_lock
+
+  defp era_module_claimed?(module) do
+    if :ets.whereis(@era_lock_table) == :undefined do
+      :ets.new(@era_lock_table, [:set, :public, :named_table])
+      false
+    else
+      :ets.member(@era_lock_table, module)
+    end
+  rescue
+    ArgumentError -> :ets.member(@era_lock_table, module)
+  end
+
+  defp claim_era_module(module) do
+    :ets.insert(@era_lock_table, {module, true})
   end
 
   # Returns a list of eras with the most
