@@ -1,25 +1,13 @@
 defmodule Calendrical.Math.Test do
   use ExUnit.Case, async: true
 
-  test "Adding months defaults to coerce: true" do
-    assert Calendrical.plus(~D[2024-02-29], :months, 12) == ~D[2025-02-28]
-
-    assert Calendrical.plus(~D[2024-02-29], :months, 12, coerce: false) ==
-             {:error, :invalid_date}
-
-    assert Calendrical.minus(~D[2024-02-29], :months, 12) == ~D[2023-02-28]
-
-    assert Calendrical.minus(~D[2024-02-29], :months, 12, coerce: false) ==
-             {:error, :invalid_date}
+  test "Date.shift with month coercion" do
+    assert Date.shift(~D[2024-02-29], month: 12) == ~D[2025-02-28]
+    assert Date.shift(~D[2024-02-29], month: -12) == ~D[2023-02-28]
   end
 
-  test "Adding years defaults to coerce: true" do
-    assert Calendrical.plus(~D[2024-02-29], :years, 1) == ~D[2025-02-28]
-    assert Calendrical.plus(~D[2024-02-29], :years, 1, coerce: false) == {:error, :invalid_date}
-
-    assert Calendrical.minus(~D[2024-02-29], :years, 1) == ~D[2023-02-28]
-
-    assert Calendrical.minus(~D[2024-02-29], :years, 1, coerce: false) ==
-             {:error, :invalid_date}
+  test "Date.shift with year coercion" do
+    assert Date.shift(~D[2024-02-29], year: 1) == ~D[2025-02-28]
+    assert Date.shift(~D[2024-02-29], year: -1) == ~D[2023-02-28]
   end
 end

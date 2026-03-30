@@ -6,8 +6,12 @@ defmodule Calendrical.Julian.Test do
     assert Calendrical.localize(date(2019, 03, 01, Calendrical.Julian), :era) == "AD"
   end
 
-  test "plus years in a Julian date" do
-    assert Calendrical.Julian.plus(1, 1, 1, :years, 1)
+  test "shift years in a Julian date" do
+    {:ok, date} = Date.new(1, 1, 1, Calendrical.Julian)
+    shifted = Date.shift(date, year: 1)
+    assert shifted.year == 2
+    assert shifted.month == 1
+    assert shifted.day == 1
   end
 
   test "Calendar conversion from Julian starting March 25 for dates before new year" do

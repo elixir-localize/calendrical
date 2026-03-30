@@ -2280,7 +2280,7 @@ defmodule Calendrical do
   end
 
   def current(date, :year) do
-    plus(date, :years, 0)
+    date
   end
 
   def current(%Date.Range{first: date}, :quarter) do
@@ -2289,7 +2289,7 @@ defmodule Calendrical do
   end
 
   def current(date, :quarter) do
-    plus(date, :quarters, 0)
+    date
   end
 
   def current(%Date.Range{first: date}, :month) do
@@ -2298,7 +2298,7 @@ defmodule Calendrical do
   end
 
   def current(date, :month) do
-    plus(date, :months, 0)
+    date
   end
 
   def current(%Date.Range{first: date}, :week) do
@@ -2307,7 +2307,7 @@ defmodule Calendrical do
   end
 
   def current(date, :week) do
-    plus(date, :weeks, 0)
+    date
   end
 
   def current(%Date.Range{first: date}, :day) do
@@ -2316,7 +2316,7 @@ defmodule Calendrical do
   end
 
   def current(date, :day) do
-    plus(date, :days, 0)
+    date
   end
 
   @doc """
@@ -2360,8 +2360,8 @@ defmodule Calendrical do
     |> Interval.year()
   end
 
-  def next(date, :year, options) do
-    plus(date, :years, 1, options)
+  def next(date, :year, _options) do
+    Date.shift(date, year: 1)
   end
 
   def next(%Date.Range{first: date}, :quarter, options) do
@@ -2369,8 +2369,8 @@ defmodule Calendrical do
     |> Interval.quarter()
   end
 
-  def next(date, :quarter, options) do
-    plus(date, :quarters, 1, options)
+  def next(date, :quarter, _options) do
+    Date.shift(date, month: 3)
   end
 
   def next(%Date.Range{first: date}, :month, options) do
@@ -2378,8 +2378,8 @@ defmodule Calendrical do
     |> Interval.month()
   end
 
-  def next(date, :month, options) do
-    plus(date, :months, 1, options)
+  def next(date, :month, _options) do
+    Date.shift(date, month: 1)
   end
 
   def next(%Date.Range{last: date}, :week, options) do
@@ -2387,8 +2387,8 @@ defmodule Calendrical do
     |> Interval.week()
   end
 
-  def next(date, :week, options) do
-    plus(date, :weeks, 1, options)
+  def next(date, :week, _options) do
+    Date.shift(date, week: 1)
   end
 
   def next(%Date.Range{last: date}, :day, options) do
@@ -2396,8 +2396,8 @@ defmodule Calendrical do
     |> Interval.day()
   end
 
-  def next(date, :day, options) do
-    plus(date, :days, 1, options)
+  def next(date, :day, _options) do
+    Date.shift(date, day: 1)
   end
 
   @doc """
@@ -2413,8 +2413,7 @@ defmodule Calendrical do
   * `period` is `:year`, `:quarter`, `:month`,
     `:week` or `:day`.
 
-  * `options` is a `t:Keyword.t/0` list of options that is
-    passed to `plus/4` or `minus/4`.
+  * `options` is a `t:Keyword.t/0` list of options.
 
   ### Returns
 
@@ -2444,8 +2443,8 @@ defmodule Calendrical do
     |> Interval.year()
   end
 
-  def previous(date, :year, options) do
-    plus(date, :years, -1, options)
+  def previous(date, :year, _options) do
+    Date.shift(date, year: -1)
   end
 
   def previous(%Date.Range{last: date}, :quarter, options) do
@@ -2453,8 +2452,8 @@ defmodule Calendrical do
     |> Interval.quarter()
   end
 
-  def previous(date, :quarter, options) do
-    minus(date, :quarters, 1, options)
+  def previous(date, :quarter, _options) do
+    Date.shift(date, month: -3)
   end
 
   def previous(%Date.Range{last: date}, :month, options) do
@@ -2462,8 +2461,8 @@ defmodule Calendrical do
     |> Interval.month()
   end
 
-  def previous(date, :month, options) do
-    minus(date, :months, 1, options)
+  def previous(date, :month, _options) do
+    Date.shift(date, month: -1)
   end
 
   def previous(%Date.Range{first: date}, :week, options) do
@@ -2471,16 +2470,16 @@ defmodule Calendrical do
     |> Interval.week()
   end
 
-  def previous(date, :week, options) do
-    minus(date, :weeks, 1, options)
+  def previous(date, :week, _options) do
+    Date.shift(date, week: -1)
   end
 
   def previous(%Date.Range{first: date}, :day, options) do
     previous(date, :day, options)
   end
 
-  def previous(date, :day, options) do
-    minus(date, :days, 1, options)
+  def previous(date, :day, _options) do
+    Date.shift(date, day: -1)
   end
 
   @doc """
@@ -2999,209 +2998,23 @@ defmodule Calendrical do
     end
   end
 
-  @spec plus(integer, integer()) :: integer() | {:error, :invalid_date}
   @doc false
-
-  def plus(value, increment) when is_integer(value) and is_integer(increment) do
-    value + increment
+  def month_day(_year, month, day, _calendar, false) do
+    {month, day}
   end
 
-  @doc """
-  Adds a duration to a date.
+  def month_day(year, month, day, calendar, true) do
+    new_month =
+      year
+      |> calendar.periods_in_year
+      |> min(month)
 
-  ### Arguments
+    new_day =
+      year
+      |> calendar.days_in_month(month)
+      |> min(day)
 
-  * `date` is any map that conforms to
-    `t:Calendar.date.t/0`.
-
-  * `duration` is any duration returned
-    by `Calendrical.Duration.new!/2`.
-
-  * `options` is a Keyword list of
-    options.
-
-  ### Options
-
-  * Options are those applicable to
-    `Calendrical.plus/4`.
-
-  ### Returns
-
-  * A `t:Calendar.date.t/0` advanced by the duration.
-
-  ### Examples
-
-      iex> Calendrical.plus(~D[2020-01-01],
-      ...> Calendrical.Duration.new!(~D[2020-01-01], ~D[2020-02-01]))
-      ~D[2020-02-01]
-
-      iex> Calendrical.plus(~D[2020-01-01],
-      ...> Calendrical.Duration.new!(~D[2020-01-01], ~D[2020-01-02]))
-      ~D[2020-01-02]
-
-      iex> Calendrical.plus(~D[2020-01-01],
-      ...> Calendrical.Duration.new!(~D[2020-01-01], ~D[2020-02-01]))
-      ~D[2020-02-01]
-
-      iex> Calendrical.plus(~D[2020-01-01],
-      ...> Calendrical.Duration.new!(~D[2020-01-01], ~D[2021-02-01]))
-      ~D[2021-02-01]
-
-  """
-
-  @spec plus(Calendar.date(), Calendrical.Duration.t()) ::
-          Calendar.date()
-
-  def plus(date, %Calendrical.Duration{} = duration) do
-    plus(date, duration, [])
-  end
-
-  # @spec plus(Calendar.date(), Calendrical.Duration.t(), Keyword.t()) ::
-  #   Calendar.date()
-
-  def plus(date, %Calendrical.Duration{} = duration, options) do
-    date
-    |> plus(:days, duration.day, options)
-    |> plus(:months, duration.month, options)
-    |> plus(:years, duration.year, options)
-  end
-
-  @doc """
-  Increments a date or date range by an
-  integer amount of a date period (year,
-  quarter, month, week or day).
-
-  ### Arguments
-
-  * `date_or_date_range` is any `t:Date.t/0` or
-    `Date.Range.t`.
-
-  * `period` is `:years`, `:quarters`, `:months`,
-    `:weeks` or `:days`.
-
-  * `options` is a `t:Keyword.t/0` list of options.
-
-  ### Options
-
-  * `:coerce` is a boolean which, when set to `true`
-    will coerce the month and/or day to be a valid date.
-    This affects,for example, moving to the previous month
-    from `~D[2019-03-31]`. Since there is no date `~D[2019-02-31]`
-    this would normally return `{:error, :invalid_date}`.
-    Setting `coerce: true` it will return `~D[2019-02-28]`.
-    `coerce: true` is the default.
-
-  ### Returns
-
-  When a `t:Date.t/0` is passed, a `t:Date.t/0` is
-  returned.  When a `Date.Range.t` is passed
-  a `Date.Range.t` is returned.
-
-  ### Examples
-
-      iex> Calendrical.plus(~D[2016-02-29], :days, 1)
-      ~D[2016-03-01]
-
-      iex> Calendrical.plus(~D[2019-03-01], :months, 1)
-      ~D[2019-04-01]
-
-      iex> Calendrical.plus(~D[2016-02-29], :days, 1)
-      ~D[2016-03-01]
-
-      iex> Calendrical.plus(~D[2019-02-28], :days, 1)
-      ~D[2019-03-01]
-
-      iex> Calendrical.plus(~D[2019-03-01], :months, 1)
-      ~D[2019-04-01]
-
-      iex> Calendrical.plus(~D[2019-03-01], :quarters, 1)
-      ~D[2019-06-01]
-
-      iex> Calendrical.plus(~D[2019-03-01], :years, 1)
-      ~D[2020-03-01]
-
-  """
-
-  @spec plus(Calendar.date() | Date.Range.t(), atom(), integer(), Keyword.t()) ::
-          Calendar.date() | {:error, :invalid_date}
-
-  def plus(date, period, increment, options \\ [])
-
-  def plus(%Date.Range{first: %{calendar: Calendar.ISO} = first}, period, increment, options) do
-    %{first | calendar: Calendrical.Gregorian}
-    |> plus(period, increment, options)
-    |> coerce_iso_calendar()
-  end
-
-  def plus(%{calendar: Calendar.ISO} = date, period, increment, options) do
-    %{date | calendar: Calendrical.Gregorian}
-    |> plus(period, increment, options)
-    |> coerce_iso_calendar()
-  end
-
-  def plus(%Date.Range{last: date}, :years, years, options) do
-    plus(date, :years, years, options)
-    |> Interval.year()
-  end
-
-  def plus(date, :years, years, options) do
-    %{year: year, month: month, day: day, calendar: calendar} = date
-    new_year = year + years
-
-    coerce? = Keyword.get(options, :coerce, @default_coercion)
-    {new_month, new_day} = month_day(new_year, month, day, calendar, coerce?)
-
-    with {:ok, date} <- Date.new(new_year, new_month, new_day, calendar) do
-      date
-    end
-  end
-
-  def plus(%Date.Range{last: date}, :quarters, quarters, _options) do
-    plus(date, :quarters, quarters)
-    |> Interval.quarter()
-  end
-
-  def plus(date, :quarters, quarters, _options) do
-    %{year: year, month: month, day: day, calendar: calendar} = date
-
-    calendar.plus(year, month, day, :quarters, quarters)
-    |> date_from_tuple(calendar)
-  end
-
-  def plus(%Date.Range{last: date}, :months, months, _options) do
-    plus(date, :months, months)
-    |> Interval.month()
-  end
-
-  def plus(date, :months, months, options) do
-    %{year: year, month: month, day: day, calendar: calendar} = date
-
-    calendar.plus(year, month, day, :months, months, options)
-    |> date_from_tuple(calendar)
-  end
-
-  def plus(%Date.Range{last: date}, :weeks, weeks, _options) do
-    plus(date, :weeks, weeks)
-    |> Interval.week()
-  end
-
-  def plus(date, :weeks, weeks, _options) do
-    %{year: year, month: month, day: day, calendar: calendar} = date
-
-    calendar.plus(year, month, day, :weeks, weeks)
-    |> date_from_tuple(calendar)
-  end
-
-  def plus(%Date.Range{last: date}, :days, days, _options) do
-    plus(date, :days, days)
-    |> Interval.day()
-  end
-
-  def plus(date, :days, days, _options) do
-    %{year: year, month: month, day: day, calendar: calendar} = date
-
-    calendar.plus(year, month, day, :days, days)
-    |> date_from_tuple(calendar)
+    {new_month, new_day}
   end
 
   if Code.ensure_loaded?(Calendar.ISO) && function_exported?(Calendar.ISO, :shift_date, 4) do
@@ -3352,84 +3165,6 @@ defmodule Calendrical do
     end
   end
 
-  @doc false
-  def month_day(_year, month, day, _calendar, false) do
-    {month, day}
-  end
-
-  def month_day(year, month, day, calendar, true) do
-    new_month =
-      year
-      |> calendar.periods_in_year
-      |> min(month)
-
-    new_day =
-      year
-      |> calendar.days_in_month(month)
-      |> min(day)
-
-    {new_month, new_day}
-  end
-
-  @doc """
-  Decrements a date or date range by an
-  integer amount of a date period (year,
-  quarter, month, week or day).
-
-  ### Arguments
-
-  * `date_or_date_range` is any `t:Date.t/0` or
-    `Date.Range.t`
-
-  * `period` is `:years`, `:quarters`, `:months`,
-    `:weeks` or `:days`.
-
-  * `options` is a `t:Keyword.t/0` list of options.
-
-  ### Options
-
-  * `:coerce` is a boolean which, when set to `true`
-    will coerce the month and/or day to be a valid date.
-    This affects,for example, moving to the previous month
-    from `~D[2019-03-31]`. Since there is no date `~D[2019-02-31]`
-    this would normally return `{:error, :invalid_date}`.
-    Setting `coerce: true` it will return `~D[2019-02-28]`.
-    `coerce: true` is the default.
-
-  ### Returns
-
-  When a `t:Date.t/0` is passed, a `t:Date.t/0` is
-  returned.  When a `Date.Range.t` is passed
-  a `Date.Range.t` is returned.
-
-  ### Examples
-
-      iex> Calendrical.minus(~D[2016-03-01], :days, 1)
-      ~D[2016-02-29]
-
-      iex> Calendrical.minus(~D[2019-03-01], :months, 1)
-      ~D[2019-02-01]
-
-      iex> Calendrical.minus(~D[2016-03-01], :days, 1)
-      ~D[2016-02-29]
-
-      iex> Calendrical.minus(~D[2019-03-01], :days, 1)
-      ~D[2019-02-28]
-
-      iex> Calendrical.minus(~D[2019-03-01], :months, 1)
-      ~D[2019-02-01]
-
-      iex> Calendrical.minus(~D[2019-03-01], :quarters, 1)
-      ~D[2018-12-01]
-
-      iex> Calendrical.minus(~D[2019-03-01], :years, 1)
-      ~D[2018-03-01]
-
-  """
-  def minus(%{calendar: _calendar} = date, period, amount, options \\ []) do
-    plus(date, period, -amount, options)
-  end
-
   @doc """
   Returns an `Enumerable` list of dates of a given precision
   of either `:years`, `:quarters`, `:months`, `:weeks` or
@@ -3477,8 +3212,10 @@ defmodule Calendrical do
 
   def interval(date_from, count, precision)
       when is_integer(count) and precision in @valid_precision do
+    {shift_unit, multiplier} = precision_to_shift(precision)
+
     for i <- 0..(count - 1) do
-      plus(date_from, precision, i, coerce: true)
+      Date.shift(date_from, [{shift_unit, i * multiplier}])
     end
   end
 
@@ -3493,12 +3230,19 @@ defmodule Calendrical do
 
   defp calculate_interval(date_origin, date_from, date_to, precision, iteration) do
     if Date.compare(date_from, date_to) in [:lt, :eq] do
-      next_date = plus(date_origin, precision, iteration, coerce: true)
+      {shift_unit, multiplier} = precision_to_shift(precision)
+      next_date = Date.shift(date_origin, [{shift_unit, iteration * multiplier}])
       [date_from | calculate_interval(date_origin, next_date, date_to, precision, iteration + 1)]
     else
       []
     end
   end
+
+  defp precision_to_shift(:years), do: {:year, 1}
+  defp precision_to_shift(:quarters), do: {:month, 3}
+  defp precision_to_shift(:months), do: {:month, 1}
+  defp precision_to_shift(:weeks), do: {:week, 1}
+  defp precision_to_shift(:days), do: {:day, 1}
 
   @doc """
   Returns an a `Stream` function than can be lazily
@@ -3561,7 +3305,8 @@ defmodule Calendrical do
         if iteration == count do
           {:halt, date_from}
         else
-          next_date = plus(date_from, precision, iteration, coerce: true)
+          {shift_unit, multiplier} = precision_to_shift(precision)
+          next_date = Date.shift(date_from, [{shift_unit, iteration * multiplier}])
           {[next_date], {date_from, iteration + 1, count, precision}}
         end
       end,
@@ -3586,7 +3331,8 @@ defmodule Calendrical do
         {date_from, date_to, precision, 0}
       end,
       fn {date_from, date_to, precision, iteration} ->
-        next_date = plus(date_from, precision, iteration, coerce: true)
+        {shift_unit, multiplier} = precision_to_shift(precision)
+        next_date = Date.shift(date_from, [{shift_unit, iteration * multiplier}])
 
         if Date.compare(next_date, date_to) == :gt do
           {:halt, next_date}
@@ -3605,7 +3351,8 @@ defmodule Calendrical do
         {date_from, date_to, precision, 0}
       end,
       fn {date_from, date_to, precision, iteration} ->
-        next_date = minus(date_from, precision, iteration, coerce: true)
+        {shift_unit, multiplier} = precision_to_shift(precision)
+        next_date = Date.shift(date_from, [{shift_unit, -(iteration * multiplier)}])
 
         if Date.compare(next_date, date_to) == :lt do
           {:halt, next_date}

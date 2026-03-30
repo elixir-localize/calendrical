@@ -416,8 +416,8 @@ defmodule Calendrical.Base.Week do
   end
 
   def add(naive_datetime, :year, step) do
-    %{year: year, month: month, day: day} = Calendrical.plus(naive_datetime, :years, step)
-    %{naive_datetime | year: year, month: month, day: day}
+    shifted = Date.shift(naive_datetime, year: step)
+    %{naive_datetime | year: shifted.year, month: shifted.month, day: shifted.day}
   end
 
   def day_of_month(year, week, day, config) do
