@@ -14,8 +14,9 @@ Calendrical consolidates the following ex_cldr packages into a single library:
 | `ex_cldr_calendars_ethiopic` | `Calendrical.Ethiopic` |
 | `ex_cldr_calendars_japanese` | `Calendrical.Japanese` |
 | `ex_cldr_calendars_lunisolar` | `Calendrical.Chinese`, `Calendrical.Korean`, `Calendrical.LunarJapanese` |
+| `ex_cldr_calendars_format` | `Calendrical.Format`, `Calendrical.Formatter` |
 
-All calendar functionality, localization data, and date arithmetic are available from a single dependency.
+All calendar functionality, localization data, formatting, and date arithmetic are available from a single dependency.
 
 ## Dependency changes
 
@@ -28,6 +29,7 @@ defp deps do
     {:ex_cldr_calendars, "~> 2.0"},
     {:ex_cldr_calendars_persian, "~> 1.0"},
     {:ex_cldr_calendars_coptic, "~> 1.0"},
+    {:ex_cldr_calendars_format, "~> 1.0"},
     # ... other calendar packages
   ]
 end
@@ -319,6 +321,102 @@ import Calendrical.Sigils
 ~d[2024-06-15 Persian]            # Persian calendar
 ~d[1446-06-15 C.E. Julian]        # Julian calendar
 ```
+
+## Calendar formatting (ex_cldr_calendars_format)
+
+The `ex_cldr_calendars_format` library is now part of Calendrical. It provides a behaviour-based plugin system for rendering calendars as HTML, Markdown, or custom formats.
+
+### Module renames
+
+| Old | New |
+|---|---|
+| `Cldr.Calendar.Format` | `Calendrical.Format` |
+| `Cldr.Calendar.Formatter` | `Calendrical.Formatter` |
+| `Cldr.Calendar.Formatter.Options` | `Calendrical.Formatter.Options` |
+| `Cldr.Calendar.Formatter.HTML.Basic` | `Calendrical.Formatter.HTML.Basic` |
+| `Cldr.Calendar.Formatter.HTML.Week` | `Calendrical.Formatter.HTML.Week` |
+| `Cldr.Calendar.Formatter.Markdown` | `Calendrical.Formatter.Markdown` |
+| `Cldr.Calendar.Formatter.UnknownFormatterError` | `Calendrical.Formatter.UnknownFormatterError` |
+| `Cldr.Calendar.Formatter.InvalidDateError` | `Calendrical.Formatter.InvalidDateError` |
+| `Cldr.Calendar.Formatter.InvalidOption` | `Calendrical.Formatter.InvalidOption` |
+
+### Removed `:backend` option
+
+The `:backend` option has been removed from `Calendrical.Formatter.Options`. If passed, it is silently ignored for backward compatibility.
+
+```elixir
+# Old
+Cldr.Calendar.Format.year(2024, backend: MyApp.Cldr, locale: "fr")
+Cldr.Calendar.Format.month(2024, 6, backend: MyApp.Cldr, formatter: Cldr.Calendar.Formatter.Markdown)
+
+# New
+Calendrical.Format.year(2024, locale: "fr")
+Calendrical.Format.month(2024, 6, formatter: Calendrical.Formatter.Markdown)
+```
+
+The `:locale` option defaults to `Localize.get_locale()` instead of `backend.get_locale()`.
+
+### Number formatting changes
+
+The formatter options validation for `:number_system` now uses the Localize API directly. The old three-argument `Cldr.Number.validate_number_system(locale, system, backend)` is replaced by `Localize.validate_number_system(system)`.
+
+Number formatting inside formatters uses `Localize.Number.to_string!/2` instead of `Cldr.Number.to_string!/3` (no backend parameter):
+
+```elixir
+# Old (inside a custom formatter)
+Cldr.Number.to_string!(day, backend, locale: locale, number_system: number_system)
+
+# New
+Localize.Number.to_string!(day, locale: locale, number_system: number_system)
+```
+
+### Custom formatter behaviour
+
+The `Calendrical.Formatter` behaviour callbacks are unchanged. Custom formatters that implement the four callbacks (`format_year/3`, `format_month/4`, `format_week/5`, `format_day/4`) work the same way. The only change is the module name in the `@behaviour` declaration and the `Options` struct no longer containing a `:backend` field:
+
+```elixir
+# Old
+defmodule MyApp.CustomFormatter do
+  @behaviour Cldr.Calendar.Formatter
+
+  @impl true
+  def format_day(date, year, month, options) do
+    # options.backend was available here
+    ...
+  end
+end
+
+# New
+defmodule MyApp.CustomFormatter do
+  @behaviour Calendrical.Formatter
+
+  @impl true
+  def format_day(date, year, month, options) do
+    # options.backend no longer exists
+    # use Localize directly for any locale data needs
+    ...
+  end
+end
+```
+
+### Options struct changes
+
+The `Calendrical.Formatter.Options` struct fields:
+
+| Field | Status | Notes |
+|---|---|---|
+| `:calendar` | Unchanged | Calendar module, defaults to `Calendrical.Gregorian` |
+| `:formatter` | Unchanged | Formatter module, defaults to `Calendrical.Formatter.HTML.Basic` |
+| `:locale` | Changed | Defaults to `Localize.get_locale()` instead of `backend.get_locale()` |
+| `:number_system` | Changed | Validated via `Localize.validate_number_system/1` |
+| `:territory` | Changed | Derived via `Localize.Territory.territory_from_locale/1` |
+| `:backend` | **Removed** | No longer present in the struct |
+| `:caption` | Unchanged | |
+| `:class` | Unchanged | |
+| `:id` | Unchanged | |
+| `:today` | Unchanged | |
+| `:day_names` | Unchanged | |
+| `:private` | Unchanged | |
 
 ## Configuration changes
 

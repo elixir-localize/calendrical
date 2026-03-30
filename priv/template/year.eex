@@ -1,0 +1,4 @@
+<div class="cldr_calendar_year">
+  <span><%= year %>
+  <%= months %>
+</div>
