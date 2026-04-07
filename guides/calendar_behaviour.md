@@ -1,4 +1,4 @@
-# Defining a Calendar with `Calendrical.Behaviour`
+# User-defined Calendars
 
 This guide explains how to define a new calendar in Calendrical by `use`ing the `Calendrical.Behaviour` macro. It covers the macro options, the two functions every calendar must define itself, every overridable callback, the conventions for sharing logic across related calendars, and a worked example for each common calendar shape (year-offset, solar, tabular lunar, observational lunar, lunisolar, and composite).
 

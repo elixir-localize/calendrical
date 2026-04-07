@@ -1,4 +1,4 @@
-# Calendar Summary
+# Available Calendars
 
 This guide describes every CLDR-aligned calendar that ships with Calendrical, grouped by the underlying mechanism. For each calendar it gives the CLDR identifier, the epoch, the month structure, the leap-year rule, and a worked reference date so you can verify a conversion in `iex`.
 

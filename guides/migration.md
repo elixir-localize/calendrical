@@ -1,4 +1,4 @@
-# Migrating from ex_cldr_calendars to Calendrical
+# Migrating from ex_cldr_calendars
 
 This guide covers the changes needed when migrating from [ex_cldr_calendars](https://hex.pm/packages/ex_cldr_calendars) (and its companion calendar libraries) to Calendrical.
 
