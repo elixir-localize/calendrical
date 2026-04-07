@@ -45,4 +45,40 @@ defmodule Calendrical.Islamic.TblaTest do
       end
     end
   end
+
+  describe "month name localization" do
+    test "English month names" do
+      {:ok, muharram} = Date.new(1446, 1, 1, Tbla)
+      assert Calendrical.localize(muharram, :month, locale: "en", format: :wide) == "Muharram"
+
+      {:ok, ramadan} = Date.new(1446, 9, 1, Tbla)
+      assert Calendrical.localize(ramadan, :month, locale: "en", format: :wide) == "Ramadan"
+
+      {:ok, dhul_hijjah} = Date.new(1446, 12, 1, Tbla)
+
+      assert Calendrical.localize(dhul_hijjah, :month, locale: "en", format: :wide) ==
+               "Dhuʻl-Hijjah"
+    end
+
+    test "Arabic month names" do
+      {:ok, ramadan} = Date.new(1446, 9, 1, Tbla)
+      assert Calendrical.localize(ramadan, :month, locale: "ar", format: :wide) == "رمضان"
+    end
+  end
+
+  describe "day-of-week localization" do
+    test "all 7 days of the week are localized" do
+      {:ok, start} = Date.new(1446, 1, 1, Tbla)
+      iso = Tbla.date_to_iso_days(start.year, start.month, start.day)
+
+      names =
+        for offset <- 0..6 do
+          {y, m, d} = Tbla.date_from_iso_days(iso + offset)
+          {:ok, date} = Date.new(y, m, d, Tbla)
+          Calendrical.localize(date, :day_of_week, locale: "en", format: :abbreviated)
+        end
+
+      assert Enum.sort(names) == ~w[Fri Mon Sat Sun Thu Tue Wed]
+    end
+  end
 end

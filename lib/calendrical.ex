@@ -2775,19 +2775,34 @@ defmodule Calendrical do
         cardinal_month =
           cardinal_month(month, calendar, months_in_year)
 
-        month_patterns =
-          unwrap!(Localize.Calendar.month_patterns(locale, calendar_type))
-
         months_data = unwrap!(Localize.Calendar.months(locale, calendar_type))
-        month = get_in(months_data, [type, format, cardinal_month])
 
-        if month_patterns do
-          leap_pattern = get_in(month_patterns, [type, format, :leap])
+        # Calendars such as Hebrew encode the leap-year variant of a
+        # month directly in the months data under a `_yeartype_leap`
+        # key. Try that first; if no variant exists, fall back to the
+        # `month_patterns` substitution mechanism used by lunisolar
+        # calendars.
+        leap_variant_key = :"#{cardinal_month}_yeartype_leap"
+        variant = get_in(months_data, [type, format, leap_variant_key])
 
-          Localize.Substitution.substitute([to_string(month)], leap_pattern)
-          |> :erlang.iolist_to_binary()
-        else
-          month
+        cond do
+          is_binary(variant) ->
+            variant
+
+          true ->
+            month_patterns =
+              unwrap!(Localize.Calendar.month_patterns(locale, calendar_type))
+
+            month = get_in(months_data, [type, format, cardinal_month])
+
+            if is_map(month_patterns) do
+              leap_pattern = get_in(month_patterns, [type, format, :leap])
+
+              Localize.Substitution.substitute([to_string(month)], leap_pattern)
+              |> :erlang.iolist_to_binary()
+            else
+              month
+            end
         end
 
       error ->

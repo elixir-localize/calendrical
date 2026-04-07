@@ -82,4 +82,78 @@ defmodule Calendrical.Islamic.CivilTest do
       end
     end
   end
+
+  describe "month name localization" do
+    test "English month names" do
+      cases = [
+        {1, "Muharram"},
+        {2, "Safar"},
+        {3, "Rabiʻ I"},
+        {4, "Rabiʻ II"},
+        {5, "Jumada I"},
+        {6, "Jumada II"},
+        {7, "Rajab"},
+        {8, "Shaʻban"},
+        {9, "Ramadan"},
+        {10, "Shawwal"},
+        {11, "Dhuʻl-Qiʻdah"},
+        {12, "Dhuʻl-Hijjah"}
+      ]
+
+      for {month, expected_name} <- cases do
+        {:ok, date} = Date.new(1446, month, 1, Civil)
+        assert Calendrical.localize(date, :month, locale: "en", format: :wide) == expected_name
+      end
+    end
+
+    test "abbreviated month names" do
+      {:ok, muharram} = Date.new(1446, 1, 1, Civil)
+
+      assert Calendrical.localize(muharram, :month, locale: "en", format: :abbreviated) ==
+               "Muh."
+
+      {:ok, ramadan} = Date.new(1446, 9, 1, Civil)
+
+      assert Calendrical.localize(ramadan, :month, locale: "en", format: :abbreviated) ==
+               "Ram."
+    end
+
+    test "Arabic month names are returned in Arabic script" do
+      {:ok, ramadan} = Date.new(1446, 9, 1, Civil)
+      name = Calendrical.localize(ramadan, :month, locale: "ar", format: :wide)
+      # Ramadan in Arabic is رمضان
+      assert name == "رمضان"
+    end
+  end
+
+  describe "day-of-week localization" do
+    test "English day names for known dates" do
+      # 1 Muharram 1446 AH (civil) corresponds to a known Gregorian date.
+      # Verify the localized day name is one of the seven valid English names.
+      {:ok, date} = Date.new(1446, 1, 1, Civil)
+      day = Calendrical.localize(date, :day_of_week, locale: "en", format: :wide)
+      assert day in ~w[Monday Tuesday Wednesday Thursday Friday Saturday Sunday]
+    end
+
+    test "all 7 days of the week are localized" do
+      {:ok, start} = Date.new(1446, 1, 1, Civil)
+      iso = Civil.date_to_iso_days(start.year, start.month, start.day)
+
+      names =
+        for offset <- 0..6 do
+          {y, m, d} = Civil.date_from_iso_days(iso + offset)
+          {:ok, date} = Date.new(y, m, d, Civil)
+          Calendrical.localize(date, :day_of_week, locale: "en", format: :abbreviated)
+        end
+
+      assert Enum.sort(names) == ~w[Fri Mon Sat Sun Thu Tue Wed]
+    end
+
+    test "Arabic day names are returned in Arabic script" do
+      {:ok, date} = Date.new(1446, 1, 1, Civil)
+      name = Calendrical.localize(date, :day_of_week, locale: "ar", format: :wide)
+      # Verify the result contains Arabic characters
+      assert String.match?(name, ~r/[\x{0600}-\x{06FF}]/u)
+    end
+  end
 end
