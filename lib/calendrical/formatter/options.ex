@@ -222,8 +222,6 @@ defmodule Calendrical.Formatter.Options do
   end
 
   def validate_option(option, _options, any) do
-    {:error,
-     {Calendrical.Formatter.InvalidOption,
-      "Invalid option or option value. Found option #{inspect(option)} with value #{inspect(any)}"}}
+    {:error, Calendrical.Formatter.InvalidOptionError.exception(option: option, value: any)}
   end
 end

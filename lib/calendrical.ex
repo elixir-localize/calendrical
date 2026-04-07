@@ -473,6 +473,53 @@ defmodule Calendrical do
   end
 
   @doc """
+  Returns the date of the astronomical Paschal Full Moon for a given Gregorian year.
+
+  The Paschal Full Moon is the first astronomical full moon that occurs on or after
+  the March (vernal) equinox. It is the basis for calculating the date of Easter:
+  Easter Sunday is the first Sunday after the Paschal Full Moon.
+
+  Note that this function returns the *astronomical* Paschal Full Moon, which is
+  computed from observed lunar and solar positions. This may occasionally differ
+  by a day or more from the *ecclesiastical* Paschal Full Moon used by the
+  Western (Gregorian) and Eastern (Julian) Christian churches, which is defined
+  by tabular computus rules rather than astronomical observation.
+
+  The returned date is in UTC.
+
+  ### Arguments
+
+  * `gregorian_year` is the Gregorian year for which to compute the Paschal Full
+    Moon. Must be in the range `1000..3000` due to the underlying equinox
+    calculation precision.
+
+  ### Returns
+
+  * `{:ok, date}` where `date` is the `t:Date.t/0` of the Paschal Full Moon in UTC, or
+
+  * `{:error, {module, reason}}` if the calculation cannot be performed.
+
+  ### Examples
+
+      iex> Calendrical.paschal_full_moon(2024)
+      {:ok, ~D[2024-03-25]}
+
+      iex> Calendrical.paschal_full_moon(2025)
+      {:ok, ~D[2025-04-13]}
+
+  """
+  @spec paschal_full_moon(Calendar.year()) ::
+          {:ok, Date.t()} | {:error, Exception.t()}
+  def paschal_full_moon(gregorian_year)
+      when is_integer(gregorian_year) and gregorian_year in 1000..3000 do
+    with {:ok, equinox} <- Astro.equinox(gregorian_year, :march),
+         {:ok, full_moon} <-
+           Astro.date_time_lunar_phase_at_or_after(equinox, Astro.Lunar.full_moon()) do
+      {:ok, DateTime.to_date(full_moon)}
+    end
+  end
+
+  @doc """
   Returns the calendar module preferred for
   a territory.
 
@@ -485,7 +532,7 @@ defmodule Calendrical do
 
   * `{:ok, calendar_module}` or
 
-  * `{:error, {exception, reason}}`
+  * `{:error, exception}` where `exception` is an exception struct
 
   ### Examples
 
@@ -537,7 +584,7 @@ defmodule Calendrical do
 
   * `{:ok, calendar_module}` or
 
-  * `{:error, {exception, reason}}`
+  * `{:error, exception}` where `exception` is an exception struct
 
   ### Examples
 
@@ -1221,7 +1268,7 @@ defmodule Calendrical do
       {2019, 1}
 
   """
-  @spec year_of_era(date()) :: {Calendar.day(), Calendar.era()} | {:error, {module(), String.t()}}
+  @spec year_of_era(date()) :: {Calendar.day(), Calendar.era()} | {:error, Exception.t()}
 
   def year_of_era(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1255,7 +1302,7 @@ defmodule Calendrical do
       {737456, 1}
 
   """
-  @spec day_of_era(date()) :: {Calendar.day(), Calendar.era()} | {:error, {module(), String.t()}}
+  @spec day_of_era(date()) :: {Calendar.day(), Calendar.era()} | {:error, Exception.t()}
 
   def day_of_era(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1429,7 +1476,7 @@ defmodule Calendrical do
       2019
 
   """
-  @spec calendar_year(date()) :: Calendar.year() | {:error, {module(), String.t()}}
+  @spec calendar_year(date()) :: Calendar.year() | {:error, Exception.t()}
 
   def calendar_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1463,7 +1510,7 @@ defmodule Calendrical do
       2019
 
   """
-  @spec extended_year(date()) :: Calendar.year() | {:error, {module(), String.t()}}
+  @spec extended_year(date()) :: Calendar.year() | {:error, Exception.t()}
 
   def extended_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1501,7 +1548,7 @@ defmodule Calendrical do
       2019
 
   """
-  @spec related_gregorian_year(date()) :: Calendar.year() | {:error, {module(), String.t()}}
+  @spec related_gregorian_year(date()) :: Calendar.year() | {:error, Exception.t()}
 
   def related_gregorian_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1538,7 +1585,7 @@ defmodule Calendrical do
       2019
 
   """
-  @spec cyclic_year(date()) :: Calendar.year() | {:error, {module(), String.t()}}
+  @spec cyclic_year(date()) :: Calendar.year() | {:error, Exception.t()}
 
   def cyclic_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1572,7 +1619,7 @@ defmodule Calendrical do
       4
 
   """
-  @spec quarter_of_year(date()) :: Calendrical.quarter() | {:error, {module(), String.t()}}
+  @spec quarter_of_year(date()) :: Calendrical.quarter() | {:error, Exception.t()}
 
   def quarter_of_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1609,7 +1656,7 @@ defmodule Calendrical do
   @spec month_of_year(date()) ::
           Calendar.month()
           | {Calendar.month(), leap_month :: :leap}
-          | {:error, {module(), String.t()}}
+          | {:error, Exception.t()}
 
   def month_of_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1648,7 +1695,7 @@ defmodule Calendrical do
       {:error, :not_defined}
 
   """
-  @spec week_of_year(date()) :: {Calendar.year(), week()} | {:error, {module(), String.t()}}
+  @spec week_of_year(date()) :: {Calendar.year(), week()} | {:error, Exception.t()}
 
   def week_of_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1687,7 +1734,7 @@ defmodule Calendrical do
       {:error, :not_defined}
 
   """
-  @spec iso_week_of_year(date()) :: {Calendar.year(), week()} | {:error, {module(), String.t()}}
+  @spec iso_week_of_year(date()) :: {Calendar.year(), week()} | {:error, Exception.t()}
 
   def iso_week_of_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1732,7 +1779,7 @@ defmodule Calendrical do
       {:error, :not_defined}
 
   """
-  @spec week_of_month(date()) :: {Calendar.month(), week()} | {:error, {module(), String.t()}}
+  @spec week_of_month(date()) :: {Calendar.month(), week()} | {:error, Exception.t()}
 
   def week_of_month(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1772,7 +1819,7 @@ defmodule Calendrical do
       372
 
   """
-  @spec day_of_year(date()) :: Calendar.day() | {:error, {module(), String.t()}}
+  @spec day_of_year(date()) :: Calendar.day() | {:error, Exception.t()}
 
   def day_of_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1829,14 +1876,14 @@ defmodule Calendrical do
 
   """
   @spec weeks_in_year(date()) ::
-          {Calendrical.week(), Calendar.day_of_week()} | {:error, {module(), String.t()}}
+          {Calendrical.week(), Calendar.day_of_week()} | {:error, Exception.t()}
   def weeks_in_year(%{} = date) do
     {year, _month, _day, calendar} = extract_date(date)
     calendar.weeks_in_year(year)
   end
 
   @spec weeks_in_year(year(), calendar) ::
-          {Calendrical.week(), Calendar.day_of_week()} | {:error, {module(), String.t()}}
+          {Calendrical.week(), Calendar.day_of_week()} | {:error, Exception.t()}
   def weeks_in_year(year, Calendar.ISO) do
     Calendrical.Gregorian.weeks_in_year(year)
   end
@@ -1914,7 +1961,7 @@ defmodule Calendrical do
       false
 
   """
-  @spec weekend?(date(), Keyword.t()) :: boolean | {:error, {module(), String.t()}}
+  @spec weekend?(date(), Keyword.t()) :: boolean | {:error, Exception.t()}
 
   def weekend?(date, options \\ []) do
     locale = Keyword.get(options, :locale, Localize.get_locale())
@@ -1989,7 +2036,7 @@ defmodule Calendrical do
       false
 
   """
-  @spec weekday?(date(), Keyword.t()) :: boolean | {:error, {module(), String.t()}}
+  @spec weekday?(date(), Keyword.t()) :: boolean | {:error, Exception.t()}
 
   def weekday?(date, options \\ []) do
     locale = Keyword.get(options, :locale, Localize.get_locale())
@@ -2515,15 +2562,15 @@ defmodule Calendrical do
   @spec localize(any_date_time()) ::
           {:ok, any_date_time()}
           | {:error, :incompatible_calendars}
-          | {:error, {module(), String.t()}}
+          | {:error, Exception.t()}
 
   @spec localize(any_date_time(), Keyword.t() | atom()) ::
           {:ok, any_date_time()}
           | {:error, :incompatible_calendars}
-          | {:error, {module(), String.t()}}
+          | {:error, Exception.t()}
 
   @spec localize(any_date_time(), atom(), Keyword.t()) ::
-          String.t() | {:error, :incompatible_calendars} | {:error, {module(), String.t()}}
+          String.t() | {:error, :incompatible_calendars} | {:error, Exception.t()}
 
   def localize(date) do
     localize(date, [])
@@ -2620,7 +2667,7 @@ defmodule Calendrical do
 
   """
   @spec localize(datetime :: any_date_time(), part :: part(), options :: Keyword.t()) ::
-          String.t() | {:error, {module(), String.t()}}
+          String.t() | {:error, Exception.t()}
 
   def localize(datetime, part, options \\ [])
 
@@ -2771,7 +2818,7 @@ defmodule Calendrical do
   end
 
   def localize(date, :day_of_week, _type, _format, _locale, _options) do
-    missing_date_error("localize", date[:year], date[:month], date[:day])
+    {:error, missing_date_error("localize", date[:year], date[:month], date[:day])}
   end
 
   @doc false
@@ -2936,7 +2983,7 @@ defmodule Calendrical do
   @doc since: "2.3.0"
 
   @spec month_names(calendar :: calendar(), options :: Keyword.t()) ::
-          list({pos_integer, String.t()}) | {:error, {module(), String.t()}}
+          list({pos_integer, String.t()}) | {:error, Exception.t()}
 
   def month_names(calendar, options \\ [])
 
@@ -2967,10 +3014,7 @@ defmodule Calendrical do
     if part in @valid_parts do
       {:ok, part}
     else
-      {:error,
-       {ArgumentError,
-        "The date part #{inspect(part)} is not known. " <>
-          "Valid date parts are #{inspect(@valid_parts)}"}}
+      {:error, Calendrical.InvalidPartError.exception(part: part, valid_parts: @valid_parts)}
     end
   end
 
@@ -2979,10 +3023,7 @@ defmodule Calendrical do
     if type in @valid_types do
       {:ok, type}
     else
-      {:error,
-       {ArgumentError,
-        "The date format type #{inspect(type)} is not known. " <>
-          "Valid format type are #{inspect(@valid_types)}"}}
+      {:error, Calendrical.InvalidTypeError.exception(type: type, valid_types: @valid_types)}
     end
   end
 
@@ -2992,9 +3033,7 @@ defmodule Calendrical do
       {:ok, format}
     else
       {:error,
-       {ArgumentError,
-        "The date format #{inspect(format)} is not known. " <>
-          "Valid formats are #{inspect(@valid_formats)}"}}
+       Calendrical.InvalidFormatError.exception(format: format, valid_formats: @valid_formats)}
     end
   end
 
@@ -3608,7 +3647,7 @@ defmodule Calendrical do
 
   * `{:ok, calendar_module}` or
 
-  * `{:error, {exception, reason}}`
+  * `{:error, exception}` where `exception` is an exception struct
 
   ### Examples
 
@@ -3618,9 +3657,8 @@ defmodule Calendrical do
       iex> Calendrical.validate_calendar(Calendar.ISO)
       {:ok, Calendrical.Gregorian}
 
-      iex> Calendrical.validate_calendar(:not_a_calendar)
-      {:error,
-       {Calendrical.InvalidCalendarModule, ":not_a_calendar is not a calendar module."}}
+      iex> {:error, %Calendrical.InvalidCalendarModuleError{module: :not_a_calendar}} =
+      ...>   Calendrical.validate_calendar(:not_a_calendar)
 
   """
   def validate_calendar(Calendar.ISO) do
@@ -3660,7 +3698,7 @@ defmodule Calendrical do
 
   @doc false
   def invalid_calendar_error(calendar_module) do
-    {Calendrical.InvalidCalendarModule, "#{inspect(calendar_module)} is not a calendar module."}
+    Calendrical.InvalidCalendarModuleError.exception(module: calendar_module)
   end
 
   ## January starts end the same year, December ends starts the same year
@@ -3729,7 +3767,7 @@ defmodule Calendrical do
 
   @doc false
   def calendar_error(calendar_name) do
-    {Localize.UnknownCalendarError, "The calendar #{inspect(calendar_name)} is not known."}
+    Localize.UnknownCalendarError.exception(calendar: calendar_name)
   end
 
   @doc false
@@ -3797,31 +3835,33 @@ defmodule Calendrical do
 
   @doc false
   def missing_date_error(function, year, month, day) do
-    {Calendrical.MissingFields,
-     "#{function} requires at least year, month and day. Found year: #{inspect(year)}, month: #{inspect(month)} and day: #{inspect(day)}"}
+    Calendrical.MissingFieldsError.exception(
+      function: function,
+      fields: [year: year, month: month, day: day]
+    )
   end
 
   @doc false
   def missing_year_month_error(function, year, month) do
-    {Calendrical.MissingFields,
-     "#{function} requires at least year and month. Found year: #{inspect(year)} and month: #{inspect(month)}"}
+    Calendrical.MissingFieldsError.exception(
+      function: function,
+      fields: [year: year, month: month]
+    )
   end
 
   @doc false
   def missing_year_error(function, year) do
-    {Calendrical.MissingFields,
-     "#{function} requires at least year. Found year: #{inspect(year)}"}
+    Calendrical.MissingFieldsError.exception(function: function, fields: [year: year])
   end
 
   @doc false
   def missing_month_error(function, month) do
-    {Calendrical.MissingFields,
-     "#{function} requires at least month. Found month: #{inspect(month)}"}
+    Calendrical.MissingFieldsError.exception(function: function, fields: [month: month])
   end
 
   @doc false
   def missing_day_error(function, day) do
-    {Calendrical.MissingFields, "#{function} requires at least day. Found day: #{inspect(day)}"}
+    Calendrical.MissingFieldsError.exception(function: function, fields: [day: day])
   end
 
   defdelegate day_of_week(date), to: Date
@@ -3833,12 +3873,12 @@ defmodule Calendrical do
 
   @doc false
   def unknown_calendar_error(calendar) do
-    {Localize.UnknownCalendarError, "The calendar #{inspect(calendar)} is not known."}
+    Localize.UnknownCalendarError.exception(calendar: calendar)
   end
 
   @doc false
   def unknown_territory_error(territory) do
-    {Localize.UnknownTerritoryError, "The territory #{inspect(territory)} is not known."}
+    Localize.UnknownTerritoryError.exception(territory: territory)
   end
 
   # Calendar data delegation functions

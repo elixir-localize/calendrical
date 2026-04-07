@@ -69,8 +69,7 @@ defmodule Calendrical.FiscalYear do
     if territory in @known_fiscal_calendars do
       {:ok, territory}
     else
-      {:error,
-       {Localize.UnknownCalendarError, "Fiscal calendar is unknown for #{inspect(territory)}"}}
+      {:error, Localize.UnknownCalendarError.exception(calendar: territory)}
     end
   end
 

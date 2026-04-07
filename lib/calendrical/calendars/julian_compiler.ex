@@ -1,4 +1,6 @@
 defmodule Calendrical.Julian.Compiler do
+  @moduledoc false
+
   # See https://stevemorse.org/jcal/julian.html
 
   defmacro __before_compile__(env) do

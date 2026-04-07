@@ -166,10 +166,10 @@ defmodule Calendrical.Format do
   end
 
   def invalid_formatter_error(formatter) do
-    {Calendrical.Formatter.UnknownFormatterError, "Invalid formatter #{inspect(formatter)}"}
+    Calendrical.Formatter.UnknownFormatterError.exception(formatter: formatter)
   end
 
   def invalid_date_error(date) do
-    {Calendrical.Formatter.InvalidDateError, "Invalid formatter #{inspect(date)}"}
+    Calendrical.Formatter.InvalidDateError.exception(date: date)
   end
 end

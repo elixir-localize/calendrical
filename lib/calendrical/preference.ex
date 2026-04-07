@@ -48,7 +48,7 @@ defmodule Calendrical.Preference do
 
   * `{:ok, calendar_module}` or
 
-  * `{:error, {exception, reason}}`
+  * `{:error, exception}` where `exception` is an exception struct
 
   ## Examples
 
@@ -142,7 +142,7 @@ defmodule Calendrical.Preference do
 
   * `{:ok, calendar_module}` or
 
-  * `{:error, {exception, reason}}`
+  * `{:error, exception}` where `exception` is an exception struct
 
   ## Examples
 
@@ -218,7 +218,7 @@ defmodule Calendrical.Preference do
   end
 
   def calendar_from_locale(other) do
-    {:error, {Localize.InvalidLocaleError, "Invalid locale: #{inspect(other)}"}}
+    {:error, Localize.InvalidLocaleError.exception(locale_id: other)}
   end
 
   @dialyzer {:nowarn_function, territory_from: 1}

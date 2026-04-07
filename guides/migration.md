@@ -115,15 +115,48 @@ Territory-derived calendars also change namespace. For example, `Cldr.Calendar.U
 
 ### Exception modules
 
-| Old | New |
-|---|---|
-| `Cldr.IncompatibleCalendarError` | `Calendrical.IncompatibleCalendarError` |
-| `Cldr.InvalidCalendarModule` | `Calendrical.InvalidCalendarModule` |
-| `Cldr.InvalidDateOrder` | `Calendrical.InvalidDateOrder` |
-| `Cldr.IncompatibleTimeZone` | `Calendrical.IncompatibleTimeZone` |
-| `Cldr.MissingFields` | `Calendrical.MissingFields` |
+Calendrical's exceptions have been completely restructured:
 
-Some error functions now return Localize exception structs instead of `{ExceptionModule, message}` tuples. For example, `Localize.UnknownTerritoryError` is returned as `%Localize.UnknownTerritoryError{}` rather than `{Cldr.UnknownTerritoryError, "message"}`.
+* **One file per exception** in `lib/calendrical/exception/`, mirroring the layout used by Localize.
+* **Semantic struct fields** instead of a single opaque `:message` string. Callers can now pattern-match on the exception's data fields.
+* **`gettext`-based messages** so error text can be translated. The backend is `Calendrical.Gettext` and messages are in the `"calendrical"` domain with contexts `"calendar"`, `"date"`, `"format"`, and `"option"`.
+* **All names end with `Error`** for consistency with the Localize convention.
+
+| Old | New | Fields |
+|---|---|---|
+| `Cldr.IncompatibleCalendarError` | `Calendrical.IncompatibleCalendarError` | `:from`, `:to` |
+| `Cldr.InvalidCalendarModule` | `Calendrical.InvalidCalendarModuleError` | `:module` |
+| `Cldr.InvalidDateOrder` | `Calendrical.InvalidDateOrderError` | `:from`, `:to` |
+| `Cldr.IncompatibleTimeZone` | `Calendrical.IncompatibleTimeZoneError` | `:from`, `:to` |
+| `Cldr.MissingFields` | `Calendrical.MissingFieldsError` | `:function`, `:fields` |
+
+New exceptions introduced by this refactor (replacing inline `{ArgumentError, "..."}` tuples):
+
+| Module | Fields | Used by |
+|---|---|---|
+| `Calendrical.InvalidPartError` | `:part`, `:valid_parts` | `Calendrical.localize/3` |
+| `Calendrical.InvalidTypeError` | `:type`, `:valid_types` | `Calendrical.localize/3` |
+| `Calendrical.InvalidFormatError` | `:format`, `:valid_formats` | `Calendrical.localize/3` |
+
+### Error return convention
+
+All `{:error, _}` returns from Calendrical now use the modern Elixir convention `{:error, %Exception{}}` instead of the legacy two-tuple form `{:error, {ExceptionModule, "message"}}`. This applies to functions returning Localize exceptions (`Localize.UnknownTerritoryError`, `Localize.UnknownCalendarError`, `Localize.InvalidLocaleError`) as well as Calendrical exceptions.
+
+```elixir
+# Old
+case Calendrical.calendar_from_territory(:YY) do
+  {:ok, calendar} -> calendar
+  {:error, {Localize.UnknownTerritoryError, message}} -> handle(message)
+end
+
+# New
+case Calendrical.calendar_from_territory(:YY) do
+  {:ok, calendar} -> calendar
+  {:error, %Localize.UnknownTerritoryError{territory: territory}} -> handle(territory)
+end
+```
+
+The new pattern lets callers extract structured data from the exception (e.g. `:territory`, `:calendar`, `:module`, `:fields`) instead of parsing message strings.
 
 ### Behaviour module
 
@@ -338,7 +371,7 @@ The `ex_cldr_calendars_format` library is now part of Calendrical. It provides a
 | `Cldr.Calendar.Formatter.Markdown` | `Calendrical.Formatter.Markdown` |
 | `Cldr.Calendar.Formatter.UnknownFormatterError` | `Calendrical.Formatter.UnknownFormatterError` |
 | `Cldr.Calendar.Formatter.InvalidDateError` | `Calendrical.Formatter.InvalidDateError` |
-| `Cldr.Calendar.Formatter.InvalidOption` | `Calendrical.Formatter.InvalidOption` |
+| `Cldr.Calendar.Formatter.InvalidOption` | `Calendrical.Formatter.InvalidOptionError` |
 
 ### Removed `:backend` option
 

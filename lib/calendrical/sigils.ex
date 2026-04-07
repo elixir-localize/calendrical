@@ -120,6 +120,6 @@ defmodule Calendrical.Sigils do
   end
 
   defp calendar_error(calendar) do
-    {:error, {Localize.UnknownCalendarError, calendar}}
+    {:error, Localize.UnknownCalendarError.exception(calendar: calendar)}
   end
 end
