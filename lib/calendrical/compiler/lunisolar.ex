@@ -1,27 +1,55 @@
 defmodule Calendrical.Lunisolar do
   @moduledoc """
-  Template for building lunisolar calendars.  See
-  `Calendrical.Chinese` for an example implementation.
+  Shared base implementation for Calendrical's lunisolar calendars.
 
-  The functions in this module should only be called
-  from lunisolar implementations.
+  A lunisolar calendar approximates the tropical year using lunar months,
+  inserting an intercalary (leap) month roughly every three years to keep the
+  calendar aligned with the seasons. Calendrical implements three lunisolar
+  calendars on top of this module:
 
-  Some conventions are used for naming in this module:
+  * `Calendrical.Chinese` — observation point Beijing.
 
-  * `year` refers to the calendar year with is the number
-    of years since the epoch.
+  * `Calendrical.Korean` (Dangi) — observation point Seoul.
 
-  * `cyclical_year` is the year in the sexigesimal cycle.
+  * `Calendrical.LunarJapanese` — observation point Tokyo.
 
-  * `month` is the ordinal month in the calendar year that
-    is between 1 and 12 for an ordinary year and between 1
-    and 13 in a leap year.
+  Each implementation is a thin wrapper that supplies its epoch and an
+  observation-location function (latitude, longitude, altitude, time-zone
+  offset). All of the astronomical heavy lifting — winter solstice, mean and
+  true new moon, leap-month detection, sexagesimal cycle calculations — is
+  delegated to `Astro` and lives in this module.
 
-  * `lunar_month` is a the month numbered similarly to how months
-    are traditionally numbered. The month will be a cardinal
-    number between 1 and 12 in all years with the addition of
-    a leap month in leap years. The leap month is represented
-    by `{month, :keap}`.
+  This module is **not** intended to be called directly from application code.
+  Use one of the lunisolar calendar modules above and the standard `Date` and
+  `Calendar` APIs.
+
+  ## Naming conventions
+
+  Several "year" and "month" concepts coexist in a lunisolar calendar. To keep
+  the code unambiguous, this module uses the following names consistently:
+
+  * `year` is the calendar year, counted as the number of years since the
+    calendar's epoch.
+
+  * `cyclical_year` is the position within the 60-year sexagesimal cycle
+    (1..60).
+
+  * `cycle` is the number of completed sexagesimal cycles since the epoch.
+
+  * `month` is the *ordinal* month of the calendar year — 1..12 in an ordinary
+    year and 1..13 in a leap year. This is the value the `Calendar` behaviour
+    expects.
+
+  * `lunar_month` is the *traditional* month number, 1..12 in all years, with
+    leap months represented as `{month, :leap}`. This is the value users see
+    in cultural contexts and the form returned by `Calendrical.localize/3`.
+
+  ## References
+
+  * Reingold and Dershowitz, *Calendrical Calculations: The Ultimate Edition*,
+    4th ed., chapters on the Chinese, Korean and Japanese calendars.
+
+  * The accompanying Common Lisp source distributed with the same book.
 
   """
 

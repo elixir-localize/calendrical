@@ -37,7 +37,7 @@ defmodule Calendrical.Behaviour do
 
   ## Options
 
-  * `:epoch` (required) — the epoch of the calendar as a `t:Date.t/0`
+  * `:epoch` (required) — the epoch of the calendar as a `t:Calendar.date/0`
     sigil literal in any calendar that has already been compiled
     (typically `Calendar.ISO`, `Calendrical.Gregorian`, or
     `Calendrical.Julian`). The epoch is converted to ISO days at compile
@@ -46,9 +46,9 @@ defmodule Calendrical.Behaviour do
 
   * `:cldr_calendar_type` — the CLDR calendar type used to look up
     locale data (era names, month names, day names, etc.) via
-    `Localize.Calendar`. Must be one of the values listed in
-    `Calendrical.cldr_calendar_type/0`. Defaults to `:gregorian`.
-    Example: `cldr_calendar_type: :persian`.
+    `Localize.Calendar`. Must be a CLDR calendar type atom such as
+    `:gregorian`, `:persian`, `:hebrew`, or `:islamic`. Defaults to
+    `:gregorian`. Example: `cldr_calendar_type: :persian`.
 
   * `:cldr_calendar_base` — whether the calendar is `:month`-based or
     `:week`-based. Returned by the generated `calendar_base/0` function.
@@ -116,8 +116,7 @@ defmodule Calendrical.Behaviour do
 
   ## Era support
 
-  When the using module is compiled, an `@after_compile` hook calls
-  `Calendrical.Era.define_era_module/1` which generates a
+  When the using module is compiled, an `@after_compile` hook generates a
   `Calendrical.Era.<CalendarType>` module from CLDR era data and uses it
   to implement the default `year_of_era/{1, 3}` and `day_of_era/3`
   functions. Calendars whose era logic does not match the CLDR data can
@@ -571,7 +570,7 @@ defmodule Calendrical.Behaviour do
       end
 
       @doc """
-      Returns a `Date.Range.t` representing
+      Returns a `t:Date.Range.t/0` representing
       a given year.
 
       """
@@ -588,7 +587,7 @@ defmodule Calendrical.Behaviour do
       end
 
       @doc """
-      Returns a `Date.Range.t` representing
+      Returns a `t:Date.Range.t/0` representing
       a given quarter of a year.
 
       """
@@ -599,7 +598,7 @@ defmodule Calendrical.Behaviour do
       end
 
       @doc """
-      Returns a `Date.Range.t` representing
+      Returns a `t:Date.Range.t/0` representing
       a given month of a year.
 
       """
@@ -616,7 +615,7 @@ defmodule Calendrical.Behaviour do
       end
 
       @doc """
-      Returns a `Date.Range.t` representing
+      Returns a `t:Date.Range.t/0` representing
       a given week of a year.
 
       """

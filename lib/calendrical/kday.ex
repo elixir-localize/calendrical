@@ -18,7 +18,7 @@ defmodule Calendrical.Kday do
 
   ## Arguments
 
-  * `date` is `t:Date.t/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
     ISO days since epoch.
 
     * `k` is an integer day of the week where `1` is
@@ -26,7 +26,7 @@ defmodule Calendrical.Kday do
 
   ## Returns
 
-  * A `t:Date.t/0` in the calendar of the date provided as an argument.
+  * A `t:Calendar.date/0` in the calendar of the date provided as an argument.
 
   ## Examples
 
@@ -64,7 +64,7 @@ defmodule Calendrical.Kday do
 
   ## Arguments
 
-  * `date` is `t:Date.t/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
     ISO days since epoch.
 
     * `k` is an integer day of the week where `1` is
@@ -72,7 +72,7 @@ defmodule Calendrical.Kday do
 
   ## Returns
 
-  * A `t:Date.t/0` in the calendar of the date provided as an argument
+  * A `t:Calendar.date/0` in the calendar of the date provided as an argument
 
   ## Examples
 
@@ -110,7 +110,7 @@ defmodule Calendrical.Kday do
 
   ## Arguments
 
-  * `date` is `t:Date.t/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
     ISO days since epoch.
 
   * `k` is an integer day of the week where `1` is
@@ -118,7 +118,7 @@ defmodule Calendrical.Kday do
 
   ## Returns
 
-  * A `t:Date.t/0` in the calendar of the date provided as an argument.
+  * A `t:Calendar.date/0` in the calendar of the date provided as an argument.
 
   ## Examples
 
@@ -153,7 +153,7 @@ defmodule Calendrical.Kday do
 
   ## Arguments
 
-  * `date` is `t:Date.t/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
     ISO days since epoch.
 
   * `k` is an integer day of the week where `1` is
@@ -161,7 +161,7 @@ defmodule Calendrical.Kday do
 
   ## Returns
 
-  * A `t:Date.t/0` in the calendar of the date provided as an argument.
+  * A `t:Calendar.date/0` in the calendar of the date provided as an argument.
 
   ## Examples
 
@@ -200,7 +200,7 @@ defmodule Calendrical.Kday do
 
   ## Arguments
 
-  * `date` is `t:Date.t/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
     ISO days since epoch.
 
   * `k` is an integer day of the week where `1` is
@@ -208,7 +208,7 @@ defmodule Calendrical.Kday do
 
   ## Returns
 
-  * A `t:Date.t/0` in the calendar of the date provided as an argument.
+  * A `t:Calendar.date/0` in the calendar of the date provided as an argument.
 
   ## Examples
 
@@ -246,7 +246,7 @@ defmodule Calendrical.Kday do
 
   ## Arguments
 
-  * `date` is `t:Date.t/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
     ISO days since epoch.
 
   * `n` is the cardinal number of `k` before (negative `n`) or after
@@ -257,7 +257,7 @@ defmodule Calendrical.Kday do
 
   ## Returns
 
-  * A `t:Date.t/0` in the calendar of the date provided as an argument.
+  * A `t:Calendar.date/0` in the calendar of the date provided as an argument.
 
   ## Examples
 
@@ -299,7 +299,7 @@ defmodule Calendrical.Kday do
 
   ## Arguments
 
-  * `date` is `t:Date.t/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
     ISO days since epoch.
 
   * `k` is an integer day of the week where `1` is
@@ -307,7 +307,7 @@ defmodule Calendrical.Kday do
 
   ## Returns
 
-  * A `t:Date.t/0` in the calendar of the date provided as an argument.
+  * A `t:Calendar.date/0` in the calendar of the date provided as an argument.
 
   ## Examples
 
@@ -341,7 +341,7 @@ defmodule Calendrical.Kday do
 
   ## Arguments
 
-  * `date` is `t:Date.t/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
     ISO days since epoch.
 
   * `k` is an integer day of the week where `1` is
@@ -349,7 +349,7 @@ defmodule Calendrical.Kday do
 
   ## Returns
 
-  * A `t:Date.t/0` in the calendar of the date provided as an argument
+  * A `t:Calendar.date/0` in the calendar of the date provided as an argument
 
   ## Example
 

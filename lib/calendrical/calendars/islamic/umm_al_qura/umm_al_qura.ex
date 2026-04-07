@@ -137,7 +137,7 @@ defmodule Calendrical.Islamic.UmmAlQura do
   def max_year, do: @max_year
 
   @doc """
-  Returns the Gregorian `t:Date.t/0` of the first day of the given
+  Returns the Gregorian `t:Calendar.date/0` of the first day of the given
   Hijri month according to the official Umm al-Qura tables.
 
   Returns `{:error, %Calendrical.IslamicYearOutOfRangeError{}}` if the

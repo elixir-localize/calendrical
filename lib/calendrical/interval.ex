@@ -1,45 +1,40 @@
 defmodule Calendrical.Interval do
   @moduledoc """
-  Implements functions to return intervals and compare
-  date intervals.
+  Constructs and compares date intervals for any Calendrical calendar.
 
-  In particular it provides functions which return an
-  interval (as a `Date.Range.t`) for years, quarters,
-  months, weeks and days.
+  An interval is represented as an Elixir `t:Date.Range.t/0` whose `:first` and
+  `:last` dates are in the desired calendar. Ranges produced by this module
+  are enumerable and have the day as their unit of precision.
 
-  In general, the intervals created with the packaage
-  [calendar_interval](https://hex.pm/packages/calendar_interval)
-  are to be preferred since they can used over different
-  time precisions whereas the functions in this module are
-  all intervals of a day. In order to be used with `ex_cldr_calendars`,
-  version "~> 0.2" of [calendar_interval](https://hex.pm/packages/calendar_interval)
-  is required.
+  The constructor functions cover the standard calendrical units: `year/2`,
+  `quarter/3`, `month/3`, `week/3`, and `day/3`. Each one also accepts a
+  single `t:Calendar.date/0` argument and returns the interval that contains
+  that date.
 
-  Note however that as of release `0.2`, [calendar_interval](https://hex.pm/packages/calendar_interval) does
-  not support intervals of `quarters` or `weeks`.
+  `compare/2` and the corresponding `relation/2` (re-exported from
+  `Calendrical.IntervalRelation`) implement
+  [Allen's interval algebra](https://en.wikipedia.org/wiki/Allen%27s_interval_algebra),
+  returning one of 13 atoms describing how two ranges relate.
 
   """
 
   @doc """
-  Returns a `Date.Range.t` that represents
-  the `year`.
+  Returns a `t:Date.Range.t/0` that represents the `year`.
 
   The range is enumerable.
 
-  ## Arguments
+  ### Arguments
 
-  * `year` is any `year` for `calendar`
+  * `year` is any `year` for `calendar`.
 
-  * `calendar` is any module that implements
-    the `Calendar` and `Calendrical`
+  * `calendar` is any module that implements the `Calendar` and `Calendrical`
     behaviours. The default is `Calendrical.Gregorian`.
 
-  ## Returns
+  ### Returns
 
-  * A `Date.Range.t()` representing the
-    the enumerable days in the `year`
+  * A `t:Date.Range.t/0` representing the enumerable days in the `year`.
 
-  ## Examples
+  ### Examples
 
       iex> Calendrical.Interval.year 2019, Calendrical.Fiscal.UK
       Date.range(~D[2019-01-01 Calendrical.Fiscal.UK], ~D[2019-12-31 Calendrical.Fiscal.UK])
@@ -66,28 +61,24 @@ defmodule Calendrical.Interval do
   end
 
   @doc """
-  Returns a `Date.Range.t` that represents
-  the `quarter`.
+  Returns a `t:Date.Range.t/0` that represents the `quarter`.
 
   The range is enumerable.
 
-  ## Arguments
+  ### Arguments
 
-  * `year` is any `year` for `calendar`
+  * `year` is any `year` for `calendar`.
 
-  * `quarter` is any `quarter` in the
-  `  year` for `calendar`
+  * `quarter` is any `quarter` in the `year` for `calendar`.
 
-  * `calendar` is any module that implements
-    the `Calendar` and `Calendrical`
+  * `calendar` is any module that implements the `Calendar` and `Calendrical`
     behaviours. The default is `Calendrical.Gregorian`.
 
-  ## Returns
+  ### Returns
 
-  * A `Date.Range.t()` representing the
-    the enumerable days in the `quarter`
+  * A `t:Date.Range.t/0` representing the enumerable days in the `quarter`.
 
-  ## Examples
+  ### Examples
 
       iex> Calendrical.Interval.quarter 2019, 2, Calendrical.Fiscal.UK
       Date.range(~D[2019-04-01 Calendrical.Fiscal.UK], ~D[2019-06-30 Calendrical.Fiscal.UK])
@@ -116,28 +107,24 @@ defmodule Calendrical.Interval do
   end
 
   @doc """
-  Returns a `Date.Range.t` that represents
-  the `year`.
+  Returns a `t:Date.Range.t/0` that represents the `month`.
 
   The range is enumerable.
 
-  ## Arguments
+  ### Arguments
 
-  * `year` is any `year` for `calendar`
+  * `year` is any `year` for `calendar`.
 
-  * `month` is any `month` in the `year`
-    for `calendar`
+  * `month` is any `month` in the `year` for `calendar`.
 
-  * `calendar` is any module that implements
-    the `Calendar` and `Calendrical`
+  * `calendar` is any module that implements the `Calendar` and `Calendrical`
     behaviours. The default is `Calendrical.Gregorian`.
 
-  ## Returns
+  ### Returns
 
-  * A `Date.Range.t()` representing the
-    the enumerable days in the `month`
+  * A `t:Date.Range.t/0` representing the enumerable days in the `month`.
 
-  ## Examples
+  ### Examples
 
       iex> Calendrical.Interval.month 2019, 3, Calendrical.Fiscal.UK
       Date.range(~D[2019-03-01 Calendrical.Fiscal.UK], ~D[2019-03-30 Calendrical.Fiscal.UK])
@@ -165,31 +152,27 @@ defmodule Calendrical.Interval do
   end
 
   @doc """
-  Returns a `Date.Range.t` that represents
-  the `year`.
+  Returns a `t:Date.Range.t/0` that represents the `week`.
 
   The range is enumerable.
 
-  ## Arguments
+  ### Arguments
 
-  * `year` is any `year` for `calendar`
+  * `year` is any `year` for `calendar`.
 
-  * `week` is any `week` in the `year`
-    for `calendar`
+  * `week` is any `week` in the `year` for `calendar`.
 
-  * `calendar` is any module that implements
-    the `Calendar` and `Calendrical`
+  * `calendar` is any module that implements the `Calendar` and `Calendrical`
     behaviours. The default is `Calendrical.Gregorian`.
 
-  ## Returns
+  ### Returns
 
-  * A `Date.Range.t()` representing the
-    the enumerable days in the `week` or
+  * A `t:Date.Range.t/0` representing the enumerable days in the `week`, or
 
-  * `{:error, :not_defined}` if the calendar
-    does not support the concept of weeks
+  * `{:error, :not_defined}` if the calendar does not support the concept of
+    weeks.
 
-  ## Examples
+  ### Examples
 
       iex> Calendrical.Interval.week 2019, 52, Calendrical.Fiscal.US
       Date.range(~D[2019-12-22 Calendrical.Fiscal.US], ~D[2019-12-28 Calendrical.Fiscal.US])
@@ -223,28 +206,27 @@ defmodule Calendrical.Interval do
   end
 
   @doc """
-  Returns a `Date.Range.t` that represents
-  the `day`.
+  Returns a `t:Date.Range.t/0` containing a single `day`.
 
   The range is enumerable.
 
-  ## Arguments
+  ### Arguments
 
-  * `year` is any `year` for `calendar`
+  * `year` is any `year` for `calendar`.
 
-  * `day` is any `day` in the `year`
-    for `calendar`
+  * `day` is any `day` in the `year` for `calendar` (the ordinal day of year).
 
-  * `calendar` is any module that implements
-    the `Calendar` and `Calendrical`
+  * `calendar` is any module that implements the `Calendar` and `Calendrical`
     behaviours. The default is `Calendrical.Gregorian`.
 
-  ## Returns
+  ### Returns
 
-  * A `Date.Range.t()` representing the
-    the enumerable days in the `week`
+  * A `t:Date.Range.t/0` containing the single requested day, or
 
-  ## Examples
+  * `{:error, :invalid_date}` if `day` is greater than the number of days in
+    the year.
+
+  ### Examples
 
       iex> Calendrical.Interval.day 2019, 52, Calendrical.Fiscal.US
       Date.range(~D[2019-02-21 Calendrical.Fiscal.US], ~D[2019-02-21 Calendrical.Fiscal.US])
@@ -284,32 +266,33 @@ defmodule Calendrical.Interval do
   end
 
   @doc """
-  Compare two date ranges.
+  Compares two date ranges and returns the Allen-algebra relation between
+  them.
 
   Uses [Allen's Interval Algebra](https://en.wikipedia.org/wiki/Allen%27s_interval_algebra)
   to return one of 13 different relationships:
 
-  Relation	     | Converse
-  ----------     | --------------
-  :precedes	     | :preceded_by
-  :meets         | :met_by
-  :overlaps      | :overlapped_by
-  :finished_by   | :finishes
-  :contains      | :during
-  :starts        | :started_by
-  :equals        | :equals
+  Relation       | Converse
+  -------------- | --------------
+  `:precedes`    | `:preceded_by`
+  `:meets`       | `:met_by`
+  `:overlaps`    | `:overlapped_by`
+  `:finished_by` | `:finishes`
+  `:contains`    | `:during`
+  `:starts`      | `:started_by`
+  `:equals`      | `:equals`
 
-  ## Arguments
+  ### Arguments
 
-  * `range_1` is a `Date.Range.t`
+  * `range_1` is a `t:Date.Range.t/0`.
 
-  * `range_2` is a `Date.Range.t`
+  * `range_2` is a `t:Date.Range.t/0`.
 
-  ## Returns
+  ### Returns
 
-  An atom representing the relationship between the two ranges.
+  * An atom representing the relationship of `range_1` to `range_2`.
 
-  ## Examples
+  ### Examples
 
       iex> Calendrical.Interval.compare Calendrical.Interval.day(~D[2019-01-01]),
       ...> Calendrical.Interval.day(~D[2019-01-02])

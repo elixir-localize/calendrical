@@ -39,7 +39,7 @@ defmodule Calendrical.Chinese do
   alias Calendrical.Lunisolar
 
   @doc """
-  Returns a `t:Date.t/0` in the `#{__MODULE__}` calendar
+  Returns a `t:Calendar.date/0` in the `#{__MODULE__}` calendar
   formed by a calendar year, a *cardinal* lunar month number
   and a cardinal day number.
 
@@ -125,7 +125,7 @@ defmodule Calendrical.Chinese do
   ### Arguments
 
   * `date_or_year` is either an integer year number
-    or a `t:Date.t/0` in the `#{inspect(__MODULE__)}`
+    or a `t:Calendar.date/0` in the `#{inspect(__MODULE__)}`
     calendar.
 
   ### Returns
@@ -197,7 +197,7 @@ defmodule Calendrical.Chinese do
 
   ### Arguements
 
-  * `date` is any `t:Date.t/0` in the `#{inspect(__MODULE__)}` calendar.
+  * `date` is any `t:Calendar.date/0` in the `#{inspect(__MODULE__)}` calendar.
 
   ### Returns
 
@@ -226,7 +226,7 @@ defmodule Calendrical.Chinese do
   ### Arguments
 
   * `date_or_year` is either an integer year number
-    or a `t:Date.t/0` in the `#{inspect(__MODULE__)}`
+    or a `t:Calendar.date/0` in the `#{inspect(__MODULE__)}`
     calendar.
 
   ### Returns
@@ -264,7 +264,7 @@ defmodule Calendrical.Chinese do
   The lunar month number in the traditional lunisolar calendar is
   between 1 and 12 with a leap month added when there are 13 new moons
   between Winter solstices. This intercalary leap month is not
-  representable in its traditional form in the `t:Date.t/0` struct.
+  representable in its traditional form in the `t:Calendar.date/0` struct.
 
   This function takes a date, or year and month, and returns either the
   month number between 1 and 12 or a 2-tuple representing the leap month.
@@ -275,7 +275,7 @@ defmodule Calendrical.Chinese do
 
   ### Arguments
 
-  * `date` which is any `t:Date.t/0` in the `#{inspect(__MODULE__)}`
+  * `date` which is any `t:Calendar.date/0` in the `#{inspect(__MODULE__)}`
     calendar, *or*
 
   *`year` and `month` representing the calendar year and month.
@@ -355,7 +355,7 @@ defmodule Calendrical.Chinese do
 
   ### Returns
 
-  * a `t:Date.t/0` representing the Gregorian date of
+  * a `t:Calendar.date/0` representing the Gregorian date of
     the lunar year of the given Gregorian year.
 
   ### Example
@@ -389,7 +389,7 @@ defmodule Calendrical.Chinese do
 
   ### Arguments
 
-  * `date` which is any `t:Date.t/0` in the `#{inspect(__MODULE__)}`
+  * `date` which is any `t:Calendar.date/0` in the `#{inspect(__MODULE__)}`
     calendar, *or*
 
   *`year` and `month` representing the calendar year and month.

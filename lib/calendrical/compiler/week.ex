@@ -414,7 +414,7 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
-      Returns a `Date.Range.t` representing
+      Returns a `t:Date.Range.t/0` representing
       a given year.
 
       """
@@ -424,7 +424,7 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
-      Returns a `Date.Range.t` representing
+      Returns a `t:Date.Range.t/0` representing
       a given quarter of a year.
 
       """
@@ -434,7 +434,7 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
-      Returns a `Date.Range.t` representing
+      Returns a `t:Date.Range.t/0` representing
       a given month of a year.
 
       """
@@ -444,7 +444,7 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
-      Returns a `Date.Range.t` representing
+      Returns a `t:Date.Range.t/0` representing
       a given week of a year.
 
       """

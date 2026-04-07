@@ -1,10 +1,5 @@
 defmodule Calendrical.Config do
-  @moduledoc """
-  Defines the configuration for a calendar.
-
-  See `Calendrical.new/3` for usage details.
-
-  """
+  @moduledoc false
   defstruct calendar: nil,
 
             # Each quarter has three

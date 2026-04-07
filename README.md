@@ -16,7 +16,7 @@ Calendrical extends Elixir's standard `Calendar` and `Date` modules with compreh
 
 * **Fiscal-year calendars** — pre-built fiscal calendars for ~50 territories (US, UK, AU, JP, …) plus a configurable `Calendrical.FiscalYear.calendar_for/1` factory.
 
-* **Date arithmetic** — `Calendrical.shift_date/4`, `Calendrical.shift_naive_datetime/8`, and the standard `Date.shift/2` work across every calendar.
+* **Date arithmetic** — the standard `Date.shift/2` and `NaiveDateTime.shift/2` work across every Calendrical calendar.
 
 * **Date intervals** — `Calendrical.Interval` returns `Date.Range` values for years, quarters, months, weeks, and days in any supported calendar, with `relation/2` implementing Allen's interval algebra.
 
@@ -26,7 +26,7 @@ Calendrical extends Elixir's standard `Calendar` and `Date` modules with compreh
 
 * **Astronomical calendar support** — observational lunar calendars (Persian, Chinese, Korean, Lunar Japanese, observational Islamic, Saudi Rgsa, astronomical Umm al-Qura) use the [Astro](https://hex.pm/packages/astro) library for equinox, lunar phase, and crescent visibility calculations.
 
-* **Sigils** — `~d` literals for any registered calendar (`~d[2024-09-01 Calendrical.Hebrew]`, `~d[1446-09-01 Calendrical.Islamic.UmmAlQura]`).
+* **Sigils** — every Calendrical calendar works with Elixir's native `~D`/`~U`/`~N` sigils via the standard calendar suffix: `~D[2024-09-01 Calendrical.Hebrew]`, `~D[1446-09-01 Calendrical.Islamic.UmmAlQura]`.
 
 * **Ecclesiastical calendars** — `Calendrical.Ecclesiastical` provides Reingold-style algorithms for the movable and fixed Christian feasts of three different traditions: **Western** (`easter_sunday/1`, `good_friday/1`, `pentecost/1`, `advent/1`, `christmas/1`, `epiphany/1`), **Eastern Orthodox** (`orthodox_easter_sunday/1`, `orthodox_good_friday/1`, `orthodox_pentecost/1`, `orthodox_advent/1`, `eastern_orthodox_christmas/1`), and **astronomical** (`astronomical_easter_sunday/1`, `astronomical_good_friday/1`, `paschal_full_moon/1` — the WCC 1997 proposed reckoning).
 
@@ -100,7 +100,7 @@ Calendrical implements all 17 calendar systems exposed by CLDR. They are grouped
 
 | Family | Calendars |
 |---|---|
-| **Gregorian-based** (year-offset over `Calendrical.Gregorian`) | `Calendrical.Gregorian`, `Calendrical.ISO`, `Calendrical.ISOWeek`, `Calendrical.NRF`, `Calendrical.Buddhist`, `Calendrical.Roc`, `Calendrical.Japanese`, `Calendrical.Indian` |
+| **Gregorian-based** (year-offset over `Calendrical.Gregorian`) | `Calendrical.Gregorian`, `Calendrical.ISOWeek`, `Calendrical.NRF`, `Calendrical.Buddhist`, `Calendrical.Roc`, `Calendrical.Japanese`, `Calendrical.Indian` |
 | **Julian-based** (proleptic Julian + variants) | `Calendrical.Julian`, `Calendrical.Julian.Jan1`, `Calendrical.Julian.March1`, `Calendrical.Julian.March25`, `Calendrical.Julian.Sept1`, `Calendrical.Julian.Dec25` |
 | **Solar (non-Gregorian)** | `Calendrical.Persian` (astronomical) |
 | **Lunar (tabular)** | `Calendrical.Coptic`, `Calendrical.Ethiopic`, `Calendrical.Ethiopic.AmeteAlem`, `Calendrical.Islamic.Civil`, `Calendrical.Islamic.Tbla`, `Calendrical.Islamic.UmmAlQura` |

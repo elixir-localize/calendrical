@@ -16,7 +16,6 @@ defmodule Calendrical.Formatter do
   called if required.
 
   """
-  alias Calendrical.Formatter.Options
 
   @doc """
   Returns the formatted calendar for a year
@@ -32,8 +31,7 @@ defmodule Calendrical.Formatter do
   * `month` is the month for which
     the calendar is requested
 
-  * `options` is a `Calendrical.Formatter.Options`
-    struct
+  * `options` is a keyword list of formatter options.
 
   ## Returns
 
@@ -43,7 +41,7 @@ defmodule Calendrical.Formatter do
   @callback format_year(
               formatted_months :: String.t(),
               year :: Calendar.year(),
-              options :: Keyword.t() | Options.t()
+              options :: map()
             ) :: any()
 
   @doc """
@@ -60,8 +58,7 @@ defmodule Calendrical.Formatter do
   * `month` is the month for which
     the calendar is requested
 
-  * `options` is a `Calendrical.Formatter.Options`
-    struct
+  * `options` is a keyword list of formatter options.
 
   ## Returns
 
@@ -74,7 +71,7 @@ defmodule Calendrical.Formatter do
               formatted_weeks :: String.t(),
               year :: Calendar.year(),
               month :: Calendar.month(),
-              options :: Keyword.t() | Options.t()
+              options :: map()
             ) :: any()
 
   @doc """
@@ -95,8 +92,7 @@ defmodule Calendrical.Formatter do
     form `{year, week_number}` that represents
     the week of year for week to be formatted
 
-  * `options` is a `Calendrical.Formatter.Options`
-    struct
+  * `options` is a keyword list of formatter options.
 
   ## Returns
 
@@ -109,7 +105,7 @@ defmodule Calendrical.Formatter do
               year :: Calendar.year(),
               month :: Calendar.month(),
               week_number :: {Calendar.year(), pos_integer},
-              options :: Options.t()
+              options :: map()
             ) :: any()
 
   @doc """
@@ -126,8 +122,7 @@ defmodule Calendrical.Formatter do
   * `month` is the month for which
     the calendar is requested
 
-  * `options` is a `Calendrical.Formatter.Options`
-    struct
+  * `options` is a keyword list of formatter options.
 
   ## Returns
 
@@ -139,6 +134,6 @@ defmodule Calendrical.Formatter do
               date :: Date.t(),
               year :: Calendar.year(),
               month :: Calendar.month(),
-              options :: Options.t()
+              options :: map()
             ) :: any()
 end

@@ -408,7 +408,7 @@ defmodule Calendrical do
               Date.Range.t() | {:error, :not_defined}
 
   @doc """
-  Increments a `t:Date.t/0` or `Date.Range.t` by a specified positive
+  Increments a `t:Calendar.date/0` or `t:Date.Range.t/0` by a specified positive
   or negative integer number of periods (year, quarter, month,
   week or day).
 
@@ -734,15 +734,15 @@ defmodule Calendrical do
   @doc """
   Converts a date or a date range to another calendar.
 
-  If the argument is a `t:Date.t/0`, `Date.convert/2` is used to
+  If the argument is a `t:Calendar.date/0`, `Date.convert/2` is used to
   do the conversion.
 
-  If the argument is a `t:/Date.Range.t/0` then `Date.convert/2` is
+  If the argument is a `t:Date.Range.t/0` then `Date.convert/2` is
   applied to the start and end of the range and a new range returned.
 
   ### Arguments
 
-  * `date_or_range` is any `t:Date.t/0` or ` t:Date.Range.t/0`.
+  * `date_or_range` is any `t:Calendar.date/0` or ` t:Date.Range.t/0`.
 
   * `calendar` is any valid calendar module.
 
@@ -807,8 +807,8 @@ defmodule Calendrical do
 
   ## Options
 
-  * `:locale` is any locale returned by `Localize.known_locale_names/1`. The
-    default is `Localize.get_locale/0`.
+  * `:locale` is a locale identifier atom, string, or a
+    `t:Localize.LanguageTag.t/0`. The default is `Localize.get_locale/0`.
 
   * `:calendar` is the name of any known calendar. The default
     is `Calendrical.Gregorian`.
@@ -940,7 +940,7 @@ defmodule Calendrical do
 
   ### Returns
 
-  * a `t:Date.t/0`  or
+  * a `t:Calendar.date/0`  or
 
   * `{:error, :invalid_date}`
 
@@ -964,15 +964,15 @@ defmodule Calendrical do
 
   @doc """
   Returns the first date of a `year`
-  for a `t:Date.t/0`.
+  for a `t:Calendar.date/0`.
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0`.
+  * `date` is any `t:Calendar.date/0`.
 
   ### Returns
 
-  * a `t:Date.t/0`  or
+  * a `t:Calendar.date/0`  or
 
   * `{:error, :invalid_date}`
 
@@ -1007,7 +1007,7 @@ defmodule Calendrical do
 
   ### Returns
 
-  * a `t:Date.t/0`  or
+  * a `t:Calendar.date/0`  or
 
   * `{:error, :invalid_date}`
 
@@ -1042,15 +1042,15 @@ defmodule Calendrical do
 
   @doc """
   Returns the last date of a `year`
-  for a `t:Date.t/0`.
+  for a `t:Calendar.date/0`.
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0`.
+  * `date` is any `t:Calendar.date/0`.
 
   ### Returns
 
-  * a `t:Date.t/0`  or
+  * a `t:Calendar.date/0`  or
 
   * `{:error, :invalid_date}`
 
@@ -1177,7 +1177,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0` or a map with one or
+  * `date` is any `t:Calendar.date/0` or a map with one or
     more of the fields `:year`, `:month`, `:day` and
     optionally `:calendar`.
 
@@ -1228,7 +1228,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0` or a map with one or
+  * `date` is any `t:Calendar.date/0` or a map with one or
     more of the fields `:year`, `:month`, `:day` and
     optionally `:calendar`.
 
@@ -1263,7 +1263,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0` or a map with one or
+  * `date` is any `t:Calendar.date/0` or a map with one or
     more of the fields `:year`, `:month`, `:day` and
     optionally `:calendar`.
 
@@ -1291,11 +1291,11 @@ defmodule Calendrical do
 
   @doc """
   Returns the Modified Julian Day of
-  a `t:Date.t/0`.
+  a `t:Calendar.date/0`.
 
   ### Arguments
 
-  * `date_or_datetime` is any `t:Date.t/0` or a `t:DateTime.t/0`.
+  * `date_or_datetime` is any `t:Calendar.date/0` or a `t:DateTime.t/0`.
     If a `t:DateTime.t/0` is given, the result will be given in
     the current timezone.
 
@@ -1402,7 +1402,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0` or a map with one or
+  * `date` is any `t:Calendar.date/0` or a map with one or
     more of the fields `:year`, `:month`, `:day` and
     optionally `:calendar`.
 
@@ -1436,7 +1436,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0` or a map with one or
+  * `date` is any `t:Calendar.date/0` or a map with one or
     more of the fields `:year`, `:month`, `:day` and
     optionally `:calendar`.
 
@@ -1474,7 +1474,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0` or a map with one or
+  * `date` is any `t:Calendar.date/0` or a map with one or
     more of the fields `:year`, `:month`, `:day` and
     optionally `:calendar`.
 
@@ -1512,7 +1512,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0` or a map with one or
+  * `date` is any `t:Calendar.date/0` or a map with one or
     more of the fields `:year`, `:month`, `:day` and
     optionally `:calendar`.
 
@@ -1545,7 +1545,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0` or a map with one or
+  * `date` is any `t:Calendar.date/0` or a map with one or
     more of the fields `:year`, `:month`, `:day` and
     optionally `:calendar`.
 
@@ -1579,7 +1579,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0` or a map with one or
+  * `date` is any `t:Calendar.date/0` or a map with one or
     more of the fields `:year`, `:month`, `:day` and
     optionally `:calendar`.
 
@@ -1616,7 +1616,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0` or a map with one or
+  * `date` is any `t:Calendar.date/0` or a map with one or
     more of the fields `:year`, `:month`, `:day` and
     optionally `:calendar`.
 
@@ -1655,7 +1655,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0` or a map with one or
+  * `date` is any `t:Calendar.date/0` or a map with one or
     more of the fields `:year`, `:month`, `:day` and
     optionally `:calendar`.
 
@@ -1701,7 +1701,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0` or a map with one or
+  * `date` is any `t:Calendar.date/0` or a map with one or
     more of the fields `:year`, `:month`, `:day` and
     optionally `:calendar`.
 
@@ -1739,7 +1739,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0` or a map with one or
+  * `date` is any `t:Calendar.date/0` or a map with one or
     more of the fields `:year`, `:month`, `:day` and
     optionally `:calendar`.
 
@@ -1778,7 +1778,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0` or an integer year
+  * `date` is any `t:Calendar.date/0` or an integer year
     or a map with one or more of the fields `:year`,
     `:month`, `:day` and optionally `:calendar`.
 
@@ -1847,7 +1847,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0`.
+  * `date` is any `t:Calendar.date/0`.
 
   * `options` is a `t:Keyword.t/0` list of options.
 
@@ -1929,7 +1929,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0`.
+  * `date` is any `t:Calendar.date/0`.
 
   * `options` is a `t:Keyword.t/0` list of options.
 
@@ -2250,17 +2250,17 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date_or_date_range` is any `t:Date.t/0` or
-    `Date.Range.t`.
+  * `date_or_date_range` is any `t:Calendar.date/0` or
+    `t:Date.Range.t/0`.
 
   * `period` is `:year`, `:quarter`, `:month`,
     `:week` or `:day`.
 
   ### Returns
 
-  When a `t:Date.t/0` is passed, a `t:Date.t/0` is
-  returned.  When a `Date.Range.t` is passed
-  a `Date.Range.t` is returned.
+  When a `t:Calendar.date/0` is passed, a `t:Calendar.date/0` is
+  returned.  When a `t:Date.Range.t/0` is passed
+  a `t:Date.Range.t/0` is returned.
 
   ### Examples
 
@@ -2320,17 +2320,17 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date_or_date_range` is any `t:Date.t/0` or
-    `Date.Range.t`.
+  * `date_or_date_range` is any `t:Calendar.date/0` or
+    `t:Date.Range.t/0`.
 
   * `period` is `:year`, `:quarter`, `:month`,
   ` :week` or `:day`.
 
   ### Returns
 
-  When a `t:Date.t/0` is passed, a `t:Date.t/0` is
-  returned.  When a `Date.Range.t` is passed
-  a `Date.Range.t` is returned.
+  When a `t:Calendar.date/0` is passed, a `t:Calendar.date/0` is
+  returned.  When a `t:Date.Range.t/0` is passed
+  a `t:Date.Range.t/0` is returned.
 
   ### Examples
 
@@ -2401,8 +2401,8 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date_or_date_range` is any `t:Date.t/0` or
-    `Date.Range.t`.
+  * `date_or_date_range` is any `t:Calendar.date/0` or
+    `t:Date.Range.t/0`.
 
   * `period` is `:year`, `:quarter`, `:month`,
     `:week` or `:day`.
@@ -2411,9 +2411,9 @@ defmodule Calendrical do
 
   ### Returns
 
-  When a `t:Date.t/0` is passed, a `t:Date.t/0` is
-  returned.  When a `Date.Range.t` is passed
-  a `Date.Range.t` is returned.
+  When a `t:Calendar.date/0` is passed, a `t:Calendar.date/0` is
+  returned.  When a `t:Date.Range.t/0` is passed
+  a `t:Date.Range.t/0` is returned.
 
   ### Examples
 
@@ -2482,16 +2482,15 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0`.
+  * `date` is any `t:Calendar.date/0`.
 
   * `options` is a `t:Keyword.t/0` list of options. The default is
     `[]`.
 
   ### Options
 
-  * `:locale` is any valid locale name in the list returned by
-    `Localize.known_locale_names/1` or a `Localize.LanguageTag` struct
-    returned by `Localize.Locale.new!/2`. The default is `Localize.get_locale()`.
+  * `:locale` is a locale identifier atom, string, or a
+    `t:Localize.LanguageTag.t/0`. The default is `Localize.get_locale/0`.
 
   ### Returns
 
@@ -2536,11 +2535,11 @@ defmodule Calendrical do
 
   @doc """
   Returns a localized string for a part of
-  a `t:Date.t/0`.
+  a `t:Calendar.date/0`.
 
   ### Arguments
 
-  * `date` is any `t:Date.t/0`.
+  * `date` is any `t:Calendar.date/0`.
 
   * `part` is one of `:era`, `:quarter`, `:month`,
     `:day_of_week` or `:days_of_week`.
@@ -2549,9 +2548,8 @@ defmodule Calendrical do
 
   ### Options
 
-  * `:locale` is any valid locale name in the list returned by
-    `Localize.known_locale_names/1` or a `Localize.LanguageTag` struct
-    returned by `Localize.Locale.new!/2`. The default is `Localize.get_locale()`.
+  * `:locale` is a locale identifier atom, string, or a
+    `t:Localize.LanguageTag.t/0`. The default is `Localize.get_locale/0`.
 
   * `:format` is one of `:wide`, `:abbreviated` or `:narrow`. The
     default is `:abbreviated`.
@@ -2878,8 +2876,8 @@ defmodule Calendrical do
 
   ### Options
 
-  * `:locale` is any locale returned by `Localize.known_locale_names/1`. The
-    default is `Localize.get_locale/0`.
+  * `:locale` is a locale identifier atom, string, or a
+    `t:Localize.LanguageTag.t/0`. The default is `Localize.get_locale/0`.
 
   * `:type` is one of `:stand_alone` or `:format`. The default
     is `:format`.
@@ -3171,11 +3169,11 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date_from` is a any `t:Date.t/0` that is the start of the
+  * `date_from` is a any `t:Calendar.date/0` that is the start of the
     sequence.
 
   * `date_to_or_count` is upper bound of the sequence
-    as a `t:Date.t/0` or the number of dates in the
+    as a `t:Calendar.date/0` or the number of dates in the
     sequence to be generated.
 
   * `precision` is one of `:years`, `:quarters`,
@@ -3253,11 +3251,11 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date_from` is a any `t:Date.t/0` that is the start of the
+  * `date_from` is a any `t:Calendar.date/0` that is the start of the
     sequence.
 
   * `date_to_or_count` is upper bound of the sequence
-    as a `t:Date.t/0` or the number of dates in the
+    as a `t:Calendar.date/0` or the number of dates in the
     sequence to be generated.
 
   * `precision` is one of `:years`, `:quarters`,
@@ -3371,7 +3369,7 @@ defmodule Calendrical do
 
   ## Argumenets
 
-  * `date` is any `t:Date.t/0`.
+  * `date` is any `t:Calendar.date/0`.
 
   ### Returns
 
@@ -3414,7 +3412,7 @@ defmodule Calendrical do
 
   ### Returns
 
-  * a `t:Date.t/0`
+  * a `t:Calendar.date/0`
 
   ## Example
 
@@ -3445,7 +3443,7 @@ defmodule Calendrical do
   end
 
   @doc """
-  Returns a `t:Date.t/0` from a date tuple of
+  Returns a `t:Calendar.date/0` from a date tuple of
   `{year, month, day}` and a calendar.
 
   ### Arguments
@@ -3459,7 +3457,7 @@ defmodule Calendrical do
 
   ### Returns
 
-  * a `t:Date.t/0`.
+  * a `t:Calendar.date/0`.
 
   ### Examples
 
@@ -3477,7 +3475,7 @@ defmodule Calendrical do
   end
 
   @doc """
-  Returns a `t:Date.t/0` from a keyword list
+  Returns a `t:Calendar.date/0` from a keyword list
   and a calendar.
 
   ### Arguments
@@ -3491,7 +3489,7 @@ defmodule Calendrical do
 
   ### Returns
 
-  * a `t:Date.t/0` or
+  * a `t:Calendar.date/0` or
 
   * `{:error, :invalid_date}`
 
@@ -3518,7 +3516,7 @@ defmodule Calendrical do
   end
 
   @doc """
-  Returns a `t:Date.t/0` from a year, day_of_year
+  Returns a `t:Calendar.date/0` from a year, day_of_year
   and a calendar.
 
   ### Arguments
@@ -3535,7 +3533,7 @@ defmodule Calendrical do
 
   ### Returns
 
-  * a `t:Date.t/0` or
+  * a `t:Calendar.date/0` or
 
   * `{:error, :invalid_date}`
 
@@ -3848,8 +3846,8 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `locale` is any locale returned by `Localize.known_locale_names/0`.
-    The default is `Localize.get_locale/0`.
+  * `:locale` is a locale identifier atom, string, or a
+    `t:Localize.LanguageTag.t/0`. The default is `Localize.get_locale/0`.
 
   * `calendar` is a calendar type atom. The default is `:gregorian`.
 
@@ -3867,8 +3865,8 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `locale` is any locale returned by `Localize.known_locale_names/0`.
-    The default is `Localize.get_locale/0`.
+  * `:locale` is a locale identifier atom, string, or a
+    `t:Localize.LanguageTag.t/0`. The default is `Localize.get_locale/0`.
 
   * `calendar` is a calendar type atom. The default is `:gregorian`.
 
@@ -3886,8 +3884,8 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `locale` is any locale returned by `Localize.known_locale_names/0`.
-    The default is `Localize.get_locale/0`.
+  * `:locale` is a locale identifier atom, string, or a
+    `t:Localize.LanguageTag.t/0`. The default is `Localize.get_locale/0`.
 
   * `calendar` is a calendar type atom. The default is `:gregorian`.
 
@@ -3905,8 +3903,8 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `locale` is any locale returned by `Localize.known_locale_names/0`.
-    The default is `Localize.get_locale/0`.
+  * `:locale` is a locale identifier atom, string, or a
+    `t:Localize.LanguageTag.t/0`. The default is `Localize.get_locale/0`.
 
   * `calendar` is a calendar type atom. The default is `:gregorian`.
 
@@ -3924,8 +3922,8 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `locale` is any locale returned by `Localize.known_locale_names/0`.
-    The default is `Localize.get_locale/0`.
+  * `:locale` is a locale identifier atom, string, or a
+    `t:Localize.LanguageTag.t/0`. The default is `Localize.get_locale/0`.
 
   * `calendar` is a calendar type atom. The default is `:gregorian`.
 
@@ -3943,8 +3941,8 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `locale` is any locale returned by `Localize.known_locale_names/0`.
-    The default is `Localize.get_locale/0`.
+  * `:locale` is a locale identifier atom, string, or a
+    `t:Localize.LanguageTag.t/0`. The default is `Localize.get_locale/0`.
 
   * `calendar` is a calendar type atom. The default is `:gregorian`.
 
@@ -3962,8 +3960,8 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `locale` is any locale returned by `Localize.known_locale_names/0`.
-    The default is `Localize.get_locale/0`.
+  * `:locale` is a locale identifier atom, string, or a
+    `t:Localize.LanguageTag.t/0`. The default is `Localize.get_locale/0`.
 
   * `calendar` is a calendar type atom. The default is `:gregorian`.
 

@@ -108,7 +108,7 @@ All modules move from the `Cldr.Calendar` namespace to `Calendrical`:
 | `Cldr.Calendar.Config` | `Calendrical.Config` |
 | `Cldr.Calendar.Interval` | `Calendrical.Interval` |
 | `Cldr.Calendar.Kday` | `Calendrical.Kday` |
-| `Cldr.Calendar.Sigils` | `Calendrical.Sigils` |
+| `Cldr.Calendar.Sigils` | **removed** — use Elixir's native `~D` sigil. See [Sigils](#sigils) below. |
 | `Cldr.Calendar.Preference` | `Calendrical.Preference` |
 
 Territory-derived calendars also change namespace. For example, `Cldr.Calendar.US` becomes `Calendrical.US` and `Cldr.Calendar.GB` becomes `Calendrical.GB`.
@@ -343,17 +343,45 @@ Calendrical.interval_stream(~D[2024-01-01], ~D[2024-12-31], :quarters)
 
 ### Sigils
 
-The `~d` sigil works the same way:
+The `Calendrical.Sigils` module — which provided the `~d` sigil — has been **removed**. Use Elixir's native `~D` sigil with a fully-qualified calendar suffix instead.
 
 ```elixir
+# Old (ex_cldr_calendars / Calendrical 0.0.x)
 import Calendrical.Sigils
 
-~d[2024-06-15]                    # Gregorian
+~d[2024-06-15]                    # Gregorian (default)
 ~d[2024-06-15 Gregorian]          # Explicit Gregorian
 ~d[2024-W24-6]                    # ISO Week
 ~d[2024-06-15 Persian]            # Persian calendar
 ~d[1446-06-15 C.E. Julian]        # Julian calendar
+
+# New (Calendrical 0.1.0+) — use Elixir's native ~D, ~U, ~N
+~D[2024-06-15]                                      # Calendar.ISO (default)
+~D[2024-06-15 Calendrical.Gregorian]                # Explicit Gregorian
+~D[2024-06-15 Calendrical.Persian]                  # Persian calendar
+~D[1446-06-15 Calendrical.Julian]                   # Julian calendar
+~D[-1446-06-15 Calendrical.Julian]                  # B.C.E. Julian (negative year)
+~D[1446-09-01 Calendrical.Islamic.UmmAlQura]        # Umm al-Qura
+~D[5784-08-15 Calendrical.Hebrew]                   # Hebrew (Tishri = 1)
 ```
+
+The native `~D` sigil has supported the trailing calendar form since Elixir 1.10. It works for any module implementing the `Calendar` behaviour, so all 17 Calendrical calendars (and any user-defined calendar built with `Calendrical.Behaviour`) are valid.
+
+Features the old `~d` sigil supported that the native `~D` does not:
+
+* **ISO week date format** (`~d[2024-W24-6]`) — there is no native sigil for week dates. If you need to parse a week date, do so explicitly:
+
+  ```elixir
+  # Roughly equivalent to ~d[2024-W24-6]
+  {year, week, day} = {2024, 24, 6}
+  Date.new!(year, week, day, Calendrical.ISOWeek)
+  ```
+
+* **Short calendar names** (`~d[2024-06-15 Persian]` → `Calendrical.Persian`) — write the full module name with the native sigil.
+
+* **B.C.E./C.E. era markers** (`~d[2024-01-01 B.C.E. Julian]`) — use a negative year with the native sigil: `~D[-2024-01-01 Calendrical.Julian]`.
+
+* **Default to `Calendrical.Gregorian`** — bare `~d[2024-01-01]` defaulted to `Calendrical.Gregorian`. Bare `~D[2024-01-01]` defaults to `Calendar.ISO`. The two are arithmetically equivalent (Calendrical.Gregorian wraps Calendar.ISO) but the `:calendar` field is different. Use `~D[2024-01-01 Calendrical.Gregorian]` if you specifically want the Calendrical.Gregorian calendar struct.
 
 ## Calendar formatting (ex_cldr_calendars_format)
 

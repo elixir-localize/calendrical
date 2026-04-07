@@ -412,7 +412,7 @@ defmodule Calendrical.Ecclesiastical do
 
   ### Returns
 
-  * `{:ok, date}` where `date` is the `t:Date.t/0` of the Paschal
+  * `{:ok, date}` where `date` is the `t:Calendar.date/0` of the Paschal
     Full Moon in UTC, or
 
   * `{:error, exception}` if the calculation cannot be performed.
@@ -479,7 +479,7 @@ defmodule Calendrical.Ecclesiastical do
   Returns the dates of *Eastern Orthodox Christmas* (25 December
   Julian) that fall in the given Gregorian year.
 
-  Returns a list of zero, one, or two `t:Date.t/0` values because
+  Returns a list of zero, one, or two `t:Calendar.date/0` values because
   the Julian-to-Gregorian offset can place 25 December Julian in
   either January or December of the same Gregorian year.
 
@@ -501,7 +501,7 @@ defmodule Calendrical.Ecclesiastical do
   Returns the dates of *Coptic Christmas* (29 Koiak in the Coptic
   calendar) that fall in the given Gregorian year.
 
-  Returns a list of zero, one, or two `t:Date.t/0` values for the
+  Returns a list of zero, one, or two `t:Calendar.date/0` values for the
   same reason as `eastern_orthodox_christmas/1`.
 
   ## Examples

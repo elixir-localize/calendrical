@@ -131,6 +131,8 @@ This is the first release of Calendrical, which consolidates the `ex_cldr_calend
 
 * `Calendrical.plus/{4,5,6}`, `Calendrical.minus/{4,5,6}`, the `plus/6` callback in `Calendrical.Behaviour`, and the corresponding `:months` clause in `Calendrical.Base.Month` and `Calendrical.Base.Week`. Use `Date.shift/2` / `NaiveDateTime.shift/2` instead.
 
+* `Calendrical.Sigils` (the `~d` sigil). Elixir's native `~D` sigil has supported a trailing calendar suffix since Elixir 1.10 and works for any module implementing the `Calendar` behaviour. Use `~D[2024-09-01 Calendrical.Hebrew]` instead of `~d[2024-09-01 Hebrew]`. The `Calendrical.Sigils` sigil's other features (default of `Calendrical.Gregorian`, ISO week-date format `yyyy-Wmm-dd`, fiscal calendar shortcuts, B.C.E./C.E. era markers) are minor conveniences that did not justify maintaining a parallel sigil system. See [`guides/migration.md`](guides/migration.md) for one-line equivalents of every removed feature.
+
 ### Calendars
 
 This release introduces 17 calendar implementations covering every CLDR-acceptable calendar type. See [`guides/calendar_summary.md`](guides/calendar_summary.md) for the full list grouped by family, with month structures, leap-year rules, and reference dates.

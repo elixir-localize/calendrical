@@ -42,7 +42,7 @@ defmodule Calendrical.Islamic.UmmAlQura.ReferenceData do
   Each map has three keys:
     - `:hijri_year`  — Hijri year (integer)
     - `:hijri_month` — Hijri month number, 1–12 (1 = Muharram)
-    - `:gregorian`   — `Date.t()` of the 1st day of that Hijri month
+    - `:gregorian`   — `t:Calendar.date/0` of the 1st day of that Hijri month
 
   The sequence starts at 1 Muharram #{@hijri_start_year} AH
   (#{@hijri_start_date}) and covers approximately 145 years.

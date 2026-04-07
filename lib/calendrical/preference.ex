@@ -1,4 +1,37 @@
 defmodule Calendrical.Preference do
+  @moduledoc """
+  Resolves the preferred Calendrical calendar module for a CLDR locale or an
+  ISO 3166 territory.
+
+  CLDR ships preference rankings that say, for any given territory, which
+  calendar systems are most appropriate to use. This module turns those
+  rankings into actual Elixir module names by walking the preference list and
+  returning the first calendar whose Calendrical implementation is loaded in
+  the current build.
+
+  The two main entry points are:
+
+  * `calendar_from_territory/1` — given an ISO 3166 territory code, return the
+    preferred calendar module.
+
+  * `calendar_from_locale/1` — given a CLDR locale, return the preferred
+    calendar module. Honours the `-u-ca-` BCP 47 calendar extension and the
+    `-u-fw-` first-day-of-week extension when present.
+
+  In every case, if no calendar in the preference list is available, the
+  module falls back to `Calendrical.Gregorian` (the default calendar), which
+  is always present.
+
+  ## Optional calendar packages
+
+  Some calendar implementations only ship if their dependencies are loaded —
+  for example, the lunisolar calendars require `Astro`. The runtime
+  `Code.ensure_loaded?/1` checks in this module exist precisely so that the
+  preference resolver gracefully degrades when an optional calendar is not
+  available in the current build.
+
+  """
+
   alias Localize.LanguageTag
 
   # The calendar_from_locale/1 function clauses use pattern matching on
@@ -36,49 +69,42 @@ defmodule Calendrical.Preference do
   end
 
   @doc """
-  Returns the calendar module preferred for
-  a territory.
+  Returns the Calendrical calendar module preferred for the given territory.
 
-  ## Arguments
+  Walks the CLDR territory preference list and returns the first calendar
+  whose Calendrical implementation is loaded in the current build. If no
+  preferred calendar is loaded, falls back to `Calendrical.Gregorian`.
 
-  * `territory` is any valid ISO3166-2 code as
-    an `t:String.t/0` or upcased `t.atom/0`.
+  ### Arguments
 
-  ## Returns
+  * `territory` is any valid ISO 3166 alpha-2 code as a `t:String.t/0` or an
+    upcased `t:atom/0` (e.g. `:US`, `:IR`, `:JP`).
 
-  * `{:ok, calendar_module}` or
+  ### Returns
 
-  * `{:error, exception}` where `exception` is an exception struct
+  * `{:ok, calendar_module}` on success.
 
-  ## Examples
+  * `{:error, exception}` if the territory is unknown.
 
-      iex> Calendrical.Preference.calendar_from_territory :US
+  ### Examples
+
+      iex> Calendrical.Preference.calendar_from_territory(:US)
       {:ok, Calendrical.US}
 
-      iex> {:error, %Localize.UnknownTerritoryError{}} = Calendrical.Preference.calendar_from_territory(:YY)
+      iex> {:error, %Localize.UnknownTerritoryError{}} =
+      ...>   Calendrical.Preference.calendar_from_territory(:YY)
 
-  ## Notes
+  ### Notes
 
-  The overwhelming majority of territories have
-  `:gregorian` as their first preferred calendar
-  and therefore `Calendrical.Gregorian`
-  will be returned for most territories.
+  The overwhelming majority of territories have `:gregorian` as their first
+  preferred calendar, so `Calendrical.Gregorian` is returned for most
+  territories.
 
-  Returning any other calendar module would require:
-
-  1. That another calendar is preferred over `:gregorian`
-     for a territory.
-
-  2. That a calendar module is available to support
-     that calendar.
-
-  As an example, Iran (territory `:IR`) prefers the
-  `:persian` calendar. If the optional library
-  [ex_cldr_calendars_persian](https://hex.pm/packages/ex_cldr_calendars_persian)
-  is installed, the calendar module `Calendrical.Persian` will
-  be returned. If it is not installed, `Calendrical.Gregorian`
-  will be returned as `:gregorian` is the second preference
-  for `:IR`.
+  Returning any other calendar module requires both that another calendar is
+  preferred over `:gregorian` for the territory, and that the corresponding
+  Calendrical implementation is loaded. For example, Iran (`:IR`) prefers the
+  `:persian` calendar, so `Calendrical.Persian` is returned (the Persian
+  calendar is built into Calendrical and always available).
 
   """
   def calendar_from_territory(territory) when is_atom(territory) do
@@ -129,22 +155,25 @@ defmodule Calendrical.Preference do
   end
 
   @doc """
-  Return the calendar module for a locale.
+  Returns the Calendrical calendar module preferred for the given locale.
 
-  ## Arguments
+  Honours the BCP 47 `-u-ca-` calendar extension and the `-u-fw-` first-day-
+  of-week extension when present in the locale identifier. If no calendar
+  extension is supplied, falls back to the territory preference list (see
+  `calendar_from_territory/1`).
 
-  * `:locale` is any locale or locale name validated
-    by `Localize.validate_locale/1`.  The default is
-    `Localize.get_locale()` which returns the locale
-    set for the current process.
+  ### Arguments
 
-  ## Returns
+  * `locale` is a locale identifier atom, string, or a
+    `t:Localize.LanguageTag.t/0`. The default is `Localize.get_locale/0`.
 
-  * `{:ok, calendar_module}` or
+  ### Returns
 
-  * `{:error, exception}` where `exception` is an exception struct
+  * `{:ok, calendar_module}` on success.
 
-  ## Examples
+  * `{:error, exception}` if the locale is invalid.
+
+  ### Examples
 
       iex> Calendrical.Preference.calendar_from_locale(:"en-GB")
       {:ok, Calendrical.GB}
@@ -239,10 +268,12 @@ defmodule Calendrical.Preference do
                     |> Map.new()
                     |> Map.put(:iso8601, Calendrical.ISOWeek)
 
+  @doc false
   def calendar_modules do
     @calendar_modules
   end
 
+  @doc false
   def calendar_module(calendar) when calendar in @known_calendars do
     Map.fetch!(calendar_modules(), calendar)
   end
@@ -255,6 +286,7 @@ defmodule Calendrical.Preference do
     {:error, Calendrical.unknown_calendar_error(other)}
   end
 
+  @doc false
   def calendar_from_name(name) do
     calendar_module = calendar_module(name)
 
