@@ -102,7 +102,8 @@ defmodule Calendrical.Era do
     :chinese,
     :dangi,
     :persian,
-    :gregorian
+    :gregorian,
+    :hebrew
   ]
 
   @eras_in_julian_calendar [

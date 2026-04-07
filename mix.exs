@@ -46,7 +46,6 @@ defmodule Calendrical.MixProject do
       {:astro, "~> 2.0"},
       {:tz_world, "~> 1.0", optional: true},
       {:tzdata, "~> 1.1", optional: true},
-
       {:gettext, "~> 1.0"},
       {:calendar_interval, "~> 0.2", optional: true},
       {:ex_doc, "~> 0.21", optional: true, runtime: false},

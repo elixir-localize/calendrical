@@ -305,6 +305,7 @@ defmodule Calendrical do
               | :islamic_civil
               | :islamic_tbla
               | :islamic_umalqura
+              | :hebrew
 
   @doc """
   Returns the calendar basis.
