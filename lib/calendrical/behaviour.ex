@@ -1,4 +1,130 @@
 defmodule Calendrical.Behaviour do
+  @moduledoc """
+  Provides default implementations of the `Calendar` and `Calendrical`
+  callbacks for algorithmic calendars.
+
+  A calendar that `use`s this module gets a complete `Calendar` and
+  `Calendrical` implementation derived from a small number of options
+  plus two functions the calendar must define itself:
+
+  * `date_to_iso_days/3` — convert a calendar `{year, month, day}` to
+    an integer ISO day number.
+  * `date_from_iso_days/1` — convert an integer ISO day number back to
+    a calendar `{year, month, day}`.
+
+  Every other callback is generated with a sensible default that the
+  calendar can override with `defoverridable` (all callbacks are made
+  overridable automatically).
+
+  ## Example
+
+      defmodule MyApp.MyCalendar do
+        use Calendrical.Behaviour,
+          epoch: ~D[0001-01-01 Calendar.ISO],
+          cldr_calendar_type: :gregorian
+
+        @impl true
+        def leap_year?(year), do: rem(year, 4) == 0
+
+        def date_to_iso_days(year, month, day) do
+          # ... calendar-specific calculation
+        end
+
+        def date_from_iso_days(iso_days) do
+          # ... calendar-specific calculation
+        end
+      end
+
+  ## Options
+
+  * `:epoch` (required) — the epoch of the calendar as a `t:Date.t/0`
+    sigil literal in any calendar that has already been compiled
+    (typically `Calendar.ISO`, `Calendrical.Gregorian`, or
+    `Calendrical.Julian`). The epoch is converted to ISO days at compile
+    time and made available via the generated `epoch/0` function. Example:
+    `epoch: ~D[0622-03-20 Calendrical.Julian]`.
+
+  * `:cldr_calendar_type` — the CLDR calendar type used to look up
+    locale data (era names, month names, day names, etc.) via
+    `Localize.Calendar`. Must be one of the values listed in
+    `Calendrical.cldr_calendar_type/0`. Defaults to `:gregorian`.
+    Example: `cldr_calendar_type: :persian`.
+
+  * `:cldr_calendar_base` — whether the calendar is `:month`-based or
+    `:week`-based. Returned by the generated `calendar_base/0` function.
+    Defaults to `:month`.
+
+  * `:days_in_week` — the number of days in a week. Returned by the
+    generated `days_in_week/0` function and used to compute
+    `last_day_of_week/0`. Defaults to `7`.
+
+  * `:first_day_of_week` — the day-of-week ordinal (1..7) on which the
+    week begins, where `1` is Monday and `7` is Sunday. The special value
+    `:first` causes `day_of_week/4` to use the first day of the calendar
+    year as the start of each week (used by some week-based calendars).
+    Defaults to `1` (Monday).
+
+  * `:months_in_ordinary_year` — the number of months in a non-leap
+    year. Returned by `months_in_ordinary_year/0` and used as the default
+    return value of `months_in_year/1` for non-leap years. Defaults to
+    `12`.
+
+  * `:months_in_leap_year` — the number of months in a leap year.
+    Returned by `months_in_leap_year/0` and used as the default return
+    value of `months_in_year/1` for leap years. Defaults to the value of
+    `:months_in_ordinary_year`. Calendars with a leap month (such as the
+    Hebrew calendar) should set this to one more than
+    `:months_in_ordinary_year`.
+
+  ## Generated functions
+
+  After `use Calendrical.Behaviour, ...`, the following functions are
+  available in the calling module and may be overridden:
+
+  * Identity / configuration: `epoch/0`, `epoch_day_of_week/0`,
+    `first_day_of_week/0`, `last_day_of_week/0`, `cldr_calendar_type/0`,
+    `calendar_base/0`, `days_in_week/0`, `months_in_ordinary_year/0`,
+    `months_in_leap_year/0`.
+
+  * Validity: `valid_date?/3`, `valid_time?/4`.
+
+  * Year/era: `year_of_era/1`, `year_of_era/3`, `calendar_year/3`,
+    `extended_year/3`, `related_gregorian_year/3`, `cyclic_year/3`,
+    `day_of_era/3`.
+
+  * Periods: `quarter_of_year/3`, `month_of_year/3`, `week_of_year/3`,
+    `iso_week_of_year/3`, `week_of_month/3`, `day_of_year/3`,
+    `day_of_week/4`.
+
+  * Counts: `months_in_year/1`, `weeks_in_year/1`, `days_in_year/1`,
+    `days_in_month/1`, `days_in_month/2`, `periods_in_year/1`.
+
+  * Ranges: `year/1`, `quarter/2`, `month/2`, `week/2`.
+
+  * Arithmetic: `plus/5`, `plus/6`, `shift_date/4`, `shift_time/5`,
+    `shift_naive_datetime/8`.
+
+  * Conversion: `naive_datetime_to_iso_days/7`,
+    `naive_datetime_from_iso_days/1`,
+    `iso_days_to_beginning_of_day/1`, `iso_days_to_end_of_day/1`.
+
+  * Parsing/formatting: `parse_date/1`, `parse_time/1`,
+    `parse_naive_datetime/1`, `parse_utc_datetime/1`,
+    `date_to_string/3`, `time_to_string/4`, `naive_datetime_to_string/7`,
+    `datetime_to_string/11`, `time_to_day_fraction/4`,
+    `time_from_day_fraction/1`, `day_rollover_relative_to_midnight_utc/0`.
+
+  ## Era support
+
+  When the using module is compiled, an `@after_compile` hook calls
+  `Calendrical.Era.define_era_module/1` which generates a
+  `Calendrical.Era.<CalendarType>` module from CLDR era data and uses it
+  to implement the default `year_of_era/{1, 3}` and `day_of_era/3`
+  functions. Calendars whose era logic does not match the CLDR data can
+  override these callbacks directly.
+
+  """
+
   defmacro __using__(opts \\ []) do
     epoch = Keyword.fetch!(opts, :epoch)
 
@@ -672,6 +798,7 @@ defmodule Calendrical.Behaviour do
       defoverridable naive_datetime_to_iso_days: 7
 
       defoverridable year_of_era: 1
+      defoverridable year_of_era: 3
       defoverridable quarter_of_year: 3
       defoverridable month_of_year: 3
       defoverridable week_of_year: 3
