@@ -26,13 +26,13 @@ defmodule Calendrical.LunarJapanese do
 
       # Alternative epoch starting from the reign of Emperor
       # Huangdi
-      config :ex_cldr_calendars,
+      config :calendrical,
         lunar_japanese_epoch: ~D[0645-07-20]
 
   """
 
   use Calendrical.Behaviour,
-    epoch: Application.compile_env(:ex_cldr_calendars, :lunar_japanese_epoch, ~D[0645-07-20]),
+    epoch: Application.compile_env(:calendrical, :lunar_japanese_epoch, ~D[0645-07-20]),
     cldr_calendar_type: :chinese,
     months_in_normal_year: 12,
     months_in_leap_year: 13

@@ -75,11 +75,6 @@ defmodule Calendrical.Compiler.Week do
       @spec year_of_era(Calendrical.year()) ::
               {year :: Calendar.year(), era :: Calendrical.era()}
 
-      unless Code.ensure_loaded?(Calendar.ISO) &&
-               function_exported?(Calendar.ISO, :year_of_era, 3) do
-        @impl true
-      end
-
       def year_of_era(year) do
         Week.year_of_era(year, __config__())
       end
@@ -520,75 +515,73 @@ defmodule Calendrical.Compiler.Week do
         Week.long_year?(year, __config__())
       end
 
-      if Code.ensure_loaded?(Calendar.ISO) && function_exported?(Calendar.ISO, :shift_date, 4) do
-        @doc """
-        Shifts a date by given duration.
+      @doc """
+      Shifts a date by given duration.
 
-        """
-        @spec shift_date(Calendar.year(), Calendar.month(), Calendar.day(), Duration.t()) ::
-                {Calendar.year(), Calendar.month(), Calendar.day()}
+      """
+      @spec shift_date(Calendar.year(), Calendar.month(), Calendar.day(), Duration.t()) ::
+              {Calendar.year(), Calendar.month(), Calendar.day()}
 
-        @impl Calendar
-        def shift_date(year, month, day, duration) do
-          Calendrical.shift_date(year, month, day, __MODULE__, duration)
-        end
+      @impl Calendar
+      def shift_date(year, month, day, duration) do
+        Calendrical.shift_date(year, month, day, __MODULE__, duration)
+      end
 
-        @doc """
-        Shifts a time by given duration.
+      @doc """
+      Shifts a time by given duration.
 
-        """
-        @spec shift_time(
-                Calendar.hour(),
-                Calendar.minute(),
-                Calendar.second(),
-                Calendar.microsecond(),
-                Duration.t()
-              ) ::
-                {Calendar.hour(), Calendar.minute(), Calendar.second(), Calendar.microsecond()}
+      """
+      @spec shift_time(
+              Calendar.hour(),
+              Calendar.minute(),
+              Calendar.second(),
+              Calendar.microsecond(),
+              Duration.t()
+            ) ::
+              {Calendar.hour(), Calendar.minute(), Calendar.second(), Calendar.microsecond()}
 
-        @impl Calendar
-        def shift_time(hour, minute, second, microsecond, duration) do
-          Calendar.ISO.shift_time(hour, minute, second, microsecond, duration)
-        end
+      @impl Calendar
+      def shift_time(hour, minute, second, microsecond, duration) do
+        Calendar.ISO.shift_time(hour, minute, second, microsecond, duration)
+      end
 
-        @doc """
-        Shifts a naive date time by given duration.
+      @doc """
+      Shifts a naive date time by given duration.
 
-        """
-        @spec shift_naive_datetime(
+      """
+      @spec shift_naive_datetime(
+              Calendar.year(),
+              Calendar.month(),
+              Calendar.day(),
+              Calendar.hour(),
+              Calendar.minute(),
+              Calendar.second(),
+              Calendar.microsecond(),
+              Duration.t()
+            ) ::
+              {
                 Calendar.year(),
                 Calendar.month(),
                 Calendar.day(),
                 Calendar.hour(),
                 Calendar.minute(),
                 Calendar.second(),
-                Calendar.microsecond(),
-                Duration.t()
-              ) ::
-                {
-                  Calendar.year(),
-                  Calendar.month(),
-                  Calendar.day(),
-                  Calendar.hour(),
-                  Calendar.minute(),
-                  Calendar.second(),
-                  Calendar.microsecond()
-                }
+                Calendar.microsecond()
+              }
 
-        @impl Calendar
-        def shift_naive_datetime(year, month, day, hour, minute, second, microsecond, duration) do
-          Calendrical.shift_naive_datetime(
-            year,
-            month,
-            day,
-            hour,
-            minute,
-            second,
-            microsecond,
-            __MODULE__,
-            duration
-          )
-        end
+      @impl Calendar
+      def shift_naive_datetime(year, month, day, hour, minute, second, microsecond, duration) do
+        Calendrical.shift_naive_datetime(
+          year,
+          month,
+          day,
+          hour,
+          minute,
+          second,
+          microsecond,
+          __MODULE__,
+          duration
+        )
       end
 
       @doc """
@@ -741,14 +734,11 @@ defmodule Calendrical.Compiler.Week do
       @doc false
       defdelegate parse_time(string), to: Calendar.ISO
 
-      if Code.ensure_loaded?(Calendar.ISO) &&
-           function_exported?(Calendar.ISO, :iso_days_to_beginning_of_day, 1) do
-        @doc false
-        defdelegate iso_days_to_beginning_of_day(iso_days), to: Calendar.ISO
+      @doc false
+      defdelegate iso_days_to_beginning_of_day(iso_days), to: Calendar.ISO
 
-        @doc false
-        defdelegate iso_days_to_end_of_day(iso_days), to: Calendar.ISO
-      end
+      @doc false
+      defdelegate iso_days_to_end_of_day(iso_days), to: Calendar.ISO
 
       @doc false
       defdelegate day_rollover_relative_to_midnight_utc, to: Calendar.ISO

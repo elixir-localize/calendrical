@@ -17,12 +17,12 @@ defmodule Calendrical.Korean do
   be changed by setting the `:korean_epoch` configuration
   key in `config.exs`:
 
-      config :ex_cldr_calendars,
+      config :calendrical,
         korean_epoch: ~D[-2332-02-15]
 
   """
   use Calendrical.Behaviour,
-    epoch: Application.compile_env(:ex_cldr_calendars, :korean_epoch, ~D[-2332-02-15]),
+    epoch: Application.compile_env(:calendrical, :korean_epoch, ~D[-2332-02-15]),
     cldr_calendar_type: :dangi,
     months_in_normal_year: 12,
     months_in_leap_year: 13

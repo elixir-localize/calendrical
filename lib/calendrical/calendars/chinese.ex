@@ -18,13 +18,13 @@ defmodule Calendrical.Chinese do
 
       # Alternative epoch starting from the reign of Emperor
       # Huangdi
-      config :ex_cldr_calendars,
+      config :calendrical,
         chinese_epoch: ~D[-2696-01-01]
 
   """
 
   use Calendrical.Behaviour,
-    epoch: Application.compile_env(:ex_cldr_calendars, :chinese_epoch, ~D[-2636-02-15]),
+    epoch: Application.compile_env(:calendrical, :chinese_epoch, ~D[-2636-02-15]),
     cldr_calendar_type: :chinese,
     months_in_normal_year: 12,
     months_in_leap_year: 13

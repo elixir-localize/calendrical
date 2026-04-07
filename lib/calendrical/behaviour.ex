@@ -108,11 +108,6 @@ defmodule Calendrical.Behaviour do
 
       @spec year_of_era(Calendar.year()) :: {year :: Calendar.year(), era :: Calendar.era()}
 
-      unless Code.ensure_loaded?(Calendar.ISO) &&
-               function_exported?(Calendar.ISO, :year_of_era, 3) do
-        @impl true
-      end
-
       def year_of_era(year) do
         iso_days = date_to_iso_days(year, 1, 1)
         @era_module.year_of_era(iso_days, year)
@@ -284,87 +279,74 @@ defmodule Calendrical.Behaviour do
         this_day - first_day + 1
       end
 
-      if Code.ensure_loaded?(Date) && function_exported?(Date, :day_of_week, 2) do
-        @impl true
+      @impl true
 
-        @spec day_of_week(Calendar.year(), Calendar.month(), Calendar.day(), :default | atom()) ::
-                {Calendar.day_of_week(), first_day_of_week :: non_neg_integer(),
-                 last_day_of_week :: non_neg_integer()}
+      @spec day_of_week(Calendar.year(), Calendar.month(), Calendar.day(), :default | atom()) ::
+              {Calendar.day_of_week(), first_day_of_week :: non_neg_integer(),
+               last_day_of_week :: non_neg_integer()}
 
-        if @first_day_of_week == :first do
-          def day_of_week(year, month, day, :default = starting_on) do
-            iso_days = date_to_iso_days(year, month, day)
-            first_day_of_year = date_to_iso_days(year, 1, 1)
-            day_of_week = Integer.mod(iso_days - first_day_of_year, 7) + 1
-            {day_of_week, 1, 7}
-          end
-        else
-          def day_of_week(year, month, day, starting_on) do
-            iso_days = date_to_iso_days(year, month, day)
-
-            day_of_week =
-              Integer.mod(iso_days + day_of_week_offset(starting_on, @first_day_of_week), 7) + 1
-
-            {day_of_week, 1, 7}
-          end
+      if @first_day_of_week == :first do
+        def day_of_week(year, month, day, :default = starting_on) do
+          iso_days = date_to_iso_days(year, month, day)
+          first_day_of_year = date_to_iso_days(year, 1, 1)
+          day_of_week = Integer.mod(iso_days - first_day_of_year, 7) + 1
+          {day_of_week, 1, 7}
         end
-
-        # The offset here is based upon the epoch being
-        # 0000-01-01 which is a saturday=6. Therefore the offset
-        # is what we add to the iso_days to get to 6.
-
-        @doc false
-        def day_of_week_offset(:default, first_day_of_week), do: 6 - first_day_of_week
-        def day_of_week_offset(:monday, _first_day_of_week), do: 5
-        def day_of_week_offset(:tuesday, _first_day_of_week), do: 4
-        def day_of_week_offset(:wednesday, _first_day_of_week), do: 3
-        def day_of_week_offset(:thursday, _first_day_of_week), do: 2
-        def day_of_week_offset(:friday, _first_day_of_week), do: 1
-        def day_of_week_offset(:saturday, _first_day_of_week), do: 0
-        def day_of_week_offset(:sunday, _first_day_of_week), do: 6
-
-        def day_of_week_offset(starting_on, _first_day_of_week) do
-          raise ArgumentError,
-                "starting_on #{inspect(starting_on)} is not supported for #{inspect(__MODULE__)}"
-        end
-
-        defoverridable day_of_week: 4
       else
-        @impl true
+        def day_of_week(year, month, day, starting_on) do
+          iso_days = date_to_iso_days(year, month, day)
 
-        @spec day_of_week(Calendar.year(), Calendar.month(), Calendar.day()) :: 1..7
-        def day_of_week(year, month, day) do
-          day_of_week(year, month, day, :default)
+          day_of_week =
+            Integer.mod(iso_days + day_of_week_offset(starting_on, @first_day_of_week), 7) + 1
+
+          {day_of_week, 1, 7}
         end
-
-        defoverridable day_of_week: 3
       end
 
-      if Code.ensure_loaded?(Calendar.ISO) && function_exported?(Calendar.ISO, :shift_date, 4) do
-        @impl true
-        def shift_date(year, month, day, duration) do
-          Calendrical.shift_date(year, month, day, __MODULE__, duration)
-        end
+      # The offset here is based upon the epoch being
+      # 0000-01-01 which is a saturday=6. Therefore the offset
+      # is what we add to the iso_days to get to 6.
 
-        @impl true
-        def shift_time(hour, minute, second, microsecond, duration) do
-          Calendar.ISO.shift_time(hour, minute, second, microsecond, duration)
-        end
+      @doc false
+      def day_of_week_offset(:default, first_day_of_week), do: 6 - first_day_of_week
+      def day_of_week_offset(:monday, _first_day_of_week), do: 5
+      def day_of_week_offset(:tuesday, _first_day_of_week), do: 4
+      def day_of_week_offset(:wednesday, _first_day_of_week), do: 3
+      def day_of_week_offset(:thursday, _first_day_of_week), do: 2
+      def day_of_week_offset(:friday, _first_day_of_week), do: 1
+      def day_of_week_offset(:saturday, _first_day_of_week), do: 0
+      def day_of_week_offset(:sunday, _first_day_of_week), do: 6
 
-        @impl true
-        def shift_naive_datetime(year, month, day, hour, minute, second, microsecond, duration) do
-          Calendrical.shift_naive_datetime(
-            year,
-            month,
-            day,
-            hour,
-            minute,
-            second,
-            microsecond,
-            __MODULE__,
-            duration
-          )
-        end
+      def day_of_week_offset(starting_on, _first_day_of_week) do
+        raise ArgumentError,
+              "starting_on #{inspect(starting_on)} is not supported for #{inspect(__MODULE__)}"
+      end
+
+      defoverridable day_of_week: 4
+
+      @impl true
+      def shift_date(year, month, day, duration) do
+        Calendrical.shift_date(year, month, day, __MODULE__, duration)
+      end
+
+      @impl true
+      def shift_time(hour, minute, second, microsecond, duration) do
+        Calendar.ISO.shift_time(hour, minute, second, microsecond, duration)
+      end
+
+      @impl true
+      def shift_naive_datetime(year, month, day, hour, minute, second, microsecond, duration) do
+        Calendrical.shift_naive_datetime(
+          year,
+          month,
+          day,
+          hour,
+          minute,
+          second,
+          microsecond,
+          __MODULE__,
+          duration
+        )
       end
 
       @doc """
@@ -667,16 +649,13 @@ defmodule Calendrical.Behaviour do
       @impl Calendar
       defdelegate valid_time?(hour, minute, second, microsecond), to: Calendar.ISO
 
-      if Code.ensure_loaded?(Calendar.ISO) &&
-           function_exported?(Calendar.ISO, :iso_days_to_beginning_of_day, 1) do
-        @doc false
-        @impl true
-        defdelegate iso_days_to_beginning_of_day(iso_days), to: Calendar.ISO
+      @doc false
+      @impl true
+      defdelegate iso_days_to_beginning_of_day(iso_days), to: Calendar.ISO
 
-        @doc false
-        @impl true
-        defdelegate iso_days_to_end_of_day(iso_days), to: Calendar.ISO
-      end
+      @doc false
+      @impl true
+      defdelegate iso_days_to_end_of_day(iso_days), to: Calendar.ISO
 
       defoverridable valid_date?: 3
       defoverridable valid_time?: 4

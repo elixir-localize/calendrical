@@ -204,30 +204,19 @@ defmodule Calendrical.Ethiopic do
   """
   @epoch_day_of_week 6
 
-  if Code.ensure_loaded?(Date) && function_exported?(Date, :day_of_week, 2) do
-    @last_day_of_week 5
+  @last_day_of_week 5
 
-    @spec day_of_week(year, month, day, :default | atom()) ::
-            {Calendar.day_of_week(), first_day_of_week :: non_neg_integer(),
-             last_day_of_week :: non_neg_integer()}
+  @spec day_of_week(year, month, day, :default | atom()) ::
+          {Calendar.day_of_week(), first_day_of_week :: non_neg_integer(),
+           last_day_of_week :: non_neg_integer()}
 
-    @impl true
-    def day_of_week(year, month, day, :default) do
-      days = date_to_iso_days(year, month, day)
-      days_after_saturday = rem(days, 7)
-      day = Localize.Utils.Math.amod(days_after_saturday + @epoch_day_of_week, @days_in_week)
+  @impl true
+  def day_of_week(year, month, day, :default) do
+    days = date_to_iso_days(year, month, day)
+    days_after_saturday = rem(days, 7)
+    day = Localize.Utils.Math.amod(days_after_saturday + @epoch_day_of_week, @days_in_week)
 
-      {day, @epoch_day_of_week, @last_day_of_week}
-    end
-  else
-    @spec day_of_week(year, month, day) :: 1..7
-
-    @impl true
-    def day_of_week(year, month, day) do
-      days = date_to_iso_days(year, month, day)
-      days_after_saturday = rem(days, 7)
-      Localize.Utils.Math.amod(days_after_saturday + @epoch_day_of_week, @days_in_week)
-    end
+    {day, @epoch_day_of_week, @last_day_of_week}
   end
 
   @doc """
@@ -478,11 +467,9 @@ defmodule Calendrical.Ethiopic do
     Calendrical.Parse.parse_naive_datetime(string, __MODULE__)
   end
 
-  if Version.match?(System.version(), ">= 1.10.0-dev") do
-    @doc false
-    @impl Calendar
-    defdelegate parse_time(string), to: Calendar.ISO
-  end
+  @doc false
+  @impl Calendar
+  defdelegate parse_time(string), to: Calendar.ISO
 
   @doc false
   @impl Calendar
@@ -500,16 +487,13 @@ defmodule Calendrical.Ethiopic do
   @impl Calendar
   defdelegate date_to_string(year, month, day), to: Calendar.ISO
 
-  if Code.ensure_loaded?(Calendar.ISO) &&
-       function_exported?(Calendar.ISO, :iso_days_to_beginning_of_day, 1) do
-    @doc false
-    @impl Calendar
-    defdelegate iso_days_to_beginning_of_day(iso_days), to: Calendar.ISO
+  @doc false
+  @impl Calendar
+  defdelegate iso_days_to_beginning_of_day(iso_days), to: Calendar.ISO
 
-    @doc false
-    @impl Calendar
-    defdelegate iso_days_to_end_of_day(iso_days), to: Calendar.ISO
-  end
+  @doc false
+  @impl Calendar
+  defdelegate iso_days_to_end_of_day(iso_days), to: Calendar.ISO
 
   @doc false
   @impl Calendar
@@ -549,31 +533,29 @@ defmodule Calendrical.Ethiopic do
   @impl Calendar
   defdelegate valid_time?(hour, minute, second, microsecond), to: Calendar.ISO
 
-  if function_exported?(Calendar.ISO, :shift_date, 4) do
-    @doc false
-    @impl Calendar
-    def shift_date(year, month, day, duration) do
-      Calendrical.shift_date(year, month, day, __MODULE__, duration)
-    end
+  @doc false
+  @impl Calendar
+  def shift_date(year, month, day, duration) do
+    Calendrical.shift_date(year, month, day, __MODULE__, duration)
+  end
 
-    @doc false
-    @impl Calendar
-    defdelegate shift_time(hour, minute, second, microsecond, duration), to: Calendar.ISO
+  @doc false
+  @impl Calendar
+  defdelegate shift_time(hour, minute, second, microsecond, duration), to: Calendar.ISO
 
-    @doc false
-    @impl Calendar
-    def shift_naive_datetime(year, month, day, hour, minute, second, microsecond, duration) do
-      Calendrical.shift_naive_datetime(
-        year,
-        month,
-        day,
-        hour,
-        minute,
-        second,
-        microsecond,
-        __MODULE__,
-        duration
-      )
-    end
+  @doc false
+  @impl Calendar
+  def shift_naive_datetime(year, month, day, hour, minute, second, microsecond, duration) do
+    Calendrical.shift_naive_datetime(
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      second,
+      microsecond,
+      __MODULE__,
+      duration
+    )
   end
 end
