@@ -43,7 +43,7 @@ defmodule Calendrical.MixProject do
   defp deps do
     [
       {:localize, path: "../localize"},
-      {:astro, "~> 1.0"},
+      {:astro, path: "../astro"},
       {:gettext, "~> 1.0"},
       {:calendar_interval, "~> 0.2", optional: true},
       {:ex_doc, "~> 0.21", optional: true, runtime: false},

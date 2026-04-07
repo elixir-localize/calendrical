@@ -113,7 +113,10 @@ defmodule Calendrical.PaschalFullMoonTest do
         previous_search_from = Date.add(pfm, -1)
 
         {:ok, previous_full_moon} =
-          Astro.date_time_lunar_phase_at_or_before(previous_search_from, Astro.Lunar.full_moon())
+          Astro.date_time_lunar_phase_at_or_before(
+            previous_search_from,
+            Astro.Lunar.full_moon_phase()
+          )
 
         assert DateTime.compare(previous_full_moon, equinox) == :lt,
                "Year #{year}: previous full moon #{previous_full_moon} is not before equinox #{equinox}"

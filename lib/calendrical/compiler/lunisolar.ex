@@ -620,7 +620,7 @@ defmodule Calendrical.Lunisolar do
   def solar_longitude_on_or_after(lambda, iso_days, location_fun) do
     {_lat, _lng, _alt, offset} = location_fun.(iso_days)
     d = Time.universal_from_standard(iso_days, offset)
-    t = Solar.solar_longitude_after(lambda, d)
+    t = Solar.solar_ecliptic_longitude_after(lambda, d)
 
     Time.standard_from_universal(t, location_fun.(t))
   end
@@ -633,7 +633,7 @@ defmodule Calendrical.Lunisolar do
   def current_major_solar_term(iso_days, location_fun) do
     {_lat, _lng, _alt, offset} = location_fun.(iso_days)
     d = Time.universal_from_standard(iso_days, offset)
-    s = Solar.solar_longitude(d)
+    s = Solar.solar_ecliptic_longitude(d)
     amod(2 + floor(trunc(s) / deg(30)), 12)
   end
 
@@ -645,7 +645,7 @@ defmodule Calendrical.Lunisolar do
 
   """
   def major_solar_term_on_or_after(iso_days, location_fun) do
-    s = Solar.solar_longitude(midnight_in_location(iso_days, location_fun))
+    s = Solar.solar_ecliptic_longitude(midnight_in_location(iso_days, location_fun))
     l = mod(30 * ceil(s / 30), 360)
     solar_longitude_on_or_after(l, iso_days, location_fun)
   end
@@ -656,7 +656,7 @@ defmodule Calendrical.Lunisolar do
   def current_minor_solar_term(iso_days, location_fun) do
     {_lat, _lng, _alt, offset} = location_fun.(iso_days)
     d = Time.universal_from_standard(iso_days, offset)
-    s = Solar.solar_longitude(d)
+    s = Solar.solar_ecliptic_longitude(d)
     amod(3 + floor(s - deg(15) / deg(30)), 12)
   end
 
@@ -667,7 +667,7 @@ defmodule Calendrical.Lunisolar do
 
   """
   def minor_solar_term_on_or_after(iso_days, location_fun) do
-    s = Solar.solar_longitude(midnight_in_location(iso_days, location_fun))
+    s = Solar.solar_ecliptic_longitude(midnight_in_location(iso_days, location_fun))
     l = mod(30 * ceil((s - deg(15)) / 30) + deg(15), 360)
 
     solar_longitude_on_or_after(l, iso_days, location_fun)
@@ -734,14 +734,14 @@ defmodule Calendrical.Lunisolar do
   """
   def december_solstice_on_or_before(iso_days, location_fun) do
     approx =
-      Solar.estimate_prior_solar_longitude(
+      Solar.estimate_prior_solar_ecliptic_longitude(
         @winter,
         midnight_in_location(iso_days + 1, location_fun)
       )
 
     next(
       floor(approx) - 1,
-      &(@winter < Solar.solar_longitude(midnight_in_location(1 + &1, location_fun)))
+      &(@winter < Solar.solar_ecliptic_longitude(midnight_in_location(1 + &1, location_fun)))
     )
   end
 

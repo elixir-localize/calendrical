@@ -502,7 +502,7 @@ defmodule Calendrical do
       when is_integer(gregorian_year) and gregorian_year in 1000..3000 do
     with {:ok, equinox} <- Astro.equinox(gregorian_year, :march),
          {:ok, full_moon} <-
-           Astro.date_time_lunar_phase_at_or_after(equinox, Astro.Lunar.full_moon()) do
+           Astro.date_time_lunar_phase_at_or_after(equinox, Astro.Lunar.full_moon_phase()) do
       {:ok, DateTime.to_date(full_moon)}
     end
   end
