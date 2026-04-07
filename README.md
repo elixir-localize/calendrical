@@ -28,7 +28,7 @@ Calendrical extends Elixir's standard `Calendar` and `Date` modules with compreh
 
 * **Sigils** — `~d` literals for any registered calendar (`~d[2024-09-01 Calendrical.Hebrew]`, `~d[1446-09-01 Calendrical.Islamic.UmmAlQura]`).
 
-* **Paschal Full Moon** — `Calendrical.paschal_full_moon/1` computes the astronomical Paschal Full Moon used to calculate Easter.
+* **Ecclesiastical calendars** — `Calendrical.Ecclesiastical` provides Reingold-style algorithms for the movable and fixed Christian feasts of three different traditions: **Western** (`easter_sunday/1`, `good_friday/1`, `pentecost/1`, `advent/1`, `christmas/1`, `epiphany/1`), **Eastern Orthodox** (`orthodox_easter_sunday/1`, `orthodox_good_friday/1`, `orthodox_pentecost/1`, `orthodox_advent/1`, `eastern_orthodox_christmas/1`), and **astronomical** (`astronomical_easter_sunday/1`, `astronomical_good_friday/1`, `paschal_full_moon/1` — the WCC 1997 proposed reckoning).
 
 ## Supported Elixir and OTP versions
 
@@ -80,8 +80,16 @@ iex> # Find the second Tuesday in November 2024
 iex> Calendrical.Kday.nth_kday(~D[2024-11-01], 2, :tuesday)
 ~D[2024-11-12]
 
-iex> # Compute Easter Sunday for 2025 from the astronomical Paschal Full Moon
-iex> {:ok, pfm} = Calendrical.paschal_full_moon(2025)
+iex> # Western Easter Sunday for 2024 (Gregorian computus)
+iex> Calendrical.Ecclesiastical.easter_sunday(2024)
+~D[2024-03-31 Calendrical.Gregorian]
+
+iex> # Eastern Orthodox Easter Sunday for 2024 (Julian computus)
+iex> Calendrical.Ecclesiastical.orthodox_easter_sunday(2024)
+~D[2024-04-22 Calendrical.Julian]
+
+iex> # Astronomical Paschal Full Moon for 2025
+iex> {:ok, pfm} = Calendrical.Ecclesiastical.paschal_full_moon(2025)
 iex> pfm
 ~D[2025-04-13]
 ```

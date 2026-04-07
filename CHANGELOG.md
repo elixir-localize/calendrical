@@ -70,7 +70,17 @@ This is the first release of Calendrical, which consolidates the `ex_cldr_calend
 
 * `Calendrical.Preference` — `calendar_from_locale/1` and `calendar_from_territory/1` return the preferred calendar for a CLDR locale or ISO 3166 territory.
 
-* `Calendrical.paschal_full_moon/1` — returns the date of the astronomical Paschal Full Moon for a given Gregorian year, used as the basis for computing Easter Sunday. Uses `Astro.equinox/2` and `Astro.date_time_lunar_phase_at_or_after/2`.
+* `Calendrical.Ecclesiastical` — Reingold-style algorithms for the dates of Christian liturgical events in a given Gregorian year, organized into three traditions:
+
+  * **Western** (Roman Catholic / Anglican / most Protestants, Gregorian *computus*, results returned as `Calendrical.Gregorian` dates): `easter_sunday/1`, `good_friday/1` (two days before), `pentecost/1` (49 days after), `advent/1` (the Sunday closest to 30 November), `christmas/1` (25 December), `epiphany/1` (first Sunday after 1 January, US observance).
+
+  * **Eastern Orthodox** (Julian *computus*, results returned as `Calendrical.Julian` dates so the calendar context is visible): `orthodox_easter_sunday/1`, `orthodox_good_friday/1` (two days before), `orthodox_pentecost/1` (49 days after), `orthodox_advent/1` (the start of the *Nativity Fast* on 15 November Julian — Eastern Orthodoxy has no movable "Advent Sunday" equivalent), `eastern_orthodox_christmas/1` (25 December Julian, projected onto the Gregorian calendar).
+
+  * **Astronomical** (the World Council of Churches' 1997 Aleppo proposal for unifying Western and Eastern Easter; not currently used by any Church, included for comparison; year range restricted to 1000..3000): `astronomical_easter_sunday/1` (first Sunday strictly after the astronomical Paschal Full Moon), `astronomical_good_friday/1` (two days before), `paschal_full_moon/1` (the astronomical PFM itself, computed via `Astro.equinox/2` and `Astro.date_time_lunar_phase_at_or_after/2`).
+
+  Plus `coptic_christmas/1` (29 Koiak Coptic) which doesn't fit cleanly into any of the three traditions.
+
+  The module's moduledoc includes a comparison table showing the three Easter computations side-by-side.
 
 * Eleven exception modules in `lib/calendrical/exception/`, one per file, modeled after the Localize convention. Each has semantic struct fields, an `exception/1` constructor that takes a keyword list, and a `message/1` callback that uses `Gettext.dpgettext/5` for translation:
 
@@ -110,6 +120,8 @@ This is the first release of Calendrical, which consolidates the `ex_cldr_calend
 * The `plus/minus` callbacks have been removed from the `Calendrical` behaviour. Calendar arithmetic is now driven exclusively by `Date.shift/2` / `NaiveDateTime.shift/2`, which delegate to the calendar's `shift_date/4`, `shift_time/5`, and `shift_naive_datetime/8` callbacks.
 
 * All conditional code that supported Elixir versions older than 1.17 has been removed. Calendrical now requires **Elixir 1.17+** and **Erlang/OTP 26+**, matching Localize. Removed 24 obsolete `Code.ensure_loaded?` / `function_exported?` / `Version.match?` guards across 7 files.
+
+* `Calendrical.paschal_full_moon/1` has moved to `Calendrical.Ecclesiastical.paschal_full_moon/1`. The new home is alongside the rest of the Christian-calendar functions.
 
 ### Removed
 

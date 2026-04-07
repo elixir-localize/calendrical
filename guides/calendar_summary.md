@@ -207,3 +207,93 @@ iex> Date.shift(day_before, day: 1)
 The 11 "missing" days (3 September 1752 through 13 September 1752) are not valid dates in the English composite calendar — `Calendrical.England.valid_date?(1752, 9, 5)` returns `false`.
 
 See [`calendar_behaviour.md`](calendar_behaviour.md) for the syntax of `use Calendrical.Composite`.
+
+---
+
+## Ecclesiastical calendars
+
+The `Calendrical.Ecclesiastical` module is not a calendar in the `Calendar` behaviour sense — it does not implement `date_to_iso_days/3` or `valid_date?/3` and is not registered as a CLDR calendar type. Instead, it provides functions that, given a Gregorian year, return the dates of the principal Christian liturgical events for that year. The algorithms are taken from Dershowitz & Reingold, *Calendrical Calculations* (4th ed.), Chapter 9 ("Ecclesiastical Calendars").
+
+### Three Easter traditions
+
+Calendrical exposes three different *Easter* computations because they really are three distinct calculations. The differences are small in most years (and the three frequently coincide) but the underlying definitions and target audiences are different.
+
+| Function | Method | Calendar | Used by |
+|---|---|---|---|
+| `easter_sunday/1` | Gregorian *computus* (tabular) | `Calendrical.Gregorian` | Roman Catholic, Anglican, most Protestants |
+| `astronomical_easter_sunday/1` | **Astronomical** Paschal Full Moon + first Sunday after | `Calendar.ISO` (UTC) | "Astronomical Easter" — proposed by the World Council of Churches in 1997, no Church follows it |
+| `orthodox_easter_sunday/1` | Julian *computus* (tabular) | `Calendrical.Julian` | Eastern Orthodox |
+
+Western Easter and Orthodox Easter coincide in years like **2025**; they can differ by one, four, or five weeks in other years because the Western (Gregorian) and Eastern (Julian) computus use different lookup tables and different leap-year rules. The astronomical reckoning agrees with the Western Gregorian computus for most years in the 21st century but is not actually used by any Church — it is included for comparison and research.
+
+### Movable feasts (Western)
+
+Western (Roman Catholic, Anglican, most Protestants). All return `Calendrical.Gregorian` dates.
+
+| Function | Returns | Notes |
+|---|---|---|
+| `easter_sunday/1` | Western Easter Sunday | Gregorian *computus*. |
+| `good_friday/1` | Western Good Friday | Two days before `easter_sunday/1`. |
+| `pentecost/1` | Western Pentecost Sunday (Whitsunday) | 49 days after `easter_sunday/1`. |
+| `advent/1` | Western Advent Sunday | The Sunday closest to 30 November. |
+
+### Movable feasts (Eastern Orthodox)
+
+All return `Calendrical.Julian` dates so the calendar context is visible in the result.
+
+| Function | Returns | Notes |
+|---|---|---|
+| `orthodox_easter_sunday/1` | Orthodox Easter Sunday | Julian *computus*. |
+| `orthodox_good_friday/1` | Orthodox Good Friday | Two days before `orthodox_easter_sunday/1`. |
+| `orthodox_pentecost/1` | Orthodox Pentecost Sunday | 49 days after `orthodox_easter_sunday/1`. |
+| `orthodox_advent/1` | Start of the Eastern Orthodox *Nativity Fast* | **Fixed** at 15 November (Julian) — a 40-day Lenten preparation. The Orthodox tradition does not have a movable "Advent Sunday" equivalent. |
+
+### Movable feasts (astronomical, WCC 1997)
+
+The World Council of Churches' 1997 Aleppo proposal for unifying Western and Eastern Easter. **No Church currently follows it.** All return `Calendar.ISO` dates and are restricted to year range 1000..3000.
+
+| Function | Returns | Notes |
+|---|---|---|
+| `astronomical_easter_sunday/1` | `{:ok, Date}` for Astronomical Easter | First Sunday strictly after the astronomical Paschal Full Moon. |
+| `astronomical_good_friday/1` | `{:ok, Date}` for Astronomical Good Friday | Two days before `astronomical_easter_sunday/1`. |
+| `paschal_full_moon/1` | `{:ok, Date}` for the astronomical Paschal Full Moon | The first astronomical full moon on or after the March vernal equinox, computed via `Astro.equinox/2` and `Astro.date_time_lunar_phase_at_or_after/2`. May differ by a day from the *ecclesiastical* PFM used by the Western or Eastern computus. |
+
+### Fixed feasts
+
+| Function | Returns | Notes |
+|---|---|---|
+| `christmas/1` | The Gregorian date of Western Christmas Day | Always 25 December. |
+| `epiphany/1` | The Gregorian date of Epiphany (US observance) | The first Sunday after 1 January. The traditional fixed-date Epiphany on 6 January is more widely observed elsewhere. |
+| `eastern_orthodox_christmas/1` | A list of zero, one, or two Gregorian dates | 25 December Julian projected onto the proleptic Gregorian calendar. May fall in either January or December of the requested Gregorian year. |
+| `coptic_christmas/1` | A list of zero, one, or two Gregorian dates | 29 Koiak in the Coptic calendar projected onto the proleptic Gregorian calendar. |
+
+**Worked example.**
+
+```elixir
+iex> Calendrical.Ecclesiastical.easter_sunday(2024)
+~D[2024-03-31 Calendrical.Gregorian]
+
+iex> Calendrical.Ecclesiastical.orthodox_easter_sunday(2024)
+~D[2024-04-22 Calendrical.Julian]
+
+# Project onto Gregorian: Orthodox Easter 2024 = May 5 Gregorian
+iex> {:ok, gregorian} =
+...>   Date.convert(
+...>     Calendrical.Ecclesiastical.orthodox_easter_sunday(2024),
+...>     Calendrical.Gregorian
+...>   )
+iex> gregorian
+~D[2024-05-05 Calendrical.Gregorian]
+
+iex> Calendrical.Ecclesiastical.pentecost(2025)
+~D[2025-06-08 Calendrical.Gregorian]
+
+iex> Calendrical.Ecclesiastical.orthodox_pentecost(2025)
+~D[2025-05-26 Calendrical.Julian]
+
+iex> Calendrical.Ecclesiastical.advent(2025)
+~D[2025-11-30 Calendrical.Gregorian]
+
+iex> Calendrical.Ecclesiastical.orthodox_advent(2025)
+~D[2025-11-15 Calendrical.Julian]
+```

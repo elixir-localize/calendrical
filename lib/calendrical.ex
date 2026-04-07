@@ -467,53 +467,6 @@ defmodule Calendrical do
   end
 
   @doc """
-  Returns the date of the astronomical Paschal Full Moon for a given Gregorian year.
-
-  The Paschal Full Moon is the first astronomical full moon that occurs on or after
-  the March (vernal) equinox. It is the basis for calculating the date of Easter:
-  Easter Sunday is the first Sunday after the Paschal Full Moon.
-
-  Note that this function returns the *astronomical* Paschal Full Moon, which is
-  computed from observed lunar and solar positions. This may occasionally differ
-  by a day or more from the *ecclesiastical* Paschal Full Moon used by the
-  Western (Gregorian) and Eastern (Julian) Christian churches, which is defined
-  by tabular computus rules rather than astronomical observation.
-
-  The returned date is in UTC.
-
-  ### Arguments
-
-  * `gregorian_year` is the Gregorian year for which to compute the Paschal Full
-    Moon. Must be in the range `1000..3000` due to the underlying equinox
-    calculation precision.
-
-  ### Returns
-
-  * `{:ok, date}` where `date` is the `t:Date.t/0` of the Paschal Full Moon in UTC, or
-
-  * `{:error, {module, reason}}` if the calculation cannot be performed.
-
-  ### Examples
-
-      iex> Calendrical.paschal_full_moon(2024)
-      {:ok, ~D[2024-03-25]}
-
-      iex> Calendrical.paschal_full_moon(2025)
-      {:ok, ~D[2025-04-13]}
-
-  """
-  @spec paschal_full_moon(Calendar.year()) ::
-          {:ok, Date.t()} | {:error, Exception.t()}
-  def paschal_full_moon(gregorian_year)
-      when is_integer(gregorian_year) and gregorian_year in 1000..3000 do
-    with {:ok, equinox} <- Astro.equinox(gregorian_year, :march),
-         {:ok, full_moon} <-
-           Astro.date_time_lunar_phase_at_or_after(equinox, Astro.Lunar.full_moon_phase()) do
-      {:ok, DateTime.to_date(full_moon)}
-    end
-  end
-
-  @doc """
   Returns the calendar module preferred for
   a territory.
 
