@@ -302,6 +302,9 @@ defmodule Calendrical do
               | :chinese
               | :japanese
               | :dangi
+              | :islamic_civil
+              | :islamic_tbla
+              | :islamic_umalqura
 
   @doc """
   Returns the calendar basis.
