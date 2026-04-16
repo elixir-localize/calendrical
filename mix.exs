@@ -36,6 +36,8 @@ defmodule Calendrical.MixProject do
       links: links(),
       files: [
         "lib",
+        "priv",
+        "guides",
         "mix.exs",
         "README*",
         "CHANGELOG*",
@@ -76,18 +78,24 @@ defmodule Calendrical.MixProject do
 
   def groups_for_modules do
     [
-      "Gregorian Month-based Calendars": ~r/^Calendrical\.(Gregorian|ISO|Buddhist|Japanese|Roc)$/,
-      "Gregorian Week-based Calendars": ~r/^Calendrical\.(ISOWeek|NRF|)$/,
-      "Lunisolar Calendars": ~r/^Calendrical\.(Chinese|Korean|LunarJapanese|Hebrew)$/,
+      "Gregorian Month-based Calendars":
+        ~r/^Calendrical\.(Gregorian|Buddhist|Japanese|Roc|Indian)$/,
+      "Gregorian Week-based Calendars": ~r/^Calendrical\.(ISOWeek|NRF)$/,
+      "Julian Calendars": ~r/^Calendrical\.Julian(\.(Jan1|March1|March25|Sept1|Dec25))?$/,
+      "Lunisolar Calendars":
+        ~r/^Calendrical\.(Chinese|Korean|LunarJapanese|Hebrew|Lunisolar)$/,
       "Ethiopic Calendars": ~r/^Calendrical\.Ethiopic(\.AmeteAlem)?$/,
       "Islamic Calendars":
-        ~r/^Calendrical\.Islamic\.(Civil|Tbla|Observational|Rgsa|UmmAlQura.ReferenceData|UmmAlQura(\.Astronomical)?)$/,
-      "Julian Calendars": ~r/^Calendrical\.Julian(\.(Jan1|March1|March25|Sept1|Dec25))?$/,
-      "ISO Calendars": ~r/^Calendrical\.(ISO|k)?$/,
-      "Ecclesiastical Calendars": ~r/Calendrical.Ecclesiastical/,
-      "Other Calendars": ~r/^Calendrical\.(Indian|Persian|Composite|Coptic)$/,
+        ~r/^Calendrical\.Islamic\.(Civil|Tbla|Observational|Rgsa|UmmAlQura(\.Astronomical|\.ReferenceData)?)$/,
+      "Ecclesiastical Calendars": ~r/^Calendrical\.Ecclesiastical$/,
+      "Other Calendars": ~r/^Calendrical\.(Persian|Composite|Coptic)$/,
+      "Fiscal-year Calendars": ~r/^Calendrical\.FiscalYear$/,
       Behaviours: [Calendrical.Behaviour, Calendrical.Formatter],
-      Eras: ~r/^Calendrical.Era/,
+      Formatting: ~r/^Calendrical\.Format$/,
+      Intervals: ~r/^Calendrical\.Interval$/,
+      "K-day Calculations": ~r/^Calendrical\.Kday$/,
+      Preference: ~r/^Calendrical\.Preference$/,
+      Eras: ~r/^Calendrical\.Era$/,
       Exceptions: ~r/^Calendrical\.\w+Error$/
     ]
   end
@@ -117,13 +125,13 @@ defmodule Calendrical.MixProject do
 
   defp deps do
     [
-      {:localize, path: "../localize"},
+      {:localize, "~> 0.14"},
       {:astro, "~> 2.0"},
       {:tz_world, "~> 1.0", optional: true},
       {:tzdata, "~> 1.1", optional: true},
       {:gettext, "~> 1.0"},
       {:calendar_interval, "~> 0.2", optional: true},
-      {:ex_doc, "~> 0.21", optional: true, runtime: false},
+      {:ex_doc, "~> 0.38", optional: true, runtime: false},
       {:dialyxir, "~> 1.0", optional: true, only: [:dev, :test], runtime: false},
       {:stream_data, "~> 1.0", only: :test}
     ]

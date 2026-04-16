@@ -6,13 +6,13 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] — Unreleased
+## [0.1.0] — 2026-04-16
 
 This is the first release of Calendrical, which consolidates the `ex_cldr_calendars` library family into a single package built on `Localize`. Functionality from the following libraries has been merged in: `ex_cldr_calendars`, `ex_cldr_calendars_persian`, `ex_cldr_calendars_coptic`, `ex_cldr_calendars_ethiopic`, `ex_cldr_calendars_japanese`, `ex_cldr_calendars_lunisolar`, `ex_cldr_calendars_islamic`, `ex_cldr_calendars_format`, and `ex_cldr_calendars_composite`.
 
 ### Added
 
-* `Calendrical.Behaviour` — a `defmacro __using__` template that supplies sensible default implementations of every `Calendar` and `Calendrical` callback. Calendars `use` the behaviour, supply an `:epoch` (and any non-default options), define `date_to_iso_days/3` and `date_from_iso_days/1`, and override only the callbacks that differ from the defaults. Every generated function is `defoverridable`. See [`guides/calendar_behaviour.md`](guides/calendar_behaviour.md).
+* `Calendrical.Behaviour` — a `defmacro __using__` template that supplies sensible default implementations of every `Calendar` and `Calendrical` callback. Calendars `use` the behaviour, supply an `:epoch` (and any non-default options), define `date_to_iso_days/3` and `date_from_iso_days/1`, and override only the callbacks that differ from the defaults. Every generated function is `defoverridable`. See [`guides/calendar_behaviour.md`](https://hexdocs.pm/calendrical/calendar_behaviour.html).
 
 * All 17 CLDR-acceptable calendar types are implemented:
 
@@ -54,7 +54,7 @@ This is the first release of Calendrical, which consolidates the `ex_cldr_calend
 
 * `Calendrical.strftime_options!/1` — returns a keyword list compatible with `Calendar.strftime/3` so the standard library's formatter can produce locale-aware output for any Calendrical calendar.
 
-* `Calendrical.shift_date/4` and `Calendrical.shift_naive_datetime/8` — calendar-aware date/datetime shifting that supports the standard `Date.shift/2` and `NaiveDateTime.shift/2` APIs across every Calendrical calendar.
+* `Calendrical.shift_date/5` and `Calendrical.shift_naive_datetime/9` — calendar-aware date/datetime shifting that supports the standard `Date.shift/2` and `NaiveDateTime.shift/2` APIs across every Calendrical calendar.
 
 * `Calendrical.Interval` — `Date.Range` for years, quarters, months, weeks, and days in any supported calendar. The `Calendrical.Interval.relation/2` function implements Allen's interval algebra (precedes, meets, overlaps, contains, …).
 
@@ -63,8 +63,6 @@ This is the first release of Calendrical, which consolidates the `ex_cldr_calend
 * `Calendrical.FiscalYear` — pre-built fiscal calendars for 50+ territories (US, AU, UK, JP, …). The `Calendrical.FiscalYear.calendar_for/1` factory creates a fiscal calendar for any supported ISO 3166 territory code.
 
 * `Calendrical.Format` and `Calendrical.Formatter` — calendar formatting via a behaviour-based plugin system. Includes `Calendrical.Formatter.HTML.Basic`, `Calendrical.Formatter.HTML.Week`, and `Calendrical.Formatter.Markdown` for rendering calendars to HTML and Markdown. Custom formatters can be added by implementing the `Calendrical.Formatter` behaviour.
-
-* `Calendrical.Sigils` — `~d` literals for any registered calendar. Supports the inbuilt calendars (`~d[2024-09-01 Calendrical.Hebrew]`), fiscal calendars (`~d[2024-01-01 Calendrical.FiscalYear.US]`), and user-defined calendars resolvable via `Calendrical.Preference.calendar_module/1`.
 
 * `Calendrical.Parse` — parses ISO-8601 date and datetime strings into the calling calendar via `parse_date/1`, `parse_naive_datetime/1`, and `parse_utc_datetime/1`.
 
@@ -103,7 +101,7 @@ This is the first release of Calendrical, which consolidates the `ex_cldr_calend
 
 ### Changed (vs. `ex_cldr_calendars`)
 
-* All `Cldr.Calendar.*` module names renamed to `Calendrical.*`. The detailed renaming map is in [`guides/migration.md`](guides/migration.md).
+* All `Cldr.Calendar.*` module names renamed to `Calendrical.*`. The detailed renaming map is in [`guides/migration.md`](https://hexdocs.pm/calendrical/migration.html).
 
 * The `:cldr_backend` option and the entire backend-module architecture have been removed. Calendrical reads CLDR data directly from `Localize.Calendar` at runtime; no compile-time backend module is required. Functions that previously took a `:backend` parameter no longer accept one.
 
@@ -113,7 +111,7 @@ This is the first release of Calendrical, which consolidates the `ex_cldr_calend
 
 * `Calendrical.Hebrew` now uses CLDR's Tishri = 1 month numbering instead of Reingold's Nisan = 1 numbering. The previous numbering produced wrong localized month names because CLDR Hebrew data uses Tishri = 1.
 
-* `Calendrical.shift_date/4` and `Calendrical.shift_naive_datetime/8` now apply duration units in the standard order (years → months → weeks → days), matching the Elixir stdlib `Date.shift/2` convention. The old `Cldr.Calendar.plus(date, %Duration{})` applied units in the opposite order.
+* `Calendrical.shift_date/5` and `Calendrical.shift_naive_datetime/9` now apply duration units in the standard order (years → months → weeks → days), matching the Elixir stdlib `Date.shift/2` convention. The old `Cldr.Calendar.plus(date, %Duration{})` applied units in the opposite order.
 
 * `Calendrical.Duration` has been removed. Use Elixir's built-in `%Duration{}` struct (since Elixir 1.17) and `Date.diff/2` instead.
 
@@ -131,8 +129,8 @@ This is the first release of Calendrical, which consolidates the `ex_cldr_calend
 
 * `Calendrical.plus/{4,5,6}`, `Calendrical.minus/{4,5,6}`, the `plus/6` callback in `Calendrical.Behaviour`, and the corresponding `:months` clause in `Calendrical.Base.Month` and `Calendrical.Base.Week`. Use `Date.shift/2` / `NaiveDateTime.shift/2` instead.
 
-* `Calendrical.Sigils` (the `~d` sigil). Elixir's native `~D` sigil has supported a trailing calendar suffix since Elixir 1.10 and works for any module implementing the `Calendar` behaviour. Use `~D[2024-09-01 Calendrical.Hebrew]` instead of `~d[2024-09-01 Hebrew]`. The `Calendrical.Sigils` sigil's other features (default of `Calendrical.Gregorian`, ISO week-date format `yyyy-Wmm-dd`, fiscal calendar shortcuts, B.C.E./C.E. era markers) are minor conveniences that did not justify maintaining a parallel sigil system. See [`guides/migration.md`](guides/migration.md) for one-line equivalents of every removed feature.
+* `Calendrical.Sigils` (the `~d` sigil). Elixir's native `~D` sigil has supported a trailing calendar suffix since Elixir 1.10 and works for any module implementing the `Calendar` behaviour. Use `~D[2024-09-01 Calendrical.Hebrew]` instead of `~d[2024-09-01 Hebrew]`. The `Calendrical.Sigils` sigil's other features (default of `Calendrical.Gregorian`, ISO week-date format `yyyy-Wmm-dd`, fiscal calendar shortcuts, B.C.E./C.E. era markers) are minor conveniences that did not justify maintaining a parallel sigil system. See [`guides/migration.md`](https://hexdocs.pm/calendrical/migration.html) for one-line equivalents of every removed feature.
 
 ### Calendars
 
-This release introduces 17 calendar implementations covering every CLDR-acceptable calendar type. See [`guides/calendar_summary.md`](guides/calendar_summary.md) for the full list grouped by family, with month structures, leap-year rules, and reference dates.
+This release introduces 17 calendar implementations covering every CLDR-acceptable calendar type. See [`guides/calendar_summary.md`](https://hexdocs.pm/calendrical/calendar_summary.html) for the full list grouped by family, with month structures, leap-year rules, and reference dates.

@@ -65,7 +65,7 @@ iex> Calendrical.localize(hebrew, :month, locale: "he", format: :wide)
 iex> # Convert to the Islamic Umm al-Qura calendar
 iex> {:ok, hijri} = Date.convert(gregorian, Calendrical.Islamic.UmmAlQura)
 iex> Calendrical.localize(hijri, :month, locale: "en")
-"Rabiʻ I"
+"Rab. I"
 
 iex> # Buddhist Era (Thailand)
 iex> {:ok, buddhist} = Date.convert(gregorian, Calendrical.Buddhist)
@@ -76,8 +76,8 @@ iex> # Get a date range for a fiscal year quarter
 iex> {:ok, calendar} = Calendrical.FiscalYear.calendar_for(:US)
 iex> Calendrical.Interval.quarter(2024, 1, calendar)
 
-iex> # Find the second Tuesday in November 2024
-iex> Calendrical.Kday.nth_kday(~D[2024-11-01], 2, :tuesday)
+iex> # Find the second Tuesday in November 2024 (Tuesday = day 2)
+iex> Calendrical.Kday.nth_kday(~D[2024-11-01], 2, 2)
 ~D[2024-11-12]
 
 iex> # Western Easter Sunday for 2024 (Gregorian computus)
@@ -96,7 +96,7 @@ iex> pfm
 
 ## Available calendars
 
-Calendrical implements all 17 calendar systems exposed by CLDR. They are grouped below by their underlying mechanism. See [`guides/calendar_summary.md`](guides/calendar_summary.md) for the full descriptions, eras, month structures, and reference dates.
+Calendrical implements all 17 calendar systems exposed by CLDR. They are grouped below by their underlying mechanism. See [`guides/calendar_summary.md`](https://hexdocs.pm/calendrical/calendar_summary.html) for the full descriptions, eras, month structures, and reference dates.
 
 | Family | Calendars |
 |---|---|
@@ -132,7 +132,7 @@ defmodule MyApp.MyCalendar do
 end
 ```
 
-See [`guides/calendar_behaviour.md`](guides/calendar_behaviour.md) for the full list of options, generated functions, and overridable callbacks.
+See [`guides/calendar_behaviour.md`](https://hexdocs.pm/calendrical/calendar_behaviour.html) for the full list of options, generated functions, and overridable callbacks.
 
 ## Localization
 
@@ -140,7 +140,7 @@ All calendars participate in CLDR localization automatically. Calling `Calendric
 
 ```elixir
 iex> {:ok, date} = Date.new(1446, 9, 1, Calendrical.Islamic.UmmAlQura)
-iex> Calendrical.localize(date, :month, locale: "en")
+iex> Calendrical.localize(date, :month, locale: "en", format: :wide)
 "Ramadan"
 
 iex> Calendrical.localize(date, :month, locale: "ar")
@@ -195,16 +195,16 @@ For Calendrical's underlying locale, default-locale, and locale-cache configurat
 
 ## Documentation
 
-* [`guides/calendar_summary.md`](guides/calendar_summary.md) — every supported calendar grouped by family, with month structure, era information, leap-year rules, and reference dates.
+* [`guides/calendar_summary.md`](https://hexdocs.pm/calendrical/calendar_summary.html) — every supported calendar grouped by family, with month structure, era information, leap-year rules, and reference dates.
 
-* [`guides/calendar_behaviour.md`](guides/calendar_behaviour.md) — how to define your own calendar by `use`ing `Calendrical.Behaviour`, including every option, every overridable callback, and worked examples.
+* [`guides/calendar_behaviour.md`](https://hexdocs.pm/calendrical/calendar_behaviour.html) — how to define your own calendar by `use`ing `Calendrical.Behaviour`, including every option, every overridable callback, and worked examples.
 
-* [`guides/migration.md`](guides/migration.md) — migrating from `ex_cldr_calendars` and the related `cldr_calendars_*` libraries.
+* [`guides/migration.md`](https://hexdocs.pm/calendrical/migration.html) — migrating from `ex_cldr_calendars` and the related `cldr_calendars_*` libraries.
 
-* [`CHANGELOG.md`](CHANGELOG.md) — release history.
+* [`CHANGELOG.md`](https://hexdocs.pm/calendrical/changelog.html) — release history.
 
 Full API documentation is available on [HexDocs](https://hexdocs.pm/calendrical).
 
 ## License
 
-Apache License 2.0. See the [LICENSE](LICENSE.md) file for details.
+Apache License 2.0. See the [LICENSE](https://github.com/elixir-localize/calendrical/blob/v0.1.0/LICENSE.md) file for details.
