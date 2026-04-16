@@ -95,8 +95,8 @@ defmodule Calendrical.MixProject do
       Intervals: ~r/^Calendrical\.Interval$/,
       "K-day Calculations": ~r/^Calendrical\.Kday$/,
       Preference: ~r/^Calendrical\.Preference$/,
-      Eras: ~r/^Calendrical\.Era$/,
-      Exceptions: ~r/^Calendrical\.\w+Error$/
+      Eras: ~r/^Calendrical\.Era/,
+      Exceptions: ~r/^Calendrical\..*Error$/
     ]
   end
 
