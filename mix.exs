@@ -82,8 +82,7 @@ defmodule Calendrical.MixProject do
         ~r/^Calendrical\.(Gregorian|Buddhist|Japanese|Roc|Indian)$/,
       "Gregorian Week-based Calendars": ~r/^Calendrical\.(ISOWeek|NRF)$/,
       "Julian Calendars": ~r/^Calendrical\.Julian(\.(Jan1|March1|March25|Sept1|Dec25))?$/,
-      "Lunisolar Calendars":
-        ~r/^Calendrical\.(Chinese|Korean|LunarJapanese|Hebrew|Lunisolar)$/,
+      "Lunisolar Calendars": ~r/^Calendrical\.(Chinese|Korean|LunarJapanese|Hebrew|Lunisolar)$/,
       "Ethiopic Calendars": ~r/^Calendrical\.Ethiopic(\.AmeteAlem)?$/,
       "Islamic Calendars":
         ~r/^Calendrical\.Islamic\.(Civil|Tbla|Observational|Rgsa|UmmAlQura(\.Astronomical|\.ReferenceData)?)$/,
