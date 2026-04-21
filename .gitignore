@@ -22,3 +22,11 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 calendrical-*.tar
 
+# Cladue
+.claude/
+CLAUDE.md
+
+# Tools
+mise.toml
+.tool-versions
+

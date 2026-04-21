@@ -260,12 +260,27 @@ defmodule Calendrical.Preference do
 
   @known_calendars Localize.known_calendars()
 
+  # CLDR calendar types whose Calendrical module name is not a direct
+  # CamelCase of the type atom. Mostly nested modules (Islamic variants,
+  # Ethiopic.AmeteAlem) and the Korean lunisolar calendar which uses the
+  # `:dangi` CLDR type.
+  @calendar_module_overrides %{
+    islamic: Calendrical.Islamic.Observational,
+    islamic_civil: Calendrical.Islamic.Civil,
+    islamic_rgsa: Calendrical.Islamic.Rgsa,
+    islamic_tbla: Calendrical.Islamic.Tbla,
+    islamic_umalqura: Calendrical.Islamic.UmmAlQura,
+    ethiopic_amete_alem: Calendrical.Ethiopic.AmeteAlem,
+    dangi: Calendrical.Korean
+  }
+
   @calendar_modules @known_calendars
                     |> Enum.map(fn c ->
                       {c,
                        Module.concat(@base_calendar, c |> Atom.to_string() |> Macro.camelize())}
                     end)
                     |> Map.new()
+                    |> Map.merge(@calendar_module_overrides)
                     |> Map.put(:iso8601, Calendrical.ISOWeek)
 
   @doc false

@@ -3636,6 +3636,94 @@ defmodule Calendrical do
     {:error, invalid_calendar_error(other)}
   end
 
+  @doc """
+  Returns the list of CLDR calendar types supported by
+  Calendrical.
+
+  The returned types are the names recognised by
+  `Localize.validate_calendar/1` and are the valid
+  inputs to `calendar_from_cldr_calendar_type/1`.
+
+  ### Returns
+
+  * A list of CLDR calendar type atoms.
+
+  ### Examples
+
+      iex> calendars = Calendrical.supported_cldr_calendar_types()
+      iex> :gregorian in calendars and :persian in calendars and :hebrew in calendars
+      true
+
+  """
+  @spec supported_cldr_calendar_types() :: [atom(), ...]
+  def supported_cldr_calendar_types do
+    Localize.Calendar.known_calendars()
+  end
+
+  @doc """
+  Returns the Calendrical calendar module associated
+  with a CLDR calendar type.
+
+  CLDR calendar types are the atoms (or their string
+  equivalents) returned by `Localize.validate_calendar/1`
+  and listed by `supported_cldr_calendar_types/0`. This
+  function maps such a type to the corresponding
+  Calendrical calendar module if it is loaded in the
+  current build.
+
+  ### Arguments
+
+  * `calendar_type` is a CLDR calendar type as an atom
+    or string. The string `"gregory"` is accepted as an
+    alias for `:gregorian`.
+
+  ### Returns
+
+  * `{:ok, calendar_module}` where `calendar_module`
+    is the Calendrical calendar module for the given
+    CLDR calendar type, or
+
+  * `{:error, exception}` where `exception` is an
+    exception struct.
+
+  ### Examples
+
+      iex> Calendrical.calendar_from_cldr_calendar_type(:gregorian)
+      {:ok, Calendrical.Gregorian}
+
+      iex> Calendrical.calendar_from_cldr_calendar_type("gregory")
+      {:ok, Calendrical.Gregorian}
+
+      iex> Calendrical.calendar_from_cldr_calendar_type(:persian)
+      {:ok, Calendrical.Persian}
+
+      iex> Calendrical.calendar_from_cldr_calendar_type(:islamic_umalqura)
+      {:ok, Calendrical.Islamic.UmmAlQura}
+
+      iex> Calendrical.calendar_from_cldr_calendar_type(:ethiopic_amete_alem)
+      {:ok, Calendrical.Ethiopic.AmeteAlem}
+
+      iex> Calendrical.calendar_from_cldr_calendar_type(:dangi)
+      {:ok, Calendrical.Korean}
+
+      iex> {:error, %Localize.UnknownCalendarError{}} =
+      ...>   Calendrical.calendar_from_cldr_calendar_type(:not_a_calendar)
+
+  """
+  @spec calendar_from_cldr_calendar_type(atom() | String.t()) ::
+          {:ok, module()} | {:error, Exception.t()}
+  def calendar_from_cldr_calendar_type(calendar_type) do
+    with {:ok, calendar_type} <- Localize.validate_calendar(calendar_type) do
+      calendar_module = Calendrical.Preference.calendar_module(calendar_type)
+
+      if is_atom(calendar_module) and Code.ensure_loaded?(calendar_module) do
+        {:ok, calendar_module}
+      else
+        {:error, unknown_calendar_error(calendar_type)}
+      end
+    end
+  end
+
   #
   # Helpers
   #

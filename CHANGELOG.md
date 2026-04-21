@@ -6,7 +6,13 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] — 2026-04-16
+## [0.3.0] — 2026-04-22
+
+### Bug Fixes
+
+* Fixes mapping CLDR calendar types to the implementation module name.
+
+## [0.2.0] — 2026-04-16
 
 This is the first release of Calendrical, which consolidates the `ex_cldr_calendars` library family into a single package built on `Localize`. Functionality from the following libraries has been merged in: `ex_cldr_calendars`, `ex_cldr_calendars_persian`, `ex_cldr_calendars_coptic`, `ex_cldr_calendars_ethiopic`, `ex_cldr_calendars_japanese`, `ex_cldr_calendars_lunisolar`, `ex_cldr_calendars_islamic`, `ex_cldr_calendars_format`, and `ex_cldr_calendars_composite`.
 
