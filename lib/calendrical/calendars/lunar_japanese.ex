@@ -1,9 +1,3 @@
-# Here to serialize the generation of the chinese and
-# lunar japanese calendars since they are both of the
-# CLDR calendar type :chinese and the code that generates the
-# era information gaurds on Code.ensure_loaded?/1
-require Calendrical.Chinese
-
 defmodule Calendrical.LunarJapanese do
   @moduledoc """
   Implementation of the Japanese lunisolar calendar.
