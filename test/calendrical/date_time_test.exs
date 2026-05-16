@@ -1,0 +1,71 @@
+defmodule Calendrical.DateTimeTest do
+  use ExUnit.Case, async: true
+
+  doctest Calendrical.DateTime
+
+  describe "parse/2 — ISO 8601 short-circuit" do
+    test "naive datetime parses in every locale" do
+      for locale <- [:en, :de, :fr, :ja, :ar] do
+        assert {:ok, ~N[2026-05-16 14:30:00]} =
+                 Calendrical.DateTime.parse("2026-05-16T14:30:00", locale: locale)
+      end
+    end
+
+    test "Z-suffix produces DateTime" do
+      assert {:ok, dt} = Calendrical.DateTime.parse("2026-05-16T14:30:00Z", locale: :en)
+      assert dt.year == 2026
+      assert dt.time_zone == "Etc/UTC"
+    end
+
+    test "fractional seconds preserved" do
+      assert {:ok, ndt} = Calendrical.DateTime.parse("2026-05-16T14:30:00.123", locale: :en)
+      assert {123_000, 3} = ndt.microsecond
+    end
+  end
+
+  describe "parse/2 — locale glue patterns" do
+    test "en glue is `, `" do
+      assert {:ok, ~N[2026-05-16 14:30:00]} =
+               Calendrical.DateTime.parse("May 16, 2026, 2:30 PM", locale: :en)
+    end
+
+    test "en glue with embedded comma in date half (backtrack-correctly)" do
+      # `MMM d, y` puts a comma between day and year. The
+      # locale glue is also `, ` — splitter must backtrack to
+      # the LATEST glue position.
+      assert {:ok, ~N[2017-07-10 09:15:00]} =
+               Calendrical.DateTime.parse("Jul 10, 2017, 9:15 AM", locale: :en)
+    end
+
+    test "en short form `5/16/26, 2:30 PM`" do
+      assert {:ok, ~N[2026-05-16 14:30:00]} =
+               Calendrical.DateTime.parse("5/16/26, 2:30 PM", locale: :en)
+    end
+
+    test "de uses `, ` glue with `dd.MM.y, HH:mm`" do
+      assert {:ok, ~N[2026-05-16 14:30:00]} =
+               Calendrical.DateTime.parse("16.05.2026, 14:30", locale: :de)
+    end
+
+    test "en-GB short" do
+      assert {:ok, ~N[2026-05-16 14:30:45]} =
+               Calendrical.DateTime.parse("16/05/2026, 14:30:45", locale: :"en-GB")
+    end
+
+    test "ja uses space glue" do
+      assert {:ok, ~N[2026-05-16 14:30:00]} =
+               Calendrical.DateTime.parse("2026/05/16 14:30:00", locale: :ja)
+    end
+  end
+
+  describe "parse/2 — error path" do
+    test "garbage rejected" do
+      assert {:error, %Calendrical.DateTimeParseError{}} =
+               Calendrical.DateTime.parse("not a datetime", locale: :en)
+    end
+
+    test "date-only input rejected (no glue separator)" do
+      assert {:error, _} = Calendrical.DateTime.parse("May 16, 2026", locale: :en)
+    end
+  end
+end

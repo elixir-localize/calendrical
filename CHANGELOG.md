@@ -10,6 +10,10 @@ The format is based on
 
 ### Added
 
+* `Calendrical.Time.parse/2` and `Calendrical.DateTime.parse/2` — locale-aware time and date-time parsers, completing the parser trio alongside `Calendrical.Date.parse/2`. TR35-compliant for the parts that matter to ordinary input (hour cycle resolution, day-period names, fractional seconds, CLDR glue patterns). Day-period parsing honours the locale's wide / abbreviated / narrow `day_periods` data plus the universal ASCII forms; the datetime parser backtracks through every occurrence of the locale's glue separator so `"Jul 10, 2017, 9:15 AM"` parses correctly even though `,` is both the locale glue and the date pattern's separator.
+
+* `Calendrical.TimeParseError` and `Calendrical.DateTimeParseError` — structured errors carrying `:input` and `:locale`.
+
 * `Calendrical.Date.parse/2` — locale-aware parser for user-typed date strings across every Calendar-behaviour module exposing `cldr_calendar_type/0` (Gregorian, Buddhist, Japanese imperial, Islamic, Persian, Hebrew, ROC, Coptic, Ethiopic, Indian, …). Handles CLDR `lenient-scope-date` separator equivalences, non-Latin digit transliteration, 2-digit year pivoting, and era markers — see `Calendrical.Date.Parser` for the full strategy.
 
 * `Calendrical.Date.parse_range/2` — locale-aware range parser. Accepts either a single string (split on CLDR's `intervalFormatFallback` separator) or a `{from, to}` tuple, with CLDR interval-skeleton inheritance so `"May 5 – May 10, 2026"` parses even though the left endpoint has no year.
