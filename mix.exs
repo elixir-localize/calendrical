@@ -1,7 +1,7 @@
 defmodule Calendrical.MixProject do
   use Mix.Project
 
-  @version "0.3.1"
+  @version "0.4.0"
 
   def project do
     [
@@ -124,7 +124,7 @@ defmodule Calendrical.MixProject do
 
   defp deps do
     [
-      {:localize, "~> 0.14"},
+      {:localize, path: "../localize", override: true},
       {:astro, "~> 2.0"},
       {:tz_world, "~> 1.0", optional: true},
       {:tzdata, "~> 1.1", optional: true},

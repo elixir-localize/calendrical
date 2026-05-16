@@ -6,7 +6,7 @@ defmodule Calendrical.PropertyTest do
   @max_runs 50_000
 
   property "next and previous weeks" do
-    check all(date <- Calendrical.Date.generate_date_in_week_calendar(), max_runs: @max_runs) do
+    check all(date <- Calendrical.Test.DateGenerator.generate_date_in_week_calendar(), max_runs: @max_runs) do
       this = Calendrical.Interval.week(date)
       previous = Calendrical.previous(this, :week, coerce: true)
       next = Calendrical.next(this, :week, coerce: true)
@@ -20,7 +20,7 @@ defmodule Calendrical.PropertyTest do
   end
 
   property "next and previous months" do
-    check all(date <- Calendrical.Date.generate_date_in_week_calendar(), max_runs: @max_runs) do
+    check all(date <- Calendrical.Test.DateGenerator.generate_date_in_week_calendar(), max_runs: @max_runs) do
       this = Calendrical.Interval.month(date)
       previous = Calendrical.previous(this, :month, coerce: true)
       next = Calendrical.next(this, :month, coerce: true)
@@ -34,7 +34,7 @@ defmodule Calendrical.PropertyTest do
   end
 
   property "next and previous quarters" do
-    check all(date <- Calendrical.Date.generate_date_in_week_calendar(), max_runs: @max_runs) do
+    check all(date <- Calendrical.Test.DateGenerator.generate_date_in_week_calendar(), max_runs: @max_runs) do
       this = Calendrical.Interval.quarter(date)
       previous = Calendrical.previous(this, :quarter, coerce: true)
       next = Calendrical.next(this, :quarter, coerce: true)

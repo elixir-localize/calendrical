@@ -1,4 +1,4 @@
-defmodule Calendrical.Date do
+defmodule Calendrical.Test.DateGenerator do
   require ExUnitProperties
 
   @week_calendars [
