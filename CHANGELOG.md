@@ -6,15 +6,15 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] — 2026-05-16
+## [0.4.0] — 2026-05-17
 
 ### Added
 
-* `Calendrical.Date.parse/2` — locale-aware parser for user-typed date strings. Tries bare ISO-8601 first, then the locale's CLDR `:short`/`:medium`/`:long`/`:full` patterns for the requested calendar. CLDR's `lenient-scope-date` data drives separator equivalences (`-`, `/`, `.`, non-breaking hyphen are all interchangeable in `en`), non-Latin digits transliterate to Latin via `Localize.Number.System.number_system_digits/1`, and 2-digit years pivot in an 80-back/20-forward window (Gregorian only — era-aware calendars take their year value literally). For era-aware calendars (`:japanese`, `:roc`), the era marker is captured and resolved via `Localize.Calendar.eras/2`, then year-within-era is converted to Gregorian year using `Localize.SupplementalData.calendars/0`. Multi-calendar support spans every Calendar-behaviour module with a `cldr_calendar_type/0` callback — `:gregorian`, `:buddhist`, `:islamic_civil`, `:islamic_umalqura`, `:japanese`, `:persian`, `:hebrew`, `:coptic`, `:ethiopic`, `:roc`, etc.
+* `Calendrical.Date.parse/2` — locale-aware parser for user-typed date strings across every Calendar-behaviour module exposing `cldr_calendar_type/0` (Gregorian, Buddhist, Japanese imperial, Islamic, Persian, Hebrew, ROC, Coptic, Ethiopic, Indian, …). Handles CLDR `lenient-scope-date` separator equivalences, non-Latin digit transliteration, 2-digit year pivoting, and era markers — see `Calendrical.Date.Parser` for the full strategy.
 
-* `Calendrical.Date.parse_range/2` — locale-aware range parser. Accepts either a single string (split on the locale's CLDR `intervalFormatFallback` separator plus lenient alternatives) or a `{from, to}` tuple. Implements CLDR interval-skeleton inheritance: `"May 5 – May 10, 2026"` parses correctly even though the left endpoint has no year, because the parser walks per-skeleton interval patterns and tracks field-occurrence to derive endpoint boundaries with cross-side field inheritance. Returns `t:Date.Range.t/0` in Gregorian. `:allow_inverted` option for descending ranges; rejected by default.
+* `Calendrical.Date.parse_range/2` — locale-aware range parser. Accepts either a single string (split on CLDR's `intervalFormatFallback` separator) or a `{from, to}` tuple, with CLDR interval-skeleton inheritance so `"May 5 – May 10, 2026"` parses even though the left endpoint has no year.
 
-* `Calendrical.DateParseError` and `Calendrical.DateRangeParseError` — structured errors with `:input`, `:locale`, `:calendar`, plus `:reason` (`:no_separator | :inverted | :from_parse_failed | :to_parse_failed`) and `:cause` for ranges.
+* `Calendrical.DateParseError` and `Calendrical.DateRangeParseError` — structured errors carrying `:input`, `:locale`, `:calendar`, plus `:reason` and `:cause` for ranges.
 
 ### Bug Fixes
 
