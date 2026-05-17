@@ -112,7 +112,7 @@ defmodule Calendrical.Lunisolar do
   """
 
   def new(year, {lunar_month, :leap} = month, day, epoch, location_fun) do
-    if valid_date?(year, month, day, epoch, location_fun) do
+    if valid_traditional_date?(year, month, day, epoch, location_fun) do
       {cycle, cyclical_year} = cycle_and_year(year)
       leap_month? = true
 
@@ -131,7 +131,7 @@ defmodule Calendrical.Lunisolar do
   end
 
   def new(year, month, day, epoch, location_fun) do
-    if valid_date?(year, month, day, epoch, location_fun) do
+    if valid_traditional_date?(year, month, day, epoch, location_fun) do
       {cycle, cyclical_year} = cycle_and_year(year)
       leap_month? = false
 
@@ -190,19 +190,36 @@ defmodule Calendrical.Lunisolar do
     end
   end
 
-  # year, month, day where month is in lunisolar month format of an integer between
-  # 1 and 12, with a leap month denoted by `{month, :leap}`.
+  # Validity check used by `new/5` to vet user-supplied **traditional** lunar
+  # months. Distinct from the 3-arity `valid_date?/3` callback that
+  # `Date.new/4` calls (which is supplied by `Calendrical.Behaviour` and uses
+  # ordinal month numbering). The two functions answer different questions —
+  # see the moduledoc of each wrapper calendar (LunarJapanese / Chinese /
+  # Korean) for the ordinal-vs-traditional discussion.
 
-  defp valid_date?(year, lunar_month, day, epoch, location_fun) when is_integer(lunar_month) do
+  defp valid_traditional_date?(year, lunar_month, day, epoch, location_fun)
+       when is_integer(lunar_month) do
     lunar_month <= @lunar_calendar_months_in_year &&
       day <= days_in_lunar_month(year, lunar_month, epoch, location_fun)
   end
 
-  defp valid_date?(year, {lunar_month, :leap}, day, epoch, location_fun)
+  defp valid_traditional_date?(year, {lunar_month, :leap}, day, epoch, location_fun)
        when is_integer(lunar_month) do
-    leap_year?(year, epoch, location_fun) &&
-      leap_month(year, epoch, location_fun) == lunar_month &&
-      day <= days_in_lunar_month(year, {lunar_month, :leap}, epoch, location_fun)
+    # `leap_month/3` returns the *ordinal* position of the intercalary month in
+    # the 1..13 sequence. The traditional notation `{M, :leap}` uses the
+    # *traditional* number, which is always the ordinal position minus one
+    # (the leap month repeats the preceding traditional month number; the lunar
+    # new year is always anchored on a non-leap month, so the ordinal is ≥ 2).
+    case leap_month(year, epoch, location_fun) do
+      nil ->
+        false
+
+      ordinal_leap when ordinal_leap - 1 == lunar_month ->
+        day <= days_in_lunar_month(year, {lunar_month, :leap}, epoch, location_fun)
+
+      _ ->
+        false
+    end
   end
 
   @doc """

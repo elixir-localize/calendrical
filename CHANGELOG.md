@@ -8,7 +8,15 @@ The format is based on
 
 ## [0.4.0] — 2026-05-17
 
+### Bug Fixes
+
+* The lunisolar validity check used by `Calendrical.LunarJapanese.new/3`, `Calendrical.Chinese.new/3`, and `Calendrical.Korean.new/3` rejected valid `{m, :leap}` inputs in the documented traditional notation. It compared the user's traditional month number to the ordinal position returned by `leap_month/1`; these are always off by one, so every leap-month tuple was reported as `:invalid_date`. The check now correctly compares against the traditional position. The private helper was also renamed from `valid_date?/5` to `valid_traditional_date?/5` to disambiguate from the public 3-arity `valid_date?/3` callback used by `Date.new/4` — the latter is unchanged and continues to accept ordinal (1..13) months per the `Calendar` behaviour contract.
+
+* Test support module renamed from `Calendrical.Date` to `Calendrical.Test.DateGenerator` to free the `Calendrical.Date` namespace for the new parser module. Affects `test/property_test.exs` and `test/day_of_week_test.exs` only — no public API impact.
+
 ### Added
+
+* `traditional_leap_month/1` on each of the three lunisolar calendars (`Calendrical.LunarJapanese`, `Calendrical.Chinese`, `Calendrical.Korean`), returning the traditional (1..12) number of the intercalary month — the number the leap month repeats — as a companion to `leap_month/1` which returns the ordinal position (1..13).
 
 * `Calendrical.Time.parse/2` and `Calendrical.DateTime.parse/2` — locale-aware time and date-time parsers, completing the parser trio alongside `Calendrical.Date.parse/2`. TR35-compliant for the parts that matter to ordinary input (hour cycle resolution, day-period names, fractional seconds, CLDR glue patterns). Day-period parsing honours the locale's wide / abbreviated / narrow `day_periods` data plus the universal ASCII forms; the datetime parser backtracks through every occurrence of the locale's glue separator so `"Jul 10, 2017, 9:15 AM"` parses correctly even though `,` is both the locale glue and the date pattern's separator.
 
@@ -20,9 +28,11 @@ The format is based on
 
 * `Calendrical.DateParseError` and `Calendrical.DateRangeParseError` — structured errors carrying `:input`, `:locale`, `:calendar`, plus `:reason` and `:cause` for ranges.
 
-### Bug Fixes
+### Documentation
 
-* Test support module renamed from `Calendrical.Date` to `Calendrical.Test.DateGenerator` to free the `Calendrical.Date` namespace for the new parser module. Affects `test/property_test.exs` and `test/day_of_week_test.exs` only — no public API impact.
+* Each lunisolar calendar's moduledoc now has a "Two month numbering conventions" section explaining the difference between **ordinal** months (used by `Date.t`, `Date.new/4`, `Date.convert/2`, and the `Calendar` callbacks) and **traditional** months (used by `new/3` and the return value of `lunar_month_of_year/1`). The previous undocumented dichotomy could silently produce dates one full lunar month off after the intercalary in leap years.
+
+* The `new/3` and `new!/3` docstrings on each lunisolar calendar now state explicitly that the `lunar_month` argument is **traditional** (1..12 with `{m, :leap}` for the intercalary), with examples showing how the traditional number maps to the ordinal stored on the resulting `Date.t` struct.
 
 ## [0.3.1] — 2026-04-25
 

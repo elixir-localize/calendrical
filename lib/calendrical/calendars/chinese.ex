@@ -21,6 +21,46 @@ defmodule Calendrical.Chinese do
       config :calendrical,
         chinese_epoch: ~D[-2696-01-01]
 
+  ## Two month numbering conventions
+
+  The Chinese lunisolar calendar (like the Japanese and Korean ones) has
+  **two distinct month numbering conventions**. Choosing the wrong one
+  silently produces dates that are off by one full lunar month after the
+  intercalary month in leap years. The conventions are:
+
+  * **Ordinal** — months counted monotonically 1..12 in ordinary years
+    and 1..13 in leap years. The intercalary appears at whatever position
+    the astronomical no-zhongqi rule places it; it is not separately
+    labelled. This is the convention `Date.new/4` accepts, the `Date.t`
+    struct stores, and `Date.convert/2` returns. It is what the standard
+    `Calendar` behaviour callbacks expect.
+
+  * **Traditional** — months always numbered 1..12, with the intercalary
+    expressed as `{month, :leap}` (read 閏N月 — "intercalary Nth month")
+    where `month` is the *preceding* traditional month number. This is
+    the convention used by cultural references and primary sources.
+    `#{inspect(__MODULE__)}.new/3` and the return value of
+    `lunar_month_of_year/1` use this convention.
+
+  As an example, lunar year 4660 (=AD 2023) has its intercalary at
+  ordinal m3, equivalent to the traditional `{2, :leap}` (閏2月):
+
+      iex> {:ok, date} = Calendrical.Chinese.new(4660, {2, :leap}, 1)
+      iex> Date.convert(date, Calendar.ISO)
+      {:ok, ~D[2023-03-22]}
+
+      # Stored ordinally on the Date.t struct:
+      iex> {:ok, date} = Calendrical.Chinese.new(4660, {2, :leap}, 1)
+      iex> {date.month, Calendrical.Chinese.lunar_month_of_year(date)}
+      {3, {2, :leap}}
+
+  Converting between the two: if a year is a leap year, traditional
+  numbers below the leap-month position equal the ordinal numbers, and
+  traditional numbers at or above the leap-month position equal
+  ordinal-minus-one. `leap_month/1` returns the **ordinal** position of
+  the intercalary; `traditional_leap_month/1` returns the **traditional**
+  number that the intercalary repeats.
+
   """
 
   use Calendrical.Behaviour,
@@ -39,43 +79,51 @@ defmodule Calendrical.Chinese do
   alias Calendrical.Lunisolar
 
   @doc """
-  Returns a `t:Calendar.date/0` in the `#{__MODULE__}` calendar
-  formed by a calendar year, a *cardinal* lunar month number
-  and a cardinal day number.
+  Returns a `t:Calendar.date/0` in the `#{inspect(__MODULE__)}` calendar
+  formed by a calendar year, a **traditional** lunar month number, and
+  a day number.
 
-  The lunar month number is that used in traditional lunisolar
-  calendar notation. It is either a number between 1 and 12
-  (the number of months in an ordinary year) or a leap month
-  specified by the 2-tuple `{month, :leap}`.
+  The lunar month is that used in traditional lunisolar calendar
+  notation. It is either a number between 1 and 12 (the number of months
+  in an ordinary year) or a leap month specified by the 2-tuple
+  `{month, :leap}` where `month` is the preceding traditional month
+  number that the intercalary repeats (read 閏N月 — "intercalary Nth
+  month"). See the moduledoc for the full ordinal-vs-traditional
+  discussion.
 
-  This function is therefore most useful for creating tradition
-  calendar dates for holidays and other events defined in
-  the lunisolar calendar.
+  This function is the right entry point for creating dates from
+  cultural references, holidays defined in the lunisolar calendar, or
+  any other source that reports a lunisolar date in its native form. To
+  build a date from an ordinal (1..13) month number — the form stored on
+  the `Date.t` struct itself — use `Date.new/4` instead.
 
   ### Arguments
 
   * `year` is any year in the `#{inspect(__MODULE__)}` calendar.
 
-  * `lunar_month` is either a cardinal month number between 1 and 12 or
-    for a leap month the 2-tuple in the format `{month, :leap}`.
+  * `lunar_month` is either a traditional month number between 1 and 12,
+    or for an intercalary month the 2-tuple `{month, :leap}` where `month`
+    is the preceding traditional month number.
 
-  * `day` is any day number valid for `year` and `month`.
+  * `day` is any day number valid for `year` and `lunar_month`.
 
   ### Returns
 
-  * `{:ok, date}` or
+  * `{:ok, date}` where `date.month` is the **ordinal** position of the
+    given lunar month within the year (1..12 in ordinary years, 1..13 in
+    leap years), or
 
-  * `{:error, reason}`
+  * `{:error, reason}`.
 
   ### Examples
 
-      # Lunar new year
+      # Lunar new year of 4660 (= AD 2023)
       iex> Calendrical.Chinese.new(4660, 1, 1)
       {:ok, ~D[4660-01-01 Calendrical.Chinese]}
 
-      # First day of leap month
-      iex> Calendrical.Chinese.new(4660, {3, :leap}, 1)
-      {:ok, ~D[4660-04-01 Calendrical.Chinese]}
+      # First day of the intercalary 2nd month (閏2月) of Y4660
+      iex> Calendrical.Chinese.new(4660, {2, :leap}, 1)
+      {:ok, ~D[4660-03-01 Calendrical.Chinese]}
 
   """
   @spec new(year :: Calendar.year(), month :: Lunisolar.lunar_month(), day :: Calendar.day()) ::
@@ -91,6 +139,15 @@ defmodule Calendrical.Chinese do
         Date.new(year, month, day, __MODULE__)
     end
   end
+
+  @doc """
+  Raising variant of `new/3`.
+
+  Raises `ArgumentError` if the date is not valid in this calendar.
+
+  """
+  @spec new!(year :: Calendar.year(), month :: Lunisolar.lunar_month(), day :: Calendar.day()) ::
+          Date.t()
 
   def new!(year, month, day) do
     case new(year, month, day) do
@@ -219,9 +276,13 @@ defmodule Calendrical.Chinese do
   end
 
   @doc """
-  Returns the ordinal month number of the leap
-  month for a year, or nil if there is no leap
-  month.
+  Returns the **ordinal** position (1..13) of the leap month for a year,
+  or `nil` if the year is not a leap year.
+
+  This is the position of the intercalary in the monotonic 1..13 ordinal
+  sequence used by `Date.t` structs and the standard `Calendar` callbacks.
+  See `traditional_leap_month/1` for the traditional notation (the
+  preceding-month number that the intercalary repeats).
 
   ### Arguments
 
@@ -231,13 +292,14 @@ defmodule Calendrical.Chinese do
 
   ### Returns
 
-  * either an ordinal month number or
+  * the ordinal position of the leap month (1..13), or
 
-  * `nil` indicating there is no leap month in the
-    given year.
+  * `nil` if there is no leap month in the given year.
 
   ### Examples
 
+      # Y4660 is a leap year; the intercalary is at ordinal m3
+      # (= traditional {2, :leap})
       iex> Calendrical.Chinese.leap_month(4660)
       3
 
@@ -255,6 +317,49 @@ defmodule Calendrical.Chinese do
 
   def leap_month(year) do
     Lunisolar.leap_month(year, epoch(), &location/1)
+  end
+
+  @doc """
+  Returns the **traditional** number (1..12) of the leap month for a year,
+  or `nil` if the year is not a leap year.
+
+  The intercalary month in lunisolar tradition repeats the number of the
+  preceding non-leap month. For example, the intercalary that appears at
+  ordinal position 3 of Y4660 is written 閏2月 in traditional notation
+  and used as `{2, :leap}` in this module's API.
+
+  ### Arguments
+
+  * `date_or_year` is either an integer year number
+    or a `t:Calendar.date/0` in the `#{inspect(__MODULE__)}`
+    calendar.
+
+  ### Returns
+
+  * the traditional number of the leap month (1..12), or
+
+  * `nil` if there is no leap month in the given year.
+
+  ### Examples
+
+      iex> Calendrical.Chinese.traditional_leap_month(4660)
+      2
+
+      iex> Calendrical.Chinese.traditional_leap_month(4661)
+      nil
+
+  """
+  @spec traditional_leap_month(date_or_year :: Date.t() | Calendar.year()) ::
+          Calendar.month() | nil
+  def traditional_leap_month(%Date{year: year, calendar: __MODULE__}) do
+    traditional_leap_month(year)
+  end
+
+  def traditional_leap_month(year) do
+    case leap_month(year) do
+      nil -> nil
+      ordinal -> ordinal - 1
+    end
   end
 
   @doc """
