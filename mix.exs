@@ -133,7 +133,15 @@ defmodule Calendrical.MixProject do
       {:ex_doc, "~> 0.38", optional: true, runtime: false},
       {:dialyxir, "~> 1.0", optional: true, only: [:dev, :test], runtime: false},
       {:stream_data, "~> 1.0", only: :test}
-    ]
+    ] ++ maybe_json_polyfill()
+  end
+
+  defp maybe_json_polyfill do
+    if Code.ensure_loaded?(:json) do
+      []
+    else
+      [{:json_polyfill, "~> 0.2 or ~> 1.0"}]
+    end
   end
 
   defp elixirc_paths(:test), do: ["lib", "test", "test/support"]
