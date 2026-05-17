@@ -428,7 +428,10 @@ defmodule Calendrical.Date.Parser do
         with {:ok, calendar_module} <- resolve_calendar_module(cldr_calendar),
              {:ok, date} <- build_date(year, month, day, calendar_module),
              iso_date <-
-               (if date.calendar == Calendar.ISO, do: date, else: Date.convert!(date, Calendar.ISO)) do
+               if(date.calendar == Calendar.ISO,
+                 do: date,
+                 else: Date.convert!(date, Calendar.ISO)
+               ) do
           {:ok, iso_date}
         else
           _ -> :error
@@ -818,7 +821,6 @@ defmodule Calendrical.Date.Parser do
     |> Enum.map(&expand_char(&1, lenient))
     |> Enum.join()
   end
-
 
   defp expand_char(char, lenient) do
     cond do

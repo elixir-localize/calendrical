@@ -282,7 +282,9 @@ defmodule Calendrical.Time.Parser do
 
   defp expand_char(char, lenient) do
     cond do
-      space_char?(char) -> @space_class
+      space_char?(char) ->
+        @space_class
+
       true ->
         case Map.get(lenient, char) do
           nil -> Regex.escape(char)
@@ -370,8 +372,12 @@ defmodule Calendrical.Time.Parser do
     period = caps |> Map.get("day_period", "") |> String.downcase()
 
     cond do
-      period in ["pm", "p.m."] -> {:ok, base + 12}
-      period in ["am", "a.m.", ""] -> {:ok, base}
+      period in ["pm", "p.m."] ->
+        {:ok, base + 12}
+
+      period in ["am", "a.m.", ""] ->
+        {:ok, base}
+
       # Locale-specific day-period name — look up via heuristic.
       String.contains?(period, "pm") or String.contains?(period, "p.m") ->
         {:ok, base + 12}
@@ -387,22 +393,31 @@ defmodule Calendrical.Time.Parser do
 
   defp extract_field(caps, key, default \\ nil) do
     case caps[key] do
-      nil when is_integer(default) -> {:ok, default}
+      nil when is_integer(default) ->
+        {:ok, default}
+
       raw when is_binary(raw) and raw != "" ->
         case Integer.parse(raw) do
           {n, ""} -> {:ok, n}
           _ -> :error
         end
 
-      _ when is_integer(default) -> {:ok, default}
-      _ -> :error
+      _ when is_integer(default) ->
+        {:ok, default}
+
+      _ ->
+        :error
     end
   end
 
   defp extract_microsecond(caps) do
     case caps["microsecond"] do
-      nil -> {:ok, {0, 0}}
-      "" -> {:ok, {0, 0}}
+      nil ->
+        {:ok, {0, 0}}
+
+      "" ->
+        {:ok, {0, 0}}
+
       raw ->
         # CLDR `S` is decimal-truncated, not rounded. Pad / trim
         # to 6 digits for Elixir's `Time` microsecond field.
@@ -416,4 +431,3 @@ defmodule Calendrical.Time.Parser do
     end
   end
 end
-

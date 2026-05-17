@@ -27,7 +27,9 @@ defmodule Calendrical.DayOfWeekTest do
   property "Day of week for calendars that start on Sunday are one more than Gregorian" do
     check all(
             date <-
-              Calendrical.Test.DateGenerator.generate_date_in_calendar(Calendrical.Test.Calendars.Month.Sunday),
+              Calendrical.Test.DateGenerator.generate_date_in_calendar(
+                Calendrical.Test.Calendars.Month.Sunday
+              ),
             max_runs: @max_runs
           ) do
       gregorian = Date.convert!(date, Calendrical.Gregorian)
@@ -44,7 +46,9 @@ defmodule Calendrical.DayOfWeekTest do
   property "Day of week for calendars that start on Friday are three more than Gregorian" do
     check all(
             date <-
-              Calendrical.Test.DateGenerator.generate_date_in_calendar(Calendrical.Test.Calendars.Month.Friday),
+              Calendrical.Test.DateGenerator.generate_date_in_calendar(
+                Calendrical.Test.Calendars.Month.Friday
+              ),
             max_runs: @max_runs
           ) do
       gregorian = Date.convert!(date, Calendrical.Gregorian)
