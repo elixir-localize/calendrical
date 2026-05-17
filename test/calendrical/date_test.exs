@@ -227,26 +227,35 @@ defmodule Calendrical.DateTest do
   end
 
   describe "parse/2 — ROC (Minguo) era" do
-    test "民國115年5月16日 (medium) → AD 2026-05-16" do
-      assert {:ok, ~D[2026-05-16]} =
+    test "民國115年5月16日 (medium) → ROC 115-05-16 ≡ 2026-05-16" do
+      assert {:ok, ~D[0115-05-16 Calendrical.Roc]} =
                Calendrical.Date.parse("民國115年5月16日",
                  locale: :"zh-Hant-TW",
                  calendar: :roc
                )
     end
 
-    test "民國115/5/16 (short, with era marker) → AD 2026-05-16" do
-      assert {:ok, ~D[2026-05-16]} =
+    test "民國115/5/16 (short, with era marker) → ROC 115-05-16 ≡ 2026-05-16" do
+      assert {:ok, ~D[0115-05-16 Calendrical.Roc]} =
                Calendrical.Date.parse("民國115/5/16",
                  locale: :"zh-Hant-TW",
                  calendar: :roc
+               )
+    end
+
+    test "with `return_calendar: :iso` round-trips to Gregorian" do
+      assert {:ok, ~D[2026-05-16]} =
+               Calendrical.Date.parse("民國115年5月16日",
+                 locale: :"zh-Hant-TW",
+                 calendar: :roc,
+                 return_calendar: :iso
                )
     end
   end
 
   describe "parse/2 — lenient spacing between adjacent fields" do
     test "ROC with optional space after era marker" do
-      assert {:ok, ~D[2026-05-16]} =
+      assert {:ok, ~D[0115-05-16 Calendrical.Roc]} =
                Calendrical.Date.parse("民國 115年5月16日",
                  locale: :"zh-Hant-TW",
                  calendar: :roc
@@ -254,13 +263,13 @@ defmodule Calendrical.DateTest do
     end
 
     test "Japanese imperial with optional space after era marker" do
-      assert {:ok, ~D[2000-01-01]} =
+      assert {:ok, ~D[2000-01-01 Calendrical.Japanese]} =
                Calendrical.Date.parse("平成 12年1月1日",
                  locale: :"ja-JP",
                  calendar: :japanese
                )
 
-      assert {:ok, ~D[2024-07-01]} =
+      assert {:ok, ~D[2024-07-01 Calendrical.Japanese]} =
                Calendrical.Date.parse("令和 6年7月1日",
                  locale: :"ja-JP",
                  calendar: :japanese

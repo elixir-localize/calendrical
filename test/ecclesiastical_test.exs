@@ -475,8 +475,12 @@ defmodule Calendrical.EcclesiasticalTest do
     end
 
     test "raises for non-integer input" do
+      # Go through `apply/3` so the compile-time type checker
+      # doesn't flag the deliberate type mismatch — the
+      # function is typed to require an integer, and this
+      # test verifies the runtime guard catches the violation.
       assert_raise FunctionClauseError, fn ->
-        Ecclesiastical.paschal_full_moon(2024.0)
+        apply(Ecclesiastical, :paschal_full_moon, [2024.0])
       end
     end
   end

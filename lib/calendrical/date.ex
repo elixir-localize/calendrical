@@ -17,10 +17,13 @@ defmodule Calendrical.Date do
   input may parse to different dates under different locales
   by design.
 
-  Returns a `t:Date.t/0`. By default (with `return_calendar:
-  :iso`), the result is in `Calendar.ISO` (Gregorian); pass
-  `return_calendar: :native` to receive the date in its input
-  calendar (e.g. a `Calendrical.Islamic.Civil` date).
+  Returns a `t:Date.t/0` in the calendar identified by the
+  `:calendar` option — `Calendar.ISO` for `:gregorian` (the
+  default), `Calendrical.Hebrew` for `:hebrew`,
+  `Calendrical.Japanese` for `:japanese`, and so on. Pass
+  `return_calendar: :iso` to force the result into Gregorian
+  regardless (useful for `Date.Range`, Ecto `:date` casts, or
+  any consumer that requires ISO).
 
   ### Arguments
 
@@ -35,13 +38,18 @@ defmodule Calendrical.Date do
 
   * `:calendar` — the CLDR calendar key (e.g. `:gregorian`,
     `:buddhist`, `:islamic_civil`, `:japanese`, `:persian`,
-    `:hebrew`). Defaults to `:gregorian`.
+    `:hebrew`). Defaults to `:gregorian`. Drives both how
+    the input is interpreted and what calendar the returned
+    `Date` is in.
 
   * `:reference_date` — the "today" anchor for two-digit-year
     pivoting. Defaults to `Date.utc_today/0`.
 
-  * `:return_calendar` — `:iso` (default) converts the result
-    to Gregorian. `:native` keeps it in the input calendar.
+  * `:return_calendar` — `:native` (default) returns the
+    parsed date in whatever `:calendar` named. `:iso` forces
+    `Calendar.ISO`. A calendar module (e.g.
+    `Calendrical.Persian`) returns the date in that
+    specific calendar.
 
   ### Returns
 
@@ -59,6 +67,24 @@ defmodule Calendrical.Date do
       {:ok, ~D[2026-05-16]}
 
       iex> Calendrical.Date.parse("16.05.2026", locale: :de)
+      {:ok, ~D[2026-05-16]}
+
+      iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :hebrew)
+      {:ok, ~D[5786-09-29 Calendrical.Hebrew]}
+
+      iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :hebrew, return_calendar: :iso)
+      {:ok, ~D[2026-05-16]}
+
+      iex> Calendrical.Date.parse("Q2 2026", locale: :en)
+      {:ok, ~D[2026-04-01]}
+
+      iex> Calendrical.Date.parse("2nd quarter 2026", locale: :en)
+      {:ok, ~D[2026-04-01]}
+
+      iex> Calendrical.Date.parse("week 20 of 2026", locale: :en)
+      {:ok, ~D[2026-05-11]}
+
+      iex> Calendrical.Date.parse("Saturday, May 16, 2026", locale: :en)
       {:ok, ~D[2026-05-16]}
 
   """

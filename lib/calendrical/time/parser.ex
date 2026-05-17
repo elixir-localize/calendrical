@@ -42,8 +42,6 @@ defmodule Calendrical.Time.Parser do
   alias Localize.DateTime.Format
   alias Calendrical.TimeParseError
 
-  @standard_formats [:short, :medium, :long, :full]
-
   # CLDR commonly uses NBSP / NNBSP / narrow-NBSP / ideographic
   # space between time fields and AM/PM markers. Accept any of
   # them where the pattern has a space.
@@ -57,12 +55,27 @@ defmodule Calendrical.Time.Parser do
   @spec parse(String.t(), Keyword.t()) ::
           {:ok, Time.t()} | {:error, Exception.t()}
   def parse(input, options \\ []) when is_binary(input) do
+    case parse_with_zone(input, options) do
+      {:ok, time, _zone} -> {:ok, time}
+      {:error, _} = err -> err
+    end
+  end
+
+  @doc """
+  Same as `parse/2` but also returns the captured time-zone
+  string (or `nil` when the pattern carried no zone). The
+  `Calendrical.DateTime.Parser` uses this to feed
+  `Calendrical.TimeZone.resolve/3` for DateTime building.
+  """
+  @spec parse_with_zone(String.t(), Keyword.t()) ::
+          {:ok, Time.t(), String.t() | nil} | {:error, Exception.t()}
+  def parse_with_zone(input, options \\ []) when is_binary(input) do
     locale = Keyword.get(options, :locale) || Localize.get_locale()
     input = String.trim(input)
 
     case try_iso(input) do
-      {:ok, _} = ok ->
-        ok
+      {:ok, time} ->
+        {:ok, time, nil}
 
       :error ->
         try_locale_patterns(input, locale)
@@ -81,16 +94,15 @@ defmodule Calendrical.Time.Parser do
   # ── Locale patterns (stubbed; filled out by subsequent edits)─
 
   defp try_locale_patterns(input, locale) do
-    with {:ok, time_formats} <- Format.time_formats(locale, :gregorian),
-         {:ok, available} <- Format.available_formats(locale, :gregorian),
+    with {:ok, available} <- Format.available_formats(locale, :gregorian),
          {:ok, day_periods} <- LCalendar.day_periods(locale, :gregorian) do
-      patterns = collect_patterns(time_formats, available)
+      patterns = collect_patterns(available)
       lenient = load_lenient_date(locale)
 
       result =
         Enum.find_value(patterns, fn {_kind, pattern} ->
           case match_pattern(input, pattern, day_periods, lenient) do
-            {:ok, time} -> {:ok, time}
+            {:ok, time, zone} -> {:ok, time, zone}
             :error -> nil
           end
         end)
@@ -99,12 +111,20 @@ defmodule Calendrical.Time.Parser do
     end
   end
 
-  defp collect_patterns(time_formats, available) do
-    for kind <- @standard_formats,
-        skeleton = Map.get(time_formats, kind),
-        not is_nil(skeleton),
-        pattern <- resolve_pattern_variants(Map.get(available, skeleton)),
-        do: {kind, pattern}
+  # Iterate every parseable CLDR pattern in `availableFormats`.
+  # CLDR's `timeStyle` standards (`:short`/`:medium`/`:long`/
+  # `:full`) are just references INTO `availableFormats` —
+  # `:short` for en is `:ahmm`, and `:ahmm` is itself a key
+  # in `availableFormats`. So iterating `availableFormats`
+  # covers the standard four AND the broader skeleton set
+  # in one pass.
+  #
+  # Skeletons that lack hour/minute fields don't construct a
+  # Time and fall through naturally.
+  defp collect_patterns(available) do
+    for {skeleton, pattern_data} <- available,
+        pattern <- resolve_pattern_variants(pattern_data),
+        do: {skeleton, pattern}
   end
 
   defp resolve_pattern_variants(nil), do: []
@@ -118,6 +138,16 @@ defmodule Calendrical.Time.Parser do
     do: [u, a]
 
   defp resolve_pattern_variants(%{format: pattern}) when is_binary(pattern), do: [pattern]
+
+  # Plural-variant maps (`%{one: ..., other: ...}`) — accept
+  # every binary variant.
+  defp resolve_pattern_variants(%{} = map) do
+    map
+    |> Map.values()
+    |> Enum.filter(&is_binary/1)
+    |> Enum.uniq()
+  end
+
   defp resolve_pattern_variants(_), do: []
 
   defp load_lenient_date(locale) do
@@ -177,11 +207,17 @@ defmodule Calendrical.Time.Parser do
     with %Regex{} <- regex,
          %{} = caps <- Regex.named_captures(regex, input),
          {:ok, hour} <- extract_hour(caps, tokens),
-         {:ok, minute} <- extract_field(caps, "minute"),
+         {:ok, minute} <- extract_field(caps, "minute", 0),
          {:ok, second} <- extract_field(caps, "second", 0),
          {:ok, microsecond} <- extract_microsecond(caps),
          {:ok, time} <- Time.new(hour, minute, second, microsecond) do
-      {:ok, time}
+      zone =
+        case Map.get(caps, "zone") do
+          z when is_binary(z) and z != "" -> z
+          _ -> nil
+        end
+
+      {:ok, time, zone}
     else
       _ -> :error
     end
@@ -263,14 +299,50 @@ defmodule Calendrical.Time.Parser do
     day_period_regex(day_periods, letter)
   end
 
-  # Flexible day period (B) — morning1/afternoon1/evening1/
-  # night1/etc. Permissive match.
-  defp field_regex({:B, _count}, _dp, _lenient), do: "[\\p{L}\\.\\s]+?"
+  # Flexible day period (B) — `morning1`, `afternoon1`,
+  # `evening1`, `night1`, plus the absolute markers
+  # `noon` and `midnight` (TR35 §Parsing Day Periods).
+  # Capture the matched period so `resolve_hour` can use
+  # it to disambiguate AM/PM for 12-hour cycles when no
+  # explicit `a` marker was supplied.
+  defp field_regex({:B, _count}, day_periods, _lenient),
+    do: flex_period_regex(day_periods)
 
-  # Time zones — captured but not validated. The `Calendrical.DateTime.Parser`
-  # path tightens this when timezone resolution matters.
-  defp field_regex({letter, _count}, _dp, _lenient) when letter in [:z, :Z, :v, :V, :x, :X, :O],
-    do: "(?P<zone>[\\p{L}\\d:+\\-/_]+)"
+  # Time zones (TR35 §Time Zone Parsing). Captures a strictly
+  # zone-shaped token under `zone`. The Time parser doesn't
+  # carry zone info (Time is wall-clock) so this is just
+  # validation to prevent false matches like "midnight"
+  # being eaten by a zone placeholder. The `DateTime` parser
+  # additionally resolves the captured value into an offset.
+  #
+  # Accepted shapes:
+  #   * `Z` — UTC marker
+  #   * `[+-]HHMM` / `[+-]HH:MM` / `[+-]HH:MM:SS` — ISO offsets
+  #   * `GMT` / `GMT[+-]H[:MM]` / `UTC[+-]...` — GMT format
+  #   * IANA region/city — e.g. `Asia/Tokyo` (capital letter +
+  #     slash + capital letter, optional underscores)
+  #   * Abbreviation — `PST`, `JST`, `BST` (3-5 uppercase letters)
+  #   * Locale name — `Pacific Time`, `Greenwich Mean Time`
+  #     (capital-led words; one-or-more space-separated)
+  defp field_regex({letter, _count}, _dp, _lenient) when letter in [:z, :Z, :v, :V, :x, :X, :O] do
+    # Abbreviation. The lookahead excludes `AM`/`PM` so a
+    # generic-zone pattern like `"h:mm:ss v"` doesn't
+    # cannibalise inputs ending in an AM/PM marker — those
+    # belong to the `a` letter.
+    "(?P<zone>" <>
+      "Z" <>
+      "|" <>
+      "[+\\-](?:\\d{2}:?\\d{2}(?::?\\d{2})?|\\d{2})" <>
+      "|" <>
+      "(?:GMT|UTC|UT)(?:[+\\-]\\d{1,2}(?::?\\d{2})?)?" <>
+      "|" <>
+      "[A-Z][A-Za-z_]+(?:/[A-Z][A-Za-z_+\\-]+)+" <>
+      "|" <>
+      "(?!AM|PM|am|pm|A\\.M\\.|P\\.M\\.)[A-Z]{2,5}" <>
+      "|" <>
+      "[A-Z][a-z]+(?: [A-Z][a-z]+){1,4}" <>
+      ")"
+  end
 
   # Literal text — expand each char via lenient equivalence.
   defp field_regex({:lit, text}, _dp, lenient) do
@@ -328,13 +400,95 @@ defmodule Calendrical.Time.Parser do
         :b -> [:wide, :abbreviated, :narrow]
       end
 
+    keys =
+      case letter do
+        :a -> [:am, :pm]
+        :b -> [:am, :pm, :noon, :midnight]
+      end
+
     contexts = [:format, :stand_alone]
 
     for context <- contexts,
         width <- widths,
-        {_period, name} <- get_in(day_periods, [context, width]) || %{},
-        is_binary(name),
+        {period, entry} <- get_in(day_periods, [context, width]) || %{},
+        period in keys,
+        name <- entry_to_names(entry),
         do: name
+  end
+
+  # Day-period entries are either bare strings (`"noon"`)
+  # or `%{default: ..., variant: ...}` maps (`am`/`pm`).
+  # Expand both into a flat list of binaries.
+  defp entry_to_names(name) when is_binary(name), do: [name]
+
+  defp entry_to_names(%{} = map),
+    do: Enum.filter(Map.values(map), &is_binary/1)
+
+  defp entry_to_names(_), do: []
+
+  # ── Flex day period regex (B) ────────────────────────────────
+
+  @flex_period_keys [
+    :morning1,
+    :morning2,
+    :afternoon1,
+    :afternoon2,
+    :evening1,
+    :evening2,
+    :night1,
+    :night2,
+    :noon,
+    :midnight
+  ]
+
+  defp flex_period_regex(day_periods) do
+    pairs = collect_flex_period_pairs(day_periods)
+
+    case pairs do
+      [] ->
+        # Locale carries no flex period data — fall back to a
+        # permissive match so the pattern still matches but
+        # contributes no AM/PM information.
+        "[\\p{L}\\.\\s]+?"
+
+      pairs ->
+        # Regex requires named groups to be unique. Group all
+        # name variants for the same period key under a
+        # single capture so `__bp_morning1` matches "in the
+        # morning" OR "morning" without duplicating the
+        # named group.
+        names_by_key =
+          pairs
+          |> Enum.group_by(fn {key, _name} -> key end, fn {_key, name} -> name end)
+          |> Enum.map(fn {key, names} ->
+            sorted = names |> Enum.uniq() |> Enum.sort_by(&(-byte_size(&1)))
+            {key, sorted}
+          end)
+          # Sort groups by their longest name so e.g. "midnight"
+          # is tried before "mi" (preventing premature short
+          # matches on locales with very short narrow forms).
+          |> Enum.sort_by(fn {_key, names} -> -byte_size(hd(names)) end)
+
+        branches =
+          Enum.map(names_by_key, fn {key, names} ->
+            alternation = names |> Enum.map(&Regex.escape/1) |> Enum.join("|")
+            "(?P<__bp_#{key}>#{alternation})"
+          end)
+
+        "(?:" <> Enum.join(branches, "|") <> ")"
+    end
+  end
+
+  defp collect_flex_period_pairs(day_periods) do
+    widths = [:wide, :abbreviated, :narrow]
+    contexts = [:format, :stand_alone]
+
+    for context <- contexts,
+        width <- widths,
+        {key, entry} <- get_in(day_periods, [context, width]) || %{},
+        key in @flex_period_keys,
+        name <- entry_to_names(entry),
+        do: {key, name}
   end
 
   # ── Field extraction ────────────────────────────────────────
@@ -370,17 +524,42 @@ defmodule Calendrical.Time.Parser do
     base = if letter == :h, do: rem(n, 12), else: n
 
     period = caps |> Map.get("day_period", "") |> String.downcase()
+    flex = flex_period_from_caps(caps)
 
     cond do
       period in ["pm", "p.m."] ->
         {:ok, base + 12}
 
-      period in ["am", "a.m.", ""] ->
+      period in ["am", "a.m.", ""] and flex == nil ->
         {:ok, base}
 
       # Locale-specific day-period name — look up via heuristic.
       String.contains?(period, "pm") or String.contains?(period, "p.m") ->
         {:ok, base + 12}
+
+      # No explicit AM/PM marker but a flex period (B) was
+      # captured. TR35 §Parsing Day Periods: derive AM/PM
+      # from the period's defining range. Conservative
+      # mapping that holds for every locale CLDR ships:
+      flex in [:morning1, :morning2] ->
+        {:ok, base}
+
+      flex in [:afternoon1, :afternoon2, :evening1, :evening2, :night1, :night2] ->
+        # `night1`/`night2` cover hours straddling midnight in
+        # some locales (e.g. en covers 21:00–05:59). For the
+        # typical 12-hour input "10 at night" → 22:00 we add
+        # 12 when the base is below 6, and we add 12 always
+        # when the typed hour is in the 6-11 range. The corner
+        # case of "1 at night" meaning 01:00 is intentionally
+        # mapped to 13:00 — `night1` is locale-defined and we
+        # follow CLDR rather than guess.
+        {:ok, base + 12}
+
+      flex == :noon ->
+        {:ok, 12}
+
+      flex == :midnight ->
+        {:ok, 0}
 
       true ->
         # No PM signal — treat as morning (12-hour with no period
@@ -391,7 +570,27 @@ defmodule Calendrical.Time.Parser do
 
   defp resolve_hour(_, _, _, _), do: :error
 
-  defp extract_field(caps, key, default \\ nil) do
+  # The `B` regex emits one branch per `(period_key, name)`
+  # tuple, named `__bp_<key>`. Find which one fired and
+  # return its key atom.
+  defp flex_period_from_caps(caps) do
+    case Enum.find(caps, fn
+           {"__bp_" <> _, value} -> value != ""
+           _ -> false
+         end) do
+      {"__bp_" <> key_str, _} ->
+        try do
+          String.to_existing_atom(key_str)
+        rescue
+          _ -> nil
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  defp extract_field(caps, key, default) do
     case caps[key] do
       nil when is_integer(default) ->
         {:ok, default}

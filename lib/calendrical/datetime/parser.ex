@@ -81,9 +81,24 @@ defmodule Calendrical.DateTime.Parser do
           {:error, no_match_error(input, locale)},
           fn {_sep, left, right} ->
             with {:ok, date} <- Calendrical.Date.parse(left, options),
-                 {:ok, time} <- Calendrical.Time.parse(right, options),
+                 {:ok, time, zone} <-
+                   Calendrical.Time.Parser.parse_with_zone(right, options),
                  {:ok, ndt} <- NaiveDateTime.new(date, time) do
-              {:ok, ndt}
+              # If the time half carried a zone, resolve it
+              # into a `DateTime`. Resolution failure (e.g.
+              # IANA name with no TZ database loaded) falls
+              # back to the `NaiveDateTime` — preserving the
+              # parse rather than failing the whole input.
+              case zone do
+                nil ->
+                  {:ok, ndt}
+
+                _ ->
+                  case Calendrical.TimeZone.resolve(zone, ndt, options) do
+                    {:ok, %DateTime{} = dt} -> {:ok, dt}
+                    _ -> {:ok, ndt}
+                  end
+              end
             else
               _ -> nil
             end

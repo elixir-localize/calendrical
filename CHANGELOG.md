@@ -6,6 +6,36 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-05-17
+
+### Breaking changes
+
+* `Calendrical.Date.parse/2` now returns the parsed `Date` in the calendar named by the `:calendar` option (e.g. `~D[5786-09-29 Calendrical.Hebrew]` for `calendar: :hebrew`), instead of always returning `Calendar.ISO`. Pass `return_calendar: :iso` to force the previous behaviour.
+
+* `Calendrical.Date.parse_range/2` keeps returning ISO-Gregorian `Date.Range` endpoints — `Date.Range` is hard-coded to `Calendar.ISO` in Elixir stdlib.
+
+### Added
+
+* **TR35 date pattern letters** — `Q`/`q` (quarter, format & standalone, widths 1–5), `w` (week of year), `W` (week of month), `Y` (week-based year), `D` (day of year), `e`/`c` (local day of week, numeric & names), `F` (day-of-week-in-month). `E` weekday names are now validated against the constructed date instead of consumed and discarded.
+
+* **TR35 flexible day periods (`B`)** — `Calendrical.Time.parse/2` recognises locale-specific flex period names (`"in the morning"`, `"at night"`, `"noon"`, `"midnight"`) and uses them to disambiguate AM/PM for 12-hour cycles when no `a` marker is present.
+
+* **TR35 time zone resolution** — `Calendrical.DateTime.parse/2` now returns a `DateTime` (with the correct UTC offset) when the input carries a zone token. Supported: ISO offsets (`Z`, `±HH:MM`, `±HHMM`), GMT/UTC format (`GMT+10:30`), IANA zones (`Asia/Tokyo`), short abbreviations (`PST`, `EST`, `JST`, …), and CLDR locale names (`Pacific Time`). New `Calendrical.TimeZone.resolve/3`. IANA-name resolution requires the host application to depend on `:tzdata` or `:tz` (detected at runtime); without one, IANA names fall back to a `NaiveDateTime`.
+
+* **All CLDR `availableFormats` skeletons** are iterated on parse, not just the four `dateStyle` / `timeStyle` references. The standards are themselves keys into `availableFormats`, so this both subsumes the previous narrower set AND admits inputs like `"3-5-1960"` (matches `:yMd` skeleton `"M/d/y"` under lenient separator equivalence) and `"week 20 of 2026"` (matches `:yw` skeleton `"'week' w 'of' Y"`).
+
+* New `Calendrical.Time.Parser.parse_with_zone/2` — same as `parse/2` but also returns the captured zone string. Used by the DateTime parser; useful directly when a caller needs both the wall time and the original zone text.
+
+* Plural-variant patterns in `availableFormats` (the `%{one: ..., other: ...}` shape on week-bearing skeletons like `:yw`) are now iterated, not silently dropped.
+
+### Bug Fixes
+
+* Time-zone field regex (`z`/`Z`/`v`/`V`/`O`/`X`/`x`) tightened from the previous permissive `[\p{L}\d:+\-/_]+` (which would happily eat `"midnight"`) to require zone-shaped input — ISO offsets, GMT format, IANA region/city, uppercase abbreviation, or CLDR-style capital-led name.
+
+* Time parser no longer requires the `minute` capture — skeletons like `:Bh` (`"h B"`) that omit minutes now parse instead of erroring.
+
+* Two-digit year pivot (`yy`) is correctly skipped for era-aware calendars (Japanese imperial, ROC) where the year is meant literally.
+
 ## [0.4.0] — 2026-05-17
 
 ### Bug Fixes
