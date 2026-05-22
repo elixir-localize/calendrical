@@ -12,6 +12,10 @@ The format is based on
 
 * `Calendrical.Date.parse_range/2` now returns a `Date.Range` whose endpoints are in the calendar named by the `:calendar` option (matching `parse/2`), instead of always returning Calendar.ISO endpoints. `Date.Range` supports any calendar provided both endpoints share it, so non-ISO ranges are well-formed.
 
+### Added
+
+* `Calendrical.parse/2` — unified locale-aware parser that dispatches to the appropriate sub-parser when the input shape is not known up-front. Tries interval, date, time, then datetime, and returns `{:ok, value}` where `value` is a `Date`, `Time`, `NaiveDateTime`, `DateTime`, or `Date.Range`. Failures return `{:error, Calendrical.ParseError.t()}` whose `:attempts` field records each sub-parser tried.
+
 ## [0.5.0] — 2026-05-17
 
 ### Breaking changes

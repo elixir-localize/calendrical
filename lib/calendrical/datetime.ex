@@ -5,6 +5,10 @@ defmodule Calendrical.DateTime do
 
   See `Calendrical.DateTime.Parser` for the parsing engine.
 
+  When the caller doesn't know in advance whether the input is a
+  date, time, datetime, or range, use `Calendrical.parse/2` — it
+  dispatches to the appropriate sub-parser.
+
   """
 
   @doc """

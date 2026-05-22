@@ -771,6 +771,88 @@ defmodule Calendrical do
   end
 
   @doc """
+  Parses a locale-formatted string as a date, time, datetime, or date range —
+  whichever matches.
+
+  Useful when the input shape is not known up-front (e.g. a single
+  text field that may carry any of `"2026-05-16"`,
+  `"14:30"`, `"May 16, 2026 2:30 PM"`, or
+  `"May 5 – May 10, 2026"`). The caller pattern-matches on the
+  returned struct to discover which kind of value was parsed.
+
+  Sub-parsers are tried in this order:
+
+  1. **Interval** (only when an interval-shaped separator is
+     present) — `Calendrical.Date.parse_range/2`.
+
+  2. **Date** — `Calendrical.Date.parse/2`.
+
+  3. **Time** — `Calendrical.Time.parse/2`.
+
+  4. **DateTime** — `Calendrical.DateTime.parse/2`.
+
+  The first sub-parser to return `{:ok, _}` wins. See
+  `Calendrical.Parser` for the rationale behind the order.
+
+  ### Arguments
+
+  * `input` is the raw user input string.
+
+  * `options` is a keyword list of options.
+
+  ### Options
+
+  Forwarded to each sub-parser. Notable keys:
+
+  * `:locale` — the locale to interpret the string under.
+    Defaults to `Localize.get_locale/0`.
+
+  * `:calendar` — the CLDR calendar key. Defaults to `:gregorian`.
+
+  * `:reference_date` — the "today" anchor for two-digit-year
+    pivoting and partial-date inheritance.
+
+  * `:allow_inverted` — applies to interval parsing only.
+
+  ### Returns
+
+  * `{:ok, value}` where `value` is one of `t:Date.t/0`,
+    `t:Time.t/0`, `t:NaiveDateTime.t/0`, `t:DateTime.t/0`, or
+    `t:Date.Range.t/0`.
+
+  * `{:error, Calendrical.ParseError.t()}` when every sub-parser
+    failed. The exception's `:attempts` field carries the
+    `{kind, exception}` pairs from each attempt, in order.
+
+  ### Examples
+
+      iex> Calendrical.parse("2026-05-16", locale: :en)
+      {:ok, ~D[2026-05-16]}
+
+      iex> Calendrical.parse("14:30", locale: :en)
+      {:ok, ~T[14:30:00]}
+
+      iex> Calendrical.parse("2026-05-16T14:30:00", locale: :en)
+      {:ok, ~N[2026-05-16 14:30:00]}
+
+      iex> {:ok, range} = Calendrical.parse("2026-05-05 – 2026-05-10", locale: :en)
+      iex> {range.first, range.last}
+      {~D[2026-05-05], ~D[2026-05-10]}
+
+  """
+  @spec parse(String.t(), Keyword.t()) ::
+          {:ok,
+           Date.t()
+           | Time.t()
+           | NaiveDateTime.t()
+           | DateTime.t()
+           | Date.Range.t()}
+          | {:error, Exception.t()}
+  def parse(input, options \\ []) when is_binary(input) do
+    Calendrical.Parser.parse(input, options)
+  end
+
+  @doc """
   Formats the given date, time, or datetime into a string.
 
   This function is a thin wrapper around `Calendar.strftime/3` intended
