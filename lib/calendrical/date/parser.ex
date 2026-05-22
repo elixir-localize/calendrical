@@ -564,8 +564,95 @@ defmodule Calendrical.Date.Parser do
   # ── ISO 8601 ─────────────────────────────────────────────────
 
   defp try_iso(input, return_module) do
-    case Date.from_iso8601(input) do
+    with :error <- try_iso_extended(input),
+         :error <- try_iso_basic(input),
+         :error <- try_iso_ordinal(input),
+         :error <- try_iso_week_date(input) do
+      :error
+    else
       {:ok, date} -> {:ok, convert_to(date, return_module)}
+    end
+  end
+
+  # `YYYY-MM-DD` (extended). Delegated to stdlib.
+  defp try_iso_extended(input) do
+    case Date.from_iso8601(input) do
+      {:ok, date} -> {:ok, date}
+      _ -> :error
+    end
+  end
+
+  # `YYYYMMDD` (basic, no separators). The 4+2+2 shape is
+  # unambiguous and ISO 8601-conformant. The stdlib parser
+  # rejects this; we accept it as a wire format.
+  defp try_iso_basic(input) do
+    case input do
+      <<y::binary-size(4), m::binary-size(2), d::binary-size(2)>> ->
+        with {year, ""} <- Integer.parse(y),
+             {month, ""} <- Integer.parse(m),
+             {day, ""} <- Integer.parse(d),
+             {:ok, date} <- Date.new(year, month, day) do
+          {:ok, date}
+        else
+          _ -> :error
+        end
+
+      _ ->
+        :error
+    end
+  end
+
+  # `YYYY-DDD` (ordinal date — year + day-of-year, 1..366).
+  defp try_iso_ordinal(input) do
+    with [_, y, d] <- Regex.run(~r/\A(\d{4})-(\d{3})\z/u, input),
+         {year, ""} <- Integer.parse(y),
+         {day_of_year, ""} <- Integer.parse(d),
+         days = days_in_iso_year(year),
+         true <- day_of_year in 1..days,
+         {:ok, jan_1} <- Date.new(year, 1, 1) do
+      {:ok, Date.add(jan_1, day_of_year - 1)}
+    else
+      _ -> :error
+    end
+  end
+
+  defp days_in_iso_year(year) do
+    if Calendar.ISO.leap_year?(year), do: 366, else: 365
+  end
+
+  # `YYYY-Www-D` (ISO week date — week-based year + week
+  # number + day-of-week 1..7, Monday=1). Resolved against
+  # `Calendar.ISO`'s week numbering.
+  defp try_iso_week_date(input) do
+    with [_, y, w, d] <- Regex.run(~r/\A(\d{4})-W(\d{2})-(\d)\z/u, input),
+         {year, ""} <- Integer.parse(y),
+         {week, ""} <- Integer.parse(w),
+         {day, ""} <- Integer.parse(d),
+         true <- week in 1..53,
+         true <- day in 1..7,
+         {:ok, date} <- iso_week_date_to_date(year, week, day) do
+      {:ok, date}
+    else
+      _ -> :error
+    end
+  end
+
+  # ISO 8601 week 01 is the week containing the first Thursday
+  # of the year (equivalently, the week containing Jan 4).
+  defp iso_week_date_to_date(year, week, day) do
+    with {:ok, jan_4} <- Date.new(year, 1, 4) do
+      jan_4_day_of_week = Date.day_of_week(jan_4)
+      week_1_monday = Date.add(jan_4, -(jan_4_day_of_week - 1))
+      candidate = Date.add(week_1_monday, (week - 1) * 7 + (day - 1))
+
+      # Validate that the resulting date's week-based year
+      # matches the requested year (rejects e.g. `2026-W53-1`
+      # for years with only 52 weeks).
+      case :calendar.iso_week_number({candidate.year, candidate.month, candidate.day}) do
+        {^year, ^week} -> {:ok, candidate}
+        _ -> :error
+      end
+    else
       _ -> :error
     end
   end

@@ -294,6 +294,35 @@ defmodule Calendrical.DateTest do
     end
   end
 
+  describe "parse/2 — ISO 8601 formats beyond stdlib" do
+    test "basic format YYYYMMDD" do
+      assert {:ok, ~D[2026-05-23]} = Calendrical.Date.parse("20260523", locale: :en)
+      assert {:ok, ~D[2000-02-29]} = Calendrical.Date.parse("20000229", locale: :en)
+    end
+
+    test "ordinal date YYYY-DDD" do
+      assert {:ok, ~D[2026-05-23]} = Calendrical.Date.parse("2026-143", locale: :en)
+      assert {:ok, ~D[2026-01-01]} = Calendrical.Date.parse("2026-001", locale: :en)
+      assert {:ok, ~D[2024-12-31]} = Calendrical.Date.parse("2024-366", locale: :en)
+    end
+
+    test "ordinal date rejects out-of-range day-of-year" do
+      assert {:error, _} = Calendrical.Date.parse("2026-366", locale: :en)
+      assert {:error, _} = Calendrical.Date.parse("2026-000", locale: :en)
+    end
+
+    test "ISO week date YYYY-Www-D" do
+      assert {:ok, ~D[2026-05-23]} = Calendrical.Date.parse("2026-W21-6", locale: :en)
+      # 2020-W53 is a real 53-week year
+      assert {:ok, ~D[2020-12-28]} = Calendrical.Date.parse("2020-W53-1", locale: :en)
+    end
+
+    test "ISO week date rejects week 53 in non-53-week year" do
+      # 2025 is a 52-week ISO year (W53 would roll into 2026).
+      assert {:error, _} = Calendrical.Date.parse("2025-W53-1", locale: :en)
+    end
+  end
+
   describe "parse/2 — M↔d swap synthesis" do
     test "English 'MMM d' pattern parses 'd MMM' input ('23 May' in :en)" do
       assert {:ok, ~D[2026-05-23]} = Calendrical.Date.parse("23 May", locale: :en)

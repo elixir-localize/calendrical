@@ -132,21 +132,26 @@ defmodule Calendrical.DateTime.Parser do
 
   defp try_iso(input) do
     cond do
-      # With offset or Z → DateTime
-      String.contains?(input, "T") and
-          (String.contains?(input, "Z") or String.contains?(input, "+") or
-             String.match?(input, ~r/\d-\d{2}:\d{2}$/u)) ->
+      # Shape `YYYY-MM-DD<sep>HH:MM:SS[…]` where <sep> is `T`
+      # (RFC 3339 / ISO 8601) or a space (Elixir stdlib also
+      # accepts; widely used by Postgres, SQLite, logs, etc.).
+      iso_datetime_shape?(input) ->
         case DateTime.from_iso8601(input) do
           {:ok, dt, _offset} -> {:ok, dt}
           _ -> try_iso_naive(input)
         end
 
-      String.contains?(input, "T") ->
-        try_iso_naive(input)
-
       true ->
         :error
     end
+  end
+
+  # `Date.from_iso8601/1` and `NaiveDateTime.from_iso8601/1`
+  # only accept the *extended* format with hyphens and colons.
+  # Cheap shape check to avoid handing arbitrary input to the
+  # stdlib parser.
+  defp iso_datetime_shape?(input) do
+    Regex.match?(~r/\A\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/u, input)
   end
 
   defp try_iso_naive(input) do

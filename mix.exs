@@ -104,6 +104,7 @@ defmodule Calendrical.MixProject do
       Guides: [
         "guides/calendar_summary.md",
         "guides/calendar_behaviour.md",
+        "guides/parsing.md",
         "guides/migration.md"
       ]
     ]

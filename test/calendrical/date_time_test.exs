@@ -21,6 +21,17 @@ defmodule Calendrical.DateTimeTest do
       assert {:ok, ndt} = Calendrical.DateTime.parse("2026-05-16T14:30:00.123", locale: :en)
       assert {123_000, 3} = ndt.microsecond
     end
+
+    test "space separator (instead of T) is accepted" do
+      # Stdlib `NaiveDateTime.from_iso8601/1` accepts space; we
+      # gate on the shape so we accept it too. Common in logs,
+      # Postgres `timestamp` columns, SQLite, etc.
+      assert {:ok, ~N[2026-05-16 14:30:00]} =
+               Calendrical.DateTime.parse("2026-05-16 14:30:00", locale: :en)
+
+      assert {:ok, dt} = Calendrical.DateTime.parse("2026-05-16 14:30:00Z", locale: :en)
+      assert dt.time_zone == "Etc/UTC"
+    end
   end
 
   describe "parse/2 — locale glue patterns" do

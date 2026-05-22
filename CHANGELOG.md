@@ -28,6 +28,12 @@ The format is based on
 
 * `Calendrical.Date.parse/2` now accepts month-name + day input in either order regardless of the locale's preferred ordering. For any CLDR pattern with a name-form month (`MMM`/`MMMM`/`MMMMM`) and a numeric day, the parser also tries the reversed token order — so `"May 23"` parses in French (CLDR has `d MMM`) and `"23 May"` parses in English (CLDR has `MMM d, y`). Numeric `M`/`MM` are excluded because the swap would be ambiguous with `d`. Applies to year-bearing and weekday-bearing variants too; non-M-and-d tokens stay in place.
 
+* ISO 8601 forms beyond Elixir stdlib are now accepted: **basic format** (`20260523`), **ordinal date** (`2026-143`), and **ISO week date** (`2026-W21-6`). `Calendrical.Date.parse/2` recognises all three in every locale as a universal escape hatch alongside the existing extended format (`2026-05-23`).
+
+* `Calendrical.DateTime.parse/2` now accepts a space separator between date and time (`"2026-05-23 14:30:00"`) in addition to `T`. Elixir stdlib's `NaiveDateTime.from_iso8601/1` has accepted this form since 1.4; the gate has been relaxed so Calendrical does too. Common in SQL output, log lines, and human-readable timestamps.
+
+* New parsing guide ([`guides/parsing.md`](guides/parsing.md)) describing what each parser accepts, how Calendrical compares to Elixir stdlib, ISO 8601 coverage, and the documented variances from CLDR (case-insensitive name matching, M↔d swap, lenient separators).
+
 ## [0.5.0] — 2026-05-17
 
 ### Breaking changes
