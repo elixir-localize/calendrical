@@ -175,10 +175,7 @@ defmodule Calendrical.Date.Parser do
              DateRangeParseError.exception(
                input: input,
                reason: :no_separator,
-               message:
-                 "could not find an interval separator in #{inspect(input)} for locale " <>
-                   "#{inspect(locale)}; expected CLDR interval-fallback separator (e.g. \" – \") " <>
-                   "or one of `-`, `/`, `~`, `〜`"
+               locale: locale
              )}
         end
     end
@@ -495,8 +492,7 @@ defmodule Calendrical.Date.Parser do
          DateRangeParseError.exception(
            input: string,
            reason: reason_tag,
-           cause: err,
-           message: "range endpoint #{inspect(string)} could not be parsed: " <> err.message
+           cause: err
          )}
     end
   end
@@ -508,9 +504,8 @@ defmodule Calendrical.Date.Parser do
          DateRangeParseError.exception(
            input: {from, to},
            reason: :inverted,
-           message:
-             "range end #{inspect(to)} is before start #{inspect(from)}; " <>
-               "pass `allow_inverted: true` to permit descending ranges"
+           from: from,
+           to: to
          )}
 
       :gt ->
@@ -1608,13 +1603,6 @@ defmodule Calendrical.Date.Parser do
   # ── Errors ───────────────────────────────────────────────────
 
   defp no_match_error(input, locale, calendar) do
-    DateParseError.exception(
-      input: input,
-      locale: locale,
-      calendar: calendar,
-      message:
-        "could not parse #{inspect(input)} as a date in locale #{inspect(locale)} " <>
-          "(calendar #{inspect(calendar)}); ISO-8601 (YYYY-MM-DD) is always accepted as a fallback"
-    )
+    DateParseError.exception(input: input, locale: locale, calendar: calendar)
   end
 end

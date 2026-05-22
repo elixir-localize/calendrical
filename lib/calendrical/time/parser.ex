@@ -183,13 +183,7 @@ defmodule Calendrical.Time.Parser do
   defp parse_cldr_set(_), do: []
 
   defp no_match_error(input, locale) do
-    TimeParseError.exception(
-      input: input,
-      locale: locale,
-      message:
-        "could not parse #{inspect(input)} as a time in locale #{inspect(locale)}; " <>
-          "ISO-8601 (HH:MM[:SS[.frac]]) is always accepted as a fallback"
-    )
+    TimeParseError.exception(input: input, locale: locale)
   end
 
   # ── Pattern → regex ──────────────────────────────────────────

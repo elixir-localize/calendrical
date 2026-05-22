@@ -145,4 +145,43 @@ defmodule Calendrical.ParseTest do
       assert {:error, %Calendrical.ParseError{}} = Calendrical.parse("", locale: :en)
     end
   end
+
+  describe "Calendrical.parse/2 — exceptions are structured" do
+    test "ParseError carries no :message struct field; message/1 materializes it" do
+      assert {:error, %Calendrical.ParseError{} = err} =
+               Calendrical.parse("garbage", locale: :en)
+
+      refute Map.has_key?(err, :message)
+      msg = Exception.message(err)
+      assert msg =~ "garbage"
+      assert msg =~ ":en"
+    end
+
+    test "DateParseError carries no :message field" do
+      assert {:error, %Calendrical.DateParseError{} = err} =
+               Calendrical.Date.parse("garbage", locale: :en)
+
+      refute Map.has_key?(err, :message)
+      assert Exception.message(err) =~ "garbage"
+    end
+
+    test "DateRangeParseError :inverted carries :from and :to, not prose" do
+      assert {:error, %Calendrical.DateRangeParseError{} = err} =
+               Calendrical.Date.parse_range({"2026-05-10", "2026-05-05"}, locale: :en)
+
+      assert err.reason == :inverted
+      assert err.from == ~D[2026-05-10]
+      assert err.to == ~D[2026-05-05]
+      refute Map.has_key?(err, :message)
+    end
+
+    test "DateRangeParseError reason_atoms/0 is exhaustive" do
+      assert Calendrical.DateRangeParseError.reason_atoms() == [
+               :no_separator,
+               :inverted,
+               :from_parse_failed,
+               :to_parse_failed
+             ]
+    end
+  end
 end

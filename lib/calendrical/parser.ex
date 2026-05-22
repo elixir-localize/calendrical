@@ -66,10 +66,7 @@ defmodule Calendrical.Parser do
        ParseError.exception(
          input: input,
          locale: locale,
-         attempts: Enum.reverse(attempts),
-         message:
-           "could not parse #{inspect(input)} as a date, time, datetime, " <>
-             "or interval in locale #{inspect(locale)}"
+         attempts: Enum.reverse(attempts)
        )}
     end
   end

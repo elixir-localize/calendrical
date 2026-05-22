@@ -192,12 +192,6 @@ defmodule Calendrical.DateTime.Parser do
   # ── Errors ───────────────────────────────────────────────────
 
   defp no_match_error(input, locale) do
-    DateTimeParseError.exception(
-      input: input,
-      locale: locale,
-      message:
-        "could not parse #{inspect(input)} as a datetime in locale #{inspect(locale)}; " <>
-          "ISO-8601 (YYYY-MM-DDTHH:MM:SS[Z|±HH:MM]) is always accepted as a fallback"
-    )
+    DateTimeParseError.exception(input: input, locale: locale)
   end
 end

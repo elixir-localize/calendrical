@@ -8,6 +8,10 @@ The format is based on
 
 ## [0.6.0] — 2026-05-23
 
+### Breaking changes
+
+* `Calendrical.DateParseError`, `TimeParseError`, `DateTimeParseError`, `DateRangeParseError`, and `ParseError` no longer carry a `:message` struct field. The human-readable message is materialised by `Exception.message/1` from the semantic fields (`:input`, `:locale`, `:calendar`, `:reason`, `:from`, `:to`, `:cause`, `:attempts`). Pattern-match on `:reason` (and other structural fields) rather than parsing the rendered string. `DateRangeParseError` now declares `@behaviour Localize.Exception` and exposes `reason_atoms/0` for the closed set of failure categories; the `:inverted` reason carries `:from`/`:to` Date endpoints instead of stuffing them into `:input`.
+
 ### Bug Fixes
 
 * `Calendrical.Date.parse_range/2` now returns a `Date.Range` whose endpoints are in the calendar named by the `:calendar` option (matching `parse/2`), instead of always returning Calendar.ISO endpoints. `Date.Range` supports any calendar provided both endpoints share it, so non-ISO ranges are well-formed.
