@@ -390,7 +390,10 @@ defmodule Calendrical.Time.Parser do
       |> Enum.map(&Regex.escape/1)
       |> Enum.join("|")
 
-    "(?P<day_period>#{alternation})"
+    # `(?i:...)` per CLDR TR35 §6.5 — day-period name matching
+    # is case-insensitive so "am" matches "AM", "Du matin"
+    # matches "du matin", etc.
+    "(?P<day_period>(?i:#{alternation}))"
   end
 
   defp collect_period_names(day_periods, letter) do
@@ -472,7 +475,8 @@ defmodule Calendrical.Time.Parser do
         branches =
           Enum.map(names_by_key, fn {key, names} ->
             alternation = names |> Enum.map(&Regex.escape/1) |> Enum.join("|")
-            "(?P<__bp_#{key}>#{alternation})"
+            # Case-insensitive per CLDR TR35 §6.5.
+            "(?P<__bp_#{key}>(?i:#{alternation}))"
           end)
 
         "(?:" <> Enum.join(branches, "|") <> ")"

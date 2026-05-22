@@ -12,9 +12,13 @@ The format is based on
 
 * `Calendrical.Date.parse_range/2` now returns a `Date.Range` whose endpoints are in the calendar named by the `:calendar` option (matching `parse/2`), instead of always returning Calendar.ISO endpoints. `Date.Range` supports any calendar provided both endpoints share it, so non-ISO ranges are well-formed.
 
+* Month, day, era, quarter, and day-period name matching is now case-insensitive per CLDR TR35 §6.5 (Lenient Parsing). Previously `"23 Mai"` (capitalised) failed to parse in French because the parser case-sensitively matched the lowercase CLDR form "mai"; `"23 mai"` worked. All four parsers now accept any case for locale name fields.
+
 ### Added
 
 * `Calendrical.parse/2` — unified locale-aware parser that dispatches to the appropriate sub-parser when the input shape is not known up-front. Tries interval, date, time, then datetime, and returns `{:ok, value}` where `value` is a `Date`, `Time`, `NaiveDateTime`, `DateTime`, or `Date.Range`. Failures return `{:error, Calendrical.ParseError.t()}` whose `:attempts` field records each sub-parser tried.
+
+* The `:calendar` option on all parsers now accepts either a CLDR calendar key atom (`:gregorian`, `:hebrew`, …) or a calendar module (`Calendar.ISO`, `Calendrical.Hebrew`, …). Modules are coerced via the `cldr_calendar_type/0` callback; `Calendar.ISO` is treated as `:gregorian`.
 
 ## [0.5.0] — 2026-05-17
 

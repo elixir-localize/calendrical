@@ -40,11 +40,15 @@ defmodule Calendrical.Date do
   * `:locale` — the locale to interpret the string under.
     Defaults to `Localize.get_locale/0`.
 
-  * `:calendar` — the CLDR calendar key (e.g. `:gregorian`,
-    `:buddhist`, `:islamic_civil`, `:japanese`, `:persian`,
-    `:hebrew`). Defaults to `:gregorian`. Drives both how
-    the input is interpreted and what calendar the returned
-    `Date` is in.
+  * `:calendar` — either a CLDR calendar key (e.g.
+    `:gregorian`, `:buddhist`, `:islamic_civil`, `:japanese`,
+    `:persian`, `:hebrew`) or a calendar module
+    (`Calendar.ISO`, `Calendrical.Hebrew`,
+    `Calendrical.Buddhist`, …). A module is coerced to its
+    CLDR atom via the `cldr_calendar_type/0` callback;
+    `Calendar.ISO` is an alias for `:gregorian`. Defaults to
+    `:gregorian`. Drives both how the input is interpreted
+    and what calendar the returned `Date` is in.
 
   * `:reference_date` — the "today" anchor for two-digit-year
     pivoting. Defaults to `Date.utc_today/0`.
@@ -74,6 +78,9 @@ defmodule Calendrical.Date do
       {:ok, ~D[2026-05-16]}
 
       iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :hebrew)
+      {:ok, ~D[5786-09-29 Calendrical.Hebrew]}
+
+      iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew)
       {:ok, ~D[5786-09-29 Calendrical.Hebrew]}
 
       iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :hebrew, return_calendar: :iso)
@@ -153,6 +160,10 @@ defmodule Calendrical.Date do
       {~D[2026-05-05], ~D[2026-05-10]}
 
       iex> {:ok, range} = Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"}, calendar: :buddhist)
+      iex> {range.first, range.last}
+      {~D[2569-05-05 Calendrical.Buddhist], ~D[2569-05-10 Calendrical.Buddhist]}
+
+      iex> {:ok, range} = Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"}, calendar: Calendrical.Buddhist)
       iex> {range.first, range.last}
       {~D[2569-05-05 Calendrical.Buddhist], ~D[2569-05-10 Calendrical.Buddhist]}
 

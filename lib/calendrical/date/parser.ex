@@ -90,7 +90,7 @@ defmodule Calendrical.Date.Parser do
           {:ok, Date.t()} | {:error, Exception.t()}
   def parse(input, options \\ []) when is_binary(input) do
     locale = Keyword.get(options, :locale) || Localize.get_locale()
-    cldr_calendar = Keyword.get(options, :calendar, :gregorian)
+    cldr_calendar = normalise_calendar(Keyword.get(options, :calendar, :gregorian))
     reference_year = (Keyword.get(options, :reference_date) || Date.utc_today()).year
     return_module = resolve_return_calendar(options, cldr_calendar)
     input = String.trim(input)
@@ -143,6 +143,7 @@ defmodule Calendrical.Date.Parser do
   @spec parse_range(String.t(), Keyword.t()) ::
           {:ok, Date.Range.t()} | {:error, Exception.t()}
   def parse_range(input, options \\ []) when is_binary(input) do
+    options = normalise_calendar_option(options)
     locale = Keyword.get(options, :locale) || Localize.get_locale()
     cldr_calendar = Keyword.get(options, :calendar, :gregorian)
     reference_year = (Keyword.get(options, :reference_date) || Date.utc_today()).year
@@ -470,6 +471,7 @@ defmodule Calendrical.Date.Parser do
           {:ok, Date.Range.t()} | {:error, Exception.t()}
   def parse_range_pair(from_string, to_string, options)
       when is_binary(from_string) and is_binary(to_string) do
+    options = normalise_calendar_option(options)
     allow_inverted = Keyword.get(options, :allow_inverted, false)
 
     with {:ok, from_date} <- parse_or_wrap(from_string, options, :from_parse_failed),
@@ -622,6 +624,33 @@ defmodule Calendrical.Date.Parser do
       {:error, _} -> {:ok, Calendar.ISO}
     end
   end
+
+  # The `:calendar` option accepts either a CLDR calendar type
+  # atom (`:gregorian`, `:hebrew`, …) or a calendar module
+  # (`Calendar.ISO`, `Calendrical.Hebrew`, …). Modules are
+  # coerced to their CLDR atom via the `cldr_calendar_type/0`
+  # callback; `Calendar.ISO` is the stdlib alias for
+  # proleptic-Gregorian and maps to `:gregorian`.
+  @doc false
+  def normalise_calendar_option(options) do
+    case Keyword.fetch(options, :calendar) do
+      :error -> options
+      {:ok, value} -> Keyword.put(options, :calendar, normalise_calendar(value))
+    end
+  end
+
+  @doc false
+  def normalise_calendar(Calendar.ISO), do: :gregorian
+
+  def normalise_calendar(value) when is_atom(value) do
+    if Code.ensure_loaded?(value) and function_exported?(value, :cldr_calendar_type, 0) do
+      value.cldr_calendar_type()
+    else
+      value
+    end
+  end
+
+  def normalise_calendar(other), do: other
 
   # Convert `date` into `target_module`, gracefully degrading
   # on conversion failure (returns the original date so the
@@ -1014,7 +1043,10 @@ defmodule Calendrical.Date.Parser do
       |> Enum.sort_by(fn {_index, name} -> -byte_size(name) end)
       |> Enum.map(fn {index, name} -> "(?P<__m#{index}__>#{Regex.escape(name)})" end)
 
-    "(?:" <> Enum.join(branches, "|") <> ")"
+    # `(?i:...)` per CLDR TR35 §6.5 — month-name matching is
+    # case-insensitive, so French "Mai" matches lowercase "mai"
+    # in CLDR data, English "MAY" matches "May", etc.
+    "(?i:" <> Enum.join(branches, "|") <> ")"
   end
 
   defp era_name_regex(eras_data, width) when is_map(eras_data) do
@@ -1030,7 +1062,7 @@ defmodule Calendrical.Date.Parser do
         |> Enum.sort_by(fn {_index, name} -> -byte_size(name) end)
         |> Enum.map(fn {index, name} -> "(?P<__e#{index}__>#{Regex.escape(name)})" end)
 
-      {:branches, "(?:" <> Enum.join(branches, "|") <> ")"}
+      {:branches, "(?i:" <> Enum.join(branches, "|") <> ")"}
     end
   end
 
@@ -1084,7 +1116,7 @@ defmodule Calendrical.Date.Parser do
 
     case branches do
       [] -> {:plain, "[\\p{L}\\.]+"}
-      _ -> {:capture, :day_of_week, "(?:" <> Enum.join(branches, "|") <> ")"}
+      _ -> {:capture, :day_of_week, "(?i:" <> Enum.join(branches, "|") <> ")"}
     end
   end
 
@@ -1113,7 +1145,7 @@ defmodule Calendrical.Date.Parser do
 
     case branches do
       [] -> {:plain, "[\\p{L}\\d\\.\\s]+?"}
-      _ -> {:capture, :quarter, "(?:" <> Enum.join(branches, "|") <> ")"}
+      _ -> {:capture, :quarter, "(?i:" <> Enum.join(branches, "|") <> ")"}
     end
   end
 

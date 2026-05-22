@@ -294,6 +294,72 @@ defmodule Calendrical.DateTest do
     end
   end
 
+  describe "parse/2 — case-insensitive name matching (CLDR TR35 §6.5)" do
+    test "French 'Mai' matches CLDR lowercase 'mai'" do
+      assert {:ok, %Date{month: 5, day: 23}} =
+               Calendrical.Date.parse("23 Mai 2026", locale: :fr)
+    end
+
+    test "French uppercase 'MAI' also matches" do
+      assert {:ok, %Date{month: 5, day: 23}} =
+               Calendrical.Date.parse("23 MAI 2026", locale: :fr)
+    end
+
+    test "English uppercase 'MAY' matches CLDR 'May'" do
+      assert {:ok, %Date{month: 5, day: 23}} =
+               Calendrical.Date.parse("MAY 23, 2026", locale: :en)
+    end
+
+    test "English lowercase weekday matches" do
+      assert {:ok, ~D[2026-05-16]} =
+               Calendrical.Date.parse("saturday, may 16, 2026", locale: :en)
+    end
+  end
+
+  describe "parse/2 — :calendar option accepts a module" do
+    test "Calendar.ISO is treated as :gregorian" do
+      assert {:ok, ~D[2026-05-16]} =
+               Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendar.ISO)
+    end
+
+    test "Calendrical.Hebrew is equivalent to :hebrew" do
+      assert {:ok, %Date{calendar: Calendrical.Hebrew} = d} =
+               Calendrical.Date.parse("2026-05-16",
+                 locale: :en,
+                 calendar: Calendrical.Hebrew
+               )
+
+      {:ok, expected} =
+        Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :hebrew)
+
+      assert d == expected
+    end
+
+    test "module form works for parse_range/2" do
+      assert {:ok, range} =
+               Calendrical.Date.parse_range(
+                 {"2026-05-05", "2026-05-10"},
+                 locale: :en,
+                 calendar: Calendrical.Buddhist
+               )
+
+      assert range.first == ~D[2569-05-05 Calendrical.Buddhist]
+      assert range.last == ~D[2569-05-10 Calendrical.Buddhist]
+    end
+
+    test "module form works for single-string parse_range/2" do
+      assert {:ok, range} =
+               Calendrical.Date.parse_range(
+                 "2026-05-05 – 2026-05-10",
+                 locale: :en,
+                 calendar: Calendrical.Hebrew
+               )
+
+      assert range.first.calendar == Calendrical.Hebrew
+      assert range.last.calendar == Calendrical.Hebrew
+    end
+  end
+
   describe "parse/2 — ROC (Minguo) era" do
     test "民國115年5月16日 (medium) → ROC 115-05-16 ≡ 2026-05-16" do
       assert {:ok, ~D[0115-05-16 Calendrical.Roc]} =

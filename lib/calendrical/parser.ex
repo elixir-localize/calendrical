@@ -50,6 +50,7 @@ defmodule Calendrical.Parser do
            | Date.Range.t()}
           | {:error, Exception.t()}
   def parse(input, options \\ []) when is_binary(input) do
+    options = Calendrical.Date.Parser.normalise_calendar_option(options)
     locale = Keyword.get(options, :locale) || Localize.get_locale()
     cldr_calendar = Keyword.get(options, :calendar, :gregorian)
     trimmed = String.trim(input)

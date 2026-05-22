@@ -76,6 +76,27 @@ defmodule Calendrical.ParseTest do
       assert range.first.calendar == Calendrical.Buddhist
       assert range.last.calendar == Calendrical.Buddhist
     end
+
+    test "calendar option accepts a module — Calendrical.Hebrew" do
+      assert {:ok, %Date{calendar: Calendrical.Hebrew}} =
+               Calendrical.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew)
+    end
+
+    test "calendar option accepts Calendar.ISO as alias for :gregorian" do
+      assert {:ok, ~D[2026-05-16]} =
+               Calendrical.parse("2026-05-16", locale: :en, calendar: Calendar.ISO)
+    end
+
+    test "module-form calendar works for intervals" do
+      assert {:ok, %Date.Range{} = range} =
+               Calendrical.parse("2026-05-05 – 2026-05-10",
+                 locale: :en,
+                 calendar: Calendrical.Buddhist
+               )
+
+      assert range.first.calendar == Calendrical.Buddhist
+      assert range.last.calendar == Calendrical.Buddhist
+    end
   end
 
   describe "Calendrical.parse/2 — order: date before time" do
