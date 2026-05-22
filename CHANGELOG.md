@@ -32,7 +32,7 @@ The format is based on
 
 * `Calendrical.DateTime.parse/2` now accepts a space separator between date and time (`"2026-05-23 14:30:00"`) in addition to `T`. Elixir stdlib's `NaiveDateTime.from_iso8601/1` has accepted this form since 1.4; the gate has been relaxed so Calendrical does too. Common in SQL output, log lines, and human-readable timestamps.
 
-* New parsing guide ([`guides/parsing.md`](guides/parsing.md)) describing what each parser accepts, how Calendrical compares to Elixir stdlib, ISO 8601 coverage, and the documented variances from CLDR (case-insensitive name matching, M↔d swap, lenient separators).
+* New parsing guide ([`guides/parsing.md`](https://hexdocs.pm/calendrical/parsing.html)) describing what each parser accepts, how Calendrical compares to Elixir stdlib, ISO 8601 coverage, and the documented variances from CLDR (case-insensitive name matching, M↔d swap, lenient separators).
 
 ## [0.5.0] — 2026-05-17
 
