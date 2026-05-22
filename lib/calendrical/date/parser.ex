@@ -122,8 +122,7 @@ defmodule Calendrical.Date.Parser do
   #
   #   * `:iso` — force the result into `Calendar.ISO`
   #     (Gregorian). Use this when a downstream consumer
-  #     (e.g. `Date.Range`, an Ecto `:date` cast) requires
-  #     ISO.
+  #     (e.g. an Ecto `:date` cast) requires ISO.
   #
   #   * a calendar module like `Calendrical.Persian` —
   #     return the Date in that specific calendar regardless
@@ -440,7 +439,10 @@ defmodule Calendrical.Date.Parser do
   end
 
   # Fill missing fields from `inherit_from`, then construct
-  # the date in the requested calendar and convert to ISO.
+  # the date in the requested calendar. The returned date
+  # keeps the requested calendar — both interval endpoints
+  # are materialised under the same calendar so the resulting
+  # `Date.Range` is well-formed for any calendar, not just ISO.
   defp materialise(%{year: y, month: m, day: d}, inherit_from, cldr_calendar) do
     year = y || inherit_from.year
     month = m || inherit_from.month
@@ -452,13 +454,8 @@ defmodule Calendrical.Date.Parser do
 
       true ->
         with {:ok, calendar_module} <- resolve_calendar_module(cldr_calendar),
-             {:ok, date} <- build_date(year, month, day, calendar_module),
-             iso_date <-
-               if(date.calendar == Calendar.ISO,
-                 do: date,
-                 else: Date.convert!(date, Calendar.ISO)
-               ) do
-          {:ok, iso_date}
+             {:ok, date} <- build_date(year, month, day, calendar_module) do
+          {:ok, date}
         else
           _ -> :error
         end
@@ -483,10 +480,11 @@ defmodule Calendrical.Date.Parser do
   end
 
   defp parse_or_wrap(string, options, reason_tag) do
-    # `Date.Range` requires ISO endpoints (stdlib constraint),
-    # so range endpoint parsing always returns ISO regardless
-    # of what `:calendar` was passed.
-    case parse(string, Keyword.put(options, :return_calendar, :iso)) do
+    # `Date.Range` supports any calendar as long as both
+    # endpoints share the same one. We let `parse/2` return
+    # whatever `:calendar` the caller asked for and rely on
+    # both endpoints being parsed under the same option.
+    case parse(string, options) do
       {:ok, %Date{} = date} ->
         {:ok, date}
 

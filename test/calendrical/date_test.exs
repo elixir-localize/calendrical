@@ -226,6 +226,74 @@ defmodule Calendrical.DateTest do
     end
   end
 
+  describe "parse_range/2 — non-ISO calendars" do
+    test "Buddhist pair returns Date.Range with Buddhist endpoints" do
+      assert {:ok, range} =
+               Calendrical.Date.parse_range(
+                 {"2026-05-05", "2026-05-10"},
+                 locale: :en,
+                 calendar: :buddhist
+               )
+
+      assert %Date.Range{} = range
+      assert range.first == ~D[2569-05-05 Calendrical.Buddhist]
+      assert range.last == ~D[2569-05-10 Calendrical.Buddhist]
+      assert range.first.calendar == Calendrical.Buddhist
+      assert range.last.calendar == Calendrical.Buddhist
+    end
+
+    test "Hebrew pair returns Date.Range with Hebrew endpoints" do
+      assert {:ok, range} =
+               Calendrical.Date.parse_range(
+                 {"2026-05-05", "2026-05-10"},
+                 locale: :en,
+                 calendar: :hebrew
+               )
+
+      assert %Date.Range{} = range
+      assert range.first == ~D[5786-09-18 Calendrical.Hebrew]
+      assert range.last == ~D[5786-09-23 Calendrical.Hebrew]
+      assert range.first.calendar == Calendrical.Hebrew
+      assert range.last.calendar == Calendrical.Hebrew
+    end
+
+    test "Persian pair returns Date.Range with Persian endpoints" do
+      assert {:ok, range} =
+               Calendrical.Date.parse_range(
+                 {"2026-05-05", "2026-05-10"},
+                 locale: :en,
+                 calendar: :persian
+               )
+
+      assert %Date.Range{} = range
+      assert range.first.calendar == Calendrical.Persian
+      assert range.last.calendar == Calendrical.Persian
+    end
+
+    test "Gregorian default returns Date.Range with Calendar.ISO endpoints" do
+      assert {:ok, range} =
+               Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"}, locale: :en)
+
+      assert %Date.Range{} = range
+      assert range.first.calendar == Calendar.ISO
+      assert range.last.calendar == Calendar.ISO
+    end
+
+    test "inverted Buddhist range with allow_inverted preserves calendar" do
+      assert {:ok, range} =
+               Calendrical.Date.parse_range(
+                 {"2026-05-10", "2026-05-05"},
+                 locale: :en,
+                 calendar: :buddhist,
+                 allow_inverted: true
+               )
+
+      assert %Date.Range{step: -1} = range
+      assert range.first.calendar == Calendrical.Buddhist
+      assert range.last.calendar == Calendrical.Buddhist
+    end
+  end
+
   describe "parse/2 — ROC (Minguo) era" do
     test "民國115年5月16日 (medium) → ROC 115-05-16 ≡ 2026-05-16" do
       assert {:ok, ~D[0115-05-16 Calendrical.Roc]} =

@@ -104,7 +104,13 @@ defmodule Calendrical.Date do
   have the endpoints split.
 
   Each endpoint is parsed independently via `parse/2`. The
-  result is a `t:Date.Range.t/0` (Gregorian).
+  result is always a `t:Date.Range.t/0`; the calendar of the
+  range's endpoints follows the `:calendar` option (defaults
+  to `:gregorian`, i.e. `Calendar.ISO`). `Date.Range` supports
+  any calendar provided both endpoints share it — both
+  endpoints are parsed under the same option, so the range is
+  well-formed for Buddhist, Hebrew, Japanese, Persian, and
+  every other Calendrical-supported calendar.
 
   ### Arguments
 
@@ -126,7 +132,8 @@ defmodule Calendrical.Date do
 
   ### Returns
 
-  * `{:ok, Date.Range.t()}` on success.
+  * `{:ok, Date.Range.t()}` on success. The endpoints'
+    calendar matches the `:calendar` option.
 
   * `{:error, Calendrical.DateParseError.t() |
     Calendrical.DateRangeParseError.t()}` on failure.
@@ -140,6 +147,10 @@ defmodule Calendrical.Date do
       iex> {:ok, range} = Calendrical.Date.parse_range("May 5, 2026 – May 10, 2026", locale: :en)
       iex> {range.first, range.last}
       {~D[2026-05-05], ~D[2026-05-10]}
+
+      iex> {:ok, range} = Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"}, calendar: :buddhist)
+      iex> {range.first, range.last}
+      {~D[2569-05-05 Calendrical.Buddhist], ~D[2569-05-10 Calendrical.Buddhist]}
 
   """
   @spec parse_range(String.t() | {String.t(), String.t()}, Keyword.t()) ::
