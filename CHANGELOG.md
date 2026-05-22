@@ -18,11 +18,15 @@ The format is based on
 
 * Month, day, era, quarter, and day-period name matching is now case-insensitive per CLDR TR35 §6.5 (Lenient Parsing). Previously `"23 Mai"` (capitalised) failed to parse in French because the parser case-sensitively matched the lowercase CLDR form "mai"; `"23 mai"` worked. All four parsers now accept any case for locale name fields.
 
+* A literal space in a CLDR date pattern now requires at least one whitespace character in the input (previously zero-or-more). Inter-field gaps with no explicit pattern separator stay optional. This prevents over-greedy matches like `"mai23"` binding to a `MMMM d y` pattern as month=mai, day=2, year=3.
+
 ### Added
 
 * `Calendrical.parse/2` — unified locale-aware parser that dispatches to the appropriate sub-parser when the input shape is not known up-front. Tries interval, date, time, then datetime, and returns `{:ok, value}` where `value` is a `Date`, `Time`, `NaiveDateTime`, `DateTime`, or `Date.Range`. Failures return `{:error, Calendrical.ParseError.t()}` whose `:attempts` field records each sub-parser tried.
 
 * The `:calendar` option on all parsers now accepts either a CLDR calendar key atom (`:gregorian`, `:hebrew`, …) or a calendar module (`Calendar.ISO`, `Calendrical.Hebrew`, …). Modules are coerced via the `cldr_calendar_type/0` callback; `Calendar.ISO` is treated as `:gregorian`.
+
+* `Calendrical.Date.parse/2` now accepts month-name + day input in either order regardless of the locale's preferred ordering. For any CLDR pattern with a name-form month (`MMM`/`MMMM`/`MMMMM`) and a numeric day, the parser also tries the reversed token order — so `"May 23"` parses in French (CLDR has `d MMM`) and `"23 May"` parses in English (CLDR has `MMM d, y`). Numeric `M`/`MM` are excluded because the swap would be ambiguous with `d`. Applies to year-bearing and weekday-bearing variants too; non-M-and-d tokens stay in place.
 
 ## [0.5.0] — 2026-05-17
 

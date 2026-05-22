@@ -80,6 +80,7 @@ defmodule Calendrical.Date.Parser do
   # space (U+3000) around separators. Real-world input uses
   # plain ASCII space. Accept any of them as the same slot.
   @space_class "[    　]*"
+  @literal_space_class "[    　]+"
 
   @doc """
   Parses `input` as a locale-formatted date.
@@ -759,9 +760,74 @@ defmodule Calendrical.Date.Parser do
   # (year-only patterns, weekday-only patterns, etc.) won't
   # successfully construct one and fall through naturally.
   defp collect_patterns(available) do
-    for {skeleton, pattern_data} <- available,
-        pattern <- resolve_pattern_variants(pattern_data),
-        do: {skeleton, pattern}
+    base =
+      for {skeleton, pattern_data} <- available,
+          pattern <- resolve_pattern_variants(pattern_data),
+          do: {skeleton, pattern}
+
+    synthesised = synthesise_month_day_swaps(base)
+
+    Enum.uniq(base ++ synthesised)
+  end
+
+  # For every pattern with a name-form month (`MMM`/`MMMM`/
+  # `MMMMM`) AND a numeric day field, generate the same pattern
+  # with the M and d tokens swapped. Name-form month + day is
+  # unambiguous in either order, so we want "May 23" to parse in
+  # `:fr` (CLDR has `d MMM`) and "23 May" to parse in `:en` (CLDR
+  # has `MMM d, y`). Other tokens (year, era, weekday) and the
+  # literal text between them stay in place — only the M↔d
+  # positions exchange. Numeric M (count 1–2) is skipped because
+  # the swap would be genuinely ambiguous with d.
+  defp synthesise_month_day_swaps(patterns) do
+    for {skeleton, pattern} <- patterns,
+        swapped = swap_month_day(pattern),
+        is_binary(swapped),
+        swapped != pattern,
+        uniq: true,
+        do: {skeleton, swapped}
+  end
+
+  defp swap_month_day(pattern) do
+    tokens = tokenize_pattern(pattern)
+
+    m_tokens =
+      tokens |> Enum.with_index() |> Enum.filter(&match?({{:M, _}, _}, &1))
+
+    d_tokens =
+      tokens |> Enum.with_index() |> Enum.filter(&match?({{:d, _}, _}, &1))
+
+    case {m_tokens, d_tokens} do
+      {[{{:M, m_count}, m_idx}], [{{:d, d_count}, d_idx}]} when m_count >= 3 ->
+        tokens
+        |> List.replace_at(m_idx, {:d, d_count})
+        |> List.replace_at(d_idx, {:M, m_count})
+        |> detokenize_pattern()
+
+      _ ->
+        nil
+    end
+  end
+
+  defp detokenize_pattern(tokens) do
+    Enum.map_join(tokens, "", &detokenize_token/1)
+  end
+
+  defp detokenize_token({:lit, ""}), do: ""
+
+  defp detokenize_token({:lit, text}) when is_binary(text) do
+    if Regex.match?(~r/[yYMdEGLcQqwWDeF]/u, text) do
+      # CLDR letters inside the literal need quoting so the
+      # re-tokenizer treats them as text, not field letters.
+      # Escape internal single quotes with `''` per CLDR.
+      "'" <> String.replace(text, "'", "''") <> "'"
+    else
+      text
+    end
+  end
+
+  defp detokenize_token({letter, count}) when is_atom(letter) and is_integer(count) do
+    String.duplicate(Atom.to_string(letter), count)
   end
 
   defp resolve_pattern_variants(nil), do: []
@@ -1009,7 +1075,11 @@ defmodule Calendrical.Date.Parser do
   defp expand_char(char, lenient) do
     cond do
       space_char?(char) ->
-        @space_class
+        # A literal space in the CLDR pattern requires at least
+        # one whitespace character in the input. Inter-field
+        # gaps (with no pattern literal between them) use the
+        # `*` form via `@space_class` elsewhere.
+        @literal_space_class
 
       true ->
         case Map.get(lenient, char) do

@@ -294,6 +294,44 @@ defmodule Calendrical.DateTest do
     end
   end
 
+  describe "parse/2 — M↔d swap synthesis" do
+    test "English 'MMM d' pattern parses 'd MMM' input ('23 May' in :en)" do
+      assert {:ok, ~D[2026-05-23]} = Calendrical.Date.parse("23 May", locale: :en)
+    end
+
+    test "French 'd MMM' pattern parses 'MMM d' input ('mai 23' in :fr)" do
+      # Month name has to be in the locale's language ("mai", not
+      # "May") — the swap reorders M and d but doesn't translate.
+      assert {:ok, ~D[2026-05-23]} = Calendrical.Date.parse("mai 23", locale: :fr)
+    end
+
+    test "French native 'd MMM' still works" do
+      assert {:ok, ~D[2026-05-23]} = Calendrical.Date.parse("23 mai", locale: :fr)
+    end
+
+    test "swap applies to year-bearing yMMMd patterns" do
+      # English `:yMMMd` is "MMM d, y"; swapped is "d MMM, y".
+      assert {:ok, ~D[2026-05-23]} = Calendrical.Date.parse("23 May, 2026", locale: :en)
+    end
+
+    test "swap applies to wide month names too (MMMM)" do
+      # English `:MMMMd` is "MMMM d" (no comma); swap → "d MMMM".
+      # Verify both orderings parse with the wide month name.
+      assert {:ok, ~D[2026-05-23]} = Calendrical.Date.parse("May 23", locale: :en)
+      assert {:ok, ~D[2026-05-23]} = Calendrical.Date.parse("23 May", locale: :en)
+    end
+
+    test "swap does NOT apply to numeric M (M/MM) — would be ambiguous with d" do
+      # `5/16` in :en is M/d (May 16); the swap MUST NOT turn it
+      # into d/M (5 May / "16 of month 5"). Numeric M (count < 3)
+      # is excluded from the swap.
+      assert {:ok, ~D[2026-05-16]} = Calendrical.Date.parse("5/16/26", locale: :en)
+      # In :en-GB the same input is d/M (16 May). The native
+      # ordering still wins; the swap doesn't apply here.
+      assert {:ok, ~D[2026-04-03]} = Calendrical.Date.parse("3/4/26", locale: :"en-GB")
+    end
+  end
+
   describe "parse/2 — case-insensitive name matching (CLDR TR35 §6.5)" do
     test "French 'Mai' matches CLDR lowercase 'mai'" do
       assert {:ok, %Date{month: 5, day: 23}} =
