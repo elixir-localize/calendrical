@@ -47,7 +47,10 @@ defmodule Calendrical.Parser do
            | Time.t()
            | NaiveDateTime.t()
            | DateTime.t()
-           | Date.Range.t()}
+           | Date.Range.t()
+           | Date.Range.t()
+           | map()
+           | {map(), map()}}
           | {:error, Exception.t()}
   def parse(input, options \\ []) when is_binary(input) do
     options = Calendrical.Date.Parser.normalise_calendar_option(options)
