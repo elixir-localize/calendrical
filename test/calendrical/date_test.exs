@@ -532,4 +532,108 @@ defmodule Calendrical.DateTest do
       end
     end
   end
+
+  describe "parse/2 — as: :map" do
+    test "month + day with no year omits :year" do
+      assert {:ok, %{calendar: Calendar.ISO, month: 5, day: 5}} =
+               Calendrical.Date.parse("May 5", locale: :en, as: :map)
+    end
+
+    test "year alone returns just the year" do
+      assert {:ok, %{calendar: Calendar.ISO, year: 2026}} =
+               Calendrical.Date.parse("2026", locale: :en, as: :map)
+    end
+
+    test "month name alone returns just the month" do
+      assert {:ok, %{calendar: Calendar.ISO, month: 5}} =
+               Calendrical.Date.parse("May", locale: :en, as: :map)
+    end
+
+    test "month + year (no day) keeps both fields" do
+      assert {:ok, %{calendar: Calendar.ISO, month: 5, year: 2026}} =
+               Calendrical.Date.parse("May 2026", locale: :en, as: :map)
+    end
+
+    test "full locale-formatted date returns full map" do
+      assert {:ok, %{calendar: Calendar.ISO, month: 5, day: 16, year: 2026}} =
+               Calendrical.Date.parse("5/16/26", locale: :en, as: :map)
+    end
+
+    test "ISO 8601 returns full map" do
+      assert {:ok, %{calendar: Calendar.ISO, month: 5, day: 16, year: 2026}} =
+               Calendrical.Date.parse("2026-05-16", locale: :en, as: :map)
+    end
+
+    test "quarter + year captured as :quarter" do
+      assert {:ok, %{calendar: Calendar.ISO, year: 2026, quarter: 2}} =
+               Calendrical.Date.parse("Q2 2026", locale: :en, as: :map)
+    end
+
+    test ":calendar key reflects the parsing calendar — Hebrew" do
+      # 2026-05-16 ISO → 5786-09-29 Hebrew. The Hebrew y/m/d
+      # values appear in the map under the Hebrew calendar.
+      assert {:ok, %{calendar: Calendrical.Hebrew, year: 5786, month: 9, day: 29}} =
+               Calendrical.Date.parse("2026-05-16",
+                 locale: :en,
+                 calendar: :hebrew,
+                 as: :map
+               )
+    end
+
+    test "garbage still errors" do
+      assert {:error, %Calendrical.DateParseError{}} =
+               Calendrical.Date.parse("garbage", locale: :en, as: :map)
+    end
+
+    test "two-digit year still pivots in map mode when year was actually captured" do
+      ref = ~D[2026-05-16]
+
+      assert {:ok, %{year: 2030, month: 5, day: 16}} =
+               Calendrical.Date.parse("5/16/30",
+                 locale: :en,
+                 reference_date: ref,
+                 as: :map
+               )
+    end
+  end
+
+  describe "parse_range/2 — as: :map" do
+    test "interval pattern with partial left endpoint inherits year" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 5},
+               %{calendar: Calendar.ISO, year: 2026, month: 5, day: 10}}} =
+               Calendrical.Date.parse_range("May 5 – May 10, 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "pre-split pair where both endpoints lack year" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, month: 5, day: 5},
+               %{calendar: Calendar.ISO, month: 5, day: 10}}} =
+               Calendrical.Date.parse_range({"May 5", "May 10"},
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "pre-split pair with full ISO endpoints" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 5},
+               %{calendar: Calendar.ISO, year: 2026, month: 5, day: 10}}} =
+               Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"},
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "non-Gregorian calendar honoured in :calendar key" do
+      assert {:ok, {%{calendar: Calendrical.Buddhist}, %{calendar: Calendrical.Buddhist}}} =
+               Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"},
+                 calendar: :buddhist,
+                 as: :map
+               )
+    end
+  end
 end

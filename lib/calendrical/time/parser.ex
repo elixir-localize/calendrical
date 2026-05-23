@@ -53,10 +53,10 @@ defmodule Calendrical.Time.Parser do
   See `Calendrical.Time.parse/2` for the public contract.
   """
   @spec parse(String.t(), Keyword.t()) ::
-          {:ok, Time.t()} | {:error, Exception.t()}
+          {:ok, Time.t() | map()} | {:error, Exception.t()}
   def parse(input, options \\ []) when is_binary(input) do
     case parse_with_zone(input, options) do
-      {:ok, time, _zone} -> {:ok, time}
+      {:ok, value, _zone} -> {:ok, value}
       {:error, _} = err -> err
     end
   end
@@ -66,19 +66,41 @@ defmodule Calendrical.Time.Parser do
   string (or `nil` when the pattern carried no zone). The
   `Calendrical.DateTime.Parser` uses this to feed
   `Calendrical.TimeZone.resolve/3` for DateTime building.
+
+  In `as: :map` mode the first element is the field map (with
+  `:time_zone` already embedded when a zone was captured); the
+  zone is also returned as the third element for callers that
+  need the raw string.
   """
   @spec parse_with_zone(String.t(), Keyword.t()) ::
-          {:ok, Time.t(), String.t() | nil} | {:error, Exception.t()}
+          {:ok, Time.t() | map(), String.t() | nil} | {:error, Exception.t()}
   def parse_with_zone(input, options \\ []) when is_binary(input) do
     locale = Keyword.get(options, :locale) || Localize.get_locale()
+    as = Keyword.get(options, :as, :struct)
     input = String.trim(input)
 
     case try_iso(input) do
       {:ok, time} ->
-        {:ok, time, nil}
+        {:ok, finalise_time(time, as), nil}
 
       :error ->
-        try_locale_patterns(input, locale)
+        try_locale_patterns(input, locale, as)
+    end
+  end
+
+  # ISO 8601 always carries hour+minute+second (the stdlib
+  # parser rejects shorter forms), so the map always has those
+  # three. Microsecond is included only when the input
+  # actually supplied fractional precision — `{n, 0}` means
+  # "no fraction specified" and is omitted.
+  defp finalise_time(%Time{} = time, :struct), do: time
+
+  defp finalise_time(%Time{hour: h, minute: m, second: s, microsecond: us}, :map) do
+    base = %{hour: h, minute: m, second: s}
+
+    case us do
+      {_, 0} -> base
+      other -> Map.put(base, :microsecond, other)
     end
   end
 
@@ -93,7 +115,7 @@ defmodule Calendrical.Time.Parser do
 
   # ── Locale patterns (stubbed; filled out by subsequent edits)─
 
-  defp try_locale_patterns(input, locale) do
+  defp try_locale_patterns(input, locale, as) do
     with {:ok, available} <- Format.available_formats(locale, :gregorian),
          {:ok, day_periods} <- LCalendar.day_periods(locale, :gregorian) do
       patterns = collect_patterns(available)
@@ -101,8 +123,8 @@ defmodule Calendrical.Time.Parser do
 
       result =
         Enum.find_value(patterns, fn {_kind, pattern} ->
-          case match_pattern(input, pattern, day_periods, lenient) do
-            {:ok, time, zone} -> {:ok, time, zone}
+          case match_pattern(input, pattern, day_periods, lenient, as) do
+            {:ok, value, zone} -> {:ok, value, zone}
             :error -> nil
           end
         end)
@@ -188,7 +210,7 @@ defmodule Calendrical.Time.Parser do
 
   # ── Pattern → regex ──────────────────────────────────────────
 
-  defp match_pattern(input, pattern, day_periods, lenient) do
+  defp match_pattern(input, pattern, day_periods, lenient, as) do
     tokens = tokenize_pattern(pattern)
     regex_string = compile_regex(tokens, day_periods, lenient)
 
@@ -200,22 +222,70 @@ defmodule Calendrical.Time.Parser do
 
     with %Regex{} <- regex,
          %{} = caps <- Regex.named_captures(regex, input),
-         {:ok, hour} <- extract_hour(caps, tokens),
-         {:ok, minute} <- extract_field(caps, "minute", 0),
-         {:ok, second} <- extract_field(caps, "second", 0),
-         {:ok, microsecond} <- extract_microsecond(caps),
-         {:ok, time} <- Time.new(hour, minute, second, microsecond) do
-      zone =
-        case Map.get(caps, "zone") do
-          z when is_binary(z) and z != "" -> z
-          _ -> nil
-        end
+         {:ok, hour} <- extract_hour(caps, tokens) do
+      zone = extract_zone(caps)
 
-      {:ok, time, zone}
+      case as do
+        :map ->
+          {:ok, build_time_map(caps, hour, zone), zone}
+
+        :struct ->
+          with {:ok, minute} <- extract_field(caps, "minute", 0),
+               {:ok, second} <- extract_field(caps, "second", 0),
+               {:ok, microsecond} <- extract_microsecond(caps),
+               {:ok, time} <- Time.new(hour, minute, second, microsecond) do
+            {:ok, time, zone}
+          else
+            _ -> :error
+          end
+      end
     else
       _ -> :error
     end
   end
+
+  defp extract_zone(caps) do
+    case Map.get(caps, "zone") do
+      z when is_binary(z) and z != "" -> z
+      _ -> nil
+    end
+  end
+
+  # Build a map containing only the fields the input actually
+  # supplied. Hour is mandatory (no time pattern lacks it);
+  # minute, second, microsecond, and time_zone are added only
+  # if captured.
+  defp build_time_map(caps, hour, zone) do
+    %{hour: hour}
+    |> maybe_put_int(caps, "minute", :minute)
+    |> maybe_put_int(caps, "second", :second)
+    |> maybe_put_microsecond(caps)
+    |> maybe_put_zone(zone)
+  end
+
+  defp maybe_put_int(map, caps, key, dest_key) do
+    case caps[key] do
+      raw when is_binary(raw) and raw != "" ->
+        case Integer.parse(raw) do
+          {n, ""} -> Map.put(map, dest_key, n)
+          _ -> map
+        end
+
+      _ ->
+        map
+    end
+  end
+
+  defp maybe_put_microsecond(map, caps) do
+    case extract_microsecond(caps) do
+      {:ok, {_, 0}} -> map
+      {:ok, microsecond} -> Map.put(map, :microsecond, microsecond)
+      _ -> map
+    end
+  end
+
+  defp maybe_put_zone(map, nil), do: map
+  defp maybe_put_zone(map, zone), do: Map.put(map, :time_zone, zone)
 
   # Walk a CLDR pattern string and emit alternating literal /
   # field tokens. Fields are runs of identical CLDR letters

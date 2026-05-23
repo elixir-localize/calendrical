@@ -78,4 +78,44 @@ defmodule Calendrical.TimeTest do
       assert {:error, _} = Calendrical.Time.parse("12:60:00", locale: :en)
     end
   end
+
+  describe "parse/2 — as: :map" do
+    test "hour + am marker returns just :hour" do
+      assert {:ok, %{hour: 11}} = Calendrical.Time.parse("11 am", locale: :en, as: :map)
+    end
+
+    test "hh:mm captures hour and minute, no second" do
+      assert {:ok, %{hour: 11, minute: 30}} =
+               Calendrical.Time.parse("11:30", locale: :en, as: :map)
+    end
+
+    test "hh:mm:ss captures hour, minute, second" do
+      assert {:ok, %{hour: 11, minute: 30, second: 45}} =
+               Calendrical.Time.parse("11:30:45", locale: :en, as: :map)
+    end
+
+    test "fractional seconds surface as :microsecond" do
+      assert {:ok, %{hour: 11, minute: 30, second: 45, microsecond: {123_000, 3}}} =
+               Calendrical.Time.parse("11:30:45.123", locale: :en, as: :map)
+    end
+
+    test "ISO 8601 returns hour+minute+second (no microsecond when fraction omitted)" do
+      assert {:ok, %{hour: 14, minute: 30, second: 0}} =
+               result =
+               Calendrical.Time.parse("14:30:00", locale: :en, as: :map)
+
+      {:ok, map} = result
+      refute Map.has_key?(map, :microsecond)
+    end
+
+    test "time-zone marker surfaces as :time_zone" do
+      assert {:ok, %{hour: 11, minute: 30, time_zone: "PST"}} =
+               Calendrical.Time.parse("11:30 PST", locale: :en, as: :map)
+    end
+
+    test "garbage still errors in map mode" do
+      assert {:error, %Calendrical.TimeParseError{}} =
+               Calendrical.Time.parse("not a time", locale: :en, as: :map)
+    end
+  end
 end

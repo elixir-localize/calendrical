@@ -816,11 +816,22 @@ defmodule Calendrical do
 
   * `:allow_inverted` — applies to interval parsing only.
 
+  * `:as` — `:struct` (default) returns the appropriate
+    struct (`Date`, `Time`, `NaiveDateTime`, `DateTime`, or
+    `Date.Range`). `:map` returns a bare field map
+    containing only what the input actually supplied — useful
+    when a downstream library needs the unresolved partial
+    rather than a struct with synthesised defaults. See the
+    individual `Calendrical.Date.parse/2`,
+    `Calendrical.Time.parse/2`, and
+    `Calendrical.DateTime.parse/2` docs for the map shapes.
+
   ### Returns
 
   * `{:ok, value}` where `value` is one of `t:Date.t/0`,
     `t:Time.t/0`, `t:NaiveDateTime.t/0`, `t:DateTime.t/0`, or
-    `t:Date.Range.t/0`.
+    `t:Date.Range.t/0` (struct mode), or a field map / a
+    `{from_map, to_map}` tuple (map mode).
 
   * `{:error, Calendrical.ParseError.t()}` when every sub-parser
     failed. The exception's `:attempts` field carries the
@@ -841,6 +852,12 @@ defmodule Calendrical do
       iex> {range.first, range.last}
       {~D[2026-05-05], ~D[2026-05-10]}
 
+      iex> Calendrical.parse("May 5", locale: :en, as: :map)
+      {:ok, %{calendar: Calendar.ISO, month: 5, day: 5}}
+
+      iex> Calendrical.parse("11 am", locale: :en, as: :map)
+      {:ok, %{hour: 11}}
+
   """
   @spec parse(String.t(), Keyword.t()) ::
           {:ok,
@@ -848,7 +865,9 @@ defmodule Calendrical do
            | Time.t()
            | NaiveDateTime.t()
            | DateTime.t()
-           | Date.Range.t()}
+           | Date.Range.t()
+           | map()
+           | {map(), map()}}
           | {:error, Exception.t()}
   def parse(input, options \\ []) when is_binary(input) do
     Calendrical.Parser.parse(input, options)

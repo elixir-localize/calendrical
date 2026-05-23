@@ -45,21 +45,68 @@ defmodule Calendrical.DateTime.Parser do
   See `Calendrical.DateTime.parse/2` for the public contract.
   """
   @spec parse(String.t(), Keyword.t()) ::
-          {:ok, NaiveDateTime.t() | DateTime.t()} | {:error, Exception.t()}
+          {:ok, NaiveDateTime.t() | DateTime.t() | map()} | {:error, Exception.t()}
   def parse(input, options \\ []) when is_binary(input) do
     locale = Keyword.get(options, :locale) || Localize.get_locale()
+    as = Keyword.get(options, :as, :struct)
     input = String.trim(input)
 
     case try_iso(input) do
-      {:ok, _} = ok ->
-        ok
+      {:ok, value} ->
+        {:ok, finalise_datetime(value, as)}
 
       :error ->
-        try_locale_glue(input, locale, options)
+        try_locale_glue(input, locale, options, as)
     end
   end
 
-  defp try_locale_glue(input, locale, options) do
+  # ISO 8601 always yields full year+month+day+hour+minute+second.
+  # The map merges the date and time fields and surfaces the
+  # `:time_zone` string when the input carried a `Z` or offset.
+  defp finalise_datetime(%NaiveDateTime{} = ndt, :struct), do: ndt
+  defp finalise_datetime(%DateTime{} = dt, :struct), do: dt
+
+  defp finalise_datetime(%NaiveDateTime{} = ndt, :map) do
+    naive_datetime_to_map(ndt)
+  end
+
+  defp finalise_datetime(%DateTime{} = dt, :map) do
+    dt
+    |> DateTime.to_naive()
+    |> naive_datetime_to_map()
+    |> Map.put(:time_zone, dt.time_zone)
+    |> Map.put(:utc_offset, dt.utc_offset)
+    |> Map.put(:std_offset, dt.std_offset)
+    |> Map.put(:zone_abbr, dt.zone_abbr)
+  end
+
+  defp naive_datetime_to_map(%NaiveDateTime{
+         year: y,
+         month: m,
+         day: d,
+         hour: h,
+         minute: mi,
+         second: s,
+         microsecond: us,
+         calendar: cal
+       }) do
+    base = %{
+      year: y,
+      month: m,
+      day: d,
+      hour: h,
+      minute: mi,
+      second: s,
+      calendar: cal
+    }
+
+    case us do
+      {_, 0} -> base
+      other -> Map.put(base, :microsecond, other)
+    end
+  end
+
+  defp try_locale_glue(input, locale, options, as) do
     case glue_separators(locale) do
       [] ->
         {:error, no_match_error(input, locale)}
@@ -76,34 +123,58 @@ defmodule Calendrical.DateTime.Parser do
             {sep, left, right}
           end
 
+        finder =
+          case as do
+            :map -> &try_split_as_map(&1, options)
+            :struct -> &try_split_as_struct(&1, options)
+          end
+
         Enum.find_value(
           candidates,
           {:error, no_match_error(input, locale)},
-          fn {_sep, left, right} ->
-            with {:ok, date} <- Calendrical.Date.parse(left, options),
-                 {:ok, time, zone} <-
-                   Calendrical.Time.Parser.parse_with_zone(right, options),
-                 {:ok, ndt} <- NaiveDateTime.new(date, time) do
-              # If the time half carried a zone, resolve it
-              # into a `DateTime`. Resolution failure (e.g.
-              # IANA name with no TZ database loaded) falls
-              # back to the `NaiveDateTime` — preserving the
-              # parse rather than failing the whole input.
-              case zone do
-                nil ->
-                  {:ok, ndt}
-
-                _ ->
-                  case Calendrical.TimeZone.resolve(zone, ndt, options) do
-                    {:ok, %DateTime{} = dt} -> {:ok, dt}
-                    _ -> {:ok, ndt}
-                  end
-              end
-            else
-              _ -> nil
-            end
-          end
+          finder
         )
+    end
+  end
+
+  defp try_split_as_struct({_sep, left, right}, options) do
+    with {:ok, date} <- Calendrical.Date.parse(left, options),
+         {:ok, time, zone} <-
+           Calendrical.Time.Parser.parse_with_zone(right, options),
+         {:ok, ndt} <- NaiveDateTime.new(date, time) do
+      # If the time half carried a zone, resolve it
+      # into a `DateTime`. Resolution failure (e.g.
+      # IANA name with no TZ database loaded) falls
+      # back to the `NaiveDateTime` — preserving the
+      # parse rather than failing the whole input.
+      case zone do
+        nil ->
+          {:ok, ndt}
+
+        _ ->
+          case Calendrical.TimeZone.resolve(zone, ndt, options) do
+            {:ok, %DateTime{} = dt} -> {:ok, dt}
+            _ -> {:ok, ndt}
+          end
+      end
+    else
+      _ -> nil
+    end
+  end
+
+  defp try_split_as_map({_sep, left, right}, options) do
+    date_opts = Keyword.put(options, :as, :map)
+    time_opts = Keyword.put(options, :as, :map)
+
+    with {:ok, %{} = date_map} <- Calendrical.Date.parse(left, date_opts),
+         {:ok, %{} = time_map, _zone} <-
+           Calendrical.Time.Parser.parse_with_zone(right, time_opts) do
+      # Date map carries `:calendar`; time map carries the time
+      # fields plus `:time_zone` if any. Merge — date's
+      # `:calendar` wins (the time map has no calendar key).
+      {:ok, Map.merge(time_map, date_map)}
+    else
+      _ -> nil
     end
   end
 

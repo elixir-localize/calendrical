@@ -59,9 +59,29 @@ defmodule Calendrical.Date do
     `Calendrical.Persian`) returns the date in that
     specific calendar.
 
+  * `:as` — `:struct` (default) returns a `t:Date.t/0`.
+    `:map` returns a bare field map containing only what the
+    input actually supplied (`%{month: 5, day: 5, calendar:
+    Calendar.ISO}` for `"May 5"`) plus a `:calendar` key
+    naming the resolved calendar module. Useful when a
+    downstream library (e.g.
+    [`Tempo`](https://github.com/elixir-localize/tempo))
+    needs the unresolved partial rather than a defaulted
+    `Date`. In `:map` mode the `:reference_date` fallback for
+    missing-year inputs is suppressed, and `:return_calendar`
+    has no effect (the map stays in the parsing calendar).
+
   ### Returns
 
-  * `{:ok, Date.t()}` on success.
+  * `{:ok, Date.t()}` on success when `as: :struct` (the
+    default).
+
+  * `{:ok, map()}` on success when `as: :map`. The map
+    always has a `:calendar` key; the other keys
+    (`:year`, `:month`, `:day`, `:quarter`,
+    `:week_of_year`, `:week_based_year`, `:day_of_year`,
+    `:day_of_week`, `:day_of_week_in_month`) are present
+    only when the input supplied them.
 
   * `{:error, Calendrical.DateParseError.t()}` when no
     pattern matched.
@@ -70,6 +90,12 @@ defmodule Calendrical.Date do
 
       iex> Calendrical.Date.parse("2026-05-16", locale: :en)
       {:ok, ~D[2026-05-16]}
+
+      iex> Calendrical.Date.parse("May 5", locale: :en, as: :map)
+      {:ok, %{calendar: Calendar.ISO, month: 5, day: 5}}
+
+      iex> Calendrical.Date.parse("2026", locale: :en, as: :map)
+      {:ok, %{calendar: Calendar.ISO, year: 2026}}
 
       iex> Calendrical.Date.parse("5/16/26", locale: :en)
       {:ok, ~D[2026-05-16]}
@@ -100,7 +126,7 @@ defmodule Calendrical.Date do
 
   """
   @spec parse(String.t(), Keyword.t()) ::
-          {:ok, Date.t()} | {:error, Exception.t()}
+          {:ok, Date.t() | map()} | {:error, Exception.t()}
   def parse(input, options \\ []) when is_binary(input) do
     Calendrical.Date.Parser.parse(input, options)
   end
@@ -132,19 +158,28 @@ defmodule Calendrical.Date do
 
   ### Options
 
-  Same as `parse/2`: `:locale`, `:calendar`, `:reference_date`.
-  Plus:
+  Same as `parse/2`: `:locale`, `:calendar`, `:reference_date`,
+  `:as`. Plus:
 
   * `:allow_inverted` — when `true`, an end-before-start
     range is returned as-is (Elixir's
     `Date.range/3` builds a descending range). When `false`
     (the default), an inverted range is rejected with a
-    `Calendrical.DateRangeParseError`.
+    `Calendrical.DateRangeParseError`. Only applies when
+    `as: :struct` (the default); `as: :map` skips the
+    comparison because partial maps may not have enough
+    fields to compare.
 
   ### Returns
 
-  * `{:ok, Date.Range.t()}` on success. The endpoints'
-    calendar matches the `:calendar` option.
+  * `{:ok, Date.Range.t()}` on success when `as: :struct`.
+    The endpoints' calendar matches the `:calendar` option.
+
+  * `{:ok, {from_map, to_map}}` on success when `as: :map`.
+    Each endpoint is a field map; missing fields are
+    inherited from the other endpoint per the CLDR interval
+    convention (so `"May 5 – May 10, 2026"` yields two maps
+    both carrying `:year`).
 
   * `{:error, Calendrical.DateParseError.t() |
     Calendrical.DateRangeParseError.t()}` on failure.
@@ -154,6 +189,11 @@ defmodule Calendrical.Date do
       iex> {:ok, range} = Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"})
       iex> {range.first, range.last}
       {~D[2026-05-05], ~D[2026-05-10]}
+
+      iex> Calendrical.Date.parse_range("May 5 – May 10, 2026", locale: :en, as: :map)
+      {:ok,
+       {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 5},
+        %{calendar: Calendar.ISO, year: 2026, month: 5, day: 10}}}
 
       iex> {:ok, range} = Calendrical.Date.parse_range("May 5, 2026 – May 10, 2026", locale: :en)
       iex> {range.first, range.last}
@@ -169,7 +209,7 @@ defmodule Calendrical.Date do
 
   """
   @spec parse_range(String.t() | {String.t(), String.t()}, Keyword.t()) ::
-          {:ok, Date.Range.t()} | {:error, Exception.t()}
+          {:ok, Date.Range.t() | {map(), map()}} | {:error, Exception.t()}
   def parse_range(input, options \\ [])
 
   def parse_range({from_string, to_string}, options)

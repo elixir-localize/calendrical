@@ -34,9 +34,24 @@ defmodule Calendrical.Time do
   * `:locale` — the locale to interpret the string under.
     Defaults to `Localize.get_locale/0`.
 
+  * `:as` — `:struct` (default) returns a `t:Time.t/0`.
+    `:map` returns a bare field map containing only what the
+    input actually supplied (`%{hour: 11}` for `"11 am"`,
+    `%{hour: 11, minute: 30, time_zone: "PST"}` for
+    `"11:30 PST"`). `:minute` and `:second` default to `0`
+    only in `:struct` mode; in `:map` mode they are omitted
+    unless captured. Microsecond is included only when the
+    input carried fractional precision.
+
   ### Returns
 
-  * `{:ok, Time.t()}` on success.
+  * `{:ok, Time.t()}` on success when `as: :struct` (the
+    default).
+
+  * `{:ok, map()}` on success when `as: :map`. The map
+    always has `:hour`; `:minute`, `:second`, `:microsecond`,
+    and `:time_zone` appear only when the input supplied
+    them.
 
   * `{:error, Calendrical.TimeParseError.t()}` when no pattern
     matched.
@@ -52,9 +67,15 @@ defmodule Calendrical.Time do
       iex> Calendrical.Time.parse("14:30", locale: :de)
       {:ok, ~T[14:30:00]}
 
+      iex> Calendrical.Time.parse("11 am", locale: :en, as: :map)
+      {:ok, %{hour: 11}}
+
+      iex> Calendrical.Time.parse("11:30", locale: :en, as: :map)
+      {:ok, %{hour: 11, minute: 30}}
+
   """
   @spec parse(String.t(), Keyword.t()) ::
-          {:ok, Time.t()} | {:error, Exception.t()}
+          {:ok, Time.t() | map()} | {:error, Exception.t()}
   def parse(input, options \\ []) when is_binary(input) do
     Calendrical.Time.Parser.parse(input, options)
   end

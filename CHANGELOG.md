@@ -6,6 +6,12 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+* `:as` option on `Calendrical.parse/2`, `Calendrical.Date.parse/2`, `Calendrical.Date.parse_range/2`, `Calendrical.Time.parse/2`, and `Calendrical.DateTime.parse/2`. Pass `as: :map` to get a bare field map containing only what the input actually supplied (`"May 5"` → `%{calendar: Calendar.ISO, month: 5, day: 5}`, `"11 am"` → `%{hour: 11}`, `"2026"` → `%{year: 2026}`) instead of a struct with synthesised defaults — useful for downstream libraries that need the unresolved partial.
+
 ## [0.6.0] — 2026-05-23
 
 ### Breaking changes

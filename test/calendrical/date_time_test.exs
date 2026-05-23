@@ -79,4 +79,50 @@ defmodule Calendrical.DateTimeTest do
       assert {:error, _} = Calendrical.DateTime.parse("May 16, 2026", locale: :en)
     end
   end
+
+  describe "parse/2 — as: :map" do
+    test "locale-glue datetime merges date and time fields" do
+      assert {:ok,
+              %{
+                calendar: Calendar.ISO,
+                year: 2026,
+                month: 5,
+                day: 16,
+                hour: 14,
+                minute: 30
+              }} =
+               Calendrical.DateTime.parse("May 16, 2026, 2:30 PM",
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "partial date + time omits year" do
+      assert {:ok, %{calendar: Calendar.ISO, month: 5, day: 5, hour: 11, minute: 30}} =
+               Calendrical.DateTime.parse("May 5, 11:30 AM", locale: :en, as: :map)
+    end
+
+    test "ISO naive datetime returns full map" do
+      assert {:ok,
+              %{
+                calendar: Calendar.ISO,
+                year: 2026,
+                month: 5,
+                day: 16,
+                hour: 14,
+                minute: 30,
+                second: 0
+              }} =
+               Calendrical.DateTime.parse("2026-05-16T14:30:00", locale: :en, as: :map)
+    end
+
+    test "ISO datetime with Z includes :time_zone" do
+      {:ok, map} =
+        Calendrical.DateTime.parse("2026-05-16T14:30:00Z", locale: :en, as: :map)
+
+      assert map.year == 2026
+      assert map.hour == 14
+      assert map.time_zone == "Etc/UTC"
+    end
+  end
 end

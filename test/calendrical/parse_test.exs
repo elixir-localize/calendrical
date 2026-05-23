@@ -184,4 +184,23 @@ defmodule Calendrical.ParseTest do
              ]
     end
   end
+
+  describe "Calendrical.parse/2 — as: :map" do
+    test "dispatches partial date through to a field map" do
+      assert {:ok, %{calendar: Calendar.ISO, month: 5, day: 5}} =
+               Calendrical.parse("May 5", locale: :en, as: :map)
+    end
+
+    test "dispatches partial time through to a field map" do
+      assert {:ok, %{hour: 11, minute: 30}} =
+               Calendrical.parse("11:30", locale: :en, as: :map)
+    end
+
+    test "dispatches range through to a map pair" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 5},
+               %{calendar: Calendar.ISO, year: 2026, month: 5, day: 10}}} =
+               Calendrical.parse("May 5 – May 10, 2026", locale: :en, as: :map)
+    end
+  end
 end
