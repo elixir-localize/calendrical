@@ -121,7 +121,17 @@ defmodule Calendrical.Ecclesiastical do
   the Nicaean rule corrected for the Gregorian century rule and the
   Metonic-cycle inaccuracy.
 
-  ## Examples
+  ### Arguments
+
+  * `gregorian_year` is the Gregorian year for which to compute
+    Easter Sunday.
+
+  ### Returns
+
+  * A `t:Date.t/0` in `Calendrical.Gregorian` representing Western
+    Easter Sunday.
+
+  ### Examples
 
       iex> Calendrical.Ecclesiastical.easter_sunday(2024)
       ~D[2024-03-31 Calendrical.Gregorian]
@@ -161,7 +171,17 @@ defmodule Calendrical.Ecclesiastical do
   Returns the date of Western *Good Friday* in the given Gregorian
   year — exactly two days before `easter_sunday/1`.
 
-  ## Examples
+  ### Arguments
+
+  * `gregorian_year` is the Gregorian year for which to compute
+    Good Friday.
+
+  ### Returns
+
+  * A `t:Date.t/0` in `Calendrical.Gregorian` representing Western
+    Good Friday.
+
+  ### Examples
 
       iex> Calendrical.Ecclesiastical.good_friday(2024)
       ~D[2024-03-29 Calendrical.Gregorian]
@@ -177,10 +197,21 @@ defmodule Calendrical.Ecclesiastical do
 
   @doc """
   Returns the date of *Pentecost Sunday* (Whitsunday) in the given
-  Gregorian year. Pentecost is exactly 49 days after Western
-  Easter Sunday.
+  Gregorian year.
 
-  ## Examples
+  Pentecost is exactly 49 days after Western Easter Sunday.
+
+  ### Arguments
+
+  * `gregorian_year` is the Gregorian year for which to compute
+    Pentecost.
+
+  ### Returns
+
+  * A `t:Date.t/0` in `Calendrical.Gregorian` representing
+    Pentecost Sunday.
+
+  ### Examples
 
       iex> Calendrical.Ecclesiastical.pentecost(2024)
       ~D[2024-05-19 Calendrical.Gregorian]
@@ -198,7 +229,17 @@ defmodule Calendrical.Ecclesiastical do
   Returns the date of *Advent Sunday* in the given Gregorian year:
   the Sunday closest to 30 November.
 
-  ## Examples
+  ### Arguments
+
+  * `gregorian_year` is the Gregorian year for which to compute
+    Advent Sunday.
+
+  ### Returns
+
+  * A `t:Date.t/0` in `Calendrical.Gregorian` representing Advent
+    Sunday.
+
+  ### Examples
 
       iex> Calendrical.Ecclesiastical.advent(2024)
       ~D[2024-12-01 Calendrical.Gregorian]
@@ -224,7 +265,17 @@ defmodule Calendrical.Ecclesiastical do
   the Julian-calendar context is immediately visible in the result.
   Use `Date.convert/2` to project it onto another calendar.
 
-  ## Examples
+  ### Arguments
+
+  * `gregorian_year` is the Gregorian year for which to compute
+    Eastern Orthodox Easter.
+
+  ### Returns
+
+  * A `t:Date.t/0` in `Calendrical.Julian` representing Eastern
+    Orthodox Easter Sunday.
+
+  ### Examples
 
       iex> Calendrical.Ecclesiastical.orthodox_easter_sunday(2024)
       ~D[2024-04-22 Calendrical.Julian]
@@ -259,9 +310,17 @@ defmodule Calendrical.Ecclesiastical do
   Gregorian year — exactly two days before
   `orthodox_easter_sunday/1`.
 
-  The result is returned as a `Calendrical.Julian` `Date`.
+  ### Arguments
 
-  ## Examples
+  * `gregorian_year` is the Gregorian year for which to compute
+    Eastern Orthodox Good Friday.
+
+  ### Returns
+
+  * A `t:Date.t/0` in `Calendrical.Julian` representing Eastern
+    Orthodox Good Friday.
+
+  ### Examples
 
       iex> Calendrical.Ecclesiastical.orthodox_good_friday(2024)
       ~D[2024-04-20 Calendrical.Julian]
@@ -282,9 +341,17 @@ defmodule Calendrical.Ecclesiastical do
   given Gregorian year — exactly 49 days after
   `orthodox_easter_sunday/1`.
 
-  The result is returned as a `Calendrical.Julian` `Date`.
+  ### Arguments
 
-  ## Examples
+  * `gregorian_year` is the Gregorian year for which to compute
+    Eastern Orthodox Pentecost.
+
+  ### Returns
+
+  * A `t:Date.t/0` in `Calendrical.Julian` representing Eastern
+    Orthodox Pentecost Sunday.
+
+  ### Examples
 
       iex> Calendrical.Ecclesiastical.orthodox_pentecost(2024)
       ~D[2024-06-10 Calendrical.Julian]
@@ -312,9 +379,17 @@ defmodule Calendrical.Ecclesiastical do
   of Advent" observance — so this function returns the (fixed)
   start of the fast instead.
 
-  The result is returned as a `Calendrical.Julian` `Date`.
+  ### Arguments
 
-  ## Examples
+  * `gregorian_year` is the Gregorian year for which to compute the
+    start of the Nativity Fast.
+
+  ### Returns
+
+  * A `t:Date.t/0` in `Calendrical.Julian` representing the start
+    of the Nativity Fast (15 November Julian).
+
+  ### Examples
 
       iex> Calendrical.Ecclesiastical.orthodox_advent(2024)
       ~D[2024-11-15 Calendrical.Julian]
@@ -343,9 +418,19 @@ defmodule Calendrical.Ecclesiastical do
 
   Uses `paschal_full_moon/1` (which in turn uses the `Astro`
   library) and so is restricted to the year range `1000..3000`.
-  The result is returned as a `Calendar.ISO` `Date`.
 
-  ## Examples
+  ### Arguments
+
+  * `gregorian_year` is the Gregorian year for which to compute
+    Astronomical Easter. Must be in the range `1000..3000`.
+
+  ### Returns
+
+  * `{:ok, date}` where `date` is a `Calendar.ISO` `t:Date.t/0`, or
+
+  * `{:error, exception}` if the calculation cannot be performed.
+
+  ### Examples
 
       iex> Calendrical.Ecclesiastical.astronomical_easter_sunday(2024)
       {:ok, ~D[2024-03-31]}
@@ -368,7 +453,18 @@ defmodule Calendrical.Ecclesiastical do
   Gregorian year — exactly two days before
   `astronomical_easter_sunday/1`.
 
-  ## Examples
+  ### Arguments
+
+  * `gregorian_year` is the Gregorian year for which to compute
+    Astronomical Good Friday. Must be in the range `1000..3000`.
+
+  ### Returns
+
+  * `{:ok, date}` where `date` is a `Calendar.ISO` `t:Date.t/0`, or
+
+  * `{:error, exception}` if the calculation cannot be performed.
+
+  ### Examples
 
       iex> Calendrical.Ecclesiastical.astronomical_good_friday(2024)
       {:ok, ~D[2024-03-29]}
@@ -401,9 +497,6 @@ defmodule Calendrical.Ecclesiastical do
   (`orthodox_easter_sunday/1`) computus, which are defined by
   tabular rules rather than astronomical observation.
 
-  The returned date is a `Calendar.ISO` `Date`. The `Astro` library
-  returns the underlying instant in UTC.
-
   ### Arguments
 
   * `gregorian_year` is the Gregorian year for which to compute the
@@ -412,8 +505,8 @@ defmodule Calendrical.Ecclesiastical do
 
   ### Returns
 
-  * `{:ok, date}` where `date` is the `t:Calendar.date/0` of the Paschal
-    Full Moon in UTC, or
+  * `{:ok, date}` where `date` is the `t:Calendar.date/0` of the
+    Paschal Full Moon in UTC, or
 
   * `{:error, exception}` if the calculation cannot be performed.
 
@@ -441,7 +534,16 @@ defmodule Calendrical.Ecclesiastical do
   Returns the date of Western *Christmas Day* (25 December) in the
   given Gregorian year.
 
-  ## Examples
+  ### Arguments
+
+  * `gregorian_year` is the Gregorian year for which to return
+    Christmas Day.
+
+  ### Returns
+
+  * A `t:Date.t/0` in `Calendrical.Gregorian`.
+
+  ### Examples
 
       iex> Calendrical.Ecclesiastical.christmas(2024)
       ~D[2024-12-25 Calendrical.Gregorian]
@@ -459,7 +561,16 @@ defmodule Calendrical.Ecclesiastical do
   Note that the traditional fixed-date Epiphany falls on 6 January
   and is more widely observed elsewhere.
 
-  ## Examples
+  ### Arguments
+
+  * `gregorian_year` is the Gregorian year for which to compute
+    Epiphany.
+
+  ### Returns
+
+  * A `t:Date.t/0` in `Calendrical.Gregorian` representing Epiphany.
+
+  ### Examples
 
       iex> Calendrical.Ecclesiastical.epiphany(2024)
       ~D[2024-01-07 Calendrical.Gregorian]
@@ -479,11 +590,19 @@ defmodule Calendrical.Ecclesiastical do
   Returns the dates of *Eastern Orthodox Christmas* (25 December
   Julian) that fall in the given Gregorian year.
 
-  Returns a list of zero, one, or two `t:Calendar.date/0` values because
-  the Julian-to-Gregorian offset can place 25 December Julian in
-  either January or December of the same Gregorian year.
+  ### Arguments
 
-  ## Examples
+  * `gregorian_year` is the Gregorian year in which to look for
+    occurrences of Eastern Orthodox Christmas.
+
+  ### Returns
+
+  * A list of zero, one, or two `t:Date.t/0` values in
+    `Calendrical.Gregorian`. Two-element lists occur because the
+    Julian-to-Gregorian offset can place 25 December Julian in
+    either January or December of the same Gregorian year.
+
+  ### Examples
 
       iex> Calendrical.Ecclesiastical.eastern_orthodox_christmas(2024)
       [~D[2024-01-07 Calendrical.Gregorian]]
@@ -501,10 +620,18 @@ defmodule Calendrical.Ecclesiastical do
   Returns the dates of *Coptic Christmas* (29 Koiak in the Coptic
   calendar) that fall in the given Gregorian year.
 
-  Returns a list of zero, one, or two `t:Calendar.date/0` values for the
-  same reason as `eastern_orthodox_christmas/1`.
+  ### Arguments
 
-  ## Examples
+  * `gregorian_year` is the Gregorian year in which to look for
+    occurrences of Coptic Christmas.
+
+  ### Returns
+
+  * A list of zero, one, or two `t:Date.t/0` values in
+    `Calendrical.Gregorian`. Two-element lists occur for the same
+    reason as `eastern_orthodox_christmas/1`.
+
+  ### Examples
 
       iex> Calendrical.Ecclesiastical.coptic_christmas(2024)
       [~D[2024-01-08 Calendrical.Gregorian]]

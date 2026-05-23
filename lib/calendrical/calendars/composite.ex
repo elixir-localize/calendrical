@@ -95,7 +95,7 @@ defmodule Calendrical.Composite do
   @doc """
   Creates a new composite calendar at runtime.
 
-  ## Arguments
+  ### Arguments
 
   * `calendar_module` is the module name to be created. This will
     be the name of the new composite calendar if it is successfully
@@ -104,13 +104,23 @@ defmodule Calendrical.Composite do
   * `options` is a keyword list of options. See
     `Calendrical.Composite` for the supported options.
 
-  ## Returns
+  ### Options
 
-  * `{:ok, module}` or
+  * `:calendars` (required) is a list of `Date` literals indicating
+    the first day on which a new calendar takes effect. Each entry
+    must be expressed in the calendar that takes effect on that day.
 
-  * `{:module_already_exists, calendar_module}`
+  * `:base_calendar` is the calendar in use before any of the
+    configured transitions. Defaults to `Calendrical.Julian`.
 
-  ## Examples
+  ### Returns
+
+  * `{:ok, module}` if the calendar is successfully created, or
+
+  * `{:module_already_exists, calendar_module}` if a module with
+    the same name already exists.
+
+  ### Examples
 
       iex> Calendrical.Composite.new(MyApp.Denmark,
       ...>   calendars: [~D[1700-03-01 Calendrical.Gregorian]])

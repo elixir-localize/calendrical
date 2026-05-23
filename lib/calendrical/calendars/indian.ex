@@ -68,8 +68,19 @@ defmodule Calendrical.Indian do
 
   @doc """
   Returns the offset (in years) between the Saka era and the
-  proleptic Gregorian calendar. `saka_year + gregorian_offset()`
-  yields the corresponding Gregorian year.
+  proleptic Gregorian calendar.
+
+  Adding this offset to a Saka year yields the corresponding
+  Gregorian year.
+
+  ### Returns
+
+  * The integer `78`.
+
+  ### Examples
+
+      iex> Calendrical.Indian.gregorian_offset()
+      78
 
   """
   @spec gregorian_offset() :: 78
@@ -78,12 +89,38 @@ defmodule Calendrical.Indian do
   @doc """
   Returns the Gregorian year corresponding to the given Saka year.
 
+  ### Arguments
+
+  * `saka_year` is any Saka year as an integer.
+
+  ### Returns
+
+  * An integer Gregorian year (78 more than the input).
+
+  ### Examples
+
+      iex> Calendrical.Indian.gregorian_year(1947)
+      2025
+
   """
   @spec gregorian_year(year) :: integer()
   def gregorian_year(saka_year), do: saka_year + @gregorian_offset
 
   @doc """
   Returns the Saka year corresponding to the given Gregorian year.
+
+  ### Arguments
+
+  * `gregorian_year` is any proleptic Gregorian year as an integer.
+
+  ### Returns
+
+  * An integer Saka year (78 less than the input).
+
+  ### Examples
+
+      iex> Calendrical.Indian.saka_year(2025)
+      1947
 
   """
   @spec saka_year(integer()) :: year
@@ -92,9 +129,26 @@ defmodule Calendrical.Indian do
   # ── Configuration overrides ──────────────────────────────────────────────
 
   @doc """
-  Returns whether the given Saka year is a leap year. The leap year
-  rule is the proleptic Gregorian rule applied to the corresponding
-  Gregorian year.
+  Returns whether the given Saka year is a leap year.
+
+  The leap year rule is the proleptic Gregorian rule applied to the
+  corresponding Gregorian year.
+
+  ### Arguments
+
+  * `year` is any Saka year as an integer.
+
+  ### Returns
+
+  * `true` if the year contains 366 days; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Indian.leap_year?(1946)
+      true
+
+      iex> Calendrical.Indian.leap_year?(1947)
+      false
 
   """
   @impl true
@@ -106,6 +160,27 @@ defmodule Calendrical.Indian do
   @doc """
   Returns the number of days in the given Saka `year` and `month`.
 
+  In a leap year, Chaitra (month 1) has 31 days; in an ordinary year
+  it has 30. The remaining months have fixed lengths.
+
+  ### Arguments
+
+  * `year` is any Saka year as an integer.
+
+  * `month` is a Saka month in the range `1..12`.
+
+  ### Returns
+
+  * The number of days in the month (`30..31`).
+
+  ### Examples
+
+      iex> Calendrical.Indian.days_in_month(1947, 1)
+      30
+
+      iex> Calendrical.Indian.days_in_month(1946, 1)
+      31
+
   """
   @impl true
   @spec days_in_month(year, month) :: 30..31
@@ -115,7 +190,23 @@ defmodule Calendrical.Indian do
   end
 
   @doc """
-  Returns the number of days in the given Saka `year` (365 or 366).
+  Returns the number of days in the given Saka `year`.
+
+  ### Arguments
+
+  * `year` is any Saka year as an integer.
+
+  ### Returns
+
+  * `365` for an ordinary year or `366` for a leap year.
+
+  ### Examples
+
+      iex> Calendrical.Indian.days_in_year(1947)
+      365
+
+      iex> Calendrical.Indian.days_in_year(1946)
+      366
 
   """
   @impl true
@@ -124,8 +215,31 @@ defmodule Calendrical.Indian do
   end
 
   @doc """
-  Determines if the given `year`, `month`, and `day` form a valid
+  Returns whether the given `year`, `month`, and `day` form a valid
   Saka date.
+
+  ### Arguments
+
+  * `year` is any Saka year as an integer.
+
+  * `month` is a Saka month in the range `1..12`.
+
+  * `day` is a Saka day-of-month.
+
+  ### Returns
+
+  * `true` if the date is valid; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Indian.valid_date?(1947, 1, 30)
+      true
+
+      iex> Calendrical.Indian.valid_date?(1947, 1, 31)
+      false
+
+      iex> Calendrical.Indian.valid_date?(1946, 1, 31)
+      true
 
   """
   @impl true
@@ -140,8 +254,25 @@ defmodule Calendrical.Indian do
   # ── Calendar conversion ──────────────────────────────────────────────────
 
   @doc """
-  Returns the number of ISO days for the given Saka `year`,
-  `month`, and `day`.
+  Returns the number of ISO days for the given Saka `year`, `month`,
+  and `day`.
+
+  ### Arguments
+
+  * `year` is any Saka year as an integer.
+
+  * `month` is a Saka month in the range `1..12`.
+
+  * `day` is a Saka day-of-month.
+
+  ### Returns
+
+  * An integer count of days since the proleptic ISO epoch.
+
+  ### Examples
+
+      iex> Calendrical.Indian.date_to_iso_days(1947, 1, 1)
+      739697
 
   """
   @spec date_to_iso_days(year, month, day) :: integer()
@@ -150,7 +281,22 @@ defmodule Calendrical.Indian do
   end
 
   @doc """
-  Returns a Saka `{year, month, day}` for the given ISO day number.
+  Returns a Saka `{year, month, day}` tuple for the given ISO day
+  number.
+
+  ### Arguments
+
+  * `iso_days` is an integer count of days since the proleptic
+    ISO epoch.
+
+  ### Returns
+
+  * A three-tuple `{year, month, day}` in the Saka calendar.
+
+  ### Examples
+
+      iex> Calendrical.Indian.date_from_iso_days(739_700)
+      {1947, 1, 4}
 
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}

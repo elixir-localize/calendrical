@@ -37,8 +37,19 @@ defmodule Calendrical.Roc do
 
   @doc """
   Returns the offset (in years) between the ROC era and the proleptic
-  Gregorian calendar. `roc_year + gregorian_offset()` yields the
-  corresponding Gregorian year.
+  Gregorian calendar.
+
+  Adding this offset to a ROC year yields the corresponding Gregorian
+  year.
+
+  ### Returns
+
+  * The integer `1911`.
+
+  ### Examples
+
+      iex> Calendrical.Roc.gregorian_offset()
+      1911
 
   """
   @spec gregorian_offset() :: 1911
@@ -47,12 +58,38 @@ defmodule Calendrical.Roc do
   @doc """
   Returns the Gregorian year corresponding to the given ROC year.
 
+  ### Arguments
+
+  * `roc_year` is any ROC year as an integer.
+
+  ### Returns
+
+  * An integer Gregorian year (1911 more than the input).
+
+  ### Examples
+
+      iex> Calendrical.Roc.gregorian_year(115)
+      2026
+
   """
   @spec gregorian_year(year) :: integer()
   def gregorian_year(roc_year), do: roc_year + @gregorian_offset
 
   @doc """
   Returns the ROC year corresponding to the given Gregorian year.
+
+  ### Arguments
+
+  * `gregorian_year` is any proleptic Gregorian year as an integer.
+
+  ### Returns
+
+  * An integer ROC year (1911 less than the input).
+
+  ### Examples
+
+      iex> Calendrical.Roc.roc_year(2026)
+      115
 
   """
   @spec roc_year(integer()) :: year
@@ -91,6 +128,23 @@ defmodule Calendrical.Roc do
   Returns the number of ISO days for the given ROC `year`, `month`,
   and `day`.
 
+  ### Arguments
+
+  * `year` is any ROC year as an integer.
+
+  * `month` is a month in the range `1..12`.
+
+  * `day` is a day-of-month.
+
+  ### Returns
+
+  * An integer count of days since the proleptic ISO epoch.
+
+  ### Examples
+
+      iex> Calendrical.Roc.date_to_iso_days(115, 1, 1)
+      739982
+
   """
   @spec date_to_iso_days(year, month, day) :: integer()
   def date_to_iso_days(year, month, day) do
@@ -98,7 +152,22 @@ defmodule Calendrical.Roc do
   end
 
   @doc """
-  Returns a ROC `{year, month, day}` for the given ISO day number.
+  Returns a ROC `{year, month, day}` tuple for the given ISO day
+  number.
+
+  ### Arguments
+
+  * `iso_days` is an integer count of days since the proleptic
+    ISO epoch.
+
+  ### Returns
+
+  * A three-tuple `{year, month, day}` in the ROC calendar.
+
+  ### Examples
+
+      iex> Calendrical.Roc.date_from_iso_days(739_252)
+      {113, 1, 2}
 
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}

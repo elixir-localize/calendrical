@@ -48,8 +48,19 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
   @doc """
   Returns the offset (in years) between the Amete Alem (Era of the
   World) and the Amete Mihret (Era of Mercy) used by
-  `Calendrical.Ethiopic`. `amete_alem_year - era_offset()` yields
-  the corresponding Amete Mihret year.
+  `Calendrical.Ethiopic`.
+
+  Subtracting this offset from an Amete Alem year yields the
+  corresponding Amete Mihret year.
+
+  ### Returns
+
+  * The integer `5500`.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.AmeteAlem.era_offset()
+      5500
 
   """
   @spec era_offset() :: 5500
@@ -59,6 +70,19 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
   Returns the corresponding `Calendrical.Ethiopic` (Amete Mihret)
   year for the given Amete Alem year.
 
+  ### Arguments
+
+  * `amete_alem_year` is any Amete Alem year as an integer.
+
+  ### Returns
+
+  * An integer Amete Mihret year (5500 less than the input).
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.AmeteAlem.amete_mihret_year(7518)
+      2018
+
   """
   @spec amete_mihret_year(year) :: integer()
   def amete_mihret_year(amete_alem_year), do: amete_alem_year - @era_offset
@@ -66,6 +90,20 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
   @doc """
   Returns the Amete Alem year for the given Amete Mihret
   (`Calendrical.Ethiopic`) year.
+
+  ### Arguments
+
+  * `amete_mihret_year` is any Amete Mihret (Ethiopic) year as an
+    integer.
+
+  ### Returns
+
+  * An integer Amete Alem year (5500 more than the input).
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.AmeteAlem.amete_alem_year(2018)
+      7518
 
   """
   @spec amete_alem_year(integer()) :: year
@@ -112,6 +150,23 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
   Returns the number of ISO days for the given Amete Alem `year`,
   `month`, and `day`.
 
+  ### Arguments
+
+  * `year` is any Amete Alem year as an integer.
+
+  * `month` is an Ethiopic month in the range `1..13`.
+
+  * `day` is an Ethiopic day-of-month.
+
+  ### Returns
+
+  * An integer count of days since the proleptic ISO epoch.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.AmeteAlem.date_to_iso_days(7518, 1, 1)
+      739870
+
   """
   @spec date_to_iso_days(year, month, day) :: integer()
   def date_to_iso_days(year, month, day) do
@@ -119,8 +174,22 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
   end
 
   @doc """
-  Returns an Amete Alem `{year, month, day}` for the given ISO day
-  number.
+  Returns an Amete Alem `{year, month, day}` tuple for the given
+  ISO day number.
+
+  ### Arguments
+
+  * `iso_days` is an integer count of days since the proleptic
+    ISO epoch.
+
+  ### Returns
+
+  * A three-tuple `{year, month, day}` in Amete Alem numbering.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.AmeteAlem.date_from_iso_days(740_000)
+      {7518, 5, 11}
 
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}

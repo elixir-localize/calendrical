@@ -51,8 +51,19 @@ defmodule Calendrical.Buddhist do
 
   @doc """
   Returns the offset (in years) between the Buddhist Era and the
-  proleptic Gregorian calendar. `buddhist_year - gregorian_offset()`
-  yields the corresponding Gregorian year.
+  proleptic Gregorian calendar.
+
+  Subtracting this offset from a Buddhist year yields the corresponding
+  Gregorian year.
+
+  ### Returns
+
+  * The integer `543`.
+
+  ### Examples
+
+      iex> Calendrical.Buddhist.gregorian_offset()
+      543
 
   """
   @spec gregorian_offset() :: 543
@@ -61,12 +72,38 @@ defmodule Calendrical.Buddhist do
   @doc """
   Returns the Gregorian year corresponding to the given Buddhist year.
 
+  ### Arguments
+
+  * `buddhist_year` is any Buddhist Era year as an integer.
+
+  ### Returns
+
+  * An integer Gregorian year (543 less than the input).
+
+  ### Examples
+
+      iex> Calendrical.Buddhist.gregorian_year(2569)
+      2026
+
   """
   @spec gregorian_year(year) :: integer()
   def gregorian_year(buddhist_year), do: buddhist_year - @gregorian_offset
 
   @doc """
   Returns the Buddhist year corresponding to the given Gregorian year.
+
+  ### Arguments
+
+  * `gregorian_year` is any proleptic Gregorian year as an integer.
+
+  ### Returns
+
+  * An integer Buddhist year (543 more than the input).
+
+  ### Examples
+
+      iex> Calendrical.Buddhist.buddhist_year(2026)
+      2569
 
   """
   @spec buddhist_year(integer()) :: year
@@ -75,9 +112,26 @@ defmodule Calendrical.Buddhist do
   # ── Configuration overrides ──────────────────────────────────────────────
 
   @doc """
-  Returns whether the given Buddhist `year` is a leap year. The
-  underlying calendar is proleptic Gregorian, so the leap-year rule
+  Returns whether the given Buddhist `year` is a leap year.
+
+  The underlying calendar is proleptic Gregorian, so the leap-year rule
   applies to the corresponding Gregorian year.
+
+  ### Arguments
+
+  * `year` is any Buddhist year as an integer.
+
+  ### Returns
+
+  * `true` if the year contains 366 days; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Buddhist.leap_year?(2567)
+      true
+
+      iex> Calendrical.Buddhist.leap_year?(2569)
+      false
 
   """
   @impl true
@@ -89,6 +143,21 @@ defmodule Calendrical.Buddhist do
   @doc """
   Returns the number of days in the given Buddhist `year` and `month`.
 
+  ### Arguments
+
+  * `year` is any Buddhist year as an integer.
+
+  * `month` is a month in the range `1..12`.
+
+  ### Returns
+
+  * The number of days in the month (`28..31`).
+
+  ### Examples
+
+      iex> Calendrical.Buddhist.days_in_month(2569, 2)
+      28
+
   """
   @impl true
   @spec days_in_month(year, month) :: 28..31
@@ -97,7 +166,23 @@ defmodule Calendrical.Buddhist do
   end
 
   @doc """
-  Returns the number of days in the given Buddhist `year` (365 or 366).
+  Returns the number of days in the given Buddhist `year`.
+
+  ### Arguments
+
+  * `year` is any Buddhist year as an integer.
+
+  ### Returns
+
+  * `365` for an ordinary year or `366` for a leap year.
+
+  ### Examples
+
+      iex> Calendrical.Buddhist.days_in_year(2569)
+      365
+
+      iex> Calendrical.Buddhist.days_in_year(2567)
+      366
 
   """
   @impl true
@@ -106,8 +191,28 @@ defmodule Calendrical.Buddhist do
   end
 
   @doc """
-  Determines if the given `year`, `month`, and `day` form a valid
+  Returns whether the given `year`, `month`, and `day` form a valid
   Buddhist date.
+
+  ### Arguments
+
+  * `year` is any Buddhist year as an integer.
+
+  * `month` is a month in the range `1..12`.
+
+  * `day` is a day-of-month.
+
+  ### Returns
+
+  * `true` if the date is valid; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Buddhist.valid_date?(2569, 1, 31)
+      true
+
+      iex> Calendrical.Buddhist.valid_date?(2569, 2, 29)
+      false
 
   """
   @impl true
@@ -124,6 +229,23 @@ defmodule Calendrical.Buddhist do
   Returns the number of ISO days for the given Buddhist `year`,
   `month`, and `day`.
 
+  ### Arguments
+
+  * `year` is any Buddhist year as an integer.
+
+  * `month` is a month in the range `1..12`.
+
+  * `day` is a day-of-month.
+
+  ### Returns
+
+  * An integer count of days since the proleptic ISO epoch.
+
+  ### Examples
+
+      iex> Calendrical.Buddhist.date_to_iso_days(2569, 1, 1)
+      739982
+
   """
   @spec date_to_iso_days(year, month, day) :: integer()
   def date_to_iso_days(year, month, day) do
@@ -131,7 +253,22 @@ defmodule Calendrical.Buddhist do
   end
 
   @doc """
-  Returns a Buddhist `{year, month, day}` for the given ISO day number.
+  Returns a Buddhist `{year, month, day}` tuple for the given ISO day
+  number.
+
+  ### Arguments
+
+  * `iso_days` is an integer count of days since the proleptic
+    ISO epoch.
+
+  ### Returns
+
+  * A three-tuple `{year, month, day}` in Buddhist Era numbering.
+
+  ### Examples
+
+      iex> Calendrical.Buddhist.date_from_iso_days(739_252)
+      {2567, 1, 2}
 
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}

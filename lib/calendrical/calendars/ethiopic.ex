@@ -35,8 +35,32 @@ defmodule Calendrical.Ethiopic do
   @last_day_of_week 5
 
   @doc """
-  Determines if the date given is valid according to
-  this calendar.
+  Returns whether the supplied `year`, `month`, and `day` is a valid
+  Ethiopic date.
+
+  ### Arguments
+
+  * `year` is any Ethiopic year as an integer.
+
+  * `month` is an Ethiopic month in the range `1..13`.
+
+  * `day` is an Ethiopic day-of-month. Months `1..12` have 30 days;
+    month 13 has 5 days, or 6 in a leap year.
+
+  ### Returns
+
+  * `true` if the date is valid; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.valid_date?(2018, 1, 30)
+      true
+
+      iex> Calendrical.Ethiopic.valid_date?(2019, 13, 6)
+      true
+
+      iex> Calendrical.Ethiopic.valid_date?(2018, 13, 6)
+      false
 
   """
   @impl true
@@ -57,23 +81,77 @@ defmodule Calendrical.Ethiopic do
   end
 
   @doc """
-  Calculates the year and era from the given `year`.
+  Returns the year and era for the given Ethiopic `year`.
 
-  The Ethiopic calendar has two eras: the current era which
-  starts in year 1 and is defined as era `1` (Amete Mihret);
-  and a second era for years less than 1, defined as era `0`.
+  The Ethiopic calendar has two eras: the current era which starts
+  in year 1 and is defined as era `1` (Amete Mihret); and a
+  second era for years less than 1, defined as era `0`.
+
+  ### Arguments
+
+  * `year` is any Ethiopic year as an integer.
+
+  ### Returns
+
+  * A two-tuple `{year_in_era, era}` where `era` is `0` or `1`.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.year_of_era(2018)
+      {2018, 1}
+
+      iex> Calendrical.Ethiopic.year_of_era(-50)
+      {50, 0}
 
   """
   @spec year_of_era(year) :: {pos_integer(), 0..1}
   def year_of_era(year) when year > 0, do: {year, 1}
   def year_of_era(year) when year < 0, do: {abs(year), 0}
 
+  @doc """
+  Returns the year and era for the Ethiopic date given by `year`,
+  `month`, and `day`.
+
+  ### Arguments
+
+  * `year` is any Ethiopic year as an integer.
+
+  * `month` is an Ethiopic month in the range `1..13`.
+
+  * `day` is an Ethiopic day-of-month.
+
+  ### Returns
+
+  * A two-tuple `{year_in_era, era}` where `era` is `0` or `1`.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.year_of_era(2018, 1, 1)
+      {2018, 1}
+
+  """
   @impl true
   def year_of_era(year, _month, _day), do: year_of_era(year)
 
   @doc """
-  Calculates the related Gregorian year for an Ethiopic date by
-  converting via ISO days.
+  Returns the Gregorian year that contains the given Ethiopic date.
+
+  ### Arguments
+
+  * `year` is any Ethiopic year as an integer.
+
+  * `month` is an Ethiopic month in the range `1..13`.
+
+  * `day` is an Ethiopic day-of-month.
+
+  ### Returns
+
+  * An integer Gregorian year.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.related_gregorian_year(2018, 1, 1)
+      2025
 
   """
   @impl true
@@ -86,8 +164,26 @@ defmodule Calendrical.Ethiopic do
   end
 
   @doc """
-  The Ethiopic calendar does not define quarters because the
-  year has 13 months.
+  Returns `{:error, :not_defined}` because the Ethiopic calendar
+  does not define quarters; the year has 13 months and so does not
+  divide evenly into four quarters.
+
+  ### Arguments
+
+  * `year` is any Ethiopic year as an integer.
+
+  * `month` is an Ethiopic month in the range `1..13`.
+
+  * `day` is an Ethiopic day-of-month.
+
+  ### Returns
+
+  * `{:error, :not_defined}`.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.quarter_of_year(2018, 1, 1)
+      {:error, :not_defined}
 
   """
   @impl true
@@ -96,8 +192,25 @@ defmodule Calendrical.Ethiopic do
   end
 
   @doc """
-  Calculates the day and era from the given `year`, `month`,
-  and `day`.
+  Returns the day-of-era and era for the given Ethiopic `year`,
+  `month`, and `day`.
+
+  ### Arguments
+
+  * `year` is any Ethiopic year as an integer.
+
+  * `month` is an Ethiopic month in the range `1..13`.
+
+  * `day` is an Ethiopic day-of-month.
+
+  ### Returns
+
+  * A two-tuple `{day_in_era, era}` where `era` is `0` or `1`.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.day_of_era(2018, 1, 1)
+      {743031, 1}
 
   """
   @impl true
@@ -108,11 +221,31 @@ defmodule Calendrical.Ethiopic do
   end
 
   @doc """
-  Returns the day of the week for the given `year`, `month`,
-  and `day`.
+  Returns the day of the week for the given Ethiopic `year`,
+  `month`, and `day`.
 
   Ethiopic weeks begin on Saturday, so the returned tuple has
   `first_day_of_week = 6` and `last_day_of_week = 5`.
+
+  ### Arguments
+
+  * `year` is any Ethiopic year as an integer.
+
+  * `month` is an Ethiopic month in the range `1..13`.
+
+  * `day` is an Ethiopic day-of-month.
+
+  * `starting_on` is `:default` for the calendar's natural week
+    boundary (Saturday).
+
+  ### Returns
+
+  * A three-tuple `{day_of_week, first_day_of_week, last_day_of_week}`.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.day_of_week(2018, 1, 1, :default)
+      {4, 6, 5}
 
   """
   @impl true
@@ -125,10 +258,31 @@ defmodule Calendrical.Ethiopic do
   end
 
   @doc """
-  Returns the number of days in the given `year` and `month`.
+  Returns the number of days in the given Ethiopic `year` and `month`.
 
   Months 1-12 always have 30 days; month 13 has 5 days, or 6
   in a leap year.
+
+  ### Arguments
+
+  * `year` is any Ethiopic year as an integer.
+
+  * `month` is an Ethiopic month in the range `1..13`.
+
+  ### Returns
+
+  * An integer number of days.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.days_in_month(2018, 1)
+      30
+
+      iex> Calendrical.Ethiopic.days_in_month(2018, 13)
+      5
+
+      iex> Calendrical.Ethiopic.days_in_month(2019, 13)
+      6
 
   """
   @impl true
@@ -142,7 +296,23 @@ defmodule Calendrical.Ethiopic do
   end
 
   @doc """
-  Returns the number of days in the given `year`.
+  Returns the number of days in the given Ethiopic `year`.
+
+  ### Arguments
+
+  * `year` is any Ethiopic year as an integer.
+
+  ### Returns
+
+  * `365` for an ordinary year or `366` for a leap year.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.days_in_year(2018)
+      365
+
+      iex> Calendrical.Ethiopic.days_in_year(2019)
+      366
 
   """
   @impl true
@@ -151,10 +321,26 @@ defmodule Calendrical.Ethiopic do
   end
 
   @doc """
-  Returns whether the given `year` is an Ethiopic leap year.
+  Returns whether the given Ethiopic `year` is a leap year.
 
   An Ethiopic year is a leap year when it is one less than a
-  multiple of four.
+  multiple of four (i.e. `rem(year, 4) == 3`).
+
+  ### Arguments
+
+  * `year` is any Ethiopic year as an integer.
+
+  ### Returns
+
+  * `true` if the year contains 366 days; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.leap_year?(2019)
+      true
+
+      iex> Calendrical.Ethiopic.leap_year?(2018)
+      false
 
   """
   @impl true
@@ -163,25 +349,58 @@ defmodule Calendrical.Ethiopic do
   end
 
   @doc """
-  Returns the number of ISO days for the given Ethiopic
-  `year`, `month`, and `day`.
+  Returns the number of ISO days for the given Ethiopic `year`,
+  `month`, and `day`.
+
+  ### Arguments
+
+  * `year` is any Ethiopic year as an integer.
+
+  * `month` is an Ethiopic month in the range `1..13`.
+
+  * `day` is an Ethiopic day-of-month.
+
+  ### Returns
+
+  * An integer count of days since the proleptic ISO epoch.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.date_to_iso_days(2018, 1, 1)
+      739870
 
   """
+  @spec date_to_iso_days(year, month, day) :: integer()
   def date_to_iso_days(year, month, day) do
     (epoch() - 1 + 365 * (year - 1) + :math.floor(year / 4) + 30 * (month - 1) + day)
     |> trunc()
   end
 
   @doc """
-  Returns an Ethiopic `{year, month, day}` for the given ISO day
-  number.
+  Returns an Ethiopic `{year, month, day}` tuple for the given ISO
+  day number.
+
+  ### Arguments
+
+  * `iso_days` is an integer count of days since the proleptic
+    ISO epoch.
+
+  ### Returns
+
+  * A three-tuple `{year, month, day}` in the Ethiopic calendar.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.date_from_iso_days(740_000)
+      {2018, 5, 11}
 
   """
+  @spec date_from_iso_days(integer()) :: {year, month, day}
   def date_from_iso_days(iso_days) do
-    year = :math.floor((4 * (iso_days - epoch()) + 1463) / 1461)
-    month = :math.floor((iso_days - date_to_iso_days(year, 1, 1)) / 30) + 1
+    year = trunc(:math.floor((4 * (iso_days - epoch()) + 1463) / 1461))
+    month = trunc(:math.floor((iso_days - date_to_iso_days(year, 1, 1)) / 30)) + 1
     day = iso_days + 1 - date_to_iso_days(year, month, 1)
 
-    {trunc(year), trunc(month), trunc(day)}
+    {year, month, day}
   end
 end

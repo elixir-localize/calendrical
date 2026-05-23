@@ -13,22 +13,23 @@ defmodule Calendrical.Kday do
     ]
 
   @doc """
-  Return the date of the `day_of_week` on or before the
+  Returns the date of the `day_of_week` on or before the
   specified `date`.
 
-  ## Arguments
+  ### Arguments
 
-  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
-    ISO days since epoch.
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`,
+    `t:NaiveDateTime.t/0` or ISO days since epoch.
 
-    * `k` is an integer day of the week where `1` is
-    Monday and `7` is Sunday.
+  * `k` is an integer day of the week where `1` is Monday and `7`
+    is Sunday.
 
-  ## Returns
+  ### Returns
 
-  * A `t:Calendar.date/0` in the calendar of the date provided as an argument.
+  * A `t:Calendar.date/0` in the calendar of the date provided as
+    an argument.
 
-  ## Examples
+  ### Examples
 
       iex> Calendrical.Kday.kday_on_or_before(~D[2016-02-29], 2)
       ~D[2016-02-23]
@@ -59,22 +60,23 @@ defmodule Calendrical.Kday do
   end
 
   @doc """
-  Return the date of the `day_of_week` on or after the
+  Returns the date of the `day_of_week` on or after the
   specified `date`.
 
-  ## Arguments
+  ### Arguments
 
-  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
-    ISO days since epoch.
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`,
+    `t:NaiveDateTime.t/0` or ISO days since epoch.
 
-    * `k` is an integer day of the week where `1` is
-    Monday and `7` is Sunday.
+  * `k` is an integer day of the week where `1` is Monday and `7`
+    is Sunday.
 
-  ## Returns
+  ### Returns
 
-  * A `t:Calendar.date/0` in the calendar of the date provided as an argument
+  * A `t:Calendar.date/0` in the calendar of the date provided as
+    an argument.
 
-  ## Examples
+  ### Examples
 
       iex> Calendrical.Kday.kday_on_or_after(~D[2016-02-29], 2)
       ~D[2016-03-01]
@@ -105,22 +107,23 @@ defmodule Calendrical.Kday do
   end
 
   @doc """
-  Return the date of the `day_of_week` nearest the
+  Returns the date of the `day_of_week` nearest the
   specified `date`.
 
-  ## Arguments
+  ### Arguments
 
-  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
-    ISO days since epoch.
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`,
+    `t:NaiveDateTime.t/0` or ISO days since epoch.
 
-  * `k` is an integer day of the week where `1` is
-    Monday and `7` is Sunday.
+  * `k` is an integer day of the week where `1` is Monday and `7`
+    is Sunday.
 
-  ## Returns
+  ### Returns
 
-  * A `t:Calendar.date/0` in the calendar of the date provided as an argument.
+  * A `t:Calendar.date/0` in the calendar of the date provided as
+    an argument.
 
-  ## Examples
+  ### Examples
 
       iex> Calendrical.Kday.kday_nearest(~D[2016-02-29], 2)
       ~D[2016-03-01]
@@ -148,22 +151,23 @@ defmodule Calendrical.Kday do
   end
 
   @doc """
-  Return the date of the `day_of_week` before the
+  Returns the date of the `day_of_week` before the
   specified `date`.
 
-  ## Arguments
+  ### Arguments
 
-  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
-    ISO days since epoch.
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`,
+    `t:NaiveDateTime.t/0` or ISO days since epoch.
 
-  * `k` is an integer day of the week where `1` is
-    Monday and `7` is Sunday.
+  * `k` is an integer day of the week where `1` is Monday and `7`
+    is Sunday.
 
-  ## Returns
+  ### Returns
 
-  * A `t:Calendar.date/0` in the calendar of the date provided as an argument.
+  * A `t:Calendar.date/0` in the calendar of the date provided as
+    an argument.
 
-  ## Examples
+  ### Examples
 
       iex> Calendrical.Kday.kday_before(~D[2016-02-29], 2)
       ~D[2016-02-23]
@@ -174,7 +178,6 @@ defmodule Calendrical.Kday do
       iex> Calendrical.Kday.kday_before(~D[2023-09-30], 5)
       ~D[2023-09-29]
 
-      # 6 means Saturday.  Use either the integer value or the atom form.
       iex> Calendrical.Kday.kday_before(~D[2017-06-30], 6)
       ~D[2017-06-24]
 
@@ -195,22 +198,23 @@ defmodule Calendrical.Kday do
   end
 
   @doc """
-  Return the date of the `day_of_week` after the
+  Returns the date of the `day_of_week` after the
   specified `date`.
 
-  ## Arguments
+  ### Arguments
 
-  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
-    ISO days since epoch.
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`,
+    `t:NaiveDateTime.t/0` or ISO days since epoch.
 
-  * `k` is an integer day of the week where `1` is
-    Monday and `7` is Sunday.
+  * `k` is an integer day of the week where `1` is Monday and `7`
+    is Sunday.
 
-  ## Returns
+  ### Returns
 
-  * A `t:Calendar.date/0` in the calendar of the date provided as an argument.
+  * A `t:Calendar.date/0` in the calendar of the date provided as
+    an argument.
 
-  ## Examples
+  ### Examples
 
       iex> Calendrical.Kday.kday_after(~D[2016-02-29], 2)
       ~D[2016-03-01]
@@ -241,25 +245,26 @@ defmodule Calendrical.Kday do
   end
 
   @doc """
-  Return the date of the `nth` `day_of_week` on or before/after the
+  Returns the date of the `nth` `day_of_week` on or before/after the
   specified `date`.
 
-  ## Arguments
+  ### Arguments
 
-  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
-    ISO days since epoch.
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`,
+    `t:NaiveDateTime.t/0` or ISO days since epoch.
 
-  * `n` is the cardinal number of `k` before (negative `n`) or after
-    (positive `n`) the specified date.
+  * `n` is the cardinal number of `k` before (negative `n`) or
+    after (positive `n`) the specified date.
 
-  * `k` is an integer day of the week where `1` is
-    Monday and `7` is Sunday.
+  * `k` is an integer day of the week where `1` is Monday and `7`
+    is Sunday.
 
-  ## Returns
+  ### Returns
 
-  * A `t:Calendar.date/0` in the calendar of the date provided as an argument.
+  * A `t:Calendar.date/0` in the calendar of the date provided as
+    an argument.
 
-  ## Examples
+  ### Examples
 
       # Thanksgiving in the US
       iex> Calendrical.Kday.nth_kday(~D[2017-11-01], 4, 4)
@@ -294,22 +299,23 @@ defmodule Calendrical.Kday do
   end
 
   @doc """
-  Return the date of the first `day_of_week` on or after the
+  Returns the date of the first `day_of_week` on or after the
   specified `date`.
 
-  ## Arguments
+  ### Arguments
 
-  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
-    ISO days since epoch.
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`,
+    `t:NaiveDateTime.t/0` or ISO days since epoch.
 
-  * `k` is an integer day of the week where `1` is
-    Monday and `7` is Sunday.
+  * `k` is an integer day of the week where `1` is Monday and `7`
+    is Sunday.
 
-  ## Returns
+  ### Returns
 
-  * A `t:Calendar.date/0` in the calendar of the date provided as an argument.
+  * A `t:Calendar.date/0` in the calendar of the date provided as
+    an argument.
 
-  ## Examples
+  ### Examples
 
       # US election day
       iex> Calendrical.Kday.first_kday(~D[2017-11-02], 2)
@@ -336,22 +342,23 @@ defmodule Calendrical.Kday do
   end
 
   @doc """
-  Return the date of the last `day_of_week` on or before the
+  Returns the date of the last `day_of_week` on or before the
   specified `date`.
 
-  ## Arguments
+  ### Arguments
 
-  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`, `t:NaiveDateTime.t/0` or
-    ISO days since epoch.
+  * `date` is `t:Calendar.date/0`, a `t:DateTime.t/0`,
+    `t:NaiveDateTime.t/0` or ISO days since epoch.
 
-  * `k` is an integer day of the week where `1` is
-    Monday and `7` is Sunday.
+  * `k` is an integer day of the week where `1` is Monday and `7`
+    is Sunday.
 
-  ## Returns
+  ### Returns
 
-  * A `t:Calendar.date/0` in the calendar of the date provided as an argument
+  * A `t:Calendar.date/0` in the calendar of the date provided as
+    an argument.
 
-  ## Example
+  ### Examples
 
       # Memorial Day in the US
       iex> Calendrical.Kday.last_kday(~D[2017-05-31], 1)

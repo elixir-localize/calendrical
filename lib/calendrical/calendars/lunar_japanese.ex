@@ -161,7 +161,21 @@ defmodule Calendrical.LunarJapanese do
   @doc """
   Raising variant of `new/3`.
 
-  Raises `ArgumentError` if the date is not valid in this calendar.
+  ### Arguments
+
+  * `year` is any year in the `Calendrical.LunarJapanese` calendar.
+
+  * `month` is either an integer ordinal month or a `{month, :leap}`
+    tuple representing the traditional intercalary month.
+
+  * `day` is a day-of-month valid for the year and month.
+
+  ### Returns
+
+  * A `t:Date.t/0` in `Calendrical.LunarJapanese`.
+
+  * Raises `ArgumentError` if the date is not valid in this
+    calendar.
 
   """
   @spec new!(year :: Calendar.year(), month :: Lunisolar.lunar_month(), day :: Calendar.day()) ::
@@ -205,7 +219,7 @@ defmodule Calendrical.LunarJapanese do
 
   ### Returns
 
-  * A booelan indicating if the given year is a leap
+  * A boolean indicating if the given year is a leap
     year.
 
   ### Examples
@@ -232,7 +246,7 @@ defmodule Calendrical.LunarJapanese do
   Returns a boolean indicating if the given year and month
   is a leap month.
 
-  ### Arguements
+  ### Arguments
 
   * `year` is any year in the `#{inspect(__MODULE__)}` calendar.
 
@@ -241,7 +255,7 @@ defmodule Calendrical.LunarJapanese do
 
   ### Returns
 
-  * A booelan indicating if the given year and month is a leap
+  * A boolean indicating if the given year and month is a leap
     month.
 
   ### Examples
@@ -262,13 +276,13 @@ defmodule Calendrical.LunarJapanese do
   Returns a boolean indicating if the given year and month
   is a leap month.
 
-  ### Arguements
+  ### Arguments
 
   * `date` is any `t:Calendar.date/0` in the `#{inspect(__MODULE__)}` calendar.
 
   ### Returns
 
-  * A booelan indicating if the given year and month is a leap
+  * A boolean indicating if the given year and month is a leap
     month.
 
   ### Examples
@@ -408,7 +422,7 @@ defmodule Calendrical.LunarJapanese do
 
   @doc """
   Returns the gregorian date of the
-  Luanr New Year for a given gregorian year.
+  Lunar New Year for a given gregorian year.
 
   ### Arguments
 
@@ -437,7 +451,7 @@ defmodule Calendrical.LunarJapanese do
   end
 
   @doc """
-  Returns the year in the lunisolar sexigesimal 60-year
+  Returns the year in the lunisolar sexagesimal 60-year
   cycle.
 
   Traditionally years are numbered only within the cycle
@@ -457,7 +471,7 @@ defmodule Calendrical.LunarJapanese do
 
   ### Returns
 
-  * the integer year within the sexigesimal cycle of 60 years.
+  * the integer year within the sexagesimal cycle of 60 years.
 
   ### Examples
 

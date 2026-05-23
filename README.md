@@ -41,7 +41,7 @@ Add `calendrical` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:calendrical, "~> 0.1.0"}
+    {:calendrical, "~> 0.8"}
   ]
 end
 ```
@@ -75,6 +75,7 @@ iex> buddhist.year
 iex> # Get a date range for a fiscal year quarter
 iex> {:ok, calendar} = Calendrical.FiscalYear.calendar_for(:US)
 iex> Calendrical.Interval.quarter(2024, 1, calendar)
+Date.range(~D[2024-01-01 Calendrical.FiscalYear.US], ~D[2024-03-31 Calendrical.FiscalYear.US])
 
 iex> # Find the second Tuesday in November 2024 (Tuesday = day 2)
 iex> Calendrical.Kday.nth_kday(~D[2024-11-01], 2, 2)
@@ -207,4 +208,5 @@ Full API documentation is available on [HexDocs](https://hexdocs.pm/calendrical)
 
 ## License
 
-Apache License 2.0. See the [LICENSE](https://github.com/elixir-localize/calendrical/blob/v0.1.0/LICENSE.md) file for details.
+Apache License 2.0. See the [LICENSE](https://github.com/elixir-localize/calendrical/blob/v0.8.0/LICENSE.md) file for details.
+

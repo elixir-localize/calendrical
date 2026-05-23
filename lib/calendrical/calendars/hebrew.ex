@@ -97,6 +97,22 @@ defmodule Calendrical.Hebrew do
   Leap years are determined by a 19-year Metonic cycle: years
   3, 6, 8, 11, 14, 17, and 19 of each cycle are leap years.
 
+  ### Arguments
+
+  * `year` is any positive Hebrew year as an integer.
+
+  ### Returns
+
+  * `true` if the year contains 13 months; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.leap_year?(5784)
+      true
+
+      iex> Calendrical.Hebrew.leap_year?(5785)
+      false
+
   """
   @impl true
   @spec leap_year?(year) :: boolean()
@@ -108,6 +124,22 @@ defmodule Calendrical.Hebrew do
   Returns the number of months in the given Hebrew `year` (12 in an
   ordinary year, 13 in a leap year).
 
+  ### Arguments
+
+  * `year` is any positive Hebrew year as an integer.
+
+  ### Returns
+
+  * `12` for an ordinary year or `13` for a leap year.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.months_in_year(5785)
+      12
+
+      iex> Calendrical.Hebrew.months_in_year(5784)
+      13
+
   """
   @impl true
   @spec months_in_year(year) :: 12..13
@@ -116,8 +148,26 @@ defmodule Calendrical.Hebrew do
   end
 
   @doc """
-  The Hebrew calendar does not define quarters because the year has
-  a variable number of months (12 or 13).
+  Returns `{:error, :not_defined}` because the Hebrew calendar does
+  not define quarters; the year has a variable number of months
+  (12 or 13) and so does not divide evenly into four quarters.
+
+  ### Arguments
+
+  * `year` is any positive Hebrew year as an integer.
+
+  * `month` is a Hebrew month in the range `1..13`.
+
+  * `day` is a Hebrew day-of-month.
+
+  ### Returns
+
+  * `{:error, :not_defined}`.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.quarter_of_year(5785, 1, 1)
+      {:error, :not_defined}
 
   """
   @impl true
@@ -128,12 +178,34 @@ defmodule Calendrical.Hebrew do
   @doc """
   Returns the number of days in the given Hebrew `year` and `month`.
 
-  Returns `{:error, :invalid_month}` if `month` is `6` (Adar I) and
-  `year` is not a leap year.
+  Month 6 (*Adar I*) only exists in leap years; the function returns
+  `0` for month 6 in an ordinary year.
+
+  ### Arguments
+
+  * `year` is any positive Hebrew year as an integer.
+
+  * `month` is a Hebrew month in the range `1..13`.
+
+  ### Returns
+
+  * The number of days in the month, between 29 and 30 (or `0` for
+    month 6 in an ordinary year).
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.days_in_month(5785, 1)
+      30
+
+      iex> Calendrical.Hebrew.days_in_month(5784, 6)
+      30
+
+      iex> Calendrical.Hebrew.days_in_month(5785, 6)
+      0
 
   """
   @impl true
-  @spec days_in_month(year, month) :: 29..30
+  @spec days_in_month(year, month) :: 0..30
   def days_in_month(year, month) when month in 1..13 do
     cond do
       month in @fixed_30_day_months -> 30
@@ -151,6 +223,22 @@ defmodule Calendrical.Hebrew do
   Possible values are 353, 354, 355 (ordinary years) and 383, 384,
   385 (leap years).
 
+  ### Arguments
+
+  * `year` is any positive Hebrew year as an integer.
+
+  ### Returns
+
+  * The number of days in the year.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.days_in_year(5785)
+      355
+
+      iex> Calendrical.Hebrew.days_in_year(5784)
+      383
+
   """
   @impl true
   @spec days_in_year(year) :: 353..355 | 383..385
@@ -159,10 +247,33 @@ defmodule Calendrical.Hebrew do
   end
 
   @doc """
-  Determines if the given `year`, `month`, and `day` form a valid
+  Returns whether the given `year`, `month`, and `day` form a valid
   Hebrew date.
 
   Month 6 (*Adar I*) is only valid in leap years.
+
+  ### Arguments
+
+  * `year` is any Hebrew year as an integer.
+
+  * `month` is a Hebrew month in the range `1..13`.
+
+  * `day` is a Hebrew day-of-month.
+
+  ### Returns
+
+  * `true` if the date is valid; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.valid_date?(5785, 1, 30)
+      true
+
+      iex> Calendrical.Hebrew.valid_date?(5784, 6, 1)
+      true
+
+      iex> Calendrical.Hebrew.valid_date?(5785, 6, 1)
+      false
 
   """
   @impl true
@@ -178,12 +289,32 @@ defmodule Calendrical.Hebrew do
   def valid_date?(_year, _month, _day), do: false
 
   @doc """
-  Returns the month of the year for the given Hebrew date.
+  Returns the month-of-year for the given Hebrew date.
 
   In a leap year, month 7 is *Adar II* and is returned as
   `{7, :leap}` so that `Calendrical.localize/3` picks up the
   CLDR `7_yeartype_leap` variant ("Adar II"). All other months
   are returned as plain integers.
+
+  ### Arguments
+
+  * `year` is any positive Hebrew year as an integer.
+
+  * `month` is a Hebrew month in the range `1..13`.
+
+  * `day` is a Hebrew day-of-month.
+
+  ### Returns
+
+  * The plain `month` integer, or `{7, :leap}` for *Adar II*.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.month_of_year(5785, 7, 1)
+      7
+
+      iex> Calendrical.Hebrew.month_of_year(5784, 7, 1)
+      {7, :leap}
 
   """
   @impl true
@@ -201,6 +332,23 @@ defmodule Calendrical.Hebrew do
   Returns the number of ISO days for the given Hebrew `year`,
   `month`, and `day`.
 
+  ### Arguments
+
+  * `year` is any positive Hebrew year as an integer.
+
+  * `month` is a Hebrew month in the range `1..13`.
+
+  * `day` is a Hebrew day-of-month.
+
+  ### Returns
+
+  * An integer count of days since the proleptic ISO epoch.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.date_to_iso_days(5785, 1, 1)
+      739527
+
   """
   @spec date_to_iso_days(year, month, day) :: integer()
   def date_to_iso_days(year, month, day) do
@@ -208,7 +356,22 @@ defmodule Calendrical.Hebrew do
   end
 
   @doc """
-  Returns a Hebrew `{year, month, day}` for the given ISO day number.
+  Returns a Hebrew `{year, month, day}` tuple for the given ISO day
+  number.
+
+  ### Arguments
+
+  * `iso_days` is an integer count of days since the proleptic
+    ISO epoch.
+
+  ### Returns
+
+  * A three-tuple `{year, month, day}` in the Hebrew calendar.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.date_from_iso_days(739_500)
+      {5784, 13, 3}
 
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}
@@ -230,6 +393,19 @@ defmodule Calendrical.Hebrew do
   @doc """
   Returns the ISO day number of *1 Tishri* of the given Hebrew `year`
   (the start of the Hebrew year).
+
+  ### Arguments
+
+  * `year` is any positive Hebrew year as an integer.
+
+  ### Returns
+
+  * An integer count of days since the proleptic ISO epoch.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.hebrew_new_year(5785)
+      739527
 
   """
   @spec hebrew_new_year(year) :: integer()

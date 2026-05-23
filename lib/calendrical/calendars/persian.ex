@@ -21,12 +21,27 @@ defmodule Calendrical.Persian do
   @mean_tropical_year 365.24219
 
   @doc """
-  Returns if the given year is a leap year.
+  Returns whether the given Persian year is a leap year.
 
-  Since this calendar is observational we
-  calculate the start of successive years
-  and then calcualate the difference in
-  days to determine if its a leap year.
+  Since this calendar is observational we calculate the start of
+  successive years and then calculate the difference in days to
+  determine whether it is a leap year.
+
+  ### Arguments
+
+  * `year` is any Persian year as an integer.
+
+  ### Returns
+
+  * `true` if the year contains 366 days; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Persian.leap_year?(1403)
+      true
+
+      iex> Calendrical.Persian.leap_year?(1404)
+      false
 
   """
   @spec leap_year?(Calendar.year()) :: boolean()
@@ -38,10 +53,28 @@ defmodule Calendrical.Persian do
   end
 
   @doc """
-  Returns the number of days since the calendar
-  epoch for a given `year-month-day`
+  Returns the number of days since the ISO calendar epoch for a given
+  Persian `year`, `month`, and `day`.
+
+  ### Arguments
+
+  * `year` is any Persian year as an integer.
+
+  * `month` is a Persian month in the range `1..12`.
+
+  * `day` is a Persian day-of-month in the range `1..31`.
+
+  ### Returns
+
+  * An integer count of days since the proleptic ISO epoch.
+
+  ### Examples
+
+      iex> Calendrical.Persian.date_to_iso_days(1404, 1, 1)
+      739696
 
   """
+  @spec date_to_iso_days(Calendar.year(), Calendar.month(), Calendar.day()) :: integer()
   def date_to_iso_days(year, month, day) do
     new_year =
       new_year_on_or_before(
@@ -54,10 +87,26 @@ defmodule Calendrical.Persian do
   end
 
   @doc """
-  Returns a `{year, month, day}` calculated from
-  the number of `iso_days`.
+  Returns a `{year, month, day}` tuple representing the Persian
+  calendar date for the given count of ISO days.
+
+  ### Arguments
+
+  * `iso_days` is an integer count of days since the proleptic
+    ISO epoch.
+
+  ### Returns
+
+  * A three-tuple `{year, month, day}` in the Persian calendar.
+
+  ### Examples
+
+      iex> Calendrical.Persian.date_from_iso_days(739_335)
+      {1403, 1, 6}
 
   """
+  @spec date_from_iso_days(integer()) ::
+          {Calendar.year(), Calendar.month(), Calendar.day()}
   def date_from_iso_days(iso_days) do
     new_year_iso_days = new_year_on_or_before(iso_days)
     y = round((new_year_iso_days - epoch()) / @mean_tropical_year) + 1
@@ -74,10 +123,28 @@ defmodule Calendrical.Persian do
   end
 
   @doc """
-  Returns the Gregorian date of the
-  Persian new year for a given
-  Gregorian year
+  Returns the Gregorian `Date` of the Persian new year that falls in
+  the given Gregorian `year`.
+
+  The Persian new year (Nowruz) is the day on which the March equinox
+  occurs in Tehran local time.
+
+  ### Arguments
+
+  * `year` is the Gregorian year in which the desired Persian new
+    year falls.
+
+  ### Returns
+
+  * `{:ok, date}` where `date` is a `t:Date.t/0` in `Calendar.ISO`.
+
+  ### Examples
+
+      iex> Calendrical.Persian.new_year_gregorian(2025)
+      {:ok, ~D[2025-03-21]}
+
   """
+  @spec new_year_gregorian(Calendar.year()) :: {:ok, Date.t()}
   def new_year_gregorian(year) do
     {:ok, equinox} = vernal_equinox(year)
     {:ok, solar_noon} = midday_in_tehran(equinox)
@@ -90,10 +157,25 @@ defmodule Calendrical.Persian do
   end
 
   @doc """
-  Returns the Gregorian date of the
-  Persian last day of a given
-  Gregorian year
+  Returns the Gregorian `Date` of the last day of the Persian year
+  that begins in the given Gregorian `year`.
+
+  ### Arguments
+
+  * `year` is the Gregorian year in which the Persian year starts.
+
+  ### Returns
+
+  * `{:ok, date}` where `date` is a `t:Date.t/0` in `Calendar.ISO`,
+    one day before the next Persian new year.
+
+  ### Examples
+
+      iex> Calendrical.Persian.year_end_gregorian(2025)
+      {:ok, ~D[2026-03-20]}
+
   """
+  @spec year_end_gregorian(Calendar.year()) :: {:ok, Date.t()}
   def year_end_gregorian(year) do
     {:ok, new_year} = new_year_gregorian(year + 1)
     {:ok, Date.add(new_year, -1)}
@@ -109,6 +191,28 @@ defmodule Calendrical.Persian do
     Astro.equinox(year, :march)
   end
 
+  @doc """
+  Returns the count of ISO days of the most recent Persian new year on
+  or before `iso_days`.
+
+  ### Arguments
+
+  * `iso_days` is an integer count of days since the proleptic
+    ISO epoch.
+
+  ### Returns
+
+  * An integer count of days since the proleptic ISO epoch
+    corresponding to the most recent Persian new year on or before
+    the supplied date.
+
+  ### Examples
+
+      iex> Calendrical.Persian.new_year_on_or_before(739_400)
+      739330
+
+  """
+  @spec new_year_on_or_before(integer()) :: integer()
   def new_year_on_or_before(iso_days) when is_integer(iso_days) do
     {year, month, day} = Calendrical.Gregorian.date_from_iso_days(iso_days)
     {:ok, date} = Date.new(year, month, day)

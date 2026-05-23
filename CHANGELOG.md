@@ -6,6 +6,24 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] — 2026-05-24
+
+### Changed
+
+* Function and module documentation across the calendar modules (Persian, Coptic, Hebrew, Ethiopic, Ethiopic.AmeteAlem, Buddhist, Indian, ROC, Julian and its variants, Ecclesiastical, Kday, Composite, Formatter, Chinese, Korean, LunarJapanese) is now in the project's standard template with `### Arguments`, `### Returns`, and `### Examples` sections. Many functions gained their first doctest examples, taking the total doctest count from 410 to 509+.
+
+* `Calendrical.Julian` now has a `@moduledoc` describing the proleptic Julian calendar and the year-shift variants (`Calendrical.Julian.Jan1`, `.March1`, `.March25`, `.Sept1`, `.Dec25`). Each variant now has its own short `@moduledoc` describing the historical year-style it represents.
+
+### Fixed
+
+* Spelling fixes in calendar docs: `calcualate` → `calculate` (Persian leap-year doc), `Arguements` → `Arguments`, `boolaan`/`booelan` → `boolean`, `Luanr` → `Lunar`, `sexigesimal` → `sexagesimal` (Chinese, Korean, LunarJapanese).
+
+* README installation snippet now points to `~> 0.8` instead of the stale `~> 0.1.0` from the initial release.
+
+* README LICENSE link now points to `v0.8.0` instead of `v0.1.0`.
+
+* README Quick Start example for `Calendrical.Interval.quarter/3` now shows the expected `Date.range/2` result, matching the other examples in the block.
+
 ## [0.7.2] — 2026-05-23
 
 ### Bug Fixes

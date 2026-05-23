@@ -2,40 +2,31 @@ defmodule Calendrical.Formatter do
   @moduledoc """
   Calendar formatter behaviour.
 
-  This behaviour defines a set of
-  callbacks that are invoked during
+  This behaviour defines a set of callbacks that are invoked during
   the formatting of a calendar.
 
-  At each point in the formatting
-  process the callbacks are invoked
-  from the "inside out".  That is,
-  `format_day/4` is invoked for each
-  day of the week, then `format_week/5`
-  is called, then `format_month/4`
-  and finally `format_year/3` is
-  called if required.
+  At each point in the formatting process the callbacks are invoked
+  from the "inside out". That is, `format_day/4` is invoked for each
+  day of the week, then `format_week/5` is called, then
+  `format_month/4` and finally `format_year/3` is called if
+  required.
 
   """
 
   @doc """
-  Returns the formatted calendar for a year
+  Returns the formatted calendar for a year.
 
-  ## Arguments
+  ### Arguments
 
-  * `formatted_months` is the result
-    returned by `format_month/4`
+  * `formatted_months` is the result returned by `format_month/4`.
 
-  * `year` is the year for which
-    the calendar is requested
-
-  * `month` is the month for which
-    the calendar is requested
+  * `year` is the year for which the calendar is requested.
 
   * `options` is a keyword list of formatter options.
 
-  ## Returns
+  ### Returns
 
-  * An arbitrary result as required.
+  * An arbitrary result as required by the implementing formatter.
 
   """
   @callback format_year(
@@ -45,25 +36,22 @@ defmodule Calendrical.Formatter do
             ) :: any()
 
   @doc """
-  Returns the formatted calendar for a month
+  Returns the formatted calendar for a month.
 
-  ## Arguments
+  ### Arguments
 
-  * `formatted_weeks` is the result
-    returned by `format_week/5`
+  * `formatted_weeks` is the result returned by `format_week/5`.
 
-  * `year` is the year for which
-    the calendar is requested
+  * `year` is the year for which the calendar is requested.
 
-  * `month` is the month for which
-    the calendar is requested
+  * `month` is the month for which the calendar is requested.
 
   * `options` is a keyword list of formatter options.
 
-  ## Returns
+  ### Returns
 
-  * An arbitrary result as required which is either
-    returned if called by `Calendrical.Format.month/3`
+  * An arbitrary result as required by the implementing formatter,
+    which is either returned (if called by `Calendrical.Format.month/3`)
     or passed to `format_year/3` if not.
 
   """
@@ -75,29 +63,25 @@ defmodule Calendrical.Formatter do
             ) :: any()
 
   @doc """
-  Returns the formatted calendar for a week
+  Returns the formatted calendar for a week.
 
-  ## Arguments
+  ### Arguments
 
-  * `formatted_days` is the result
-    returned by `format_day/4`
+  * `formatted_days` is the result returned by `format_day/4`.
 
-  * `year` is the year for which
-    the calendar is requested
+  * `year` is the year for which the calendar is requested.
 
-  * `month` is the month for which
-    the calendar is requested
+  * `month` is the month for which the calendar is requested.
 
-  * `week_number` is a 2-tuple of the
-    form `{year, week_number}` that represents
-    the week of year for week to be formatted
+  * `week_number` is a 2-tuple of the form `{year, week_number}`
+    that represents the week-of-year for the week to be formatted.
 
   * `options` is a keyword list of formatter options.
 
-  ## Returns
+  ### Returns
 
-  * An arbitrary result as required which is
-    passed to `format_month/4`
+  * An arbitrary result as required by the implementing formatter,
+    which is passed to `format_month/4`.
 
   """
   @callback format_week(
@@ -109,25 +93,22 @@ defmodule Calendrical.Formatter do
             ) :: any()
 
   @doc """
-  Returns the formatted calendar for a day
+  Returns the formatted calendar for a day.
 
-  ## Arguments
+  ### Arguments
 
-  * `formatted_months` is the result
-    returned by `format_month/4`
+  * `date` is the `t:Date.t/0` of the day being formatted.
 
-  * `year` is the year for which
-    the calendar is requested
+  * `year` is the year for which the calendar is requested.
 
-  * `month` is the month for which
-    the calendar is requested
+  * `month` is the month for which the calendar is requested.
 
   * `options` is a keyword list of formatter options.
 
-  ## Returns
+  ### Returns
 
-  * An arbitrary result as required which
-    is passed to `format_week/5`
+  * An arbitrary result as required by the implementing formatter,
+    which is passed to `format_week/5`.
 
   """
   @callback format_day(
