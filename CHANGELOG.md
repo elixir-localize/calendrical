@@ -8,6 +8,10 @@ The format is based on
 
 ## [0.7.0] — 2026-05-23
 
+### Bug Fixes
+
+* `Calendrical.Time.parse/2` no longer lets narrow day-period markers (en's "a"/"p") consume the first letter of an adjacent capture. Previously `"11:30 PST"` against a `h:mm a v` pattern could match day_period="P" and zone="ST" (silently shifting 11:30 → 23:30 and losing the leading "P" of the zone); the day-period regex now requires a non-letter (or end of input) immediately after the match.
+
 ### Added
 
 * `:as` option on `Calendrical.parse/2`, `Calendrical.Date.parse/2`, `Calendrical.Date.parse_range/2`, `Calendrical.Time.parse/2`, and `Calendrical.DateTime.parse/2`. Pass `as: :map` to get a bare field map containing only what the input actually supplied (`"May 5"` → `%{calendar: Calendar.ISO, month: 5, day: 5}`, `"11 am"` → `%{hour: 11}`, `"2026"` → `%{year: 2026}`) instead of a struct with synthesised defaults — useful for downstream libraries that need the unresolved partial.

@@ -457,7 +457,14 @@ defmodule Calendrical.Time.Parser do
     # `(?i:...)` per CLDR TR35 §6.5 — day-period name matching
     # is case-insensitive so "am" matches "AM", "Du matin"
     # matches "du matin", etc.
-    "(?P<day_period>(?i:#{alternation}))"
+    #
+    # Trailing `(?![\p{L}])` prevents narrow forms (en's "a"/"p")
+    # from consuming the first letter of an adjacent capture —
+    # without it, `"11:30 PST"` against `h:mm a v` matches
+    # day_period="P" and zone="ST" instead of zone="PST". The
+    # assertion requires the match to be followed by a non-letter
+    # (or end of input).
+    "(?P<day_period>(?i:#{alternation}))(?![\\p{L}])"
   end
 
   defp collect_period_names(day_periods, letter) do
