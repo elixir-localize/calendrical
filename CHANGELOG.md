@@ -6,6 +6,18 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] — 2026-05-24
+
+### Added
+
+* Lenient input handling on `Calendrical.parse/2`, `Calendrical.Date.parse/2`, and `Calendrical.DateTime.parse/2`: internal double-whitespace is collapsed to a single space; abbreviated month names accept an optional trailing period (`"Jun."` matches CLDR `"Jun"`, `"janv"` matches CLDR `"janv."`); the M↔d swap variants now also produce comma-stripped and dash/slash/period-separated forms, so `"23 Feb 2013"`, `"01-Feb-18"`, `"01/Jun./2018"`, and `"01.Feb.2018"` all parse under `:en` even though CLDR ships only `MMM d, y`.
+
+* `Calendrical.DateTime.parse/2` accepts bare space, `" - "`, and `" @ "` as universal fallback glue separators in every locale, on top of CLDR's locale-specific glue. Catches `"01/01/2018 14:44"`, `"01/01/2018 - 17:06"`, and `"23-05-2019 @ 10:01"` shapes common in admin UIs and human-written notes.
+
+* Locale-aware weekday-prefix stripping — `"Sun, 01 January 2017"`, `"Tuesday, November 29, 2016"`, `"lundi, 1 janvier 2025"`, `"Wednesday 3rd March 2023 3:45 PM"`. The recognised weekday set is sourced from CLDR `format` + `stand-alone` × `wide`/`abbreviated`/`short` widths (narrow forms excluded to avoid single-letter false matches), with optional trailing `.`/`,`/`;` consumed.
+
+* Locale-aware ordinal-affix stripping derived from CLDR's `digits-ordinal` RBNF rule. Strips suffixes for `:en` (`st`/`nd`/`rd`/`th`), `:fr` (`er`/`e`), `:es`/`:pt`/`:it` (`º`/`ª`, with optional preceding period), `:nl` (`e`), and prefixes for `:ja` (`第`); locales whose digits-ordinal rule is just digit + `.` (`:de`) are explicitly skipped because the period collides with date-field separators. Stripping runs as a retry only if the unmodified input doesn't parse, so CLDR-baked ordinal text like `"2nd quarter"` (the wide quarter name in `:en`) keeps matching its native pattern.
+
 ## [0.8.0] — 2026-05-24
 
 ### Changed

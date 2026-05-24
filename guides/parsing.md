@@ -11,7 +11,7 @@ This guide describes what each parser accepts, how Calendrical compares to Elixi
 
 ## What Calendrical is and isn't
 
-Calendrical's parsers are designed around **CLDR locale data**. They read the locale's preferred field order, month/day/era names, day-period names, and lenient-separator equivalence classes. That makes them ideal for parsing input typed by humans — form fields, chat commands, casual UI.
+Calendrical's parsers are designed around **CLDR locale data**. They read the locale's preferred field order, month/day/era names, day-period names, and lenient-separator equivalence classes. That makes them ideal for parsing input typed by humans — form fields, chat commands, casual UI. A small pre-processing pipeline (described under [Lenient input pre-processing](#lenient-input-pre-processing)) also strips weekday prefixes and ordinal suffixes that CLDR doesn't model in patterns directly, so casual inputs like `"Tuesday, November 29, 2016"` and `"1st January 2025"` parse without the caller having to clean them first.
 
 They are **not** wire-format parsers. RFC 2822, HTTP date (RFC 7231 / IMF-fixdate), and `asctime` are not in CLDR and Calendrical does not recognise them. For those formats, use a dedicated library or write a small parser of your own.
 
@@ -37,6 +37,13 @@ The table below shows which inputs each parser accepts, and which other Elixir t
 | `16.05.2026` (de) | ✅ Date | ❌ | CLDR `dd.MM.y` for `:de` |
 | `民國115年5月16日` (zh-Hant-TW, ROC) | ✅ Date | ❌ | CLDR pattern with era marker |
 | `May 5, 2026 – May 10, 2026` (en) | ✅ Date.Range | ❌ | CLDR interval pattern |
+| `1st January 2025` (en) | ✅ Date | ❌ | Lenient: ordinal suffix stripped |
+| `Sun, 01 January 2017` (en) | ✅ Date | ❌ | Lenient: weekday prefix stripped |
+| `Wednesday 3rd March 2023 3:45 PM` (en) | ✅ NaiveDateTime | ❌ | Lenient: weekday + ordinal + bare-space glue |
+| `01/01/2018 14:44` (en) | ✅ NaiveDateTime | ❌ | Lenient: bare-space datetime glue |
+| `01-Feb-18` (en) | ✅ Date | ❌ | Lenient: dash-separated d-MMM-yy |
+| `01/Jun./2018` (en) | ✅ Date | ❌ | Lenient: abbr month with trailing period |
+| `23 Feb 2013` (en) | ✅ Date | ❌ | Lenient: M↔d swap with comma stripped |
 | `Sat, 23 May 2026 14:30:00 +1000` (RFC 2822) | ❌ | ❌ | Not in CLDR |
 | `Sat, 23 May 2026 14:30:00 GMT` (HTTP date) | ❌ | ❌ | Not in CLDR |
 | `Sat May 23 14:30:00 2026` (asctime) | ❌ | ❌ | Not in CLDR |
@@ -123,6 +130,127 @@ The parsers follow CLDR's lenient-parsing rules:
 * **Two-digit year pivoting** — `5/16/26` pivots into the 80-back/20-forward window relative to today (or `:reference_date` if you pass one). Era-aware calendars (Japanese, ROC) skip pivoting because the year is meant literally.
 * **M↔d order swap for name months** — `"May 23"` parses in French (where CLDR's pattern is `d MMM`) and `"23 May"` parses in English (where it's `MMM d, y`). The swap applies only when the month is in name form (`MMM`/`MMMM`/`MMMMM`); numeric `M`/`MM` is excluded because the swap would be ambiguous with `d`.
 
+## Lenient input pre-processing
+
+In addition to the CLDR-defined lenience above, every parser runs a small pre-processing pipeline on the input string before pattern matching. The passes are locale-aware where they need to be and degrade to no-ops where the locale data wouldn't support the transformation safely.
+
+### Whitespace normalisation
+
+Leading and trailing whitespace is trimmed; runs of two-or-more ASCII space / tab characters in the interior collapse to a single space. NBSP, narrow NBSP, ideographic space, and other Unicode space variants are **not** collapsed — CLDR patterns use them with semantic intent (e.g. `MMM d` in French, `Gy年M月d日` in Japanese).
+
+```elixir
+iex> Calendrical.parse("Feb  21,  2018", locale: :en)
+{:ok, ~D[2018-02-21]}
+```
+
+### Weekday-prefix stripping
+
+A recognised weekday name at the start of the input is consumed, along with any trailing `.`/`,`/`;` punctuation. The name set is sourced from CLDR's `format` + `stand-alone` × `wide`/`abbreviated`/`short` widths (narrow widths are excluded — single-letter `"T"` could be Tue *or* Thu and `"S"` could be Sat *or* Sun).
+
+```elixir
+iex> Calendrical.parse("Tuesday, November 29, 2016", locale: :en)
+{:ok, ~D[2016-11-29]}
+
+iex> Calendrical.parse("Sun, 01 January 2017 10:11:02 PM", locale: :en)
+{:ok, ~N[2017-01-01 22:11:02]}
+
+iex> Calendrical.parse("lundi, 1er janvier 2025", locale: :fr)
+{:ok, ~D[2025-01-01]}
+```
+
+### Ordinal-affix stripping
+
+Locale-specific ordinal suffixes and prefixes are derived from CLDR's `digits-ordinal` RBNF rule and stripped from digit-bearing tokens. Examples by locale:
+
+| Locale | Affix | Example |
+|---|---|---|
+| `:en` | suffix `st`/`nd`/`rd`/`th` | `1st`, `22nd`, `3rd`, `4th` |
+| `:fr` | suffix `er`/`e` | `1er`, `2e` |
+| `:es`/`:pt`/`:it` | suffix `º`/`ª` (with optional preceding period) | `1º`, `1.º`, `2ª` |
+| `:nl` | suffix `e` | `1e`, `22e` |
+| `:ja` | prefix `第` | `第1`, `第22` |
+
+Ordinal stripping runs as a **retry** only if the unmodified input fails to parse. That way CLDR-baked ordinal literals — `"2nd quarter"` is the wide form of quarter 2 in `:en` — keep matching their native pattern instead of being rewritten to `"2 quarter"`:
+
+```elixir
+iex> Calendrical.parse("2nd quarter 2026", locale: :en)
+{:ok, ~D[2026-04-01]}     # CLDR quarter-wide pattern (no rewrite)
+
+iex> Calendrical.parse("1st January 2025", locale: :en)
+{:ok, ~D[2025-01-01]}     # first attempt fails, retried as "1 January 2025"
+```
+
+Locales whose `digits-ordinal` rule is just digit + `.` (`:de`) are explicitly skipped — the period collides with the date-field separator in `"16.05.2026"`, so stripping unconditionally would mangle the input. Locales with no ordinal decoration at all (`:ru`) and spellout-only locales (`:de`, `:pt-PT`) produce empty affix sets and the pass is a no-op.
+
+### Abbreviated month names with trailing period
+
+Abbreviated month names accept an optional trailing `.` — covers both directions of the period asymmetry CLDR data has across locales:
+
+```elixir
+iex> Calendrical.parse("01/Jun./2018", locale: :en)   # CLDR ships "Jun"
+{:ok, ~D[2018-06-01]}
+
+iex> Calendrical.parse("lun. 5 janv 2025", locale: :fr)   # CLDR ships "janv."
+{:ok, ~D[2025-01-05]}
+```
+
+### Extra DateTime glue separators
+
+`Calendrical.DateTime.parse/2` accepts bare space, `" - "`, and `" @ "` as universal fallback glue separators in every locale, on top of CLDR's locale-specific glue (`", "` in `:en`, bare space in `:ja`, etc.):
+
+```elixir
+iex> Calendrical.parse("01/01/2018 14:44", locale: :en)
+{:ok, ~N[2018-01-01 14:44:00]}
+
+iex> Calendrical.parse("01/01/2018 - 17:06", locale: :en)
+{:ok, ~N[2018-01-01 17:06:00]}
+
+iex> Calendrical.parse("23-05-2019 @ 10:01", locale: :"en-GB")
+{:ok, ~N[2019-05-23 10:01:00]}
+```
+
+### Reverse-order name-month forms with non-standard separators
+
+For each CLDR pattern with a name-form month and a numeric day, Calendrical synthesises additional variants: the naive M↔d swap, a comma-stripped form, and dash/slash/period-separated forms. So `:en` (which ships only `MMM d, y`) also matches all of:
+
+```elixir
+iex> Calendrical.parse("23 Feb 2013", locale: :en)      # comma-stripped swap
+{:ok, ~D[2013-02-23]}
+
+iex> Calendrical.parse("01-Feb-18", locale: :en)        # dash separators
+{:ok, ~D[2018-02-01]}
+
+iex> Calendrical.parse("01/Jun/2018", locale: :en)      # slash separators
+{:ok, ~D[2018-06-01]}
+```
+
+## Return shape: structs vs maps
+
+By default the parsers return populated structs — `Date`, `Time`, `NaiveDateTime`, `DateTime`, `Date.Range`. For partial inputs the parser fills in defaults (today's year for `"May 5"`, zero for missing minute/second).
+
+Pass `as: :map` to skip the defaulting and get back only what the input actually supplied:
+
+```elixir
+iex> Calendrical.parse("May 5", locale: :en, as: :map)
+{:ok, %{calendar: Calendar.ISO, month: 5, day: 5}}
+
+iex> Calendrical.parse("2026", locale: :en, as: :map)
+{:ok, %{calendar: Calendar.ISO, year: 2026}}
+
+iex> Calendrical.parse("11 am", locale: :en, as: :map)
+{:ok, %{hour: 11}}
+
+iex> Calendrical.parse("11:30 PST", locale: :en, as: :map)
+{:ok, %{hour: 11, minute: 30, time_zone: "PST"}}
+
+iex> Calendrical.Date.parse_range("May 5 – May 10, 2026", locale: :en, as: :map)
+{:ok,
+ {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 5},
+  %{calendar: Calendar.ISO, year: 2026, month: 5, day: 10}}}
+```
+
+The map always carries `:calendar` (the resolved calendar module); other keys appear only when the input supplied them. Useful for downstream libraries that want to apply their own defaulting policy rather than inherit the parser's.
+
 ## Variance from CLDR
 
 Calendrical *deliberately* accepts inputs that CLDR doesn't strictly publish, where doing so is unambiguous and useful:
@@ -135,8 +263,14 @@ Calendrical *deliberately* accepts inputs that CLDR doesn't strictly publish, wh
 | ISO 8601 week date `YYYY-Www-D` | Not a CLDR pattern | Accepted via Calendrical's own parser |
 | Space separator in datetime | Stdlib accepts, CLDR doesn't define | Accepted |
 | M↔d order swap | CLDR publishes one ordering per locale | Both orderings accepted when M is a name form |
+| Comma-stripped + dash/slash/period variants of the swap | Not in CLDR | Accepted for `MMM`/`MMMM` patterns (so `"23 Feb 2013"`, `"01-Feb-18"`, `"01/Jun/2018"` all parse) |
+| Abbreviated month with trailing period | CLDR data has period either inconsistently or not at all | Period is optional in match either way |
 | Case-insensitive name matching | TR35 §6.5 specifies it; CLDR data is one-case | Accepted any case |
 | Lenient separator equivalence | TR35 §6.4 specifies it | Accepted per locale's lenient-scope class |
+| Internal whitespace collapse | Not specified | ASCII space/tab runs of 2+ collapse to one; NBSP/NNBSP preserved |
+| Weekday-prefix stripping | Not specified | Recognised weekday name at start consumed before pattern matching |
+| Ordinal-affix stripping | Not specified | Affixes derived from `digits-ordinal` RBNF; applied as a retry only |
+| Extra DateTime glue separators | CLDR ships locale-specific glue | Bare space, `" - "`, `" @ "` accepted everywhere as fallback |
 
 ## Unified parser dispatch
 
@@ -184,6 +318,7 @@ All parsers return `{:ok, value} | {:error, exception}` and never raise on bad i
 | Parsing a known-shape user input | The targeted parser (`Calendrical.Date.parse/2`, etc.) |
 | Parsing input where the shape is unknown | `Calendrical.parse/2` |
 | Date range from "May 5 – May 10, 2026" | `Calendrical.Date.parse_range/2` |
+| Partial inputs without parser-supplied defaults | Any parser with `as: :map` |
 | Unix timestamp | Stdlib `DateTime.from_unix/1` |
 | RFC 2822 / HTTP date | A dedicated library (Calendrical does not parse these) |
 | `Date.toString()` / asctime | A dedicated library (Calendrical does not parse these) |

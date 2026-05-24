@@ -77,7 +77,7 @@ defmodule Calendrical.Time.Parser do
   def parse_with_zone(input, options \\ []) when is_binary(input) do
     locale = Keyword.get(options, :locale) || Localize.get_locale()
     as = Keyword.get(options, :as, :struct)
-    input = String.trim(input)
+    input = Calendrical.Date.Parser.normalise_input(input)
 
     case try_iso(input) do
       {:ok, time} ->

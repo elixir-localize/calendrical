@@ -48,8 +48,24 @@ defmodule Calendrical.DateTime.Parser do
           {:ok, NaiveDateTime.t() | DateTime.t() | map()} | {:error, Exception.t()}
   def parse(input, options \\ []) when is_binary(input) do
     locale = Keyword.get(options, :locale) || Localize.get_locale()
+
+    cldr_calendar =
+      Calendrical.Date.Parser.normalise_calendar(Keyword.get(options, :calendar, :gregorian))
+
     as = Keyword.get(options, :as, :struct)
-    input = String.trim(input)
+
+    # Strip weekday prefix here too — the glue-splitting step
+    # doesn't know which half is the date, so a leading
+    # `"Sun, "` would otherwise survive into the date half
+    # regardless of where the date/time boundary lands. Ordinal
+    # stripping doesn't need to be applied here because each
+    # half is forwarded through `Calendrical.Date.parse/2` /
+    # `Calendrical.Time.parse/2`, and `Date.parse/2` already
+    # runs the ordinal-fallback retry per endpoint.
+    input =
+      input
+      |> Calendrical.Date.Parser.normalise_input()
+      |> Calendrical.Date.Parser.preprocess_safe(locale, cldr_calendar)
 
     case try_iso(input) do
       {:ok, value} ->
@@ -234,23 +250,45 @@ defmodule Calendrical.DateTime.Parser do
 
   # ── Locale glue split ───────────────────────────────────────
 
+  # Universal fallback glues — accepted in every locale on top
+  # of the CLDR-defined ones. Real-world inputs frequently use
+  # these even where CLDR specifies a more elaborate separator:
+  #
+  #   * `" "` — bare space. Default for most locales (e.g. `ja`
+  #     uses bare space) but `en` CLDR ships `, ` as the
+  #     standard; accept bare space anyway so inputs like
+  #     `"01/01/2018 14:44"` parse under `en`.
+  #
+  #   * `" - "` — common in admin UIs and exported reports.
+  #
+  #   * `" @ "` — common in human-written notes (`"23-05-2019 @ 10:01"`).
+  #
+  # Listed in descending byte-length so longer separators are
+  # tried first; that prevents the bare-space fallback from
+  # eating a hyphen-glued input before the `" - "` candidate
+  # gets to try.
+  @fallback_glue_separators [" - ", " @ ", " "]
+
   # The CLDR date-time glue pattern is always `{1}<sep>{0}` —
   # `{1}` is the date portion and `{0}` is the time portion.
   # Extract `<sep>` from each standard glue pattern; the
   # caller backtracks through every split point in the input
   # to find one where both halves parse.
   defp glue_separators(locale) do
-    case Format.date_time_formats(locale, :gregorian) do
-      {:ok, glue_map} ->
-        @standard_formats
-        |> Enum.map(&Map.get(glue_map, &1))
-        |> Enum.flat_map(&extract_separator/1)
-        |> Enum.uniq()
-        |> Enum.sort_by(&(-byte_size(&1)))
+    cldr =
+      case Format.date_time_formats(locale, :gregorian) do
+        {:ok, glue_map} ->
+          @standard_formats
+          |> Enum.map(&Map.get(glue_map, &1))
+          |> Enum.flat_map(&extract_separator/1)
 
-      _ ->
-        []
-    end
+        _ ->
+          []
+      end
+
+    (cldr ++ @fallback_glue_separators)
+    |> Enum.uniq()
+    |> Enum.sort_by(&(-byte_size(&1)))
   end
 
   # Pattern shape is `{1}<sep>{0}`; pull <sep> via regex.

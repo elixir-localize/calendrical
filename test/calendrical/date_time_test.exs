@@ -80,6 +80,21 @@ defmodule Calendrical.DateTimeTest do
     end
   end
 
+  describe "parse/2 — extended glue separators" do
+    test "bare space splits date and time even when CLDR specifies a longer glue" do
+      # CLDR `:en` ships `MMM d, y, h:mm a` as the standard glue
+      # — but real-world inputs frequently glue with just a
+      # bare space.
+      assert {:ok, ~N[2018-01-01 14:44:00]} =
+               Calendrical.DateTime.parse("01/01/2018 14:44", locale: :en)
+    end
+
+    test "' - ' splits date and time" do
+      assert {:ok, ~N[2018-01-01 17:06:00]} =
+               Calendrical.DateTime.parse("01/01/2018 - 17:06", locale: :en)
+    end
+  end
+
   describe "parse/2 — as: :map" do
     test "locale-glue datetime merges date and time fields" do
       assert {:ok,

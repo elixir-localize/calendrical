@@ -533,6 +533,74 @@ defmodule Calendrical.DateTest do
     end
   end
 
+  describe "parse/2 — lenient input normalisation" do
+    test "internal double-space is collapsed" do
+      assert {:ok, ~D[2018-02-21]} =
+               Calendrical.Date.parse("Feb  21,  2018", locale: :en)
+    end
+
+    test "abbreviated month name accepts trailing period" do
+      for input <- ["Jun. 5, 2018", "01/Jun./2018", "29/Aug./2018"] do
+        assert {:ok, %Date{}} = Calendrical.Date.parse(input, locale: :en),
+               "expected to parse #{inspect(input)}"
+      end
+    end
+
+    test "reverse-order d MMM y (no comma) parses in en" do
+      # CLDR `:en` ships `MMM d, y`; the M↔d swap variant now
+      # drops the comma so `"23 Feb 2013"` matches alongside
+      # `"23 Feb, 2013"`.
+      assert {:ok, ~D[2013-02-23]} = Calendrical.Date.parse("23 Feb 2013", locale: :en)
+      assert {:ok, ~D[2013-02-23]} = Calendrical.Date.parse("23 February 2013", locale: :en)
+    end
+
+    test "dash / slash / period separated d MMM y forms parse in en" do
+      for input <- ["01-Feb-18", "01/Jun/2018", "01.Feb.2018", "19-Dec-19"] do
+        assert {:ok, %Date{}} = Calendrical.Date.parse(input, locale: :en),
+               "expected to parse #{inspect(input)}"
+      end
+    end
+
+    test "ordinal suffix on day is stripped (en st/nd/rd/th)" do
+      assert {:ok, ~D[2025-01-01]} = Calendrical.Date.parse("1st January 2025", locale: :en)
+      assert {:ok, ~D[2022-04-21]} = Calendrical.Date.parse("21st April 2022", locale: :en)
+      assert {:ok, ~D[2021-05-22]} = Calendrical.Date.parse("22nd May 2021", locale: :en)
+      assert {:ok, ~D[2023-03-03]} = Calendrical.Date.parse("3rd March 2023", locale: :en)
+      assert {:ok, ~D[2019-12-31]} = Calendrical.Date.parse("31st Dec 2019", locale: :en)
+    end
+
+    test "ordinal suffix on day is stripped (fr 1er / Ne)" do
+      assert {:ok, ~D[2025-01-01]} = Calendrical.Date.parse("1er janvier 2025", locale: :fr)
+    end
+
+    test "CLDR-baked ordinal text (2nd quarter) still matches without rewriting" do
+      # "2nd quarter" is the CLDR wide form for quarter 2 in en;
+      # we must NOT strip the "nd" before the first parse
+      # attempt, or the quarter-wide pattern won't match.
+      assert {:ok, ~D[2026-04-01]} = Calendrical.Date.parse("2nd quarter 2026", locale: :en)
+    end
+
+    test "weekday prefix is stripped (en Sun, Sunday)" do
+      assert {:ok, ~D[2016-11-29]} =
+               Calendrical.Date.parse("Tuesday, November 29, 2016", locale: :en)
+
+      assert {:ok, ~D[2017-01-01]} =
+               Calendrical.Date.parse("Sun, 01 January 2017", locale: :en)
+    end
+
+    test "weekday + ordinal in same input compose cleanly" do
+      assert {:ok, ~N[2023-03-03 15:45:00]} =
+               Calendrical.parse("Wednesday 3rd March 2023 3:45 PM", locale: :en)
+    end
+
+    test "weekday prefix doesn't strip when the locale lacks period-suffix data unsafely" do
+      # German `digits-ordinal` is `"1."` — stripping the period
+      # would mangle "16.05.2026". The ordinal preprocessor must
+      # filter separator-only suffixes.
+      assert {:ok, ~D[2026-05-16]} = Calendrical.Date.parse("16.05.2026", locale: :de)
+    end
+  end
+
   describe "parse/2 — as: :map" do
     test "month + day with no year omits :year" do
       assert {:ok, %{calendar: Calendar.ISO, month: 5, day: 5}} =

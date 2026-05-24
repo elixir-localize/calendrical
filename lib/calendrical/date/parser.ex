@@ -95,22 +95,213 @@ defmodule Calendrical.Date.Parser do
     reference_year = (Keyword.get(options, :reference_date) || Date.utc_today()).year
     return_module = resolve_return_calendar(options, cldr_calendar)
     as = Keyword.get(options, :as, :struct)
-    input = String.trim(input)
 
-    case try_iso(input, return_module) do
-      {:ok, date} ->
-        {:ok, finalise_date(date, as)}
+    input =
+      input
+      |> normalise_input()
+      |> preprocess_safe(locale, cldr_calendar)
 
-      :error ->
-        try_locale_patterns(
-          input,
-          locale,
-          cldr_calendar,
-          reference_year,
-          return_module,
-          as
-        )
+    attempt = fn current ->
+      case try_iso(current, return_module) do
+        {:ok, date} ->
+          {:ok, finalise_date(date, as)}
+
+        :error ->
+          try_locale_patterns(
+            current,
+            locale,
+            cldr_calendar,
+            reference_year,
+            return_module,
+            as
+          )
+      end
     end
+
+    case attempt.(input) do
+      {:ok, _} = ok ->
+        ok
+
+      {:error, _} = err ->
+        # Retry with ordinal affixes stripped. Only fires if the
+        # original input couldn't be parsed, so CLDR-baked
+        # ordinal text (e.g. `"2nd quarter"` quarter-wide name)
+        # is preserved on the first attempt.
+        stripped = strip_ordinal_affixes(input, locale)
+
+        if stripped == input do
+          err
+        else
+          case attempt.(stripped) do
+            {:ok, _} = ok -> ok
+            {:error, _} -> err
+          end
+        end
+    end
+  end
+
+  # Trim leading/trailing whitespace AND collapse interior runs of
+  # ASCII space / tab to a single space, so inputs like
+  # `"02/21/2018  9:37:42 AM"` (double space) and
+  # `"Fri Mar  2 09:01:57 2018"` (Unix `date` output) parse without
+  # the parser having to model every possible whitespace variant.
+  # Only ASCII space + tab are collapsed; NBSP / NNBSP / ideographic
+  # space remain because CLDR patterns use them with semantic intent.
+  @doc false
+  def normalise_input(input) when is_binary(input) do
+    input
+    |> String.trim()
+    |> String.replace(~r/[ \t]{2,}/, " ")
+  end
+
+  # Two-stage locale-aware preprocessing.
+  #
+  # * `preprocess_safe/3` runs upfront — weekday-prefix stripping
+  #   plus any other pass that can't conflict with CLDR-baked
+  #   literals. Safe because CLDR patterns spell weekdays as
+  #   `E`/`c` tokens, never as inline literal text.
+  #
+  # * `strip_ordinal_affixes/2` runs only as a fallback, after
+  #   the first parse attempt fails. Necessary because CLDR DOES
+  #   bake ordinals into some literal text — `"2nd quarter"` is
+  #   the wide form of quarter 2 in `:en`. Stripping unconditionally
+  #   would rewrite that to `"2 quarter"`, breaking the pattern
+  #   match. Inputs the unmodified parser handles (CLDR-shipped
+  #   patterns) keep working; inputs only achievable via lenient
+  #   rewrites (`"1st January"`) succeed on the retry.
+  @doc false
+  def preprocess_safe(input, locale, cldr_calendar) when is_binary(input) do
+    strip_weekday_prefix(input, locale, cldr_calendar)
+  end
+
+  # Strip a recognised weekday name from the start of `input`,
+  # along with optional `.`/`,`/`;` punctuation immediately
+  # after it. Trailing whitespace (or end-of-input) is required
+  # so that single-letter narrow forms — which would otherwise
+  # match the first letter of any token — don't strip
+  # accidentally; narrow widths are also excluded from the
+  # alternation for the same reason.
+  defp strip_weekday_prefix(input, locale, cldr_calendar) do
+    case Localize.Calendar.days(locale, cldr_calendar) do
+      {:ok, %{} = days_data} ->
+        names = collect_weekday_names(days_data)
+
+        if names == [] do
+          input
+        else
+          alternation = names |> Enum.map(&Regex.escape/1) |> Enum.join("|")
+          regex = Regex.compile!("\\A(?i:" <> alternation <> ")[\\.,;]?(?:\\s+|\\z)", "u")
+          Regex.replace(regex, input, "", global: false)
+        end
+
+      _ ->
+        input
+    end
+  end
+
+  # Wide + abbreviated + short, format + stand_alone. Narrow
+  # excluded (single-letter, too easy to false-match). For
+  # abbreviated/short variants where the CLDR name carries a
+  # trailing period (fr "lun.", de format "Mo."), include both
+  # the literal and the period-stripped form so input that
+  # either has or lacks the period matches.
+  defp collect_weekday_names(days_data) do
+    for ctx <- [:format, :stand_alone],
+        width <- [:wide, :abbreviated, :short],
+        name_map = get_in(days_data, [ctx, width]) || %{},
+        {_index, name} when is_binary(name) <- name_map,
+        variant <- weekday_name_variants(name) do
+      variant
+    end
+    |> Enum.uniq()
+    |> Enum.sort_by(&(-String.length(&1)))
+  end
+
+  defp weekday_name_variants(name) do
+    trimmed = String.trim_trailing(name, ".")
+    if trimmed != name and trimmed != "", do: [name, trimmed], else: [name]
+  end
+
+  # Ordinal stripping is RBNF-driven: we probe `digits-ordinal`
+  # with a representative set of digits, diff each render
+  # against the bare digit to recover the locale's suffix(es)
+  # and prefix(es), then strip them from digit runs in the
+  # input. Locales without a `digits-ordinal` rule (de spellout-
+  # only, ru bare-digit) yield empty affix sets and short-
+  # circuit to a no-op. Suffix capture is lenient about an
+  # optional `.` between digit and indicator (Spanish/Portuguese
+  # `1.º` shape) which CLDR doesn't ship but real input often
+  # carries.
+  defp strip_ordinal_affixes(input, locale) do
+    {suffixes, prefixes} = ordinal_affixes(locale)
+
+    input
+    |> strip_ordinal_suffixes(suffixes)
+    |> strip_ordinal_prefixes(prefixes)
+  end
+
+  defp strip_ordinal_suffixes(input, []), do: input
+
+  defp strip_ordinal_suffixes(input, suffixes) do
+    alternation = suffixes |> Enum.map(&Regex.escape/1) |> Enum.join("|")
+    regex = Regex.compile!("(\\d+)\\.?(?:" <> alternation <> ")(?=\\b|\\s|$)", "u")
+    Regex.replace(regex, input, "\\1")
+  end
+
+  defp strip_ordinal_prefixes(input, []), do: input
+
+  defp strip_ordinal_prefixes(input, prefixes) do
+    alternation = prefixes |> Enum.map(&Regex.escape/1) |> Enum.join("|")
+    regex = Regex.compile!("(?:" <> alternation <> ")(\\d+)", "u")
+    Regex.replace(regex, input, "\\1")
+  end
+
+  @ordinal_probe_digits [1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 31]
+
+  # Locales known to render `digits-ordinal` as just digit + `.`
+  # (de) collide with the period as a date-field separator —
+  # stripping the period after every digit would mangle
+  # `"16.05.2026"`. We reject any suffix that's empty or that
+  # consists only of date-separator characters (`.`, `-`, `/`,
+  # `_`) once leading periods have been peeled (Spanish-style
+  # `"1.º"` peels to `"º"` which is a real, unambiguous
+  # indicator).
+  defp ordinal_affixes(locale) do
+    Enum.reduce(@ordinal_probe_digits, {[], []}, fn n, {suffs, prefs} ->
+      case Localize.Number.Rbnf.to_string(n, "digits-ordinal", locale: locale) do
+        {:ok, rendered} ->
+          digit_str = Integer.to_string(n)
+
+          case String.split(rendered, digit_str, parts: 2) do
+            ["", suffix] when suffix != "" ->
+              case normalise_ordinal_suffix(suffix) do
+                nil -> {suffs, prefs}
+                normalised -> {[normalised | suffs], prefs}
+              end
+
+            [prefix, ""] when prefix != "" ->
+              {suffs, [prefix | prefs]}
+
+            _ ->
+              {suffs, prefs}
+          end
+
+        _ ->
+          {suffs, prefs}
+      end
+    end)
+    |> then(fn {s, p} -> {Enum.uniq(s), Enum.uniq(p)} end)
+  end
+
+  defp normalise_ordinal_suffix(suffix) do
+    case String.trim_leading(suffix, ".") do
+      "" -> nil
+      other -> if separator_only?(other), do: nil, else: other
+    end
+  end
+
+  defp separator_only?(string) do
+    string |> String.graphemes() |> Enum.all?(&(&1 in [".", "-", "/", "_"]))
   end
 
   # When `as: :map`, surface the bare fields rather than a
@@ -165,7 +356,18 @@ defmodule Calendrical.Date.Parser do
     reference_year = (Keyword.get(options, :reference_date) || Date.utc_today()).year
     allow_inverted = Keyword.get(options, :allow_inverted, false)
     as = Keyword.get(options, :as, :struct)
-    input = String.trim(input)
+
+    # Range inputs are pre-split internally by interval-pattern
+    # matching, and each endpoint goes through `parse/2` for the
+    # split-and-parse fallback — so endpoint-level ordinal
+    # stripping is handled by `parse/2`. Range-level interval
+    # patterns don't bake ordinals into their literals (CLDR's
+    # interval patterns share the field set with regular date
+    # patterns), so safe-pass preprocessing is sufficient here.
+    input =
+      input
+      |> normalise_input()
+      |> preprocess_safe(locale, cldr_calendar)
 
     # Strategy:
     # 1. Try the locale's CLDR interval patterns first — these
@@ -966,11 +1168,61 @@ defmodule Calendrical.Date.Parser do
   # the swap would be genuinely ambiguous with d.
   defp synthesise_month_day_swaps(patterns) do
     for {skeleton, pattern} <- patterns,
-        swapped = swap_month_day(pattern),
-        is_binary(swapped),
-        swapped != pattern,
+        swapped <- swap_month_day_variants(pattern),
         uniq: true,
         do: {skeleton, swapped}
+  end
+
+  # Variants per swappable pattern (CLDR `:en` `MMM d, y` is the
+  # canonical example):
+  #
+  # * Naive swap with literals kept in place — `d MMM, y`. Matches
+  #   `"23 Feb, 2013"`.
+  #
+  # * Comma-stripped swap — `d MMM y`. Matches `"23 Feb 2013"` and
+  #   `"01 February 2013"`, the natural English reverse-order
+  #   forms that idiomatically drop the comma.
+  #
+  # * Inter-field space → `-`/`/`/`.` substitutions on the
+  #   comma-stripped swap — `d-MMM-y`, `d/MMM/y`, `d.MMM.y`.
+  #   Match `"01-Feb-18"`, `"01/Jun./2018"`, `"01.Feb.2018"` etc.
+  #   These forms are common in admin UIs, log lines, and ad-hoc
+  #   input but aren't shipped as CLDR patterns.
+  defp swap_month_day_variants(pattern) do
+    case swap_month_day(pattern) do
+      nil ->
+        []
+
+      swapped when swapped == pattern ->
+        []
+
+      swapped ->
+        decommaed = strip_commas_in_literals(swapped)
+
+        base =
+          if decommaed != swapped,
+            do: [swapped, decommaed],
+            else: [swapped]
+
+        separator_variants =
+          for sep <- ["-", "/", "."],
+              variant = replace_spaces_in_literals(decommaed, sep),
+              variant != decommaed do
+            variant
+          end
+
+        base ++ separator_variants
+    end
+  end
+
+  defp replace_spaces_in_literals(pattern, sep) do
+    pattern
+    |> tokenize_pattern()
+    |> Enum.map(fn
+      {:lit, text} -> {:lit, String.replace(text, " ", sep)}
+      other -> other
+    end)
+    |> detokenize_pattern()
   end
 
   defp swap_month_day(pattern) do
@@ -992,6 +1244,16 @@ defmodule Calendrical.Date.Parser do
       _ ->
         nil
     end
+  end
+
+  defp strip_commas_in_literals(pattern) do
+    pattern
+    |> tokenize_pattern()
+    |> Enum.map(fn
+      {:lit, text} -> {:lit, String.replace(text, ",", "")}
+      other -> other
+    end)
+    |> detokenize_pattern()
   end
 
   defp detokenize_pattern(tokens) do
@@ -1291,12 +1553,28 @@ defmodule Calendrical.Date.Parser do
     branches =
       names
       |> Enum.sort_by(fn {_index, name} -> -byte_size(name) end)
-      |> Enum.map(fn {index, name} -> "(?P<__m#{index}__>#{Regex.escape(name)})" end)
+      |> Enum.map(fn {index, name} -> month_name_branch(index, name, width) end)
 
     # `(?i:...)` per CLDR TR35 §6.5 — month-name matching is
     # case-insensitive, so French "Mai" matches lowercase "mai"
     # in CLDR data, English "MAY" matches "May", etc.
     "(?i:" <> Enum.join(branches, "|") <> ")"
+  end
+
+  # Build a single named-branch for one month. For `:abbreviated`
+  # width, trim any trailing period from the CLDR name and make
+  # the period optional in the regex — that way the en input
+  # `"Jun."` matches the CLDR name `"Jun"` (input had a period,
+  # CLDR didn't), and the fr input `"janv"` matches `"janv."`
+  # (input had no period, CLDR did). Other widths use the name
+  # verbatim.
+  defp month_name_branch(index, name, :abbreviated) do
+    trimmed = String.trim_trailing(name, ".")
+    "(?P<__m#{index}__>#{Regex.escape(trimmed)}\\.?)"
+  end
+
+  defp month_name_branch(index, name, _width) do
+    "(?P<__m#{index}__>#{Regex.escape(name)})"
   end
 
   defp era_name_regex(eras_data, width) when is_map(eras_data) do
