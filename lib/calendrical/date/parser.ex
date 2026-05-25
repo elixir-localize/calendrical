@@ -437,7 +437,7 @@ defmodule Calendrical.Date.Parser do
       transliterated = transliterate_digits(input, locale)
       eras_data = maybe_load_eras(locale, cldr_calendar)
 
-      patterns =
+      cldr_patterns =
         for {skeleton, by_field} <- intervals,
             is_atom(skeleton),
             is_map(by_field),
@@ -445,6 +445,16 @@ defmodule Calendrical.Date.Parser do
             is_binary(pattern) do
           pattern
         end
+
+      # Each CLDR pattern is tried as-is, then also through a set
+      # of day-first variants (see `synthesize_day_first_variants/1`)
+      # so informal orderings like `"23 - 25 May, 2026"` and
+      # `"5 May – 10 June, 2026"` parse alongside the CLDR-canonical
+      # `"May 23 – 25, 2026"`.
+      patterns =
+        cldr_patterns
+        |> Enum.flat_map(fn p -> [p | synthesize_day_first_variants(p)] end)
+        |> Enum.uniq()
 
       Enum.find_value(patterns, :error, fn pattern ->
         case match_interval_pattern(
@@ -578,6 +588,163 @@ defmodule Calendrical.Date.Parser do
 
   defp classify_token({:lit, _}), do: :literal
   defp classify_token({letter, _count}) when is_atom(letter), do: {:field, letter}
+
+  # ── Day-first synthesized variants ──────────────────────────
+  #
+  # CLDR ships interval patterns in the field order each locale's
+  # CLDR data prefers (e.g., English uses `"MMM d, y – MMM d, y"`
+  # — month before day). Real-world input often uses informal
+  # orderings:
+  #
+  #   * `"23 May – 25 May, 2026"` (day before month, per endpoint)
+  #
+  #   * `"23 – 25 May, 2026"`     (day before month + month moved
+  #                                 to the end so it inherits
+  #                                 across both endpoints)
+  #
+  # We generate these by structural transformation of the
+  # tokenised CLDR pattern. Two moves are applied:
+  #
+  #   * **per-endpoint swap** — for each side independently,
+  #     swap any adjacent `(MMM, whitespace, d)` to `(d,
+  #     whitespace, MMM)`. Applies to widths `3..5` for both
+  #     `:M` and `:L`.
+  #
+  #   * **cross-endpoint shift** — if MMM appears on only one
+  #     side, remove it (with its adjacent space) from that side
+  #     and re-insert it on the *other* side, immediately
+  #     before any trailing year/literal cluster.
+  #
+  # The two moves combine to yield 0–3 variants per source
+  # pattern. They're tried in addition to (not in place of) the
+  # CLDR-canonical patterns.
+  defp synthesize_day_first_variants(pattern_string) do
+    tokens = tokenize_pattern(pattern_string)
+    {left, right} = split_interval_tokens(tokens)
+
+    swap_variants =
+      [
+        {swap_md_tokens(left), right},
+        {left, swap_md_tokens(right)},
+        {swap_md_tokens(left), swap_md_tokens(right)}
+      ]
+      |> Enum.reject(fn {l, r} -> l == left and r == right end)
+
+    shift_variants = cross_endpoint_shift(left, right)
+
+    (swap_variants ++ shift_variants)
+    |> Enum.uniq()
+    |> Enum.map(fn {l, r} -> detokenize_pattern(l ++ r) end)
+    |> Enum.reject(&(&1 == pattern_string))
+    |> Enum.uniq()
+  end
+
+  # Swap any (MMM-or-LLL, whitespace-only literal, d) sequence
+  # to (d, same-whitespace, MMM-or-LLL). Works on the
+  # token-list side returned by `split_interval_tokens/1`;
+  # named differently from the existing single-pattern
+  # `swap_month_day/1` to avoid arity-1 clause collision.
+  defp swap_md_tokens(tokens), do: do_swap_md(tokens, [])
+
+  defp do_swap_md([], acc), do: Enum.reverse(acc)
+
+  defp do_swap_md([{letter, count} = m, {:lit, sp} = lit, {:d, _} = d | rest], acc)
+       when letter in [:M, :L] and count in 3..5 do
+    if String.trim(sp) == "" do
+      # Reverse order: prepend in (m, lit, d) sequence so that
+      # `Enum.reverse(acc)` yields (d, lit, m).
+      do_swap_md(rest, [m, lit, d | acc])
+    else
+      do_swap_md([lit, d | rest], [m | acc])
+    end
+  end
+
+  defp do_swap_md([head | rest], acc), do: do_swap_md(rest, [head | acc])
+
+  # If exactly one side has a month token, lift it off that side
+  # and insert it into the other side just before any trailing
+  # year/literal cluster.
+  defp cross_endpoint_shift(left, right) do
+    cond do
+      has_month?(left) and not has_month?(right) ->
+        case extract_month(left) do
+          {nil, _} -> []
+          {month, left_without} -> [{left_without, insert_month_before_trailer(right, month)}]
+        end
+
+      has_month?(right) and not has_month?(left) ->
+        case extract_month(right) do
+          {nil, _} -> []
+          {month, right_without} -> [{insert_month_before_trailer(left, month), right_without}]
+        end
+
+      true ->
+        []
+    end
+  end
+
+  defp has_month?(tokens) do
+    Enum.any?(tokens, fn
+      {letter, count} when letter in [:M, :L] and count in 3..5 -> true
+      _ -> false
+    end)
+  end
+
+  # Extract the first month token from a side, also removing the
+  # whitespace-only literal that's adjacent to it (preferring the
+  # one that *follows* it, since CLDR conventions put `MMM `
+  # before the day). Returns `{month_token | nil, remaining_tokens}`.
+  defp extract_month(tokens), do: do_extract_month(tokens, [])
+
+  defp do_extract_month([], acc), do: {nil, Enum.reverse(acc)}
+
+  defp do_extract_month([{letter, count} = m, {:lit, sp} | rest], acc)
+       when letter in [:M, :L] and count in 3..5 do
+    if String.trim(sp) == "" do
+      {m, Enum.reverse(acc) ++ rest}
+    else
+      do_extract_month(rest, [{:lit, sp}, m | acc])
+    end
+  end
+
+  defp do_extract_month([{:lit, sp}, {letter, count} = m | rest], acc)
+       when letter in [:M, :L] and count in 3..5 do
+    if String.trim(sp) == "" do
+      {m, Enum.reverse(acc) ++ rest}
+    else
+      do_extract_month([m | rest], [{:lit, sp} | acc])
+    end
+  end
+
+  defp do_extract_month([head | rest], acc), do: do_extract_month(rest, [head | acc])
+
+  # Insert `(space, month)` into a side just before any trailing
+  # year-or-literal cluster. The trailing cluster is the longest
+  # suffix made up of `:lit` and `:y` tokens; we insert before
+  # the first literal of that cluster. If the side has no such
+  # trailing cluster, append at the end.
+  defp insert_month_before_trailer(tokens, month) do
+    idx = trailer_start_index(tokens)
+    {before_trailer, trailer} = Enum.split(tokens, idx)
+    before_trailer ++ [{:lit, " "}, month] ++ trailer
+  end
+
+  defp trailer_start_index(tokens) do
+    tokens
+    |> Enum.reverse()
+    |> Enum.reduce_while({length(tokens), false}, fn token, {idx, saw_field} ->
+      cond do
+        match?({:y, _}, token) -> {:cont, {idx - 1, true}}
+        match?({:lit, _}, token) -> {:cont, {idx - 1, saw_field}}
+        saw_field -> {:halt, {idx, true}}
+        true -> {:halt, {length(tokens), false}}
+      end
+    end)
+    |> case do
+      {idx, true} -> idx
+      _ -> length(tokens)
+    end
+  end
 
   # Like compile_regex/4 but each capture is prefixed (so
   # left/right halves of the interval pattern produce
@@ -1536,6 +1703,16 @@ defmodule Calendrical.Date.Parser do
         # gaps (with no pattern literal between them) use the
         # `*` form via `@space_class` elsewhere.
         @literal_space_class
+
+      char == "," ->
+        # CLDR patterns embed `,` as a structural punctuation
+        # marker (e.g., `MMM d, y` between day and year), but
+        # informal input routinely drops it (`"May 5 2026"`).
+        # Make every literal comma optional in the compiled
+        # regex; the surrounding space-class still requires at
+        # least one whitespace char, so `"May d,y"` (comma but
+        # no space) still won't false-match.
+        ",?"
 
       char in @dash_chars ->
         # Union @dash_chars with any CLDR lenient equivalence

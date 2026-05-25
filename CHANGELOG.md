@@ -14,6 +14,10 @@ The format is based on
 
 * `Calendrical.Date.parse_range/2` now accepts wide month names where the pattern declared abbreviated (and vice versa) per CLDR TR35 §6.5 lenient parsing, so `"May 5 – June 10, 2026"` and `"May 5 – Jun 10, 2026"` both match the `MMM d – MMM d, y` skeleton and produce equal-resolution endpoints. Previously the wide form fell through to the split-fallback path and lost year inheritance.
 
+* `Calendrical.Date.parse_range/2` now matches day-first informal orderings via token-level transformation of CLDR's month-first patterns, so `"23 - 25 May, 2026"` (cross-endpoint month-shift) and `"5 May – 10 June, 2026"` (per-endpoint month/day swap) both parse with full year inheritance. Synthesized variants are tried in addition to CLDR-canonical patterns.
+
+* `Calendrical.Date.parse/2`, `parse_range/2`, and dependents now accept inputs that omit the structural comma in CLDR patterns like `MMM d, y` — so `"May 5 2026"` and `"23 – 25 May 2026"` parse alongside the comma-bearing forms.
+
 ## [0.9.0] — 2026-05-24
 
 ### Added

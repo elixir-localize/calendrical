@@ -741,6 +741,117 @@ defmodule Calendrical.DateTest do
     end
   end
 
+  describe "parse_range/2 — day-first informal orderings (synthesized variants)" do
+    # CLDR English ships interval patterns with the month *before*
+    # the day (`MMM d – d, y`, `MMM d, y – MMM d, y`, …). Real
+    # input frequently uses day-first orderings. These are
+    # generated from the CLDR patterns by token transformation
+    # rather than locale-specific hardcoding.
+    test "day-first with month moved to end (cross-endpoint shift)" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 23},
+               %{calendar: Calendar.ISO, year: 2026, month: 5, day: 25}}} =
+               Calendrical.Date.parse_range("23 - 25 May, 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "day-first cross-shift with en-dash" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 23},
+               %{calendar: Calendar.ISO, year: 2026, month: 5, day: 25}}} =
+               Calendrical.Date.parse_range("23 \u{2013} 25 May, 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "day-first per-endpoint swap, varying month" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 5},
+               %{calendar: Calendar.ISO, year: 2026, month: 6, day: 10}}} =
+               Calendrical.Date.parse_range("5 May \u{2013} 10 June, 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "day-first per-endpoint swap, both endpoints full" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 5},
+               %{calendar: Calendar.ISO, year: 2027, month: 6, day: 10}}} =
+               Calendrical.Date.parse_range("5 May, 2026 \u{2013} 10 June, 2027",
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "day-first per-endpoint swap on left only (varying day)" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 23},
+               %{calendar: Calendar.ISO, year: 2026, month: 5, day: 25}}} =
+               Calendrical.Date.parse_range("23 May \u{2013} 25, 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "CLDR-canonical month-first input still works (regression)" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 23},
+               %{calendar: Calendar.ISO, year: 2026, month: 5, day: 25}}} =
+               Calendrical.Date.parse_range("May 23 \u{2013} 25, 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+  end
+
+  describe "parse_range/2 — comma-optional (CLDR TR35 §6.5)" do
+    # CLDR patterns embed `,` as structural punctuation (e.g.,
+    # `MMM d, y` between day and year). Real input often omits it.
+    # The comma in any CLDR pattern literal is now made optional
+    # in the compiled regex.
+    test "missing comma in CLDR-canonical form" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 23},
+               %{calendar: Calendar.ISO, year: 2026, month: 5, day: 25}}} =
+               Calendrical.Date.parse_range("May 23 \u{2013} 25 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "missing comma in day-first form" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 23},
+               %{calendar: Calendar.ISO, year: 2026, month: 5, day: 25}}} =
+               Calendrical.Date.parse_range("23 \u{2013} 25 May 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "missing comma with wide month" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 5},
+               %{calendar: Calendar.ISO, year: 2026, month: 6, day: 10}}} =
+               Calendrical.Date.parse_range("May 5 \u{2013} June 10 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "comma still optional in single-date :map parse" do
+      assert {:ok, %{calendar: Calendar.ISO, year: 2026, month: 5, day: 5}} =
+               Calendrical.Date.parse("May 5 2026", locale: :en, as: :map)
+
+      assert {:ok, %{calendar: Calendar.ISO, year: 2026, month: 5, day: 5}} =
+               Calendrical.Date.parse("May 5, 2026", locale: :en, as: :map)
+    end
+  end
+
   describe "parse_range/2 — lenient month-name width (CLDR TR35 §6.5)" do
     # The pattern declares a width (`MMM` = abbreviated, `MMMM` =
     # wide), but input may use any width. So `MMM d – MMM d, y`
