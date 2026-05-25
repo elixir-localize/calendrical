@@ -6,6 +6,14 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] — 2026-05-24
+
+### Fixed
+
+* `Calendrical.Date.parse_range/2` now accepts any of `-`, `–` (en-dash), `—` (em-dash), `−` (minus sign), or `‑` (non-breaking hyphen) wherever a CLDR interval pattern declares one of them. Previously the literal en-dash in CLDR's `intervalFormats` only matched the en-dash itself, so `"May 23 - 25, 2026"` (ASCII hyphen) fell through to the split-fallback path and failed.
+
+* `Calendrical.Date.parse_range/2` now accepts wide month names where the pattern declared abbreviated (and vice versa) per CLDR TR35 §6.5 lenient parsing, so `"May 5 – June 10, 2026"` and `"May 5 – Jun 10, 2026"` both match the `MMM d – MMM d, y` skeleton and produce equal-resolution endpoints. Previously the wide form fell through to the split-fallback path and lost year inheritance.
+
 ## [0.9.0] — 2026-05-24
 
 ### Added

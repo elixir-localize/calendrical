@@ -704,4 +704,77 @@ defmodule Calendrical.DateTest do
                )
     end
   end
+
+  describe "parse_range/2 — lenient interval separators (CLDR TR35 §6.5)" do
+    # The CLDR interval pattern uses U+2013 EN DASH around the
+    # separator, but real-world input frequently uses the ASCII
+    # hyphen or em-dash instead. All forms are accepted as
+    # equivalent for the range separator slot.
+    test "ASCII hyphen accepted where pattern uses en-dash" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 23},
+               %{calendar: Calendar.ISO, year: 2026, month: 5, day: 25}}} =
+               Calendrical.Date.parse_range("May 23 - 25, 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "em-dash accepted where pattern uses en-dash" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 23},
+               %{calendar: Calendar.ISO, year: 2026, month: 5, day: 25}}} =
+               Calendrical.Date.parse_range("May 23 \u{2014} 25, 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "minus sign accepted where pattern uses en-dash" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 23},
+               %{calendar: Calendar.ISO, year: 2026, month: 5, day: 25}}} =
+               Calendrical.Date.parse_range("May 23 \u{2212} 25, 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+  end
+
+  describe "parse_range/2 — lenient month-name width (CLDR TR35 §6.5)" do
+    # The pattern declares a width (`MMM` = abbreviated, `MMMM` =
+    # wide), but input may use any width. So `MMM d – MMM d, y`
+    # accepts both `"May 23 – Jun 25, 2026"` and `"May 23 – June
+    # 25, 2026"`. The left endpoint inherits year from the right
+    # via the existing CLDR partial_to_map/3 inheritance.
+    test "wide month name accepted where pattern declares abbreviated" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 5},
+               %{calendar: Calendar.ISO, year: 2026, month: 6, day: 10}}} =
+               Calendrical.Date.parse_range("May 5 \u{2013} June 10, 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "abbreviated month name still accepted (regression check)" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 5, day: 5},
+               %{calendar: Calendar.ISO, year: 2026, month: 6, day: 10}}} =
+               Calendrical.Date.parse_range("May 5 \u{2013} Jun 10, 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+
+    test "mixed widths: wide on one side, abbreviated on the other" do
+      assert {:ok,
+              {%{calendar: Calendar.ISO, year: 2026, month: 1, day: 5},
+               %{calendar: Calendar.ISO, year: 2026, month: 6, day: 10}}} =
+               Calendrical.Date.parse_range("January 5 \u{2013} Jun 10, 2026",
+                 locale: :en,
+                 as: :map
+               )
+    end
+  end
 end

@@ -75,6 +75,15 @@ defmodule Calendrical.Date.Parser do
   @month_name_widths %{3 => :abbreviated, 4 => :wide, 5 => :narrow}
   @era_widths %{1 => :abbreviated, 2 => :abbreviated, 3 => :abbreviated, 4 => :wide, 5 => :narrow}
 
+  # Range/separator dashes treated as interchangeable in lenient
+  # parsing. CLDR interval patterns use U+2013 EN DASH; users
+  # routinely type ASCII hyphen `-` instead. We also include
+  # U+2014 EM DASH, U+2212 MINUS SIGN, and U+2011 NON-BREAKING
+  # HYPHEN. When a pattern literal is any of these, the compiled
+  # regex accepts all of them — and any CLDR `lenient-scope-date`
+  # equivalences for that char (e.g., `.`, `/`) are unioned in.
+  @dash_chars ["-", "‑", "–", "—", "−"]
+
   # CLDR formats often use narrow no-break space (U+2009),
   # NBSP (U+00A0), narrow NBSP (U+202F), and ideographic
   # space (U+3000) around separators. Real-world input uses
@@ -1528,6 +1537,16 @@ defmodule Calendrical.Date.Parser do
         # `*` form via `@space_class` elsewhere.
         @literal_space_class
 
+      char in @dash_chars ->
+        # Union @dash_chars with any CLDR lenient equivalence
+        # for this char (en's `-` already maps to `[. /]` via
+        # `lenient-scope-date`). En-dash and friends inherit the
+        # same date-component leniency by being in the same
+        # class.
+        cldr_class = Map.get(lenient, char, [char])
+        combined = Enum.uniq(@dash_chars ++ cldr_class)
+        "[" <> Enum.map_join(combined, &Regex.escape/1) <> "]"
+
       true ->
         case Map.get(lenient, char) do
           nil -> Regex.escape(char)
@@ -1543,17 +1562,44 @@ defmodule Calendrical.Date.Parser do
   defp space_char?("　"), do: true
   defp space_char?(_), do: false
 
-  defp month_name_regex(months_data, width) do
-    names =
-      months_data
-      |> get_in([:format, width]) ||
-        get_in(months_data, [:stand_alone, width]) ||
-        %{}
+  defp month_name_regex(months_data, _declared_width) do
+    # CLDR TR35 §6.5 (lenient parsing): the pattern declares a
+    # width (`MMM` = abbreviated, `MMMM` = wide), but real-world
+    # input may use any of them. We accept both wide and
+    # abbreviated names regardless of the pattern's declared
+    # width. Narrow forms are deliberately excluded — they're
+    # single-letter display forms (en's `:narrow` is "J" for both
+    # January and June), useless for parsing.
+    #
+    # Each index gets exactly ONE named capture group, with
+    # internal alternation across the widths' name forms.
+    # Duplicate names across widths (en's "May" is the same in
+    # both) are deduplicated. Longest-form-first inside the group
+    # so the regex prefers `"June"` over `"Jun"` when both could
+    # match a prefix of input.
+    by_index =
+      [:wide, :abbreviated]
+      |> Enum.flat_map(fn width ->
+        names =
+          get_in(months_data, [:format, width]) ||
+            get_in(months_data, [:stand_alone, width]) ||
+            %{}
+
+        Enum.map(names, fn {index, name} -> {index, name, width} end)
+      end)
+      |> Enum.group_by(fn {index, _name, _w} -> index end, fn {_index, name, w} -> {name, w} end)
 
     branches =
-      names
-      |> Enum.sort_by(fn {_index, name} -> -byte_size(name) end)
-      |> Enum.map(fn {index, name} -> month_name_branch(index, name, width) end)
+      by_index
+      |> Enum.map(fn {index, name_widths} ->
+        forms =
+          name_widths
+          |> Enum.uniq_by(fn {name, _w} -> name end)
+          |> Enum.sort_by(fn {name, _w} -> -byte_size(name) end)
+          |> Enum.map_join("|", &name_form/1)
+
+        "(?P<__m#{index}__>#{forms})"
+      end)
 
     # `(?i:...)` per CLDR TR35 §6.5 — month-name matching is
     # case-insensitive, so French "Mai" matches lowercase "mai"
@@ -1561,21 +1607,16 @@ defmodule Calendrical.Date.Parser do
     "(?i:" <> Enum.join(branches, "|") <> ")"
   end
 
-  # Build a single named-branch for one month. For `:abbreviated`
-  # width, trim any trailing period from the CLDR name and make
-  # the period optional in the regex — that way the en input
-  # `"Jun."` matches the CLDR name `"Jun"` (input had a period,
-  # CLDR didn't), and the fr input `"janv"` matches `"janv."`
-  # (input had no period, CLDR did). Other widths use the name
-  # verbatim.
-  defp month_name_branch(index, name, :abbreviated) do
-    trimmed = String.trim_trailing(name, ".")
-    "(?P<__m#{index}__>#{Regex.escape(trimmed)}\\.?)"
+  # The literal form one branch contributes to the alternation
+  # inside its month's capture group. Abbreviated names may carry
+  # a trailing `.` in some locales (fr's `"janv."`); we trim and
+  # then make the period optional so both `"janv"` and `"janv."`
+  # match. Wide names go in verbatim.
+  defp name_form({name, :abbreviated}) do
+    Regex.escape(String.trim_trailing(name, ".")) <> "\\.?"
   end
 
-  defp month_name_branch(index, name, _width) do
-    "(?P<__m#{index}__>#{Regex.escape(name)})"
-  end
+  defp name_form({name, _width}), do: Regex.escape(name)
 
   defp era_name_regex(eras_data, width) when is_map(eras_data) do
     names =
