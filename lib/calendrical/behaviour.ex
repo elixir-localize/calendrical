@@ -138,6 +138,18 @@ defmodule Calendrical.Behaviour do
     months_in_ordinary_year = Keyword.get(opts, :months_in_ordinary_year, 12)
     months_in_leap_year = Keyword.get(opts, :months_in_leap_year, months_in_ordinary_year)
 
+    # Resolve the year-less months_in_year/0 result at compile time. Both
+    # values are compile-time literals, so emitting a runtime comparison
+    # produces a dead branch (dialyzer pattern_match / exact_compare warnings).
+    months_in_year_result =
+      if months_in_ordinary_year == months_in_leap_year do
+        months_in_ordinary_year
+      else
+        first = min(months_in_ordinary_year, months_in_leap_year)
+        last = max(months_in_ordinary_year, months_in_leap_year)
+        {:ambiguous, first..last}
+      end
+
     quote do
       import Localize.Macros
 
@@ -510,13 +522,7 @@ defmodule Calendrical.Behaviour do
       @impl true
 
       def months_in_year do
-        if @months_in_ordinary_year == @months_in_leap_year do
-          @months_in_ordinary_year
-        else
-          first = min(@months_in_ordinary_year, @months_in_leap_year)
-          last = max(@months_in_ordinary_year, @months_in_leap_year)
-          {:ambiguous, first..last}
-        end
+        unquote(Macro.escape(months_in_year_result))
       end
 
       @doc """
