@@ -406,6 +406,15 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
+      Returns the number of months in a year (without a year).
+
+      """
+      @impl true
+      def months_in_year do
+        Week.months_in_year(__config__())
+      end
+
+      @doc """
       Returns the number days in a a week.
 
       """

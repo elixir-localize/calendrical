@@ -348,6 +348,24 @@ defmodule Calendrical do
               Calendar.day() | {:ambiguous, Range.t() | [pos_integer()]} | {:error, :undefined}
 
   @doc """
+  Returns the number of months in a year (without a year).
+
+  Returns an integer when every year has the same number of months,
+  `{:ambiguous, range}` for lunisolar calendars whose year length
+  varies (e.g. the Hebrew calendar's 12 or 13 months), or
+  `{:error, :undefined}` when it cannot be determined.
+
+  """
+  @callback months_in_year() ::
+              month() | {:ambiguous, Range.t() | [pos_integer()]} | {:error, :undefined}
+
+  # Year-less month count is only defined for calendars whose month
+  # structure is knowable without a year. Calendars built on the month
+  # compiler and those using the behaviour default implement it; others
+  # may not, so callers must tolerate its absence.
+  @optional_callbacks months_in_year: 0
+
+  @doc """
   Returns a the year in a calendar year.
 
   """

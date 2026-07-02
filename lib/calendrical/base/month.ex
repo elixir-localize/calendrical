@@ -227,6 +227,14 @@ defmodule Calendrical.Base.Month do
     {:error, missing_year_error("months_in_year", year)}
   end
 
+  # Year-less: every calendar built on the month compiler has the ISO
+  # 12-month structure, so the count is year-invariant. The year passed
+  # to `Calendar.ISO.months_in_year/1` is immaterial (it always returns
+  # 12); `1` is used only because the arity demands a year.
+  def months_in_year(config) when is_map(config) do
+    Calendar.ISO.months_in_year(1)
+  end
+
   # If the weeks start on the first day of the calendar year
   # (which is unusual) then we will have a fractional last week
   # of the year of either 1 or 2 days (depending on leap year)
@@ -274,7 +282,8 @@ defmodule Calendrical.Base.Month do
     ISO.days_in_month(iso_year, iso_month)
   end
 
-  def days_in_month(month, %{month_of_year: 1}) when is_integer(month) do
+  def days_in_month(month, %{month_of_year: 1})
+      when is_integer(month) and month in 1..@months_in_gregorian_year do
     case month do
       2 -> {:ambiguous, 28..29}
       month when month in [9, 4, 6, 11] -> 30
@@ -282,9 +291,17 @@ defmodule Calendrical.Base.Month do
     end
   end
 
-  def days_in_month(month, %{month_of_year: calendar_start_month}) when is_integer(month) do
+  def days_in_month(month, %{month_of_year: calendar_start_month})
+      when is_integer(month) and month in 1..@months_in_gregorian_year do
     gregorian_month = calendar_month_to_gregorian_month(month, calendar_start_month)
     days_in_month(gregorian_month, %{month_of_year: 1})
+  end
+
+  # An integer outside the calendar's month range is not a real month —
+  # return `:undefined` rather than a wrapped or garbage length (e.g.
+  # `days_in_month(13)` must not report 31).
+  def days_in_month(month, _config) when is_integer(month) do
+    {:error, :undefined}
   end
 
   def days_in_month(month, _config) do

@@ -168,6 +168,12 @@ defmodule Calendrical.Base.Week do
     {:error, missing_year_error("months_in_year", year)}
   end
 
+  # Year-less: week-based calendars carry the fixed 12-month year
+  # structure, so the count is year-invariant.
+  def months_in_year(config) when is_map(config) do
+    @months_in_year
+  end
+
   def weeks_in_year(year, config) when is_integer(year) do
     if long_year?(year, config), do: weeks_in_long_year(), else: weeks_in_normal_year()
   end

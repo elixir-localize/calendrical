@@ -499,6 +499,27 @@ defmodule Calendrical.Behaviour do
       end
 
       @doc """
+      Returns the number of months in a year, without a year.
+
+      Returns an integer when every year has the same number of
+      months, or `{:ambiguous, first..last}` for lunisolar calendars
+      whose year length varies (e.g. the Hebrew calendar's 12 or 13
+      months).
+
+      """
+      @impl true
+
+      def months_in_year do
+        if @months_in_ordinary_year == @months_in_leap_year do
+          @months_in_ordinary_year
+        else
+          first = min(@months_in_ordinary_year, @months_in_leap_year)
+          last = max(@months_in_ordinary_year, @months_in_leap_year)
+          {:ambiguous, first..last}
+        end
+      end
+
+      @doc """
       Returns the number of weeks in a
       given `year`.
 
@@ -808,6 +829,7 @@ defmodule Calendrical.Behaviour do
 
       defoverridable periods_in_year: 1
       defoverridable months_in_year: 1
+      defoverridable months_in_year: 0
       defoverridable weeks_in_year: 1
       defoverridable days_in_year: 1
       defoverridable days_in_month: 2
