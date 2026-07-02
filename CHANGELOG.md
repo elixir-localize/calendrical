@@ -6,6 +6,16 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] — 2026-07-02
+
+### Added
+
+* `months_in_year/0` returns the number of months in a year without needing a year — an integer for fixed-length calendars, or `{:ambiguous, first..last}` for lunisolar calendars whose month count varies with the year (e.g. the Hebrew calendar's `12..13`).
+
+### Fixed
+
+* `days_in_month/1` now returns `{:error, :undefined}` for a month outside the calendar's range (e.g. `days_in_month(13)`) instead of a wrapped or garbage length.
+
 ## [0.9.2] — 2026-06-30
 
 ### Fixed
