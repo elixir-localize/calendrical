@@ -48,6 +48,10 @@ The format is based on
 
 * `Calendrical.iso_days_to_day_of_week/1` now returns `7` for Sunday per its documented 1..7 contract, instead of `0`. `Calendrical.Kday` results are unchanged; it computes its zero-based weekday internally.
 
+* `Calendrical.localize/3` now accepts `:cyclic_year` and returns the localized sexagesimal cycle name (2026 → "bing-wu" in `:en`, 丙午 in `:ja`). The part was rejected by option validation, and the lookup keyed on elapsed years instead of the 1..60 cycle position, so it could never match a CLDR name.
+
+* `Calendrical.inspect/2` no longer crashes on dates and ranges in non-ISO calendars — it called an `inspect_date` function that no calendar defines. It now delegates to the Inspect protocol and also accepts the `t:Inspect.Opts.t/0` that `IEx.configure/1` passes to an `:inspect_fun`.
+
 ## [0.10.0] — 2026-07-02
 
 ### Added

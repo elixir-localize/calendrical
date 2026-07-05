@@ -230,7 +230,16 @@ defmodule Calendrical do
   localized.
 
   """
-  @valid_parts [:era, :quarter, :month, :day_of_week, :days_of_week, :am_pm, :day_periods]
+  @valid_parts [
+    :era,
+    :cyclic_year,
+    :quarter,
+    :month,
+    :day_of_week,
+    :days_of_week,
+    :am_pm,
+    :day_periods
+  ]
   type = &Enum.reduce(&1, fn x, acc -> {:|, [], [x, acc]} end)
 
   @type part :: unquote(type.(@valid_parts))
@@ -2345,22 +2354,21 @@ defmodule Calendrical do
 
   """
   @spec inspect(term, list()) :: Inspect.Algebra.t()
+  # The Inspect protocol already renders dates and ranges in any
+  # Calendrical calendar with the proper sigil form, so both clauses
+  # delegate to it. The struct clause supports the documented
+  # `IEx.configure/1` usage, where the second argument is an
+  # `t:Inspect.Opts.t/0` rather than a keyword list.
   def inspect(term, opts \\ [])
 
-  def inspect(%Date{calendar: Calendar.ISO} = date, opts) do
-    Kernel.inspect(date, opts)
+  def inspect(term, %Inspect.Opts{} = opts) do
+    term
+    |> Inspect.Algebra.to_doc(opts)
+    |> Inspect.Algebra.format(opts.width)
+    |> IO.iodata_to_binary()
   end
 
-  def inspect(%Date{calendar: calendar, year: year, month: month, day: day}, opts) do
-    calendar.inspect_date(year, month, day, opts)
-  end
-
-  def inspect(%Date.Range{first: first, last: last}, _opts) do
-    calendar = first.calendar
-    "#<DateRange<" <> calendar.inspect_date(first) <> ".." <> calendar.inspect_date(last) <> ">"
-  end
-
-  def inspect(term, opts) do
+  def inspect(term, opts) when is_list(opts) do
     Kernel.inspect(term, opts)
   end
 
@@ -2780,12 +2788,19 @@ defmodule Calendrical do
         {:error, reason}
 
       cyclic_year ->
-        cyclic_year_data = unwrap!(Localize.Calendar.cyclic_years(locale, calendar_type))
+        # CLDR cyclic names are keyed by the position in the
+        # sexagesimal cycle (1..60) while the calendars return
+        # elapsed years, so reduce before the lookup. Calendars
+        # without cyclic name data fall back to the numeric year.
+        cycle_position = Localize.Utils.Math.amod(cyclic_year, 60)
 
-        localized_cyclic_year =
-          get_in(cyclic_year_data, [:years, type, format, cyclic_year])
-
-        localized_cyclic_year || to_string(cyclic_year)
+        with {:ok, cyclic_year_data} <- Localize.Calendar.cyclic_years(locale, calendar_type),
+             localized when is_binary(localized) <-
+               get_in(cyclic_year_data, [:years, type, format, cycle_position]) do
+          localized
+        else
+          _no_data -> to_string(cyclic_year)
+        end
     end
   end
 
@@ -3090,7 +3105,16 @@ defmodule Calendrical do
     end
   end
 
-  @valid_parts [:era, :quarter, :month, :day_of_week, :days_of_week, :am_pm, :day_periods]
+  @valid_parts [
+    :era,
+    :cyclic_year,
+    :quarter,
+    :month,
+    :day_of_week,
+    :days_of_week,
+    :am_pm,
+    :day_periods
+  ]
   defp validate_part(part) do
     if part in @valid_parts do
       {:ok, part}

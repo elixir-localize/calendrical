@@ -105,6 +105,42 @@ defmodule Calendrical.ApiTest do
     end
   end
 
+  describe "cyclic year localization" do
+    test "localizes the sexagesimal cycle name for lunisolar calendars" do
+      chinese = Date.convert!(@sunday, Calendrical.Chinese)
+
+      # 2026 is 丙午 (bing-wu), position 43 in the cycle.
+      assert Calendrical.localize(chinese, :cyclic_year, locale: :en) == "bing-wu"
+      assert Calendrical.localize(chinese, :cyclic_year, locale: :ja) == "丙午"
+    end
+
+    test "falls back to the numeric year for calendars without cyclic names" do
+      assert Calendrical.localize(@sunday, :cyclic_year, locale: :en) == "2026"
+    end
+  end
+
+  describe "inspect/2" do
+    test "renders dates in any calendar with the sigil form" do
+      julian = Date.convert!(@sunday, Calendrical.Julian)
+
+      assert Calendrical.inspect(@sunday, []) == "~D[2026-07-05]"
+      assert Calendrical.inspect(julian, []) == "~D[2026-06-22 Calendrical.Julian]"
+    end
+
+    test "accepts Inspect.Opts as used by IEx.configure" do
+      julian = Date.convert!(@sunday, Calendrical.Julian)
+
+      assert Calendrical.inspect(julian, %Inspect.Opts{}) ==
+               "~D[2026-06-22 Calendrical.Julian]"
+    end
+
+    test "renders date ranges and arbitrary terms" do
+      range = Date.range(@sunday, Date.add(@sunday, 3))
+      assert Calendrical.inspect(range, []) =~ "Date.range"
+      assert Calendrical.inspect(%{a: 1}, []) == "%{a: 1}"
+    end
+  end
+
   describe "wrappers and conversions" do
     test "date-taking wrappers" do
       assert Calendrical.week_of_year(@sunday) == {2026, 27}
