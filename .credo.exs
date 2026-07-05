@@ -43,6 +43,7 @@
            files: %{
              excluded: [
                "lib/calendrical/compiler/",
+               "lib/calendrical/behaviour.ex",
                "lib/calendrical/calendars/composite/compiler.ex",
                "lib/calendrical/time/parser.ex",
                "lib/calendrical/interval.ex",
@@ -78,7 +79,6 @@
              excluded: [
                "lib/calendrical/compiler/",
                "lib/calendrical/calendars/composite/compiler.ex",
-               "lib/calendrical/behaviour.ex",
                "lib/calendrical/base/",
                "lib/calendrical/calendars/julian.ex"
              ]

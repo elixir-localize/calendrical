@@ -150,7 +150,43 @@ defmodule Calendrical.Behaviour do
         {:ambiguous, first..last}
       end
 
-    quote do
+    # Each section is an independent quoted block; evaluating the
+    # list injects them in order, which matters — the attributes in
+    # the prelude are read by later sections, and the overridable
+    # declarations must follow every definition. Imports are lexical
+    # to their own quote block, so a section that uses an imported
+    # macro imports it itself.
+    [
+      prelude(
+        epoch_iso_days,
+        epoch_day_of_week,
+        days_in_week,
+        first_day_of_week,
+        months_in_ordinary_year,
+        months_in_leap_year
+      ),
+      identity_and_validity(cldr_calendar_type, cldr_calendar_base),
+      era_functions(cldr_calendar_type),
+      period_functions(cldr_calendar_type),
+      shift_functions(),
+      count_functions(months_in_year_result),
+      range_functions(),
+      arithmetic_functions(),
+      conversion_functions(),
+      parse_and_format_functions(),
+      overridable_declarations()
+    ]
+  end
+
+  defp prelude(
+         epoch_iso_days,
+         epoch_day_of_week,
+         days_in_week,
+         first_day_of_week,
+         months_in_ordinary_year,
+         months_in_leap_year
+       ) do
+    quote location: :keep do
       import Localize.Macros
 
       @behaviour Calendar
@@ -169,7 +205,11 @@ defmodule Calendrical.Behaviour do
 
       @months_in_ordinary_year unquote(months_in_ordinary_year)
       @months_in_leap_year unquote(months_in_leap_year)
+    end
+  end
 
+  defp identity_and_validity(cldr_calendar_type, cldr_calendar_base) do
+    quote location: :keep do
       def epoch do
         @epoch
       end
@@ -233,7 +273,11 @@ defmodule Calendrical.Behaviour do
       def months_in_leap_year do
         @months_in_leap_year
       end
+    end
+  end
 
+  defp era_functions(cldr_calendar_type) do
+    quote location: :keep do
       @doc """
       Calculates the year and era from the given `year`.
 
@@ -315,7 +359,11 @@ defmodule Calendrical.Behaviour do
       def cyclic_year(year, month, day) do
         year
       end
+    end
+  end
 
+  defp period_functions(cldr_calendar_type) do
+    quote location: :keep do
       @doc """
       Returns the quarter of the year from the given
       `year`, `month`, and `day`.
@@ -465,7 +513,11 @@ defmodule Calendrical.Behaviour do
       end
 
       defoverridable day_of_week: 4
+    end
+  end
 
+  defp shift_functions do
+    quote location: :keep do
       @impl true
       def shift_date(year, month, day, duration) do
         Calendrical.shift_date(year, month, day, __MODULE__, duration)
@@ -490,7 +542,11 @@ defmodule Calendrical.Behaviour do
           duration
         )
       end
+    end
+  end
 
+  defp count_functions(months_in_year_result) do
+    quote location: :keep do
       @doc """
       Returns the number of periods in a given
       `year`. A period corresponds to a month
@@ -600,7 +656,11 @@ defmodule Calendrical.Behaviour do
       def days_in_week do
         @days_in_week
       end
+    end
+  end
 
+  defp range_functions do
+    quote location: :keep do
       @doc """
       Returns a `t:Date.Range.t/0` representing
       a given year.
@@ -656,7 +716,11 @@ defmodule Calendrical.Behaviour do
       def week(_year, _week) do
         {:error, :not_defined}
       end
+    end
+  end
 
+  defp arithmetic_functions do
+    quote location: :keep do
       @doc """
       Adds an `increment` number of `date_part`s
       to a `year-month-day`.
@@ -718,7 +782,11 @@ defmodule Calendrical.Behaviour do
         iso_days = date_to_iso_days(year, month, day) + days
         date_from_iso_days(iso_days)
       end
+    end
+  end
 
+  defp conversion_functions do
+    quote location: :keep do
       @doc """
       Returns the `t:Calendar.iso_days` format of
       the specified date.
@@ -761,6 +829,12 @@ defmodule Calendrical.Behaviour do
         {hour, minute, second, microsecond} = time_from_day_fraction(day_fraction)
         {year, month, day, hour, minute, second, microsecond}
       end
+    end
+  end
+
+  defp parse_and_format_functions do
+    quote location: :keep do
+      import Localize.Macros
 
       @doc false
       calendar_impl()
@@ -848,7 +922,11 @@ defmodule Calendrical.Behaviour do
       @doc false
       @impl true
       defdelegate iso_days_to_end_of_day(iso_days), to: Calendar.ISO
+    end
+  end
 
+  defp overridable_declarations do
+    quote location: :keep do
       defoverridable valid_date?: 3
       defoverridable valid_time?: 4
       defoverridable naive_datetime_to_string: 7

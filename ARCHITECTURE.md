@@ -57,7 +57,7 @@ Two properties of this path to be aware of: module names come from `Module.conca
 
 ## Known debt and invariants
 
-* `behaviour.ex` generates from one ~750-line quoted block, and the compiler modules are of similar scale. `.credo.exs` excludes them from `LongQuoteBlocks`/complexity checks by design; the trade-off is documented there.
+* `behaviour.ex` generates from eleven per-concern quoted sections (prelude, identity/validity, eras, periods, shifts, counts, ranges, arithmetic, conversion, parse/format, overridable declarations) concatenated in order by `__using__` — the order matters because later sections read the prelude's attributes and the overridable declarations must follow every definition, and imports are lexical to each section's own quote. The month/week compiler modules still generate from single large quoted blocks; `.credo.exs` documents the exclusions (Credo measures quoted AST as if it were the enclosing function's complexity).
 
 * `Calendrical.Base.Month` and `Calendrical.Base.Week` are structurally parallel (roughly 27 shared function names). The verbatim-identical pieces — the era-year mapping, `days_in_week`, the date guards — live in `Calendrical.Base.Common`; everything else that shares a name differs in substance because month arithmetic and week arithmetic genuinely differ, and further merging would obscure rather than deduplicate. Keep new shared logic in `Base.Common`; keep unit-specific logic in the respective base.
 
