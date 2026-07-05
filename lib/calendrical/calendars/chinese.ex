@@ -225,11 +225,20 @@ defmodule Calendrical.Chinese do
   @spec leap_year?(date_or_year :: Calendar.year() | Date.t()) :: boolean()
   @impl Calendar
 
-  def leap_year?(%{year: year, calendar: __MODULE}) do
+  def leap_year?(%{year: year, calendar: __MODULE__}) do
     leap_year?(year)
   end
 
-  def leap_year?(year) do
+  # A date in another calendar is converted first — the previous
+  # clause head bound a variable named `__MODULE` (a typo for
+  # `__MODULE__`), which matched any calendar and treated foreign
+  # year numbers as years of this calendar.
+  def leap_year?(%{calendar: _other} = date) do
+    {:ok, converted} = Date.convert(date, __MODULE__)
+    leap_year?(converted.year)
+  end
+
+  def leap_year?(year) when is_integer(year) do
     Lunisolar.leap_year?(year, epoch(), &location/1)
   end
 

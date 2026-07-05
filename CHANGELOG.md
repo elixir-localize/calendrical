@@ -54,6 +54,20 @@ The format is based on
 
 * `Calendrical.iso_days_to_day_of_week/1` now returns `7` for Sunday per its documented 1..7 contract, instead of `0`. `Calendrical.Kday` results are unchanged; it computes its zero-based weekday internally.
 
+* `leap_year?/1` on the Chinese, Korean and LunarJapanese calendars now converts a date in another calendar before checking, instead of silently treating any date's year number as a year of this calendar (the clause head contained `__MODULE` — a variable, not the module — so it matched every calendar).
+
+* `Calendrical.Julian.plus/6` no longer produces the invalid year zero: year and month arithmetic that crosses the BCE/CE boundary skips it, so year -1 plus one year is year 1.
+
+* `Calendrical.new/3` and `Calendrical.FiscalYear.calendar_for/1` are now idempotent, returning `{:ok, module}` when the calendar module already exists instead of `{:module_already_exists, module}`.
+
+* `Calendrical.date_from_day_of_year/3` now tags its result with the given calendar; previously a non-default calendar's field values were returned in a struct mislabelled `Calendar.ISO`.
+
+* `day_of_week/4` on the Coptic and Ethiopic calendars accepts explicit `starting_on` weekdays (`:monday` .. `:sunday`), renumbering relative to the requested start; previously anything but `:default` raised.
+
+* The `days_in_year/1` callback type is corrected from `Calendar.day()` (1..31) to a positive day count, and `leap_month?/0` admits the `:leap` atom the Hebrew calendar deliberately returns for Adar II.
+
+* `first_day_for_locale/2` and `min_days_for_locale/2` lose their ignored options argument; use the 1-arity forms.
+
 * `Calendrical.localize/3` now accepts `:cyclic_year` and returns the localized sexagesimal cycle name (2026 → "bing-wu" in `:en`, 丙午 in `:ja`). The part was rejected by option validation, and the lookup keyed on elapsed years instead of the 1..60 cycle position, so it could never match a CLDR name.
 
 * `Calendrical.LunarJapanese.year_of_era/{1,3}`, `day_of_era/3` and `calendar_year/3` now consult the Japanese era table, so lunisolar dates carry 元号 era years (2026 → Reiwa 8, and an era begins on its proclamation day mid-lunar-year, as the chronicles record). Previously they used the Chinese-type identity mapping and returned the raw elapsed year.

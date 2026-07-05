@@ -164,9 +164,17 @@ defmodule Calendrical.ApiTest do
       assert Calendrical.modified_julian_day(@sunday) == 61_226.0
     end
 
-    test "date_from_day_of_year/2" do
-      assert Calendrical.date_from_day_of_year(2026, 100) == ~D[2026-04-10]
-      assert Calendrical.date_from_day_of_year(2024, 60) == ~D[2024-02-29]
+    test "date_from_day_of_year/2 tags the result with its calendar" do
+      assert Calendrical.date_from_day_of_year(2026, 100) ==
+               ~D[2026-04-10 Calendrical.Gregorian]
+
+      assert Calendrical.date_from_day_of_year(2024, 60) ==
+               ~D[2024-02-29 Calendrical.Gregorian]
+
+      # A non-default calendar's fields must carry that calendar.
+      julian = Calendrical.date_from_day_of_year(2026, 100, Calendrical.Julian)
+      assert julian.calendar == Calendrical.Julian
+      assert {:ok, _iso} = Date.convert(julian, Calendar.ISO)
     end
   end
 end

@@ -18,8 +18,8 @@ defmodule Calendrical.FiscalYear do
 
   ## Examples
 
-      iex> Calendrical.FiscalYear.calendar_for(:US) |> elem(1)
-      Calendrical.FiscalYear.US
+      iex> Calendrical.FiscalYear.calendar_for(:US)
+      {:ok, Calendrical.FiscalYear.US}
 
       iex> :US in Calendrical.FiscalYear.known_fiscal_calendars()
       true
@@ -124,8 +124,8 @@ defmodule Calendrical.FiscalYear do
   territory code.
 
   The calendar module is created on first use and cached as a normal Elixir
-  module (e.g. `Calendrical.FiscalYear.US`). Later calls for the same
-  territory return the same module, tagged `:module_already_exists`.
+  module (e.g. `Calendrical.FiscalYear.US`). The call is idempotent: later
+  calls for the same territory return the same module.
 
   ### Arguments
 
@@ -134,26 +134,20 @@ defmodule Calendrical.FiscalYear do
 
   ### Returns
 
-  * `{:ok, calendar_module}` when the calendar module is created for the
-    first time. `calendar_module` implements both the `Calendar` and
-    `Calendrical` behaviours.
-
-  * `{:module_already_exists, calendar_module}` when the calendar module was
-    already created by an earlier call.
+  * `{:ok, calendar_module}` where `calendar_module` implements both the
+    `Calendar` and `Calendrical` behaviours.
 
   * `{:error, exception}` if the territory is unknown or has no pre-built
     fiscal calendar.
 
   ### Examples
 
-      iex> Calendrical.FiscalYear.calendar_for(:US) |> elem(1)
-      Calendrical.FiscalYear.US
+      iex> Calendrical.FiscalYear.calendar_for(:US)
+      {:ok, Calendrical.FiscalYear.US}
 
   """
   @spec calendar_for(atom() | String.t()) ::
-          {:ok, module()}
-          | {:module_already_exists, module()}
-          | {:error, Exception.t() | String.t()}
+          {:ok, module()} | {:error, Exception.t() | String.t()}
   def calendar_for(territory) do
     with {:ok, territory} <- Localize.validate_territory(territory),
          {:ok, territory} <- known_fiscal_calendar(territory) do

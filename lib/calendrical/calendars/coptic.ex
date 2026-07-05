@@ -254,7 +254,12 @@ defmodule Calendrical.Coptic do
 
   """
   @impl true
-  @spec day_of_week(year, month, day, :default) :: {1..7, 6, 5}
+  @spec day_of_week(
+          year,
+          month,
+          day,
+          :default | :monday | :tuesday | :wednesday | :thursday | :friday | :saturday | :sunday
+        ) :: {1..7, 1 | 6, 5 | 7}
   def day_of_week(year, month, day, :default) do
     days = date_to_iso_days(year, month, day)
     days_after_saturday = rem(days, 7)
@@ -262,6 +267,23 @@ defmodule Calendrical.Coptic do
 
     {day, @epoch_day_of_week, @last_day_of_week}
   end
+
+  # An explicit `starting_on` weekday renumbers the week relative to
+  # that start (the ISO convention), while `:default` keeps this
+  # calendar's native numbering above. Previously any value other
+  # than `:default` raised a FunctionClauseError.
+  def day_of_week(year, month, day, starting_on) do
+    weekday = Calendrical.iso_days_to_day_of_week(date_to_iso_days(year, month, day))
+    {Integer.mod(weekday - weekday_number(starting_on), 7) + 1, 1, 7}
+  end
+
+  defp weekday_number(:monday), do: 1
+  defp weekday_number(:tuesday), do: 2
+  defp weekday_number(:wednesday), do: 3
+  defp weekday_number(:thursday), do: 4
+  defp weekday_number(:friday), do: 5
+  defp weekday_number(:saturday), do: 6
+  defp weekday_number(:sunday), do: 7
 
   @doc """
   Returns the number of days in the given Coptic `year` and `month`.

@@ -1003,8 +1003,7 @@ defmodule Calendrical.Julian do
   def plus(year, month, day, date_part, increment, options \\ [])
 
   def plus(year, month, day, :years, years, options) do
-    new_year =
-      year + years
+    new_year = skip_year_zero(year + years, year)
 
     new_day =
       if Keyword.get(options, :coerce, false) do
@@ -1014,7 +1013,7 @@ defmodule Calendrical.Julian do
         day
       end
 
-    {year + years, month, new_day}
+    {new_year, month, new_day}
   end
 
   def plus(year, month, day, :quarters, quarters, options) do
@@ -1025,7 +1024,7 @@ defmodule Calendrical.Julian do
   def plus(year, month, day, :months, months, options) do
     months_in_year = months_in_year(year)
     {year_increment, new_month} = Localize.Utils.Math.div_amod(month + months, months_in_year)
-    new_year = year + year_increment
+    new_year = skip_year_zero(year + year_increment, year)
 
     new_day =
       if Keyword.get(options, :coerce, false) do
@@ -1041,6 +1040,21 @@ defmodule Calendrical.Julian do
   def plus(year, month, day, :days, days, _options) do
     iso_days = date_to_iso_days(year, month, day) + days
     date_from_iso_days(iso_days)
+  end
+
+  # The Julian calendar has no year zero, so year arithmetic that
+  # lands on or crosses zero skips it: year -1 plus one year is
+  # year 1, and year 1 minus one year is year -1.
+  defp skip_year_zero(new_year, original_year) when new_year >= 0 and original_year < 0 do
+    new_year + 1
+  end
+
+  defp skip_year_zero(new_year, original_year) when new_year <= 0 and original_year > 0 do
+    new_year - 1
+  end
+
+  defp skip_year_zero(new_year, _original_year) do
+    new_year
   end
 
   @doc """

@@ -200,7 +200,7 @@ defmodule Calendrical do
   Boolean indicating is this is a leap month
 
   """
-  @type leap_month? :: boolean()
+  @type leap_month? :: boolean() | :leap
 
   @typedoc """
   The precision for date intervals
@@ -347,7 +347,7 @@ defmodule Calendrical do
   Returns the number of days in a year.
 
   """
-  @callback days_in_year(year :: year()) :: Calendar.day()
+  @callback days_in_year(year :: year()) :: pos_integer() | {:error, Exception.t()}
 
   @doc """
   Returns the number of days in a month (withoout a year).
@@ -634,13 +634,11 @@ defmodule Calendrical do
 
   ### Returns
 
-  * `{:ok, module}` where `module` is the new calendar
-    module that conforms to the `Calendar` and `Calendrical`
-    behaviours or
-
-  * `{:module_already_exists, module}` if a module of the given
-    calendar name already exists. It is not guaranteed
-    that the module is in fact a calendar module in this case.
+  * `{:ok, module}` where `module` is the calendar module that
+    conforms to the `Calendar` and `Calendrical` behaviours. The
+    call is idempotent: if the module already exists it is
+    returned unchanged (it is not verified to be a calendar module
+    in that case).
 
   ## Configuration options
 
@@ -732,12 +730,12 @@ defmodule Calendrical do
 
   """
   @spec new(module(), calendar_type(), Keyword.t()) ::
-          {:ok, calendar()} | {:module_already_exists, module()} | {:error, String.t()}
+          {:ok, calendar()} | {:error, String.t()}
 
   def new(calendar_module, calendar_type, config)
       when is_atom(calendar_module) and calendar_type in [:week, :month] do
     if Code.ensure_loaded?(calendar_module) do
-      {:module_already_exists, calendar_module}
+      {:ok, calendar_module}
     else
       Compiler.create_calendar(calendar_module, calendar_type, config)
     end
@@ -2317,36 +2315,7 @@ defmodule Calendrical do
     end
   end
 
-  @doc """
-  Returns the first day of a week for a given
-  locale name where `1` means `Monday` and `7`
-  means `Sunday`.
-
-  ### Arguments
-
-  * `locale` is any locale name, as a string or atom,
-    validated by `Localize.validate_locale/1`.
-
-  * `options` is a keyword list of options. No options
-    are currently defined.
-
-  ### Returns
-
-  * The first day of the week for the territory
-    associated with `locale` where `1` means `Monday`
-    and `7` means `Sunday` or
-
-  * `{:error, exception}` where `exception` is an exception struct.
-
-  ### Examples
-
-      iex> Calendrical.first_day_for_locale("en-US")
-      7
-
-  """
-  @spec first_day_for_locale(String.t() | atom(), Keyword.t()) ::
-          day_of_week() | {:error, Exception.t()}
-  def first_day_for_locale(locale, _options \\ []) when is_locale_reference(locale) do
+  def first_day_for_locale(locale) when is_locale_reference(locale) do
     with {:ok, locale} <- Localize.validate_locale(locale) do
       first_day_for_locale(locale)
     end
@@ -2363,8 +2332,8 @@ defmodule Calendrical do
 
   ### Returns
 
-  * The minimum number of days in the first week of
-    the year for the territory associated with `locale` or
+  * The minimum number of days in the first week of the
+    year for the territory associated with `locale` or
 
   * `{:error, exception}` where `exception` is an exception struct.
 
@@ -2385,34 +2354,7 @@ defmodule Calendrical do
     end
   end
 
-  @doc """
-  Returns the minimum days in the first week of a year
-  for a given locale name.
-
-  ### Arguments
-
-  * `locale` is any locale name, as a string or atom,
-    validated by `Localize.validate_locale/1`.
-
-  * `options` is a keyword list of options. No options
-    are currently defined.
-
-  ### Returns
-
-  * The minimum number of days in the first week of
-    the year for the territory associated with `locale` or
-
-  * `{:error, exception}` where `exception` is an exception struct.
-
-  ### Examples
-
-      iex> Calendrical.min_days_for_locale("en-US")
-      1
-
-  """
-  @spec min_days_for_locale(String.t() | atom(), Keyword.t()) ::
-          1..7 | {:error, Exception.t()}
-  def min_days_for_locale(locale, _options \\ []) when is_locale_reference(locale) do
+  def min_days_for_locale(locale) when is_locale_reference(locale) do
     with {:ok, locale} <- Localize.validate_locale(locale) do
       min_days_for_locale(locale)
     end
@@ -4020,7 +3962,7 @@ defmodule Calendrical do
   ### Examples
 
       iex> Calendrical.date_from_day_of_year(2019, 32)
-      ~D[2019-02-01]
+      ~D[2019-02-01 Calendrical.Gregorian]
 
       iex> Calendrical.date_from_day_of_year(2019, 366)
       {:error, :invalid_date}
@@ -4037,7 +3979,10 @@ defmodule Calendrical do
     if day_of_year <= calendar.days_in_year(year) do
       {year, month, day} = calendar.date_from_iso_days(iso_days)
 
-      with {:ok, date} <- Date.new(year, month, day) do
+      # The field values are in `calendar`, so the struct must carry
+      # that calendar — omitting it built a struct mislabelled as
+      # Calendar.ISO.
+      with {:ok, date} <- Date.new(year, month, day, calendar) do
         date
       end
     else
