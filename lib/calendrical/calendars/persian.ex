@@ -12,6 +12,15 @@ defmodule Calendrical.Persian do
   used. It specifies the origin of the calendar to be
   the Hegira of Muhammad from Mecca to Medina in 622 CE).
 
+  ### Supported date range
+
+  This calendar is observational: each year begins at the vernal
+  equinox observed in Tehran, computed by `Astro.equinox/2`, which
+  is accurate only for Gregorian years 1000 to 3000. Date
+  conversions therefore support Gregorian years 1001 to 3000
+  (approximately Persian years 380 to 2378). Dates outside that
+  range raise `Calendrical.UnsupportedDateRangeError`.
+
   """
 
   use Calendrical.Behaviour,
@@ -19,6 +28,11 @@ defmodule Calendrical.Persian do
     cldr_calendar_type: :persian
 
   @mean_tropical_year 365.24219
+
+  # `Astro.equinox/2` is accurate to within two minutes only for
+  # this span of Gregorian years; outside it the equinox — and
+  # therefore Nowruz — cannot be computed.
+  @supported_gregorian_years 1000..3000
 
   @doc """
   Returns whether the given Persian year is a leap year.
@@ -68,6 +82,10 @@ defmodule Calendrical.Persian do
 
   * An integer count of days since the proleptic ISO epoch.
 
+  * Raises `Calendrical.UnsupportedDateRangeError` if the date falls
+    outside the supported range described in the module
+    documentation.
+
   ### Examples
 
       iex> Calendrical.Persian.date_to_iso_days(1404, 1, 1)
@@ -98,6 +116,10 @@ defmodule Calendrical.Persian do
   ### Returns
 
   * A three-tuple `{year, month, day}` in the Persian calendar.
+
+  * Raises `Calendrical.UnsupportedDateRangeError` if `iso_days`
+    falls outside the supported range described in the module
+    documentation.
 
   ### Examples
 
@@ -138,22 +160,33 @@ defmodule Calendrical.Persian do
 
   * `{:ok, date}` where `date` is a `t:Date.t/0` in `Calendar.ISO`.
 
+  * `{:error, :year_out_of_range}` if `year` is outside the
+    Gregorian years 1000 to 3000 for which the equinox can be
+    computed.
+
   ### Examples
 
       iex> Calendrical.Persian.new_year_gregorian(2025)
       {:ok, ~D[2025-03-21]}
 
-  """
-  @spec new_year_gregorian(Calendar.year()) :: {:ok, Date.t()}
-  def new_year_gregorian(year) do
-    {:ok, equinox} = vernal_equinox(year)
-    {:ok, solar_noon} = midday_in_tehran(equinox)
+      iex> Calendrical.Persian.new_year_gregorian(900)
+      {:error, :year_out_of_range}
 
-    if Time.compare(equinox, solar_noon) in [:gt, :eq] do
-      Date.new(equinox.year, equinox.month, equinox.day + 1)
-    else
-      Date.new(equinox.year, equinox.month, equinox.day)
+  """
+  @spec new_year_gregorian(Calendar.year()) :: {:ok, Date.t()} | {:error, :year_out_of_range}
+  def new_year_gregorian(year) when year in @supported_gregorian_years do
+    with {:ok, equinox} <- vernal_equinox(year),
+         {:ok, solar_noon} <- midday_in_tehran(equinox) do
+      if Time.compare(equinox, solar_noon) in [:gt, :eq] do
+        Date.new(equinox.year, equinox.month, equinox.day + 1)
+      else
+        Date.new(equinox.year, equinox.month, equinox.day)
+      end
     end
+  end
+
+  def new_year_gregorian(year) when is_integer(year) do
+    {:error, :year_out_of_range}
   end
 
   @doc """
@@ -169,16 +202,21 @@ defmodule Calendrical.Persian do
   * `{:ok, date}` where `date` is a `t:Date.t/0` in `Calendar.ISO`,
     one day before the next Persian new year.
 
+  * `{:error, :year_out_of_range}` if `year + 1` is outside the
+    Gregorian years 1000 to 3000 for which the equinox can be
+    computed.
+
   ### Examples
 
       iex> Calendrical.Persian.year_end_gregorian(2025)
       {:ok, ~D[2026-03-20]}
 
   """
-  @spec year_end_gregorian(Calendar.year()) :: {:ok, Date.t()}
+  @spec year_end_gregorian(Calendar.year()) :: {:ok, Date.t()} | {:error, :year_out_of_range}
   def year_end_gregorian(year) do
-    {:ok, new_year} = new_year_gregorian(year + 1)
-    {:ok, Date.add(new_year, -1)}
+    with {:ok, new_year} <- new_year_gregorian(year + 1) do
+      {:ok, Date.add(new_year, -1)}
+    end
   end
 
   @tehran %Geo.PointZ{coordinates: {51.3890, 35.6892, 1100}}
@@ -206,6 +244,9 @@ defmodule Calendrical.Persian do
     corresponding to the most recent Persian new year on or before
     the supplied date.
 
+  * Raises `Calendrical.UnsupportedDateRangeError` if the date falls
+    outside the supported Gregorian years 1001 to 3000.
+
   ### Examples
 
       iex> Calendrical.Persian.new_year_on_or_before(739_400)
@@ -216,16 +257,25 @@ defmodule Calendrical.Persian do
   def new_year_on_or_before(iso_days) when is_integer(iso_days) do
     {year, month, day} = Calendrical.Gregorian.date_from_iso_days(iso_days)
     {:ok, date} = Date.new(year, month, day)
-    {:ok, new_year_gregorian} = new_year_gregorian(year)
-    {:ok, prior_year_gregorian} = new_year_gregorian(year - 1)
 
-    new_year =
-      if Date.compare(new_year_gregorian, date) == :gt do
-        prior_year_gregorian
-      else
-        new_year_gregorian
-      end
+    with {:ok, new_year_gregorian} <- new_year_gregorian(year),
+         {:ok, prior_year_gregorian} <- new_year_gregorian(year - 1) do
+      new_year =
+        if Date.compare(new_year_gregorian, date) == :gt do
+          prior_year_gregorian
+        else
+          new_year_gregorian
+        end
 
-    Calendrical.Gregorian.date_to_iso_days(new_year.year, new_year.month, new_year.day)
+      Calendrical.Gregorian.date_to_iso_days(new_year.year, new_year.month, new_year.day)
+    else
+      {:error, :year_out_of_range} ->
+        raise Calendrical.UnsupportedDateRangeError,
+          calendar: __MODULE__,
+          value: date,
+          range:
+            "Gregorian years #{@supported_gregorian_years.first + 1} " <>
+              "to #{@supported_gregorian_years.last}"
+    end
   end
 end

@@ -151,8 +151,20 @@ defmodule Calendrical.Formatter.Options do
   def validate_option(:day_names, options, nil) do
     locale = Keyword.get(options, :locale)
 
-    {:ok, date} = Date.new(2000, 1, 1, Keyword.get(options, :calendar))
-    {:ok, Calendrical.localize(date, :days_of_week, locale: locale)}
+    # :calendar is validated before :day_names (see @valid_options
+    # order), so by now it is always a calendar module — but the
+    # probe date may still be invalid in an unusual calendar, so
+    # surface that as an option error rather than a MatchError.
+    calendar = Keyword.get(options, :calendar)
+
+    case Date.new(2000, 1, 1, calendar) do
+      {:ok, date} ->
+        {:ok, Calendrical.localize(date, :days_of_week, locale: locale)}
+
+      {:error, _reason} ->
+        {:error,
+         Calendrical.Formatter.InvalidOptionError.exception(option: :day_names, value: calendar)}
+    end
   end
 
   day_names =

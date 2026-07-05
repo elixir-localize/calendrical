@@ -56,8 +56,16 @@ defmodule Calendrical.Preference do
   def preferences_for_territory(territory) do
     with {:ok, territory} <- Localize.validate_territory(territory) do
       territory_preferences = territory_preferences()
-      {:ok, default_territory} = Localize.Territory.territory_from_locale(Localize.get_locale())
       the_world = Localize.Territory.the_world()
+
+      # The process locale's territory is only a fallback lookup key;
+      # a locale with no derivable territory degrades to the-world
+      # rather than crashing the preference lookup.
+      default_territory =
+        case Localize.Territory.territory_from_locale(Localize.get_locale()) do
+          {:ok, default_territory} -> default_territory
+          {:error, _reason} -> the_world
+        end
 
       preferences =
         Map.get(territory_preferences, territory) ||

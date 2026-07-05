@@ -126,13 +126,14 @@ defmodule Calendrical.MixProject do
   defp deps do
     [
       {:localize, "~> 0.37"},
-      {:astro, "~> 2.3"},
+      {:astro, "~> 2.3 and >= 2.3.3"},
       {:tz_world, "~> 1.0", optional: true},
       {:tzdata, "~> 1.1", optional: true},
       {:gettext, "~> 1.0"},
       {:calendar_interval, "~> 0.2", optional: true},
       {:ex_doc, "~> 0.38", optional: true, runtime: false},
       {:dialyxir, "~> 1.0", optional: true, only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.7", optional: true, only: [:dev, :test], runtime: false},
       {:stream_data, "~> 1.0", only: :test}
     ] ++ maybe_json_polyfill()
   end

@@ -89,8 +89,20 @@ defmodule Calendrical.Islamic.Visibility do
     date = Date.from_gregorian_days(iso_days)
 
     case Astro.new_visible_crescent(location, date, method) do
-      {:ok, v} when v in [:A, :B, :C] -> true
-      _ -> false
+      {:ok, v} when v in [:A, :B, :C] ->
+        true
+
+      # The ephemeris does not cover this date at all. Raise rather
+      # than report "not visible": treating missing data as
+      # invisibility would silently walk the crescent search forward
+      # and produce wrong month boundaries.
+      {:error, :not_found} ->
+        raise Calendrical.UnsupportedDateRangeError,
+          value: date,
+          range: "dates covered by the installed JPL ephemeris"
+
+      _ ->
+        false
     end
   end
 
@@ -116,6 +128,11 @@ defmodule Calendrical.Islamic.Visibility do
   # take the calendar date of that instant.
   defp prior_new_moon_iso_days(iso_days) do
     date = Date.from_gregorian_days(iso_days)
+
+    # `Astro.date_time_new_moon_before/1` computes the new moon from
+    # the classical lunar-phase series, not the ephemeris, so it
+    # succeeds for any date — the match cannot fail. Ephemeris range
+    # limits surface in `visible_crescent?/3` instead.
     {:ok, datetime} = Astro.date_time_new_moon_before(date)
 
     datetime
