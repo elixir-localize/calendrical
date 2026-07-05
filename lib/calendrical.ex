@@ -2046,8 +2046,11 @@ defmodule Calendrical do
 
   ### Examples
 
-      # For the default Calendar.ISO calendar the number of
-      # weeks in a year is either 52 or 53 with each week
+      # A Calendar.ISO date is handled by the default
+      # Calendrical.Gregorian calendar: Monday-start weeks
+      # with a one-day minimum first week (not ISO 8601 week
+      # numbering — use Calendrical.ISO for that). The number
+      # of weeks in a year is either 52 or 53 with each week
       # being 7 days. The first week may start in the Gregorian
       # year prior and end in the following Gregorian year.
 
@@ -2096,7 +2099,13 @@ defmodule Calendrical do
   * `year` is any integer year number.
 
   * `calendar` is any module that implements the `Calendar` and
-    `Calendrical` behaviours or `Calendar.ISO`.
+    `Calendrical` behaviours or `Calendar.ISO`. `Calendar.ISO` is
+    treated as the default `Calendrical.Gregorian` calendar —
+    Monday-start weeks with a one-day minimum first week — the
+    same convention applied to `Calendar.ISO` dates throughout
+    Calendrical, not ISO 8601 week numbering. For ISO 8601 weeks
+    (four-day minimum first week) use `Calendrical.ISO` or
+    `Calendrical.ISOWeek`.
 
   ### Returns
 
@@ -2108,6 +2117,11 @@ defmodule Calendrical do
 
       iex> Calendrical.weeks_in_year(2023, Calendar.ISO)
       {53, 7}
+
+      # ISO 8601 week numbering gives 52 weeks for 2023.
+
+      iex> Calendrical.weeks_in_year(2023, Calendrical.ISO)
+      {52, 7}
 
       iex> Calendrical.weeks_in_year(2020, Calendrical.ISOWeek)
       {53, 7}
@@ -3523,23 +3537,6 @@ defmodule Calendrical do
       |> calendar.naive_datetime_from_iso_days()
 
     {year, month, day, hour, minute, second, {ms_value, precision}}
-  end
-
-  defp shift_time_unit({hour, minute, second, microsecond}, calendar, value, unit)
-       when unit in [:second, :millisecond, :microsecond, :nanosecond] or is_integer(unit) do
-    {value, precision} = shift_time_unit_values(value, microsecond)
-
-    {_days, day_fraction} =
-      shift_time_unit(
-        {0, Calendar.ISO.time_to_day_fraction(hour, minute, second, microsecond)},
-        calendar,
-        value,
-        unit
-      )
-
-    {hour, minute, second, {microsecond, _}} = Calendar.ISO.time_from_day_fraction(day_fraction)
-
-    {hour, minute, second, {microsecond, precision}}
   end
 
   defp shift_time_unit({_days, _day_fraction} = iso_days, _calendar, value, unit)

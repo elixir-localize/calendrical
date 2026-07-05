@@ -14,6 +14,8 @@ The format is based on
 
 * `Calendrical.Persian.new_year_gregorian/1` and `year_end_gregorian/1` return `{:error, :year_out_of_range}` for years outside the supported equinox range instead of crashing.
 
+* `Calendrical.TimeZone.resolve/3` resolves CLDR metazone names ("Pacific Standard Time", "Mitteleuropäische Zeit") to the representative IANA zone for the locale's territory, falling back to the metazone's golden zone. Requires `localize >= 0.45`.
+
 ### Removed
 
 * The deprecated `Calendrical.Preference.calendar_for_territory/1` and `calendar_for_locale/1` delegates are removed. Use `calendar_from_territory/1` and `calendar_from_locale/1`.

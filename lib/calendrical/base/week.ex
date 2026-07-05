@@ -371,7 +371,7 @@ defmodule Calendrical.Base.Week do
 
     week = week - weeks_to_sub
     {weeks_in_year, _} = weeks_in_year(year - 1, config)
-    # IO.puts "  Proposed week of previous month: #{week}"
+
     {year, week} =
       if week < 1 do
         {year - 1, weeks_in_year - week}
@@ -386,26 +386,15 @@ defmodule Calendrical.Base.Week do
   # Accounting for long years is complex. So for now adding and
   # subtracting months is done one month at a time. Therefore
   # performance for large additions/subsctractions will be poor.
-  def plus(year, week, day, config, :months, months, options) when abs(months) > 1 do
+  # Each single-month step coerces the day-of-month downward when
+  # the target month is shorter, so no post-hoc reconciliation of
+  # the day-of-month is possible or required.
+  def plus(year, week, day, config, :months, months, _options) when abs(months) > 1 do
     increment = if months > 0, do: 1, else: -1
-    original_day_of_month = day_of_month(year, week, day, config)
 
-    {year, week, day} =
-      Enum.reduce(1..abs(months), {year, week, day}, fn _i, {year, week, day} ->
-        plus(year, week, day, config, :months, increment, coerce: @default_coercion)
-      end)
-
-    # Now reconcile the original date of the month with the
-    # previously calculated day of the month.
-    proposed_day_of_month = day_of_month(year, week, day, config)
-    days_difference = original_day_of_month - proposed_day_of_month
-    month = month_of_year(year, week, day, config)
-
-    if days_difference < 0 && original_day_of_month <= days_in_month(year, month, config) do
-      add_days(year, month, day, days_difference, config, options)
-    else
-      {year, week, day}
-    end
+    Enum.reduce(1..abs(months), {year, week, day}, fn _i, {year, week, day} ->
+      plus(year, week, day, config, :months, increment, coerce: @default_coercion)
+    end)
   end
 
   def plus(year, month, day, config, :weeks, weeks, _options) do

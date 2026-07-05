@@ -9,6 +9,8 @@ defmodule Calendrical.TimeZoneTest do
 
   use ExUnit.Case, async: true
 
+  doctest Calendrical.TimeZone
+
   @naive ~N[2026-07-05 12:00:00]
 
   describe "resolve/3" do
@@ -47,6 +49,39 @@ defmodule Calendrical.TimeZoneTest do
 
     test "returns an error for an unrecognizable zone" do
       assert {:error, _reason} = Calendrical.TimeZone.resolve("Not/AZone", @naive)
+    end
+  end
+
+  describe "resolve/3 metazone names" do
+    test "resolves a metazone name to its golden zone" do
+      assert {:ok, %DateTime{time_zone: "America/Los_Angeles"}} =
+               Calendrical.TimeZone.resolve("Pacific Standard Time", @naive)
+
+      assert {:ok, %DateTime{time_zone: "Asia/Tokyo"}} =
+               Calendrical.TimeZone.resolve("Japan Standard Time", @naive)
+    end
+
+    test "resolves a daylight metazone name" do
+      assert {:ok, %DateTime{time_zone: "America/Los_Angeles"}} =
+               Calendrical.TimeZone.resolve("Pacific Daylight Time", @naive)
+    end
+
+    test "resolves a metazone name to the locale territory's representative zone" do
+      assert {:ok, %DateTime{time_zone: "Europe/Berlin"}} =
+               Calendrical.TimeZone.resolve("Mitteleuropäische Zeit", @naive, locale: :de)
+
+      assert {:ok, %DateTime{time_zone: "America/Toronto"}} =
+               Calendrical.TimeZone.resolve("Eastern Standard Time", @naive, locale: :"en-CA")
+    end
+
+    test "falls back to the golden zone when the locale territory has no mapping" do
+      assert {:ok, %DateTime{time_zone: "America/New_York"}} =
+               Calendrical.TimeZone.resolve("Eastern Standard Time", @naive, locale: :en)
+    end
+
+    test "resolves a non-Latin metazone name" do
+      assert {:ok, %DateTime{time_zone: "Asia/Tokyo"}} =
+               Calendrical.TimeZone.resolve("日本標準時", @naive, locale: :ja)
     end
   end
 

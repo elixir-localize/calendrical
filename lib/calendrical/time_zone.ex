@@ -24,7 +24,14 @@ defmodule Calendrical.TimeZone do
 
   5. CLDR locale name — `Pacific Time`, `Greenwich Mean Time`.
      Looked up via `Localize`'s CLDR `timeZoneNames` data for
-     the parsing locale.
+     the parsing locale. Zone-specific names are tried first,
+     then metazone names (`Pacific Standard Time`,
+     `Mitteleuropäische Zeit`), which cover most localized
+     zone names in CLDR. A metazone resolves to its
+     representative zone for the locale's territory —
+     `Mitteleuropäische Zeit` under a `:de` locale is
+     `Europe/Berlin` — falling back to the metazone's golden
+     zone (`Europe/Paris`).
 
   When the parser captures a wall-clock instant alongside an
   IANA zone, the resolver uses the instant to pick between
@@ -75,6 +82,14 @@ defmodule Calendrical.TimeZone do
       iex> {:ok, datetime} = Calendrical.TimeZone.resolve("Asia/Tokyo", ~N[2024-07-15 14:00:00])
       iex> {datetime.zone_abbr, datetime.utc_offset}
       {"JST", 32400}
+
+      iex> {:ok, datetime} = Calendrical.TimeZone.resolve("Pacific Standard Time", ~N[2024-07-15 14:00:00])
+      iex> datetime.time_zone
+      "America/Los_Angeles"
+
+      iex> {:ok, datetime} = Calendrical.TimeZone.resolve("Mitteleuropäische Zeit", ~N[2024-07-15 14:00:00], locale: :de)
+      iex> datetime.time_zone
+      "Europe/Berlin"
 
       iex> Calendrical.TimeZone.resolve("Middle Earth Time", ~N[2024-07-15 14:00:00])
       {:error, :unresolvable_zone}
@@ -332,7 +347,10 @@ defmodule Calendrical.TimeZone do
 
   defp resolve_locale_name(zone_string, naive_dt, options) do
     locale = Keyword.get(options, :locale) || safe_get_locale()
-    iana = lookup_cldr_zone_name(zone_string, locale)
+
+    iana =
+      lookup_cldr_zone_name(zone_string, locale) ||
+        lookup_cldr_metazone_name(zone_string, locale)
 
     case iana do
       nil -> {:error, :no_cldr_match}
@@ -361,6 +379,37 @@ defmodule Calendrical.TimeZone do
     end
   rescue
     _ -> nil
+  end
+
+  # Most localized zone names ("Pacific Standard Time", "heure
+  # normale d'Europe centrale") belong to a CLDR metazone rather
+  # than an individual zone. On a name match, the metazone maps to
+  # its representative IANA zone for the locale's territory —
+  # "Central European Time" under a German locale resolves to
+  # Europe/Berlin — falling back to the metazone's golden zone.
+  defp lookup_cldr_metazone_name(zone_string, locale) do
+    case Localize.Locale.get(locale, [:dates, :time_zone_names, :metazone]) do
+      {:ok, metazone_map} when is_map(metazone_map) ->
+        Enum.find_value(metazone_map, fn {metazone, names} ->
+          if name_matches?(names, zone_string) do
+            Localize.DateTime.Timezone.zone_for_metazone(metazone, locale_territory(locale))
+          end
+        end)
+
+      _ ->
+        nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  defp locale_territory(locale) do
+    case Localize.Territory.territory_from_locale(locale) do
+      {:ok, territory} -> territory
+      _ -> :"001"
+    end
+  rescue
+    _ -> :"001"
   end
 
   defp find_zone_id(zone_map, target) do

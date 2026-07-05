@@ -256,19 +256,18 @@ defmodule Calendrical.Base.Month do
 
   # If the weeks start on the first day of the calendar year
   # (which is unusual) then we will have a fractional last week
-  # of the year of either 1 or 2 days (depending on leap year)
+  # of the year of either 1 or 2 days (depending on leap year).
+  # The year is always 365 or 366 days, neither divisible by 7,
+  # so the fractional week always exists.
 
   def weeks_in_year(year, %Config{day_of_week: :first} = config) when is_integer(year) do
     first_day = first_gregorian_day_of_year(year, config)
     last_day = last_gregorian_day_of_year(year, config)
 
-    case Localize.Utils.Math.div_mod(last_day - first_day + 1, @days_in_week) do
-      {weeks, 0} ->
-        {weeks, @days_in_week}
+    {weeks, days_in_last_week} =
+      Localize.Utils.Math.div_mod(last_day - first_day + 1, @days_in_week)
 
-      {weeks, days_in_last_week} ->
-        {weeks + 1, days_in_last_week}
-    end
+    {weeks + 1, days_in_last_week}
   end
 
   # In all other cases, like the ISO calendar, there is a
