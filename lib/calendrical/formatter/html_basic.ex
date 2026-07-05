@@ -34,7 +34,7 @@ defmodule Calendrical.Formatter.HTML.Basic do
 
   @impl true
   def format_day(date, year, month, options) do
-    format_day(date, year, month, date.calendar.calendar_base, options)
+    format_day(date, year, month, date.calendar.calendar_base(), options)
   end
 
   def format_day(date, _year, month, :month, options) do
