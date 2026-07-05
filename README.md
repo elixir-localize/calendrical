@@ -41,7 +41,7 @@ Add `calendrical` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:calendrical, "~> 0.11"}
+    {:calendrical, "~> 0.12"}
   ]
 end
 ```
@@ -208,5 +208,5 @@ Full API documentation is available on [HexDocs](https://hexdocs.pm/calendrical)
 
 ## License
 
-Apache License 2.0. See the [LICENSE](https://github.com/elixir-localize/calendrical/blob/v0.11.0/LICENSE.md) file for details.
+Apache License 2.0. See the [LICENSE](https://github.com/elixir-localize/calendrical/blob/v0.12.0/LICENSE.md) file for details.
 
