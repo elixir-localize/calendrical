@@ -2487,6 +2487,15 @@ defmodule Calendrical do
 
   @week_info Localize.SupplementalData.weeks()
 
+  # World (001) defaults, used for territories that are valid ISO
+  # codes (private-use ranges) but absent from CLDR week data.
+  @world_weekend_start get_in(@week_info, [:weekend_start, @the_world])
+  @world_weekend_end get_in(@week_info, [:weekend_end, @the_world])
+  @world_first_day get_in(@week_info, [:first_day, @the_world])
+  @world_min_days get_in(@week_info, [:min_days, @the_world])
+  @world_weekend Enum.to_list(@world_weekend_start..@world_weekend_end)
+  @world_weekdays @days -- @world_weekend
+
   for territory <- Localize.SupplementalData.known_territories() do
     starts =
       get_in(@week_info, [:weekend_start, territory]) ||
@@ -2521,27 +2530,39 @@ defmodule Calendrical do
     end
   end
 
+  # In each fallback below, a validated territory equal to the input
+  # has no generated clause (a valid ISO code absent from CLDR week
+  # data, such as the private-use range), so it takes the world
+  # default. Recursing unconditionally looped forever on such codes.
   def first_day_for_territory(territory) do
-    with {:ok, territory} <- Localize.validate_territory(territory) do
-      first_day_for_territory(territory)
+    case Localize.validate_territory(territory) do
+      {:ok, ^territory} -> @world_first_day
+      {:ok, validated} -> first_day_for_territory(validated)
+      {:error, _reason} = error -> error
     end
   end
 
   def min_days_for_territory(territory) do
-    with {:ok, territory} <- Localize.validate_territory(territory) do
-      min_days_for_territory(territory)
+    case Localize.validate_territory(territory) do
+      {:ok, ^territory} -> @world_min_days
+      {:ok, validated} -> min_days_for_territory(validated)
+      {:error, _reason} = error -> error
     end
   end
 
   def weekend(territory) do
-    with {:ok, territory} <- Localize.validate_territory(territory) do
-      weekend(territory)
+    case Localize.validate_territory(territory) do
+      {:ok, ^territory} -> @world_weekend
+      {:ok, validated} -> weekend(validated)
+      {:error, _reason} = error -> error
     end
   end
 
   def weekdays(territory) do
-    with {:ok, territory} <- Localize.validate_territory(territory) do
-      weekdays(territory)
+    case Localize.validate_territory(territory) do
+      {:ok, ^territory} -> @world_weekdays
+      {:ok, validated} -> weekdays(validated)
+      {:error, _reason} = error -> error
     end
   end
 

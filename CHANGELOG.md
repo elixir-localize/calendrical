@@ -68,6 +68,8 @@ The format is based on
 
 * `first_day_for_locale/2` and `min_days_for_locale/2` lose their ignored options argument; use the 1-arity forms.
 
+* `min_days_for_territory/1`, `first_day_for_territory/1`, `weekend/1`, `weekdays/1` and therefore `calendar_for_territory/1` no longer loop forever for a valid ISO territory absent from CLDR week data (private-use codes such as `:XX`); they take the world defaults.
+
 * `Calendrical.localize/3` now accepts `:cyclic_year` and returns the localized sexagesimal cycle name (2026 → "bing-wu" in `:en`, 丙午 in `:ja`). The part was rejected by option validation, and the lookup keyed on elapsed years instead of the 1..60 cycle position, so it could never match a CLDR name.
 
 * `Calendrical.LunarJapanese.year_of_era/{1,3}`, `day_of_era/3` and `calendar_year/3` now consult the Japanese era table, so lunisolar dates carry 元号 era years (2026 → Reiwa 8, and an era begins on its proclamation day mid-lunar-year, as the chronicles record). Previously they used the Chinese-type identity mapping and returned the raw elapsed year.

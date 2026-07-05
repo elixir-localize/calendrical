@@ -49,6 +49,16 @@ defmodule Calendrical.ApiTest do
       refute Calendrical.weekday?(@sunday)
     end
 
+    test "valid territories without CLDR week data take world defaults" do
+      # :XX is a private-use ISO code: valid, but absent from CLDR
+      # week data. These previously looped forever.
+      assert Calendrical.min_days_for_territory(:XX) == 1
+      assert Calendrical.first_day_for_territory(:XX) == 1
+      assert Calendrical.weekend(:XX) == [6, 7]
+      assert Calendrical.weekdays(:XX) == [1, 2, 3, 4, 5]
+      assert {:ok, _calendar} = Calendrical.calendar_for_territory(:XX)
+    end
+
     test "weekend days differ by territory" do
       # Saudi Arabia's weekend is Friday and Saturday.
       assert Calendrical.weekend(:SA) == [5, 6]
