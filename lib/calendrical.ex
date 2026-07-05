@@ -563,7 +563,7 @@ defmodule Calendrical do
       {:ok, Calendrical.Persian}
 
       iex> Calendrical.calendar_from_locale("fa-IR-u-ca-gregory")
-      {:ok, Calendrical.Persian}
+      {:ok, Calendrical.IR}
 
   """
   def calendar_from_locale(%LanguageTag{} = locale) do

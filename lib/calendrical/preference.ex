@@ -35,7 +35,7 @@ defmodule Calendrical.Preference do
   alias Localize.LanguageTag
 
   # The calendar_from_locale/1 function clauses use pattern matching on
-  # %LanguageTag{locale: %{calendar: nil}} which narrows the struct type
+  # %LanguageTag{locale: %{ca: nil}} which narrows the struct type
   # beyond what Localize.Territory.territory_from_locale/1's spec expects.
   # This is safe because the function accepts any LanguageTag struct.
   @dialyzer {:nowarn_function, calendar_from_locale: 1}
@@ -193,16 +193,16 @@ defmodule Calendrical.Preference do
       {:ok, Calendrical.US}
 
       iex> Calendrical.Preference.calendar_from_locale("en-u-ca-iso8601")
-      {:ok, Calendrical.US}
+      {:ok, Calendrical.ISOWeek}
 
       iex> Calendrical.Preference.calendar_from_locale("en-u-fw-mon")
-      {:ok, Calendrical.US}
+      {:ok, Calendrical.Gregorian}
 
       iex> Calendrical.Preference.calendar_from_locale(:"fa-IR")
       {:ok, Calendrical.Persian}
 
       iex> Calendrical.Preference.calendar_from_locale("fa-IR-u-ca-gregory")
-      {:ok, Calendrical.Persian}
+      {:ok, Calendrical.IR}
 
   """
   def calendar_from_locale(locale \\ Localize.get_locale())
@@ -212,11 +212,11 @@ defmodule Calendrical.Preference do
   # to override the behaviour of territories where the week is defined.
   # to start on a Sunday.
 
-  def calendar_from_locale(%LanguageTag{locale: %{calendar: nil, fw: :mon}}) do
+  def calendar_from_locale(%LanguageTag{locale: %{ca: nil, fw: :mon}}) do
     {:ok, Calendrical.Gregorian}
   end
 
-  def calendar_from_locale(%LanguageTag{locale: %{calendar: nil, fw: first_day}})
+  def calendar_from_locale(%LanguageTag{locale: %{ca: nil, fw: first_day}})
       when first_day in @day_codes do
     {:ok, day} = Map.fetch(@first_day, first_day)
     module = first_day |> Atom.to_string() |> String.capitalize() |> String.to_atom()
@@ -224,21 +224,31 @@ defmodule Calendrical.Preference do
     Calendrical.new(calendar_module, :month, day_of_week: day)
   end
 
-  def calendar_from_locale(%LanguageTag{locale: %{calendar: nil}} = locale) do
+  def calendar_from_locale(%LanguageTag{locale: %{ca: nil}} = locale) do
     with {:ok, territory} <- territory_from(locale) do
       calendar_from_territory(territory)
     end
   end
 
-  def calendar_from_locale(%LanguageTag{locale: %{calendar: calendar}} = locale) do
+  def calendar_from_locale(%LanguageTag{locale: %{ca: calendar}} = locale) do
     calendar_module = Map.get(calendar_modules(), calendar)
 
-    if calendar_module && Code.ensure_loaded?(calendar_module) do
-      {:ok, calendar_module}
-    else
-      with {:ok, territory} <- territory_from(locale) do
-        calendar_from_territory(territory, calendar)
-      end
+    cond do
+      # An explicit request for the default (gregorian) calendar
+      # still resolves through the territory, so localized week
+      # conventions (first day, minimum days) apply.
+      calendar_module == Calendrical.default_calendar() ->
+        with {:ok, territory} <- territory_from(locale) do
+          calendar_from_territory(territory, calendar)
+        end
+
+      calendar_module && Code.ensure_loaded?(calendar_module) ->
+        {:ok, calendar_module}
+
+      true ->
+        with {:ok, territory} <- territory_from(locale) do
+          calendar_from_territory(territory, calendar)
+        end
     end
   end
 
