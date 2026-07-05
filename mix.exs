@@ -160,10 +160,7 @@ defmodule Calendrical.MixProject do
 
   defp deps do
     [
-      # TEMPORARY path override: metazone resolution needs the
-      # unreleased localize 0.45.0. Restore {:localize, "~> 0.45"}
-      # once it is published to hex.
-      {:localize, path: "../localize"},
+      {:localize, "~> 0.45"},
       {:astro, "~> 2.3 and >= 2.3.3"},
       {:tz_world, "~> 1.0", optional: true},
       {:tzdata, "~> 1.1", optional: true},
