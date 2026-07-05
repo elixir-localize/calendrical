@@ -19,6 +19,7 @@ defmodule Calendrical.Base.Month do
   @months_in_quarter 3
   @months_in_gregorian_year 12
   @weeks_in_quarter 13
+  @weeks_in_long_year 53
   @iso_week_first_day 1
   @iso_week_min_days 4
   @january 1
@@ -144,6 +145,28 @@ defmodule Calendrical.Base.Month do
 
   def week_of_month(year, month, day, config) when is_date(year, month, day) do
     {_year, week} = week_of_year(year, month, day, config)
+    month_and_week_from_week_of_year(week, config)
+  end
+
+  def week_of_month(year, month, day, _config) do
+    {:error, missing_date_error("week_of_month", year, month, day)}
+  end
+
+  # Week 53 of a long year belongs to the last month of the fourth
+  # quarter with the leap week appended, mirroring
+  # `Base.Week.month_in_quarter/2`. Without this clause the quarter
+  # arithmetic below yields month 13 in a 12-month structure.
+  defp month_and_week_from_week_of_year(@weeks_in_long_year = week, config) do
+    month = @quarters_in_year * @months_in_quarter
+
+    weeks_before_month =
+      (@quarters_in_year - 1) * @weeks_in_quarter +
+        Base.Week.weeks_from_months(@months_in_quarter - 1, config)
+
+    {month, week - weeks_before_month}
+  end
+
+  defp month_and_week_from_week_of_year(week, config) do
     {quarters, weeks_remaining_in_quarter} = Math.div_amod(week, @weeks_in_quarter)
     month_in_quarter = Base.Week.month_from_weeks(weeks_remaining_in_quarter, config)
 
@@ -151,10 +174,6 @@ defmodule Calendrical.Base.Month do
     week = weeks_remaining_in_quarter - Base.Week.weeks_from_months(month_in_quarter - 1, config)
 
     {month, week}
-  end
-
-  def week_of_month(year, month, day, _config) do
-    {:error, missing_date_error("week_of_month", year, month, day)}
   end
 
   def day_of_era(year, month, day, config) when is_date(year, month, day) do
