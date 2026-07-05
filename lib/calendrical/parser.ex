@@ -32,8 +32,8 @@ defmodule Calendrical.Parser do
   # date interpretation wins.
   #
 
-  alias Localize.DateTime.Format
   alias Calendrical.ParseError
+  alias Localize.DateTime.Format
 
   @doc """
   Parses `input` as a date, time, datetime, or date range — whichever

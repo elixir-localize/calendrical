@@ -40,7 +40,7 @@ defmodule CoverageBasesTest do
   require Calendrical.Base.Week
 
   alias Calendrical.Base.{Month, Week}
-  alias Calendrical.{Gregorian, ISOWeek, NRF, CSCO, BasicWeek, Config}
+  alias Calendrical.{BasicWeek, Config, CSCO, Gregorian, ISOWeek, NRF}
   alias Calendrical.CoverageTest.{MonthBeginning, WeekEnding}
 
   describe "Base guards" do

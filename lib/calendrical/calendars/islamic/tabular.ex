@@ -60,7 +60,7 @@ defmodule Calendrical.Islamic.Tabular do
   """
   @spec date_from_iso_days(integer(), integer()) :: {integer(), 1..12, 1..30}
   def date_from_iso_days(iso_days, epoch) do
-    year = div(30 * (iso_days - epoch) + 10646, 10631)
+    year = div(30 * (iso_days - epoch) + 10_646, 10_631)
     prior_days = iso_days - date_to_iso_days(year, 1, 1, epoch)
     month = div(11 * prior_days + 330, 325)
     day = iso_days - date_to_iso_days(year, month, 1, epoch) + 1

@@ -18,7 +18,7 @@ defmodule Calendrical.Ethiopic do
     months_in_ordinary_year: 13,
     months_in_leap_year: 13
 
-  import Localize.Utils.Math, only: [mod: 2]
+  alias Calendrical.Base.Egyptian
 
   # Ethiopic does not define quarters; quarter_of_year/3 returns
   # `{:error, :not_defined}` rather than a non_neg_integer.
@@ -29,10 +29,6 @@ defmodule Calendrical.Ethiopic do
   @type year :: -9999..-1 | 1..9999
   @type month :: 1..13
   @type day :: 1..30
-
-  @months_with_30_days 1..12
-  @epoch_day_of_week 6
-  @last_day_of_week 5
 
   @doc """
   Returns whether the supplied `year`, `month`, and `day` is a valid
@@ -65,20 +61,8 @@ defmodule Calendrical.Ethiopic do
   """
   @impl true
   @spec valid_date?(year, month, day) :: boolean()
-  def valid_date?(_year, month, day) when month in @months_with_30_days and day in 1..30 do
-    true
-  end
-
-  def valid_date?(year, 13, 6) do
-    leap_year?(year)
-  end
-
-  def valid_date?(_year, 13, day) when day in 1..5 do
-    true
-  end
-
-  def valid_date?(_year, _month, _day) do
-    false
+  def valid_date?(year, month, day) do
+    Egyptian.valid_date?(year, month, day)
   end
 
   @doc """
@@ -106,8 +90,9 @@ defmodule Calendrical.Ethiopic do
 
   """
   @spec year_of_era(year) :: {pos_integer(), 0..1}
-  def year_of_era(year) when year > 0, do: {year, 1}
-  def year_of_era(year) when year < 0, do: {abs(year), 0}
+  def year_of_era(year) do
+    Egyptian.year_of_era(year)
+  end
 
   @doc """
   Returns the year and era for the Ethiopic date given by `year`,
@@ -159,11 +144,7 @@ defmodule Calendrical.Ethiopic do
   @impl true
   @spec related_gregorian_year(year, month, day) :: Calendar.year()
   def related_gregorian_year(year, month, day) do
-    {gregorian_year, _, _} =
-      date_to_iso_days(year, month, day)
-      |> Calendar.ISO.date_from_iso_days()
-
-    gregorian_year
+    Egyptian.related_gregorian_year(year, month, day, epoch())
   end
 
   @doc """
@@ -222,16 +203,7 @@ defmodule Calendrical.Ethiopic do
   @impl true
   @spec day_of_era(year, month, day) :: {non_neg_integer(), 0..1}
   def day_of_era(year, month, day) do
-    {_, era} = year_of_era(year)
-    days = date_to_iso_days(year, month, day)
-
-    # Day one of the era is the epoch; the pre-era counts backwards
-    # from the day before it.
-    if era == 1 do
-      {days - epoch() + 1, era}
-    else
-      {epoch() - days, era}
-    end
+    Egyptian.day_of_era(year, month, day, epoch())
   end
 
   @doc """
@@ -269,30 +241,9 @@ defmodule Calendrical.Ethiopic do
           day,
           :default | :monday | :tuesday | :wednesday | :thursday | :friday | :saturday | :sunday
         ) :: {1..7, 1 | 6, 5 | 7}
-  def day_of_week(year, month, day, :default) do
-    days = date_to_iso_days(year, month, day)
-    days_after_saturday = rem(days, 7)
-    day = Localize.Utils.Math.amod(days_after_saturday + @epoch_day_of_week, days_in_week())
-
-    {day, @epoch_day_of_week, @last_day_of_week}
-  end
-
-  # An explicit `starting_on` weekday renumbers the week relative to
-  # that start (the ISO convention), while `:default` keeps this
-  # calendar's native numbering above. Previously any value other
-  # than `:default` raised a FunctionClauseError.
   def day_of_week(year, month, day, starting_on) do
-    weekday = Calendrical.iso_days_to_day_of_week(date_to_iso_days(year, month, day))
-    {Integer.mod(weekday - weekday_number(starting_on), 7) + 1, 1, 7}
+    Egyptian.day_of_week(year, month, day, starting_on, epoch())
   end
-
-  defp weekday_number(:monday), do: 1
-  defp weekday_number(:tuesday), do: 2
-  defp weekday_number(:wednesday), do: 3
-  defp weekday_number(:thursday), do: 4
-  defp weekday_number(:friday), do: 5
-  defp weekday_number(:saturday), do: 6
-  defp weekday_number(:sunday), do: 7
 
   @doc """
   Returns the number of days in the given Ethiopic `year` and `month`.
@@ -324,12 +275,8 @@ defmodule Calendrical.Ethiopic do
   """
   @impl true
   @spec days_in_month(year, month) :: 5..30
-  def days_in_month(year, 13) do
-    if leap_year?(year), do: 6, else: 5
-  end
-
-  def days_in_month(_year, month) when month in @months_with_30_days do
-    30
+  def days_in_month(year, month) do
+    Egyptian.days_in_month(year, month)
   end
 
   @doc """
@@ -355,7 +302,7 @@ defmodule Calendrical.Ethiopic do
   @impl true
   @spec days_in_year(year) :: 365..366
   def days_in_year(year) do
-    if leap_year?(year), do: 366, else: 365
+    Egyptian.days_in_year(year)
   end
 
   @doc """
@@ -384,7 +331,7 @@ defmodule Calendrical.Ethiopic do
   @impl true
   @spec leap_year?(year) :: boolean()
   def leap_year?(year) do
-    mod(year, 4) == 3
+    Egyptian.leap_year?(year)
   end
 
   @doc """
@@ -411,8 +358,7 @@ defmodule Calendrical.Ethiopic do
   """
   @spec date_to_iso_days(year, month, day) :: integer()
   def date_to_iso_days(year, month, day) do
-    (epoch() - 1 + 365 * (year - 1) + :math.floor(year / 4) + 30 * (month - 1) + day)
-    |> trunc()
+    Egyptian.date_to_iso_days(year, month, day, epoch())
   end
 
   @doc """
@@ -436,10 +382,6 @@ defmodule Calendrical.Ethiopic do
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}
   def date_from_iso_days(iso_days) do
-    year = trunc(:math.floor((4 * (iso_days - epoch()) + 1463) / 1461))
-    month = trunc(:math.floor((iso_days - date_to_iso_days(year, 1, 1)) / 30)) + 1
-    day = iso_days + 1 - date_to_iso_days(year, month, 1)
-
-    {year, month, day}
+    Egyptian.date_from_iso_days(iso_days, epoch())
   end
 end

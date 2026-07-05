@@ -61,7 +61,7 @@ defmodule Calendrical.Lunisolar do
       next: 2
     ]
 
-  alias Astro.{Time, Solar, Lunar}
+  alias Astro.{Lunar, Solar, Time}
 
   @typedoc "A lunar month"
   @type lunar_month :: Calendar.month() | {Calendar.month(), :leap}
@@ -298,7 +298,7 @@ defmodule Calendrical.Lunisolar do
 
     leap_lunisolar_year?(start_of_month, location_fun) &&
       no_major_solar_term?(start_of_month, location_fun) &&
-      !is_prior_leap_month?(start_of_month, new_year, location_fun)
+      !prior_leap_month?(start_of_month, new_year, location_fun)
   end
 
   @doc """
@@ -600,7 +600,7 @@ defmodule Calendrical.Lunisolar do
       |> trunc()
 
     leap_month? =
-      is_leap_month?(leap_sui_year?, start_of_month_in_iso_days, prior_month_12, location_fun)
+      intercalary_month?(leap_sui_year?, start_of_month_in_iso_days, prior_month_12, location_fun)
 
     {lunar_month, start_of_month_in_iso_days, leap_month?}
   end
@@ -617,9 +617,9 @@ defmodule Calendrical.Lunisolar do
     {prior_month_12, next_month_11}
   end
 
-  defp is_leap_month?(leap_sui_year?, iso_days, start_of_sui_year, location_fun) do
+  defp intercalary_month?(leap_sui_year?, iso_days, start_of_sui_year, location_fun) do
     leap_sui_year? && no_major_solar_term?(iso_days, location_fun) &&
-      !is_prior_leap_month?(
+      !prior_leap_month?(
         start_of_sui_year,
         new_moon_before(iso_days, location_fun),
         location_fun
@@ -633,7 +633,7 @@ defmodule Calendrical.Lunisolar do
          start_of_month,
          location_fun
        ) do
-    if is_prior_leap_month?(last_month_12, start_of_month, location_fun),
+    if prior_leap_month?(last_month_12, start_of_month, location_fun),
       do: months - 1,
       else: months
   end
@@ -856,12 +856,12 @@ defmodule Calendrical.Lunisolar do
   lunar month starting at `m`.
 
   """
-  def is_prior_leap_month?(m_prime, m, location_fun) when m >= m_prime do
+  def prior_leap_month?(m_prime, m, location_fun) when m >= m_prime do
     no_major_solar_term?(m, location_fun) ||
-      is_prior_leap_month?(m_prime, new_moon_before(m, location_fun), location_fun)
+      prior_leap_month?(m_prime, new_moon_before(m, location_fun), location_fun)
   end
 
-  def is_prior_leap_month?(_m_prime, _m, _location_fun) do
+  def prior_leap_month?(_m_prime, _m, _location_fun) do
     false
   end
 

@@ -17,7 +17,7 @@ defmodule CoverageArithmeticTest do
 
   use ExUnit.Case, async: true
 
-  alias Calendrical.{Ethiopic, Coptic, Julian, Interval, Preference, Era}
+  alias Calendrical.{Coptic, Era, Ethiopic, Interval, Julian, Preference}
 
   describe "Ethiopic and Coptic day_of_week/4 with explicit weekday starts" do
     test "Ethiopic :default keeps the native Saturday-based numbering" do

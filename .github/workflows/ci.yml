@@ -130,11 +130,15 @@ jobs:
         if: matrix.lint
         run: mix format --check-formatted
 
+      - name: Run credo
+        if: matrix.lint
+        run: mix credo --strict
+
       - name: Compile (warnings as errors)
         run: mix compile --warnings-as-errors
 
-      - name: Run tests
-        run: mix test
+      - name: Run tests with coverage threshold
+        run: mix test --cover
 
       - name: Restore PLT cache
         if: matrix.lint

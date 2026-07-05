@@ -281,9 +281,10 @@ defmodule Calendrical.Hebrew do
   def valid_date?(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) and
              year >= 1 and month in 1..13 and day in 1..30 do
-    cond do
-      month == @adar_i and not leap_year?(year) -> false
-      true -> day <= days_in_month(year, month)
+    if month == @adar_i and not leap_year?(year) do
+      false
+    else
+      day <= days_in_month(year, month)
     end
   end
 

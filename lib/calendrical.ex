@@ -31,8 +31,8 @@ defmodule Calendrical do
 
   """
 
-  alias Calendrical.Config
   alias Calendrical.Compiler
+  alias Calendrical.Config
   alias Calendrical.Interval
 
   import Kernel, except: [inspect: 1, inspect: 2]
@@ -472,8 +472,8 @@ defmodule Calendrical do
   @valid_precision [:years, :quarters, :months, :weeks, :days]
   @default_calendar Calendrical.Gregorian
 
-  alias Localize.LanguageTag
   alias Calendrical.Config
+  alias Localize.LanguageTag
 
   @doc false
   defguard is_full_date(date)
@@ -1040,33 +1040,35 @@ defmodule Calendrical do
         do: calendar.cldr_calendar_type(),
         else: :gregorian
 
-    with {:ok, locale} <- Localize.validate_locale(locale) do
-      [
-        am_pm_names: fn period ->
-          day_periods = unwrap!(Localize.Calendar.day_periods(locale, calendar_type))
+    case Localize.validate_locale(locale) do
+      {:error, %{__exception__: true} = exception} ->
+        raise exception
 
-          get_in(day_periods, [:format, :abbreviated, period, :default]) ||
-            get_in(day_periods, [:format, :abbreviated, period])
-        end,
-        month_names: fn month ->
-          months = unwrap!(Localize.Calendar.months(locale, calendar_type))
-          get_in(months, [:format, :wide, month])
-        end,
-        abbreviated_month_names: fn month ->
-          months = unwrap!(Localize.Calendar.months(locale, calendar_type))
-          get_in(months, [:format, :abbreviated, month])
-        end,
-        day_of_week_names: fn day ->
-          days = unwrap!(Localize.Calendar.days(locale, calendar_type))
-          get_in(days, [:format, :wide, day])
-        end,
-        abbreviated_day_of_week_names: fn day ->
-          days = unwrap!(Localize.Calendar.days(locale, calendar_type))
-          get_in(days, [:format, :abbreviated, day])
-        end
-      ]
-    else
-      {:error, %{__exception__: true} = exception} -> raise exception
+      {:ok, locale} ->
+        [
+          am_pm_names: fn period ->
+            day_periods = unwrap!(Localize.Calendar.day_periods(locale, calendar_type))
+
+            get_in(day_periods, [:format, :abbreviated, period, :default]) ||
+              get_in(day_periods, [:format, :abbreviated, period])
+          end,
+          month_names: fn month ->
+            months = unwrap!(Localize.Calendar.months(locale, calendar_type))
+            get_in(months, [:format, :wide, month])
+          end,
+          abbreviated_month_names: fn month ->
+            months = unwrap!(Localize.Calendar.months(locale, calendar_type))
+            get_in(months, [:format, :abbreviated, month])
+          end,
+          day_of_week_names: fn day ->
+            days = unwrap!(Localize.Calendar.days(locale, calendar_type))
+            get_in(days, [:format, :wide, day])
+          end,
+          abbreviated_day_of_week_names: fn day ->
+            days = unwrap!(Localize.Calendar.days(locale, calendar_type))
+            get_in(days, [:format, :abbreviated, day])
+          end
+        ]
     end
   end
 
@@ -3147,24 +3149,22 @@ defmodule Calendrical do
         leap_variant_key = :"#{cardinal_month}_yeartype_leap"
         variant = get_in(months_data, [type, format, leap_variant_key])
 
-        cond do
-          is_binary(variant) ->
-            variant
+        if is_binary(variant) do
+          variant
+        else
+          month_patterns =
+            unwrap!(Localize.Calendar.month_patterns(locale, calendar_type))
 
-          true ->
-            month_patterns =
-              unwrap!(Localize.Calendar.month_patterns(locale, calendar_type))
+          month = get_in(months_data, [type, format, cardinal_month])
 
-            month = get_in(months_data, [type, format, cardinal_month])
+          if is_map(month_patterns) do
+            leap_pattern = get_in(month_patterns, [type, format, :leap])
 
-            if is_map(month_patterns) do
-              leap_pattern = get_in(month_patterns, [type, format, :leap])
-
-              Localize.Substitution.substitute([to_string(month)], leap_pattern)
-              |> :erlang.iolist_to_binary()
-            else
-              month
-            end
+            Localize.Substitution.substitute([to_string(month)], leap_pattern)
+            |> :erlang.iolist_to_binary()
+          else
+            month
+          end
         end
 
       error ->
@@ -3544,7 +3544,7 @@ defmodule Calendrical do
 
   defp shift_time_unit({_days, _day_fraction} = iso_days, _calendar, value, unit)
        when unit in [:second, :millisecond, :microsecond, :nanosecond] or is_integer(unit) do
-    ppd = System.convert_time_unit(86400, :second, unit)
+    ppd = System.convert_time_unit(86_400, :second, unit)
     Calendar.ISO.add_day_fraction_to_iso_days(iso_days, value, ppd)
   end
 
@@ -3596,7 +3596,7 @@ defmodule Calendrical do
     [
       year: year,
       month: month,
-      second: week * 7 * 86400 + day * 86400 + hour * 3600 + minute * 60 + second,
+      second: week * 7 * 86_400 + day * 86_400 + hour * 3600 + minute * 60 + second,
       microsecond: microsecond
     ]
   end

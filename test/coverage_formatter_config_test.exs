@@ -12,9 +12,9 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
 
   use ExUnit.Case, async: true
 
-  alias Calendrical.Formatter.Options
   alias Calendrical.Composite
   alias Calendrical.FiscalYear
+  alias Calendrical.Formatter.Options
 
   # ── Formatter.Options — error paths ──────────────────────────────
 

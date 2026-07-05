@@ -255,7 +255,7 @@ defmodule Calendrical.EcclesiasticalTest do
       for year <- 2020..2030 do
         result = Ecclesiastical.eastern_orthodox_christmas(year)
         assert is_list(result)
-        assert length(result) >= 1
+        assert result != []
 
         for date <- result do
           iso = %{date | calendar: Calendar.ISO}
@@ -272,7 +272,7 @@ defmodule Calendrical.EcclesiasticalTest do
       for year <- 2020..2030 do
         result = Ecclesiastical.coptic_christmas(year)
         assert is_list(result)
-        assert length(result) >= 1
+        assert result != []
 
         for date <- result do
           iso = %{date | calendar: Calendar.ISO}
@@ -480,6 +480,7 @@ defmodule Calendrical.EcclesiasticalTest do
       # function is typed to require an integer, and this
       # test verifies the runtime guard catches the violation.
       assert_raise FunctionClauseError, fn ->
+        # credo:disable-for-next-line Credo.Check.Refactor.Apply
         apply(Ecclesiastical, :paschal_full_moon, [2024.0])
       end
     end

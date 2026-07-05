@@ -34,8 +34,8 @@ defmodule Calendrical.DateTime.Parser do
   # * `{:error, Calendrical.DateTimeParseError.t()}` on failure.
   #
 
-  alias Localize.DateTime.Format
   alias Calendrical.DateTimeParseError
+  alias Localize.DateTime.Format
 
   @standard_formats [:short, :medium, :long, :full]
 
@@ -218,18 +218,16 @@ defmodule Calendrical.DateTime.Parser do
   # ── ISO 8601 ─────────────────────────────────────────────────
 
   defp try_iso(input) do
-    cond do
-      # Shape `YYYY-MM-DD<sep>HH:MM:SS[…]` where <sep> is `T`
-      # (RFC 3339 / ISO 8601) or a space (Elixir stdlib also
-      # accepts; widely used by Postgres, SQLite, logs, etc.).
-      iso_datetime_shape?(input) ->
-        case DateTime.from_iso8601(input) do
-          {:ok, dt, _offset} -> {:ok, dt}
-          _ -> try_iso_naive(input)
-        end
-
-      true ->
-        :error
+    # Shape `YYYY-MM-DD<sep>HH:MM:SS[…]` where <sep> is `T`
+    # (RFC 3339 / ISO 8601) or a space (Elixir stdlib also
+    # accepts; widely used by Postgres, SQLite, logs, etc.).
+    if iso_datetime_shape?(input) do
+      case DateTime.from_iso8601(input) do
+        {:ok, dt, _offset} -> {:ok, dt}
+        _ -> try_iso_naive(input)
+      end
+    else
+      :error
     end
   end
 

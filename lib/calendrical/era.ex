@@ -76,9 +76,10 @@ defmodule Calendrical.Era do
         end
 
       :identity ->
-        cond do
-          year >= 1 or era_data.before_era == nil -> {year, era_data.forward_era}
-          true -> {1 - year, era_data.before_era}
+        if year >= 1 or era_data.before_era == nil do
+          {year, era_data.forward_era}
+        else
+          {1 - year, era_data.before_era}
         end
     end
   end

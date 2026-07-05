@@ -68,9 +68,9 @@ defmodule Calendrical.Date.Parser do
   # from the era-year for calendars that need it (Japanese).
   #
 
+  alias Calendrical.{DateParseError, DateRangeParseError}
   alias Localize.Calendar, as: LCalendar
   alias Localize.DateTime.Format
-  alias Calendrical.{DateParseError, DateRangeParseError}
 
   @month_name_widths %{3 => :abbreviated, 4 => :wide, 5 => :narrow}
   @era_widths %{1 => :abbreviated, 2 => :abbreviated, 3 => :abbreviated, 4 => :wide, 5 => :narrow}
@@ -132,20 +132,24 @@ defmodule Calendrical.Date.Parser do
         ok
 
       {:error, _} = err ->
-        # Retry with ordinal affixes stripped. Only fires if the
-        # original input couldn't be parsed, so CLDR-baked
-        # ordinal text (e.g. `"2nd quarter"` quarter-wide name)
-        # is preserved on the first attempt.
-        stripped = strip_ordinal_affixes(input, locale)
+        retry_without_ordinal_affixes(attempt, input, locale, err)
+    end
+  end
 
-        if stripped == input do
-          err
-        else
-          case attempt.(stripped) do
-            {:ok, _} = ok -> ok
-            {:error, _} -> err
-          end
-        end
+  # Retry with ordinal affixes stripped. Only fires if the
+  # original input couldn't be parsed, so CLDR-baked
+  # ordinal text (e.g. `"2nd quarter"` quarter-wide name)
+  # is preserved on the first attempt.
+  defp retry_without_ordinal_affixes(attempt, input, locale, original_error) do
+    stripped = strip_ordinal_affixes(input, locale)
+
+    if stripped == input do
+      original_error
+    else
+      case attempt.(stripped) do
+        {:ok, _} = ok -> ok
+        {:error, _} -> original_error
+      end
     end
   end
 
@@ -198,7 +202,7 @@ defmodule Calendrical.Date.Parser do
         if names == [] do
           input
         else
-          alternation = names |> Enum.map(&Regex.escape/1) |> Enum.join("|")
+          alternation = Enum.map_join(names, "|", &Regex.escape/1)
           regex = Regex.compile!("\\A(?i:" <> alternation <> ")[\\.,;]?(?:\\s+|\\z)", "u")
           Regex.replace(regex, input, "", global: false)
         end
@@ -252,7 +256,7 @@ defmodule Calendrical.Date.Parser do
   defp strip_ordinal_suffixes(input, []), do: input
 
   defp strip_ordinal_suffixes(input, suffixes) do
-    alternation = suffixes |> Enum.map(&Regex.escape/1) |> Enum.join("|")
+    alternation = Enum.map_join(suffixes, "|", &Regex.escape/1)
     regex = Regex.compile!("(\\d+)\\.?(?:" <> alternation <> ")(?=\\b|\\s|$)", "u")
     Regex.replace(regex, input, "\\1")
   end
@@ -260,7 +264,7 @@ defmodule Calendrical.Date.Parser do
   defp strip_ordinal_prefixes(input, []), do: input
 
   defp strip_ordinal_prefixes(input, prefixes) do
-    alternation = prefixes |> Enum.map(&Regex.escape/1) |> Enum.join("|")
+    alternation = Enum.map_join(prefixes, "|", &Regex.escape/1)
     regex = Regex.compile!("(?:" <> alternation <> ")(\\d+)", "u")
     Regex.replace(regex, input, "\\1")
   end
@@ -278,28 +282,32 @@ defmodule Calendrical.Date.Parser do
   defp ordinal_affixes(locale) do
     Enum.reduce(@ordinal_probe_digits, {[], []}, fn n, {suffs, prefs} ->
       case Localize.Number.Rbnf.to_string(n, "digits-ordinal", locale: locale) do
-        {:ok, rendered} ->
-          digit_str = Integer.to_string(n)
-
-          case String.split(rendered, digit_str, parts: 2) do
-            ["", suffix] when suffix != "" ->
-              case normalise_ordinal_suffix(suffix) do
-                nil -> {suffs, prefs}
-                normalised -> {[normalised | suffs], prefs}
-              end
-
-            [prefix, ""] when prefix != "" ->
-              {suffs, [prefix | prefs]}
-
-            _ ->
-              {suffs, prefs}
-          end
-
-        _ ->
-          {suffs, prefs}
+        {:ok, rendered} -> collect_ordinal_affix(rendered, n, {suffs, prefs})
+        _ -> {suffs, prefs}
       end
     end)
     |> then(fn {s, p} -> {Enum.uniq(s), Enum.uniq(p)} end)
+  end
+
+  # Diff one RBNF render against its bare digit: a residue
+  # before the digit accumulates as a prefix, a residue after
+  # it (period-normalised) as a suffix.
+  defp collect_ordinal_affix(rendered, n, {suffs, prefs}) do
+    digit_str = Integer.to_string(n)
+
+    case String.split(rendered, digit_str, parts: 2) do
+      ["", suffix] when suffix != "" ->
+        case normalise_ordinal_suffix(suffix) do
+          nil -> {suffs, prefs}
+          normalised -> {[normalised | suffs], prefs}
+        end
+
+      [prefix, ""] when prefix != "" ->
+        {suffs, [prefix | prefs]}
+
+      _ ->
+        {suffs, prefs}
+    end
   end
 
   defp normalise_ordinal_suffix(suffix) do
@@ -500,42 +508,47 @@ defmodule Calendrical.Date.Parser do
       # pattern (would parse only a single endpoint).
       :error
     else
-      left_regex =
-        compile_capture_regex(tokens_l, months_data, eras_data, lenient, "left_")
-
-      right_regex =
-        compile_capture_regex(tokens_r, months_data, eras_data, lenient, "right_")
-
-      full_regex_string = "\\A" <> left_regex <> right_regex <> "\\z"
-
-      with {:ok, regex} <- Regex.compile(full_regex_string, "u"),
+      with {:ok, regex} <-
+             compile_interval_regex(tokens_l, tokens_r, months_data, eras_data, lenient),
            %{} = caps <- Regex.named_captures(regex, input),
            {:ok, left_partial} <- extract_partial(caps, "left_", reference_year, cldr_calendar),
            {:ok, right_partial} <- extract_partial(caps, "right_", reference_year, cldr_calendar) do
-        case as do
-          :struct ->
-            with {:ok, left_date} <- materialise(left_partial, right_partial, cldr_calendar),
-                 {:ok, right_date} <- materialise(right_partial, left_partial, cldr_calendar) do
-              {:ok, left_date, right_date}
-            else
-              _ -> :error
-            end
-
-          :map ->
-            {:ok, calendar_module} = resolve_calendar_module(cldr_calendar)
-            left_map = partial_to_map(left_partial, right_partial, calendar_module)
-            right_map = partial_to_map(right_partial, left_partial, calendar_module)
-
-            if interval_partial_meaningful?(left_partial) and
-                 interval_partial_meaningful?(right_partial) do
-              {:ok, left_map, right_map}
-            else
-              :error
-            end
-        end
+        interval_endpoints_for(as, left_partial, right_partial, cldr_calendar)
       else
         _ -> :error
       end
+    end
+  end
+
+  defp compile_interval_regex(tokens_l, tokens_r, months_data, eras_data, lenient) do
+    left_regex =
+      compile_capture_regex(tokens_l, months_data, eras_data, lenient, "left_")
+
+    right_regex =
+      compile_capture_regex(tokens_r, months_data, eras_data, lenient, "right_")
+
+    Regex.compile("\\A" <> left_regex <> right_regex <> "\\z", "u")
+  end
+
+  defp interval_endpoints_for(:struct, left_partial, right_partial, cldr_calendar) do
+    with {:ok, left_date} <- materialise(left_partial, right_partial, cldr_calendar),
+         {:ok, right_date} <- materialise(right_partial, left_partial, cldr_calendar) do
+      {:ok, left_date, right_date}
+    else
+      _ -> :error
+    end
+  end
+
+  defp interval_endpoints_for(:map, left_partial, right_partial, cldr_calendar) do
+    {:ok, calendar_module} = resolve_calendar_module(cldr_calendar)
+    left_map = partial_to_map(left_partial, right_partial, calendar_module)
+    right_map = partial_to_map(right_partial, left_partial, calendar_module)
+
+    if interval_partial_meaningful?(left_partial) and
+         interval_partial_meaningful?(right_partial) do
+      {:ok, left_map, right_map}
+    else
+      :error
     end
   end
 
@@ -682,19 +695,27 @@ defmodule Calendrical.Date.Parser do
   defp cross_endpoint_shift(left, right) do
     cond do
       has_month?(left) and not has_month?(right) ->
-        case extract_month(left) do
-          {nil, _} -> []
-          {month, left_without} -> [{left_without, insert_month_before_trailer(right, month)}]
-        end
+        shift_month_to_right(left, right)
 
       has_month?(right) and not has_month?(left) ->
-        case extract_month(right) do
-          {nil, _} -> []
-          {month, right_without} -> [{insert_month_before_trailer(left, month), right_without}]
-        end
+        shift_month_to_left(left, right)
 
       true ->
         []
+    end
+  end
+
+  defp shift_month_to_right(left, right) do
+    case extract_month(left) do
+      {nil, _} -> []
+      {month, left_without} -> [{left_without, insert_month_before_trailer(right, month)}]
+    end
+  end
+
+  defp shift_month_to_left(left, right) do
+    case extract_month(right) do
+      {nil, _} -> []
+      {month, right_without} -> [{insert_month_before_trailer(left, month), right_without}]
     end
   end
 
@@ -785,118 +806,114 @@ defmodule Calendrical.Date.Parser do
   # endpoint's portion of the pattern); represented as `nil`
   # so `materialise/3` can fill from the other side.
   defp extract_partial(caps, prefix, reference_year, cldr_calendar) do
-    year =
-      case Map.get(caps, prefix <> "year") do
-        nil ->
-          nil
-
-        "" ->
-          nil
-
-        raw ->
-          case Integer.parse(raw) do
-            {n, ""} ->
-              if cldr_calendar == :gregorian and String.length(raw) == 2 do
-                pivot_year(n, reference_year)
-              else
-                n
-              end
-
-            _ ->
-              nil
-          end
-      end
-
-    month =
-      case Map.get(caps, prefix <> "month") do
-        raw when is_binary(raw) and raw != "" ->
-          case Integer.parse(raw) do
-            {n, ""} when n in 1..13 -> n
-            _ -> nil
-          end
-
-        _ ->
-          # No numeric-month capture (nil or ""), so look for a
-          # name-based month capture (`__mN__` with the prefix).
-          extract_month_by_name(caps, prefix)
-      end
-
-    day =
-      case Map.get(caps, prefix <> "day") do
-        nil ->
-          nil
-
-        "" ->
-          nil
-
-        raw ->
-          case Integer.parse(raw) do
-            {n, ""} when n in 1..31 -> n
-            _ -> nil
-          end
-      end
-
-    # Era field (Japanese imperial) — capture index, use it to
-    # convert era_year into Gregorian year.
-    era_index =
-      case Enum.find(caps, fn
-             {key, value} ->
-               String.starts_with?(key, prefix <> "__e") and value != ""
-
-             _ ->
-               false
-           end) do
-        {key, _} ->
-          # key looks like "<prefix>__e<index>__"
-          case Regex.run(~r/__e(\d+)__$/, key) do
-            [_, idx] ->
-              case Integer.parse(idx) do
-                {n, ""} -> n
-                _ -> nil
-              end
-
-            _ ->
-              nil
-          end
-
-        nil ->
-          nil
-      end
-
-    year =
-      case {cldr_calendar, era_index, year} do
-        {:japanese, era, y} when is_integer(era) and is_integer(y) ->
-          case japanese_era_start_year(era) do
-            {:ok, start_year} -> start_year + y - 1
-            :error -> y
-          end
-
-        _ ->
-          year
-      end
+    year = extract_partial_year(caps, prefix, reference_year, cldr_calendar)
+    month = extract_partial_month(caps, prefix)
+    day = extract_partial_day(caps, prefix)
+    era_index = extract_partial_era_index(caps, prefix)
+    year = apply_partial_era_year(year, era_index, cldr_calendar)
 
     {:ok, %{year: year, month: month, day: day}}
   end
 
-  defp extract_month_by_name(caps, prefix) do
-    case Enum.find(caps, fn
-           {key, value} -> String.starts_with?(key, prefix <> "__m") and value != ""
-           _ -> false
-         end) do
-      {key, _} ->
-        case Regex.run(~r/__m(\d+)__$/, key) do
-          [_, idx] ->
-            case Integer.parse(idx) do
-              {n, ""} when n in 1..13 -> n
-              _ -> nil
-            end
+  defp extract_partial_year(caps, prefix, reference_year, cldr_calendar) do
+    case Map.get(caps, prefix <> "year") do
+      nil ->
+        nil
 
-          _ ->
-            nil
+      "" ->
+        nil
+
+      raw ->
+        case Integer.parse(raw) do
+          {n, ""} -> maybe_pivot_two_digit_year(n, raw, reference_year, cldr_calendar)
+          _ -> nil
+        end
+    end
+  end
+
+  # The 2-digit-year pivot is a Gregorian convention (see the
+  # note on `extract_year_field/3`). Non-Gregorian years are
+  # taken literally.
+  defp maybe_pivot_two_digit_year(n, raw, reference_year, cldr_calendar) do
+    if cldr_calendar == :gregorian and String.length(raw) == 2 do
+      pivot_year(n, reference_year)
+    else
+      n
+    end
+  end
+
+  defp extract_partial_month(caps, prefix) do
+    case Map.get(caps, prefix <> "month") do
+      raw when is_binary(raw) and raw != "" ->
+        case Integer.parse(raw) do
+          {n, ""} when n in 1..13 -> n
+          _ -> nil
         end
 
       _ ->
+        # No numeric-month capture (nil or ""), so look for a
+        # name-based month capture (`__mN__` with the prefix).
+        extract_month_by_name(caps, prefix)
+    end
+  end
+
+  defp extract_partial_day(caps, prefix) do
+    case Map.get(caps, prefix <> "day") do
+      nil ->
         nil
+
+      "" ->
+        nil
+
+      raw ->
+        case Integer.parse(raw) do
+          {n, ""} when n in 1..31 -> n
+          _ -> nil
+        end
+    end
+  end
+
+  # Era field (Japanese imperial) — capture index, use it to
+  # convert era_year into Gregorian year.
+  defp extract_partial_era_index(caps, prefix) do
+    prefixed_indexed_capture(caps, prefix, "__e", ~r/__e(\d+)__$/)
+  end
+
+  defp apply_partial_era_year(year, era_index, cldr_calendar) do
+    case {cldr_calendar, era_index, year} do
+      {:japanese, era, y} when is_integer(era) and is_integer(y) ->
+        case japanese_era_start_year(era) do
+          {:ok, start_year} -> start_year + y - 1
+          :error -> y
+        end
+
+      _ ->
+        year
+    end
+  end
+
+  defp extract_month_by_name(caps, prefix) do
+    case prefixed_indexed_capture(caps, prefix, "__m", ~r/__m(\d+)__$/) do
+      n when is_integer(n) and n in 1..13 -> n
+      _ -> nil
+    end
+  end
+
+  # Find the first non-empty capture whose name starts with
+  # `<prefix><marker>` (a `(?P<prefix__mN__>...)`-style named
+  # branch) and return the integer index `N` embedded in the
+  # capture name, or `nil`.
+  defp prefixed_indexed_capture(caps, prefix, marker, index_regex) do
+    with {key, _value} <-
+           Enum.find(caps, fn
+             {key, value} -> String.starts_with?(key, prefix <> marker) and value != ""
+             _ -> false
+           end),
+         [_, index_str] <- Regex.run(index_regex, key),
+         {n, ""} <- Integer.parse(index_str) do
+      n
+    else
+      _ -> nil
     end
   end
 
@@ -910,17 +927,15 @@ defmodule Calendrical.Date.Parser do
     month = m || inherit_from.month
     day = d || inherit_from.day
 
-    cond do
-      is_nil(year) or is_nil(month) or is_nil(day) ->
-        :error
-
-      true ->
-        with {:ok, calendar_module} <- resolve_calendar_module(cldr_calendar),
-             {:ok, date} <- build_date(year, month, day, calendar_module) do
-          {:ok, date}
-        else
-          _ -> :error
-        end
+    if is_nil(year) or is_nil(month) or is_nil(day) do
+      :error
+    else
+      with {:ok, calendar_module} <- resolve_calendar_module(cldr_calendar),
+           {:ok, date} <- build_date(year, month, day, calendar_module) do
+        {:ok, date}
+      else
+        _ -> :error
+      end
     end
   end
 
@@ -1108,20 +1123,22 @@ defmodule Calendrical.Date.Parser do
   # ISO 8601 week 01 is the week containing the first Thursday
   # of the year (equivalently, the week containing Jan 4).
   defp iso_week_date_to_date(year, week, day) do
-    with {:ok, jan_4} <- Date.new(year, 1, 4) do
-      jan_4_day_of_week = Date.day_of_week(jan_4)
-      week_1_monday = Date.add(jan_4, -(jan_4_day_of_week - 1))
-      candidate = Date.add(week_1_monday, (week - 1) * 7 + (day - 1))
+    case Date.new(year, 1, 4) do
+      {:ok, jan_4} ->
+        jan_4_day_of_week = Date.day_of_week(jan_4)
+        week_1_monday = Date.add(jan_4, -(jan_4_day_of_week - 1))
+        candidate = Date.add(week_1_monday, (week - 1) * 7 + (day - 1))
 
-      # Validate that the resulting date's week-based year
-      # matches the requested year (rejects e.g. `2026-W53-1`
-      # for years with only 52 weeks).
-      case :calendar.iso_week_number({candidate.year, candidate.month, candidate.day}) do
-        {^year, ^week} -> {:ok, candidate}
-        _ -> :error
-      end
-    else
-      _ -> :error
+        # Validate that the resulting date's week-based year
+        # matches the requested year (rejects e.g. `2026-W53-1`
+        # for years with only 52 weeks).
+        case :calendar.iso_week_number({candidate.year, candidate.month, candidate.day}) do
+          {^year, ^week} -> {:ok, candidate}
+          _ -> :error
+        end
+
+      _ ->
+        :error
     end
   end
 
@@ -1142,34 +1159,18 @@ defmodule Calendrical.Date.Parser do
         quarters: quarters_data,
         days: days_data,
         locale: locale,
-        cldr_calendar: cldr_calendar
+        cldr_calendar: cldr_calendar,
+        months: months_data,
+        eras: eras_data,
+        lenient: lenient,
+        reference_year: reference_year,
+        calendar_module: calendar_module
       }
-
-      run_pass = fn pass_as ->
-        Enum.find_value(patterns, fn {_kind, pattern} ->
-          case match_pattern(
-                 transliterated,
-                 pattern,
-                 months_data,
-                 eras_data,
-                 lenient,
-                 reference_year,
-                 calendar_module,
-                 cldr_calendar,
-                 ctx,
-                 pass_as
-               ) do
-            {:ok, %Date{} = date} -> {:ok, convert_to(date, return_module)}
-            {:ok, %{} = map} -> {:ok, map}
-            :error -> nil
-          end
-        end)
-      end
 
       result =
         case as do
           :struct ->
-            run_pass.(:struct)
+            run_locale_pass(patterns, transliterated, ctx, return_module, :struct)
 
           :map ->
             # Pass 1 — strict: only accept a pattern whose fields
@@ -1183,11 +1184,22 @@ defmodule Calendrical.Date.Parser do
             # Pass 2 — lax: needed for legitimately partial inputs
             # that can't construct a date even with the reference
             # year (e.g. `"2026"` alone, or `"May"` alone).
-            run_pass.({:map, :strict}) || run_pass.({:map, :lax})
+            run_locale_pass(patterns, transliterated, ctx, return_module, {:map, :strict}) ||
+              run_locale_pass(patterns, transliterated, ctx, return_module, {:map, :lax})
         end
 
       result || {:error, no_match_error(input, locale, cldr_calendar)}
     end
+  end
+
+  defp run_locale_pass(patterns, input, ctx, return_module, pass_as) do
+    Enum.find_value(patterns, fn {_kind, pattern} ->
+      case match_pattern(input, pattern, ctx, pass_as) do
+        {:ok, %Date{} = date} -> {:ok, convert_to(date, return_module)}
+        {:ok, %{} = map} -> {:ok, map}
+        :error -> nil
+      end
+    end)
   end
 
   defp resolve_calendar_module(:gregorian), do: {:ok, Calendar.ISO}
@@ -1510,17 +1522,15 @@ defmodule Calendrical.Date.Parser do
   end
 
   defp tokenize([char | rest], acc, current) do
-    cond do
-      cldr_letter?(char) ->
-        case current do
-          {^char, count} -> tokenize(rest, acc, {char, count + 1})
-          nil -> tokenize(rest, acc, {char, 1})
-          other -> tokenize(rest, [field_token(other) | acc], {char, 1})
-        end
-
-      true ->
-        acc = if current, do: [field_token(current) | acc], else: acc
-        tokenize(rest, prepend_literal(acc, char), nil)
+    if cldr_letter?(char) do
+      case current do
+        {^char, count} -> tokenize(rest, acc, {char, count + 1})
+        nil -> tokenize(rest, acc, {char, 1})
+        other -> tokenize(rest, [field_token(other) | acc], {char, 1})
+      end
+    else
+      acc = if current, do: [field_token(current) | acc], else: acc
+      tokenize(rest, prepend_literal(acc, char), nil)
     end
   end
 
@@ -1706,8 +1716,7 @@ defmodule Calendrical.Date.Parser do
   defp expand_literal(text, lenient) do
     text
     |> String.graphemes()
-    |> Enum.map(&expand_char(&1, lenient))
-    |> Enum.join()
+    |> Enum.map_join(&expand_char(&1, lenient))
   end
 
   defp expand_char(char, lenient) do
@@ -1915,20 +1924,14 @@ defmodule Calendrical.Date.Parser do
 
   # ── Matching ─────────────────────────────────────────────────
 
-  defp match_pattern(
-         input,
-         pattern,
-         months_data,
-         eras_data,
-         lenient,
-         reference_year,
-         calendar_module,
-         cldr_calendar,
-         ctx,
-         as
-       ) do
+  # `ctx` carries the per-(locale, calendar) invariants built
+  # once in `try_locale_patterns/6`: `:months`, `:eras`,
+  # `:lenient`, `:reference_year`, `:calendar_module`,
+  # `:cldr_calendar`, plus the `:days`/`:quarters`/`:locale`
+  # keys read by `field_regex/5`.
+  defp match_pattern(input, pattern, ctx, as) do
     tokens = tokenize_pattern(pattern)
-    regex_string = compile_regex(tokens, months_data, eras_data, lenient, ctx)
+    regex_string = compile_regex(tokens, ctx.months, ctx.eras, ctx.lenient, ctx)
 
     regex =
       case Regex.compile(regex_string, "u") do
@@ -1936,45 +1939,47 @@ defmodule Calendrical.Date.Parser do
         {:error, _} -> nil
       end
 
-    # Year fallback semantics by mode:
-    #
-    # * `:struct` and `{:map, :strict}` use `reference_year`
-    #   so `build_date_smart` has enough to construct a date.
-    #   In `{:map, :strict}` the fallback year is stripped
-    #   from the output map after the fact when the user
-    #   didn't actually type one.
-    #
-    # * `{:map, :lax}` uses `nil` — pass-2 inputs like
-    #   `"2026"` alone or `"May"` alone never construct a
-    #   date and the caller wants what was captured, nothing
-    #   synthesised.
-    year_fallback =
-      case as do
-        {:map, :lax} -> nil
-        _ -> reference_year
-      end
+    year_fallback = year_fallback_for(as, ctx.reference_year)
 
     with %Regex{} <- regex,
          %{} = caps <- Regex.named_captures(regex, input),
          {:ok, era_index} <- extract_era(caps),
          {:ok, fields} <-
-           extract_fields(caps, year_fallback, cldr_calendar, era_index, calendar_module) do
-      case as do
-        :struct ->
-          build_date_smart(fields, calendar_module)
-
-        {:map, :strict} ->
-          case build_date_smart(fields, calendar_module) do
-            {:ok, _date} -> {:ok, strict_map(fields, caps, calendar_module)}
-            :error -> :error
-          end
-
-        {:map, :lax} ->
-          {:ok, fields_to_map(fields, calendar_module)}
-      end
+           extract_fields(caps, year_fallback, ctx.cldr_calendar, era_index, ctx.calendar_module) do
+      match_result_for(as, fields, caps, ctx.calendar_module)
     else
       _ -> :error
     end
+  end
+
+  # Year fallback semantics by mode:
+  #
+  # * `:struct` and `{:map, :strict}` use `reference_year`
+  #   so `build_date_smart` has enough to construct a date.
+  #   In `{:map, :strict}` the fallback year is stripped
+  #   from the output map after the fact when the user
+  #   didn't actually type one.
+  #
+  # * `{:map, :lax}` uses `nil` — pass-2 inputs like
+  #   `"2026"` alone or `"May"` alone never construct a
+  #   date and the caller wants what was captured, nothing
+  #   synthesised.
+  defp year_fallback_for({:map, :lax}, _reference_year), do: nil
+  defp year_fallback_for(_as, reference_year), do: reference_year
+
+  defp match_result_for(:struct, fields, _caps, calendar_module) do
+    build_date_smart(fields, calendar_module)
+  end
+
+  defp match_result_for({:map, :strict}, fields, caps, calendar_module) do
+    case build_date_smart(fields, calendar_module) do
+      {:ok, _date} -> {:ok, strict_map(fields, caps, calendar_module)}
+      :error -> :error
+    end
+  end
+
+  defp match_result_for({:map, :lax}, fields, _caps, calendar_module) do
+    {:ok, fields_to_map(fields, calendar_module)}
   end
 
   # Strict-pass map output: drop `:year` when it was supplied
@@ -2072,15 +2077,7 @@ defmodule Calendrical.Date.Parser do
         case Integer.parse(raw) do
           {n, ""} ->
             reference_year = year_fallback || Date.utc_today().year
-
-            year =
-              if cldr_calendar == :gregorian and String.length(raw) == 2 do
-                pivot_year(n, reference_year)
-              else
-                n
-              end
-
-            {:ok, year}
+            {:ok, maybe_pivot_two_digit_year(n, raw, reference_year, cldr_calendar)}
 
           _ ->
             :error
@@ -2105,24 +2102,9 @@ defmodule Calendrical.Date.Parser do
   end
 
   defp extract_optional_month(caps) do
-    case Enum.find(caps, fn
-           {"__m" <> _, value} -> value != ""
-           _ -> false
-         end) do
-      {"__m" <> rest, _value} ->
-        case String.split(rest, "__", parts: 2) do
-          [index_str, _] ->
-            case Integer.parse(index_str) do
-              {n, ""} when n in 1..13 -> n
-              _ -> nil
-            end
-
-          _ ->
-            nil
-        end
-
-      nil ->
-        nil
+    case named_capture_index(caps, "__m") do
+      n when is_integer(n) and n in 1..13 -> n
+      _ -> nil
     end
   end
 
@@ -2148,25 +2130,14 @@ defmodule Calendrical.Date.Parser do
         end
 
       _ ->
-        case Enum.find(caps, fn
-               {"__q" <> _, value} -> value != ""
-               _ -> false
-             end) do
-          {"__q" <> rest, _value} ->
-            case String.split(rest, "__", parts: 2) do
-              [index_str, _] ->
-                case Integer.parse(index_str) do
-                  {n, ""} when n in 1..4 -> n
-                  _ -> nil
-                end
+        extract_quarter_by_name(caps)
+    end
+  end
 
-              _ ->
-                nil
-            end
-
-          nil ->
-            nil
-        end
+  defp extract_quarter_by_name(caps) do
+    case named_capture_index(caps, "__q") do
+      n when is_integer(n) and n in 1..4 -> n
+      _ -> nil
     end
   end
 
@@ -2186,42 +2157,33 @@ defmodule Calendrical.Date.Parser do
   # Day-of-week from numeric or name capture. Returns ISO
   # weekday 1..7 (Mon..Sun) or `nil`.
   defp extract_optional_day_of_week(caps) do
-    cond do
-      raw = Map.get(caps, "day_of_week_numeric") ->
-        case raw do
-          "" ->
-            nil
+    if raw = Map.get(caps, "day_of_week_numeric") do
+      parse_numeric_day_of_week(raw)
+    else
+      extract_day_of_week_by_name(caps)
+    end
+  end
 
-          binary when is_binary(binary) ->
-            case Integer.parse(binary) do
-              {n, ""} when n in 1..7 -> n
-              _ -> nil
-            end
+  defp parse_numeric_day_of_week(raw) do
+    case raw do
+      "" ->
+        nil
 
-          _ ->
-            nil
+      binary when is_binary(binary) ->
+        case Integer.parse(binary) do
+          {n, ""} when n in 1..7 -> n
+          _ -> nil
         end
 
-      true ->
-        case Enum.find(caps, fn
-               {"__d" <> _, value} -> value != ""
-               _ -> false
-             end) do
-          {"__d" <> rest, _value} ->
-            case String.split(rest, "__", parts: 2) do
-              [index_str, _] ->
-                case Integer.parse(index_str) do
-                  {n, ""} when n in 1..7 -> n
-                  _ -> nil
-                end
+      _ ->
+        nil
+    end
+  end
 
-              _ ->
-                nil
-            end
-
-          _ ->
-            nil
-        end
+  defp extract_day_of_week_by_name(caps) do
+    case named_capture_index(caps, "__d") do
+      n when is_integer(n) and n in 1..7 -> n
+      _ -> nil
     end
   end
 
@@ -2230,46 +2192,33 @@ defmodule Calendrical.Date.Parser do
   # weekday matches the computed date. Return the captured
   # weekday index (1..7) for the builder to check.
   defp extract_optional_weekday_name(caps) do
-    case Enum.find(caps, fn
-           {"__d" <> _, value} -> value != ""
-           _ -> false
-         end) do
-      {"__d" <> rest, _value} ->
-        case String.split(rest, "__", parts: 2) do
-          [index_str, _] ->
-            case Integer.parse(index_str) do
-              {n, ""} when n in 1..7 -> n
-              _ -> nil
-            end
-
-          _ ->
-            nil
-        end
-
-      nil ->
-        nil
+    case named_capture_index(caps, "__d") do
+      n when is_integer(n) and n in 1..7 -> n
+      _ -> nil
     end
   end
 
   defp extract_era(caps) do
-    case Enum.find(caps, fn
-           {"__e" <> _, value} -> value != ""
-           _ -> false
-         end) do
-      {"__e" <> rest, _value} ->
-        case String.split(rest, "__", parts: 2) do
-          [index_str, _] ->
-            case Integer.parse(index_str) do
-              {n, ""} -> {:ok, n}
-              _ -> {:ok, nil}
-            end
+    {:ok, named_capture_index(caps, "__e")}
+  end
 
-          _ ->
-            {:ok, nil}
-        end
-
-      nil ->
-        {:ok, nil}
+  # Find the first non-empty capture named `<marker><N>__`
+  # (the `__mN__` / `__qN__` / `__dN__` / `__eN__` named
+  # branches compiled by the name-based field regexes) and
+  # return the integer index `N`, or `nil` when no such
+  # capture matched.
+  defp named_capture_index(caps, marker) do
+    with {key, _value} <-
+           Enum.find(caps, fn
+             {key, value} -> String.starts_with?(key, marker) and value != ""
+             _ -> false
+           end),
+         [index_str, _] <-
+           key |> String.replace_prefix(marker, "") |> String.split("__", parts: 2),
+         {n, ""} <- Integer.parse(index_str) do
+      n
+    else
+      _ -> nil
     end
   end
 
@@ -2324,78 +2273,136 @@ defmodule Calendrical.Date.Parser do
   # pattern supplied. Strategies are ordered most-specific
   # first so partial-field patterns (e.g. `yQQQ` with no
   # month or day) don't get clobbered by a strategy that
-  # demands fields they don't have.
+  # demands fields they don't have. Day-bearing strategies
+  # are tried here; week-only and quarter strategies live in
+  # `build_date_from_week_or_quarter/2`, tried in the same
+  # overall order as before the split.
   defp build_date_smart(fields, calendar_module) do
     cond do
       # Year + month + day given → standard path. Validate
       # weekday if also supplied.
-      fields.year && fields.month && fields.day ->
-        with {:ok, date} <- build_date(fields.year, fields.month, fields.day, calendar_module) do
-          validate_weekday(date, fields)
-        end
+      has_year_month_day?(fields) ->
+        build_from_year_month_day(fields, calendar_module)
 
       # Year + day-of-year → date by adding (D-1) days to
       # Jan 1 of that year.
-      fields.year && fields.day_of_year ->
-        with {:ok, jan1} <- build_date(fields.year, 1, 1, calendar_module),
-             %Date{} = date <- Date.add(jan1, fields.day_of_year - 1) do
-          {:ok, date}
-        else
-          _ -> :error
-        end
+      has_year_day_of_year?(fields) ->
+        build_from_day_of_year(fields, calendar_module)
 
       # Week-based year + week of year + day of week → the
       # exact date.
-      fields.week_based_year && fields.week_of_year && fields.day_of_week ->
-        date_from_iso_week(
-          fields.week_based_year,
-          fields.week_of_year,
-          fields.day_of_week,
-          calendar_module
-        )
+      has_week_based_year_week_day?(fields) ->
+        build_from_iso_week_date(fields, calendar_module)
 
       # Year + week of year + day of week — treat year as
       # week-based year. Common shape: `Y w E`.
-      fields.year && fields.week_of_year && fields.day_of_week ->
-        date_from_iso_week(
-          fields.year,
-          fields.week_of_year,
-          fields.day_of_week,
-          calendar_module
-        )
+      has_year_week_day?(fields) ->
+        build_from_year_as_week_year(fields, calendar_module)
 
+      true ->
+        build_date_from_week_or_quarter(fields, calendar_module)
+    end
+  end
+
+  # Week-only and quarter strategies — the tail of the
+  # strategy table started in `build_date_smart/2`.
+  defp build_date_from_week_or_quarter(fields, calendar_module) do
+    cond do
       # Year + week of year only → first day of that week.
-      fields.year && fields.week_of_year ->
+      has_year_week?(fields) ->
         date_from_iso_week(fields.year, fields.week_of_year, 1, calendar_module)
 
-      fields.week_based_year && fields.week_of_year ->
-        date_from_iso_week(
-          fields.week_based_year,
-          fields.week_of_year,
-          1,
-          calendar_module
-        )
+      has_week_based_year_week?(fields) ->
+        date_from_iso_week(fields.week_based_year, fields.week_of_year, 1, calendar_module)
 
       # Year + month + day-of-week-in-month → e.g. 2nd
       # Tuesday of June.
-      fields.year && fields.month && fields.day_of_week && fields.day_of_week_in_month ->
-        date_from_nth_weekday(
-          fields.year,
-          fields.month,
-          fields.day_of_week,
-          fields.day_of_week_in_month,
-          calendar_module
-        )
+      has_nth_weekday_of_month?(fields) ->
+        build_from_nth_weekday(fields, calendar_module)
 
       # Year + quarter (no month) → first day of quarter.
       # Reasonable default for `yQQQ` skeletons.
-      fields.year && fields.quarter ->
-        month = (fields.quarter - 1) * 3 + 1
-        build_date(fields.year, month, 1, calendar_module)
+      has_year_quarter?(fields) ->
+        build_from_quarter(fields, calendar_module)
 
       true ->
         :error
     end
+  end
+
+  # Strategy predicates — verbatim truthiness checks from the
+  # original strategy table (fields are integers or nil).
+
+  defp has_year_month_day?(fields), do: fields.year && fields.month && fields.day
+
+  defp has_year_day_of_year?(fields), do: fields.year && fields.day_of_year
+
+  defp has_week_based_year_week_day?(fields) do
+    fields.week_based_year && fields.week_of_year && fields.day_of_week
+  end
+
+  defp has_year_week_day?(fields) do
+    fields.year && fields.week_of_year && fields.day_of_week
+  end
+
+  defp has_year_week?(fields), do: fields.year && fields.week_of_year
+
+  defp has_week_based_year_week?(fields), do: fields.week_based_year && fields.week_of_year
+
+  defp has_nth_weekday_of_month?(fields) do
+    fields.year && fields.month && fields.day_of_week && fields.day_of_week_in_month
+  end
+
+  defp has_year_quarter?(fields), do: fields.year && fields.quarter
+
+  # Strategy bodies.
+
+  defp build_from_year_month_day(fields, calendar_module) do
+    with {:ok, date} <- build_date(fields.year, fields.month, fields.day, calendar_module) do
+      validate_weekday(date, fields)
+    end
+  end
+
+  defp build_from_day_of_year(fields, calendar_module) do
+    with {:ok, jan1} <- build_date(fields.year, 1, 1, calendar_module),
+         %Date{} = date <- Date.add(jan1, fields.day_of_year - 1) do
+      {:ok, date}
+    else
+      _ -> :error
+    end
+  end
+
+  defp build_from_iso_week_date(fields, calendar_module) do
+    date_from_iso_week(
+      fields.week_based_year,
+      fields.week_of_year,
+      fields.day_of_week,
+      calendar_module
+    )
+  end
+
+  defp build_from_year_as_week_year(fields, calendar_module) do
+    date_from_iso_week(
+      fields.year,
+      fields.week_of_year,
+      fields.day_of_week,
+      calendar_module
+    )
+  end
+
+  defp build_from_nth_weekday(fields, calendar_module) do
+    date_from_nth_weekday(
+      fields.year,
+      fields.month,
+      fields.day_of_week,
+      fields.day_of_week_in_month,
+      calendar_module
+    )
+  end
+
+  defp build_from_quarter(fields, calendar_module) do
+    month = (fields.quarter - 1) * 3 + 1
+    build_date(fields.year, month, 1, calendar_module)
   end
 
   # Verify the `E`/`c` weekday name (if any was captured)
@@ -2418,20 +2425,23 @@ defmodule Calendrical.Date.Parser do
   # per-calendar week algorithms.
   defp date_from_iso_week(year, week, day_of_week, calendar_module)
        when week in 1..53 and day_of_week in 1..7 do
-    with {:ok, jan4} <- Date.new(year, 1, 4),
-         jan4_dow = Date.day_of_week(jan4),
-         week1_monday = Date.add(jan4, -(jan4_dow - 1)),
-         target = Date.add(week1_monday, (week - 1) * 7 + (day_of_week - 1)) do
-      if calendar_module == Calendar.ISO do
-        {:ok, target}
-      else
-        case Date.convert(target, calendar_module) do
-          {:ok, converted} -> {:ok, converted}
-          _ -> :error
+    case Date.new(year, 1, 4) do
+      {:ok, jan4} ->
+        jan4_dow = Date.day_of_week(jan4)
+        week1_monday = Date.add(jan4, -(jan4_dow - 1))
+        target = Date.add(week1_monday, (week - 1) * 7 + (day_of_week - 1))
+
+        if calendar_module == Calendar.ISO do
+          {:ok, target}
+        else
+          case Date.convert(target, calendar_module) do
+            {:ok, converted} -> {:ok, converted}
+            _ -> :error
+          end
         end
-      end
-    else
-      _ -> :error
+
+      _ ->
+        :error
     end
   end
 

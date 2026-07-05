@@ -209,21 +209,19 @@ defmodule Calendrical.TimeZone do
   defp gmt_format?(zone), do: String.starts_with?(zone, ["GMT", "UTC", "UT"])
 
   defp resolve_gmt(zone, naive_dt) do
-    cond do
-      zone in ["GMT", "UTC", "UT"] ->
-        build_dt(naive_dt, 0, "Etc/UTC", "UTC")
+    if zone in ["GMT", "UTC", "UT"] do
+      build_dt(naive_dt, 0, "Etc/UTC", "UTC")
+    else
+      offset_part =
+        zone
+        |> String.replace_prefix("GMT", "")
+        |> String.replace_prefix("UTC", "")
+        |> String.replace_prefix("UT", "")
 
-      true ->
-        offset_part =
-          zone
-          |> String.replace_prefix("GMT", "")
-          |> String.replace_prefix("UTC", "")
-          |> String.replace_prefix("UT", "")
-
-        case resolve_iso_offset(offset_part, naive_dt) do
-          {:ok, _} = ok -> ok
-          _ -> {:error, :invalid_gmt_offset}
-        end
+      case resolve_iso_offset(offset_part, naive_dt) do
+        {:ok, _} = ok -> ok
+        _ -> {:error, :invalid_gmt_offset}
+      end
     end
   end
 
@@ -373,20 +371,18 @@ defmodule Calendrical.TimeZone do
   end
 
   defp find_in_branch(%{} = sub, target, prefix) when is_map(sub) do
-    cond do
-      match?(%{long: _}, sub) and name_matches?(sub, target) ->
-        prefix
+    if match?(%{long: _}, sub) and name_matches?(sub, target) do
+      prefix
+    else
+      Enum.find_value(sub, fn {key, value} ->
+        next_prefix = "#{prefix}/#{key}"
 
-      true ->
-        Enum.find_value(sub, fn {key, value} ->
-          next_prefix = "#{prefix}/#{key}"
-
-          cond do
-            match?(%{long: _}, value) and name_matches?(value, target) -> next_prefix
-            is_map(value) -> find_in_branch(value, target, next_prefix)
-            true -> nil
-          end
-        end)
+        cond do
+          match?(%{long: _}, value) and name_matches?(value, target) -> next_prefix
+          is_map(value) -> find_in_branch(value, target, next_prefix)
+          true -> nil
+        end
+      end)
     end
   end
 

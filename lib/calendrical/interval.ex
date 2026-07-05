@@ -257,8 +257,9 @@ defmodule Calendrical.Interval do
     if day <= calendar.days_in_year(year) do
       iso_days = calendar.first_gregorian_day_of_year(year) + day - 1
 
-      with {year, month, day} = calendar.date_from_iso_days(iso_days),
-           {:ok, date} <- Date.new(year, month, day, calendar) do
+      {year, month, day} = calendar.date_from_iso_days(iso_days)
+
+      with {:ok, date} <- Date.new(year, month, day, calendar) do
         day(date)
       end
     else

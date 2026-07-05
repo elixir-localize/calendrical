@@ -10,10 +10,10 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
 
   use ExUnit.Case, async: true
 
-  alias Calendrical.TimeZone
-  alias Calendrical.Islamic.Visibility
   alias Calendrical.Islamic.UmmAlQura
   alias Calendrical.Islamic.UmmAlQura.Astronomical
+  alias Calendrical.Islamic.Visibility
+  alias Calendrical.TimeZone
 
   @july ~N[2026-07-05 12:00:00]
   @january ~N[2026-01-15 12:00:00]

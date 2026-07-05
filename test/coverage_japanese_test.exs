@@ -34,7 +34,7 @@ defmodule Calendrical.Coverage.JapaneseTest do
 
     test "day_of_era/3 counts days from the era proclamation" do
       assert Japanese.day_of_era(2019, 5, 1) == {1, 236}
-      assert Japanese.day_of_era(2019, 4, 30) == {11070, 235}
+      assert Japanese.day_of_era(2019, 4, 30) == {11_070, 235}
     end
 
     test "calendar_year/3 is the era year" do

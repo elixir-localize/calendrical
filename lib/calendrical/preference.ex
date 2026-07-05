@@ -152,7 +152,9 @@ defmodule Calendrical.Preference do
   end
 
   defp find_calendar(preferences, calendar) do
-    if preferred = Enum.find(preferences, &(&1 == calendar)) do
+    preferred = Enum.find(preferences, &(&1 == calendar))
+
+    if preferred do
       find_calendar([preferred])
     else
       find_calendar(preferences)

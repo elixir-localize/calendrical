@@ -62,9 +62,7 @@ defmodule Calendrical.Formatter.Options do
   end
 
   def validate_option(:calendar, _options, calendar) do
-    with {:ok, calendar} <- Calendrical.validate_calendar(calendar) do
-      {:ok, calendar}
-    end
+    Calendrical.validate_calendar(calendar)
   end
 
   def validate_option(:number_system, options, nil) do
@@ -105,9 +103,7 @@ defmodule Calendrical.Formatter.Options do
   end
 
   def validate_option(:locale, _options, locale) do
-    with {:ok, locale} <- Localize.validate_locale(locale) do
-      {:ok, locale}
-    end
+    Localize.validate_locale(locale)
   end
 
   def validate_option(:today, _options, nil) do

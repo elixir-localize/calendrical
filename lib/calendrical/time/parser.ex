@@ -38,9 +38,9 @@ defmodule Calendrical.Time.Parser do
   # case where timezone resolution actually matters.
   #
 
+  alias Calendrical.TimeParseError
   alias Localize.Calendar, as: LCalendar
   alias Localize.DateTime.Format
-  alias Calendrical.TimeParseError
 
   # CLDR commonly uses NBSP / NNBSP / narrow-NBSP / ideographic
   # space between time fields and AM/PM markers. Accept any of
@@ -307,17 +307,15 @@ defmodule Calendrical.Time.Parser do
   end
 
   defp tokenize([char | rest], acc, current) do
-    cond do
-      cldr_letter?(char) ->
-        case current do
-          {^char, count} -> tokenize(rest, acc, {char, count + 1})
-          nil -> tokenize(rest, acc, {char, 1})
-          other -> tokenize(rest, [field_token(other) | acc], {char, 1})
-        end
-
-      true ->
-        acc = if current, do: [field_token(current) | acc], else: acc
-        tokenize(rest, prepend_literal(acc, char), nil)
+    if cldr_letter?(char) do
+      case current do
+        {^char, count} -> tokenize(rest, acc, {char, count + 1})
+        nil -> tokenize(rest, acc, {char, 1})
+        other -> tokenize(rest, [field_token(other) | acc], {char, 1})
+      end
+    else
+      acc = if current, do: [field_token(current) | acc], else: acc
+      tokenize(rest, prepend_literal(acc, char), nil)
     end
   end
 
@@ -412,20 +410,17 @@ defmodule Calendrical.Time.Parser do
   defp field_regex({:lit, text}, _dp, lenient) do
     text
     |> String.graphemes()
-    |> Enum.map(&expand_char(&1, lenient))
-    |> Enum.join()
+    |> Enum.map_join(&expand_char(&1, lenient))
   end
 
   defp expand_char(char, lenient) do
-    cond do
-      space_char?(char) ->
-        @space_class
-
-      true ->
-        case Map.get(lenient, char) do
-          nil -> Regex.escape(char)
-          [_ | _] = chars -> "[" <> Enum.map_join(chars, &Regex.escape/1) <> "]"
-        end
+    if space_char?(char) do
+      @space_class
+    else
+      case Map.get(lenient, char) do
+        nil -> Regex.escape(char)
+        [_ | _] = chars -> "[" <> Enum.map_join(chars, &Regex.escape/1) <> "]"
+      end
     end
   end
 
@@ -451,8 +446,7 @@ defmodule Calendrical.Time.Parser do
       names
       |> Enum.uniq()
       |> Enum.sort_by(&(-byte_size(&1)))
-      |> Enum.map(&escape_with_flexible_spaces/1)
-      |> Enum.join("|")
+      |> Enum.map_join("|", &escape_with_flexible_spaces/1)
 
     # `(?i:...)` per CLDR TR35 §6.5 — day-period name matching
     # is case-insensitive so "am" matches "AM", "Du matin"
@@ -473,8 +467,7 @@ defmodule Calendrical.Time.Parser do
   defp escape_with_flexible_spaces(name) do
     name
     |> String.split(~r/[\s\x{00A0}\x{202F}]+/u)
-    |> Enum.map(&Regex.escape/1)
-    |> Enum.join("[\\s\\x{00A0}\\x{202F}]")
+    |> Enum.map_join("[\\s\\x{00A0}\\x{202F}]", &Regex.escape/1)
   end
 
   defp collect_period_names(day_periods, letter) do
@@ -555,7 +548,7 @@ defmodule Calendrical.Time.Parser do
 
         branches =
           Enum.map(names_by_key, fn {key, names} ->
-            alternation = names |> Enum.map(&Regex.escape/1) |> Enum.join("|")
+            alternation = Enum.map_join(names, "|", &Regex.escape/1)
             # Case-insensitive per CLDR TR35 §6.5.
             "(?P<__bp_#{key}>(?i:#{alternation}))"
           end)
@@ -631,10 +624,19 @@ defmodule Calendrical.Time.Parser do
       String.contains?(period, "pm") or String.contains?(period, "p.m") ->
         {:ok, base + 12}
 
-      # No explicit AM/PM marker but a flex period (B) was
-      # captured. TR35 §Parsing Day Periods: derive AM/PM
-      # from the period's defining range. Conservative
-      # mapping that holds for every locale CLDR ships:
+      true ->
+        resolve_flex_period_hour(base, flex)
+    end
+  end
+
+  defp resolve_hour(_, _, _, _, _), do: :error
+
+  # No explicit AM/PM marker but a flex period (B) was captured.
+  # TR35 §Parsing Day Periods: derive AM/PM from the period's
+  # defining range. Conservative mapping that holds for every
+  # locale CLDR ships.
+  defp resolve_flex_period_hour(base, flex) do
+    cond do
       flex in [:morning1, :morning2] ->
         {:ok, base}
 
@@ -661,8 +663,6 @@ defmodule Calendrical.Time.Parser do
         {:ok, base}
     end
   end
-
-  defp resolve_hour(_, _, _, _, _), do: :error
 
   # Classifies a captured day-period string against the locale's
   # am/pm names (all contexts and widths, case-insensitive).

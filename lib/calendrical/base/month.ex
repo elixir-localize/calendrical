@@ -1,9 +1,9 @@
 defmodule Calendrical.Base.Month do
   @moduledoc false
 
-  alias Calendrical.Config
-  alias Calendrical.Base
   alias Calendar.ISO
+  alias Calendrical.Base
+  alias Calendrical.Config
   alias Localize.Utils.Math
 
   import Calendrical,

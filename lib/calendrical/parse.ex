@@ -100,7 +100,7 @@ defmodule Calendrical.Parse do
               day_fraction = time_to_day_fraction(hour, minute, second, {0, 0})
 
               {{year, month, day}, {hour, minute, second, _}} =
-                case add_day_fraction_to_iso_days({0, day_fraction}, -offset, 86400) do
+                case add_day_fraction_to_iso_days({0, day_fraction}, -offset, 86_400) do
                   {0, day_fraction} ->
                     {{year, month, day}, time_from_day_fraction(day_fraction)}
 

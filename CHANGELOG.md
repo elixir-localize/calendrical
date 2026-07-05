@@ -28,6 +28,8 @@ The format is based on
 
 * Require `astro >= 2.3.3` so out-of-ephemeris moon events and out-of-range equinox/solstice return tagged errors.
 
+* `Calendrical.Lunisolar.is_prior_leap_month?/3` is renamed to `prior_leap_month?/3`; the `is_` prefix is reserved for guard-safe macros by Elixir naming conventions.
+
 ### Fixed
 
 * Lunisolar leap-year detection no longer misclassifies 383-day 13-month years as ordinary (45 of the 1240 lunar years from 645 CE were affected). `leap_year?/1`, `months_in_year/1`, `leap_month/1` and `days_in_month/2` now agree with the month sequence for these years in the Chinese, Korean and LunarJapanese calendars.
@@ -164,19 +166,19 @@ The format is based on
 
 ## [0.7.2] — 2026-05-23
 
-### Bug Fixes
+### Fixed
 
 * Require astro ~> 2.2 for the proleptic-Gregorian equinox fix.
 
 ## [0.7.1] — 2026-05-23
 
-### Bug Fixes
+### Fixed
 
 * Fix dialyzer type warnings.
 
 ## [0.7.0] — 2026-05-23
 
-### Bug Fixes
+### Fixed
 
 * `Calendrical.Time.parse/2` no longer lets narrow day-period markers (en's "a"/"p") consume the first letter of an adjacent capture. Previously `"11:30 PST"` against a `h:mm a v` pattern could match day_period="P" and zone="ST" (silently shifting 11:30 → 23:30 and losing the leading "P" of the zone); the day-period regex now requires a non-letter (or end of input) immediately after the match.
 
@@ -190,7 +192,7 @@ The format is based on
 
 * `Calendrical.DateParseError`, `TimeParseError`, `DateTimeParseError`, `DateRangeParseError`, and `ParseError` no longer carry a `:message` struct field. The human-readable message is materialised by `Exception.message/1` from the semantic fields (`:input`, `:locale`, `:calendar`, `:reason`, `:from`, `:to`, `:cause`, `:attempts`). Pattern-match on `:reason` (and other structural fields) rather than parsing the rendered string. `DateRangeParseError` now declares `@behaviour Localize.Exception` and exposes `reason_atoms/0` for the closed set of failure categories; the `:inverted` reason carries `:from`/`:to` Date endpoints instead of stuffing them into `:input`.
 
-### Bug Fixes
+### Fixed
 
 * `Calendrical.Date.parse_range/2` now returns a `Date.Range` whose endpoints are in the calendar named by the `:calendar` option (matching `parse/2`), instead of always returning Calendar.ISO endpoints. `Date.Range` supports any calendar provided both endpoints share it, so non-ISO ranges are well-formed.
 
@@ -234,7 +236,7 @@ The format is based on
 
 * Plural-variant patterns in `availableFormats` (the `%{one: ..., other: ...}` shape on week-bearing skeletons like `:yw`) are now iterated, not silently dropped.
 
-### Bug Fixes
+### Fixed
 
 * Time-zone field regex (`z`/`Z`/`v`/`V`/`O`/`X`/`x`) tightened from the previous permissive `[\p{L}\d:+\-/_]+` (which would happily eat `"midnight"`) to require zone-shaped input — ISO offsets, GMT format, IANA region/city, uppercase abbreviation, or CLDR-style capital-led name.
 
@@ -244,7 +246,7 @@ The format is based on
 
 ## [0.4.0] — 2026-05-17
 
-### Bug Fixes
+### Fixed
 
 * `Calendrical.LunarJapanese.new/3`, `Calendrical.Chinese.new/3`, and `Calendrical.Korean.new/3` rejected valid `{m, :leap}` inputs in the documented traditional notation — the validator compared the user's traditional month number against the ordinal position returned by `leap_month/1`, which is always off by one. The check now correctly converts ordinal to traditional before comparing, the private helper has been renamed `valid_traditional_date?/5` to disambiguate from the 3-arity `valid_date?/3` callback used by `Date.new/4`, and the public `Date.new/4` ordinal contract is unchanged.
 
@@ -272,13 +274,13 @@ The format is based on
 
 ## [0.3.1] — 2026-04-25
 
-### Bug Fixes
+### Fixed
 
 * Remove unnecessary require.
 
 ## [0.3.0] — 2026-04-22
 
-### Bug Fixes
+### Fixed
 
 * Fixes mapping CLDR calendar types to the implementation module name.
 

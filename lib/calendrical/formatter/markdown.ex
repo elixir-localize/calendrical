@@ -22,8 +22,7 @@ defmodule Calendrical.Formatter.Markdown do
 
     days =
       options.day_names
-      |> Enum.map(&elem(&1, 1))
-      |> Enum.join(@cell_join)
+      |> Enum.map_join(@cell_join, &elem(&1, 1))
 
     separator =
       List.duplicate([" :---: "], calendar.days_in_week())

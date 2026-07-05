@@ -355,7 +355,7 @@ defmodule Calendrical.Coverage.LunisolarTest do
       assert LunarJapanese.day_of_era(date.year, date.month, date.day) == {1, 236}
 
       before = Date.convert!(~D[2019-04-30], LunarJapanese)
-      assert LunarJapanese.day_of_era(before.year, before.month, before.day) == {11070, 235}
+      assert LunarJapanese.day_of_era(before.year, before.month, before.day) == {11_070, 235}
     end
 
     test "calendar_year/3 is the era year" do
@@ -610,9 +610,9 @@ defmodule Calendrical.Coverage.LunisolarTest do
       assert Calendar.ISO.date_from_iso_days(floor(minor)) == {2026, 1, 5}
     end
 
-    test "is_prior_leap_month?/3 returns false when the range is empty" do
+    test "prior_leap_month?/3 returns false when the range is empty" do
       iso_days = Calendar.ISO.date_to_iso_days(2026, 1, 1)
-      refute Lunisolar.is_prior_leap_month?(iso_days, iso_days - 10, &location/1)
+      refute Lunisolar.prior_leap_month?(iso_days, iso_days - 10, &location/1)
     end
 
     test "sexagesimal names" do

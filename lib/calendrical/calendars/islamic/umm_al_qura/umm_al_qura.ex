@@ -116,10 +116,7 @@ defmodule Calendrical.Islamic.UmmAlQura do
                   last_first = Map.fetch!(forward, {@max_year, 12})
                   next_first = Map.get(forward, {@max_year + 1, 1})
 
-                  cond do
-                    not is_nil(next_first) -> next_first - 1
-                    true -> last_first + 29
-                  end
+                  if next_first, do: next_first - 1, else: last_first + 29
                 )
 
   @doc """

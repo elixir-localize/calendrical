@@ -1,9 +1,9 @@
 defmodule Calendrical.Base.Week do
   @moduledoc false
 
-  alias Calendrical.Config
-  alias Calendrical.Base.Month
   alias Calendar.ISO
+  alias Calendrical.Base.Month
+  alias Calendrical.Config
   alias Localize.Utils.Math
 
   import Calendrical,

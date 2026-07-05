@@ -126,9 +126,8 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
   def first_day_of_month(hijri_year, hijri_month)
       when is_integer(hijri_year) and hijri_year >= @era4_start and
              is_integer(hijri_month) and hijri_month in 1..12 do
-    with {:ok, candidate_29} <- approximate_29th(hijri_year, hijri_month),
-         {:ok, result} <- apply_umm_al_qura_rule(candidate_29) do
-      {:ok, result}
+    with {:ok, candidate_29} <- approximate_29th(hijri_year, hijri_month) do
+      apply_umm_al_qura_rule(candidate_29)
     end
   end
 
@@ -136,9 +135,8 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
   def first_day_of_month(hijri_year, hijri_month)
       when is_integer(hijri_year) and hijri_year >= @era3_start and hijri_year < @era4_start and
              is_integer(hijri_month) and hijri_month in 1..12 do
-    with {:ok, candidate_29} <- approximate_29th(hijri_year, hijri_month),
-         {:ok, result} <- apply_moonset_only_rule(candidate_29) do
-      {:ok, result}
+    with {:ok, candidate_29} <- approximate_29th(hijri_year, hijri_month) do
+      apply_moonset_only_rule(candidate_29)
     end
   end
 
@@ -209,9 +207,8 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
     rough_jdn =
       @hijri_epoch_jdn + round(months_since_epoch * @mean_synodic_month) + 28
 
-    with {:ok, rough_date} <- jdn_to_date(rough_jdn),
-         {:ok, conjunction} <- Astro.date_time_new_moon_at_or_after(Date.add(rough_date, -2)) do
-      {:ok, conjunction}
+    with {:ok, rough_date} <- jdn_to_date(rough_jdn) do
+      Astro.date_time_new_moon_at_or_after(Date.add(rough_date, -2))
     end
   end
 

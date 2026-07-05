@@ -30,16 +30,18 @@ defmodule Calendrical.Composite.Config do
   def validate_options([]), do: {:error, :no_calendars_configured}
 
   def validate_options(options) when is_list(options) do
-    with {:ok, calendars} <- Keyword.fetch(options, :calendars) do
-      calendars = if is_list(calendars), do: calendars, else: [calendars]
+    case Keyword.fetch(options, :calendars) do
+      {:ok, calendars} ->
+        calendars = if is_list(calendars), do: calendars, else: [calendars]
 
-      if all_dates?(calendars) do
-        {:ok, Keyword.put(options, :calendars, calendars)}
-      else
-        {:error, :must_be_a_list_of_dates}
-      end
-    else
-      :error -> {:error, :no_calendars_configured}
+        if all_dates?(calendars) do
+          {:ok, Keyword.put(options, :calendars, calendars)}
+        else
+          {:error, :must_be_a_list_of_dates}
+        end
+
+      :error ->
+        {:error, :no_calendars_configured}
     end
   end
 

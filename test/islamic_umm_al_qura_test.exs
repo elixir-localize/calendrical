@@ -25,7 +25,7 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
   test "first_day_of_month/2 is correct for every entry in the official dataset" do
     reference_data = ReferenceData.umm_al_qura_dates()
 
-    assert length(reference_data) > 0,
+    assert reference_data != [],
            "Reference data must not be empty"
 
     failures =
