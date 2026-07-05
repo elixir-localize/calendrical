@@ -1,72 +1,72 @@
 defmodule Calendrical.Date.Parser do
-  @moduledoc """
-  Locale-aware parser for user-typed date strings, with full
-  multi-calendar support.
+  @moduledoc false
 
-  Public entry point: `Calendrical.Date.parse/2`. This module
-  is the underlying engine.
-
-  Strategy, in order:
-
-  * Bare ISO-8601 (`YYYY-MM-DD`) — accepted in every locale.
-    This is the wire format and the unambiguous escape hatch.
-
-  * Locale-specific CLDR patterns. The parser pulls
-    `:short`, `:medium`, `:long`, `:full` for the (locale,
-    calendar) tuple and tries each as a regex template. CLDR
-    encodes the locale's preferred field order
-    (`M/d/yy` in `en`, `dd.MM.y` in `de`, `Gy年M月d日` in
-    Japanese imperial), so the same input may parse to
-    different dates under different locales — by design.
-
-  ### Calendar support
-
-  Any CLDR calendar that has a `Calendrical.*` module
-  implementation: `:gregorian`, `:buddhist`, `:islamic_civil`,
-  `:islamic_umalqura`, `:islamic_tbla`, `:islamic_rgsa`,
-  `:islamic`, `:japanese`, `:persian`, `:hebrew`, `:coptic`,
-  `:ethiopic`, `:ethiopic_amete_alem`, `:indian`, `:roc`,
-  `:chinese`, `:dangi`.
-
-  The `:calendar` option says **what calendar to interpret
-  the input as**. The result is always a `t:Date.t/0` whose
-  `:calendar` field is the corresponding Calendrical module
-  (or `Calendar.ISO` for `:gregorian`). Convert to ISO with
-  `Date.convert/2` if needed.
-
-  ### Lenient matching
-
-  * `dd` and `MM` accept 1–2 digits (so `3/4/26` parses
-    under `en-GB`'s `dd/MM/y`).
-
-  * Any 2-digit typed year pivots into the 80-back/20-forward
-    window relative to the reference year (overridable via
-    `:reference_date`).
-
-  * Literal separators in the format pattern expand to the
-    locale's CLDR `lenient-scope-date` equivalence class —
-    `-`, `/`, `.`, non-breaking hyphen, etc. all match in
-    locales where CLDR considers them equivalent.
-
-  * Spaces between adjacent fields are accepted regardless of
-    whether the pattern includes them — so
-    `民國 115年5月16日` (with a space after the era marker)
-    parses correctly under the CLDR pattern `Gy年M月d日`.
-
-  * Non-Latin digits are transliterated to Latin before
-    integer parsing using the locale's default number system.
-    `٢٤` (Arabic-Indic 24) and `24` both parse identically.
-
-  ### Era handling
-
-  For era-aware calendars (Japanese imperial, Islamic Hijri,
-  ROC, etc.), the `G` field in CLDR patterns marks the era
-  marker (`平成`, `هـ`, `AH`, `BCE`, `民國`). The parser
-  captures the era name, resolves it via
-  `Localize.Calendar.eras/2`, and computes the calendar-year
-  from the era-year for calendars that need it (Japanese).
-
-  """
+  # Locale-aware parser for user-typed date strings, with full
+  # multi-calendar support.
+  #
+  # Public entry point: `Calendrical.Date.parse/2`. This module
+  # is the underlying engine.
+  #
+  # Strategy, in order:
+  #
+  # * Bare ISO-8601 (`YYYY-MM-DD`) — accepted in every locale.
+  # This is the wire format and the unambiguous escape hatch.
+  #
+  # * Locale-specific CLDR patterns. The parser pulls
+  # `:short`, `:medium`, `:long`, `:full` for the (locale,
+  # calendar) tuple and tries each as a regex template. CLDR
+  # encodes the locale's preferred field order
+  # (`M/d/yy` in `en`, `dd.MM.y` in `de`, `Gy年M月d日` in
+  # Japanese imperial), so the same input may parse to
+  # different dates under different locales — by design.
+  #
+  # ### Calendar support
+  #
+  # Any CLDR calendar that has a `Calendrical.*` module
+  # implementation: `:gregorian`, `:buddhist`, `:islamic_civil`,
+  # `:islamic_umalqura`, `:islamic_tbla`, `:islamic_rgsa`,
+  # `:islamic`, `:japanese`, `:persian`, `:hebrew`, `:coptic`,
+  # `:ethiopic`, `:ethiopic_amete_alem`, `:indian`, `:roc`,
+  # `:chinese`, `:dangi`.
+  #
+  # The `:calendar` option says **what calendar to interpret
+  # the input as**. The result is always a `t:Date.t/0` whose
+  # `:calendar` field is the corresponding Calendrical module
+  # (or `Calendar.ISO` for `:gregorian`). Convert to ISO with
+  # `Date.convert/2` if needed.
+  #
+  # ### Lenient matching
+  #
+  # * `dd` and `MM` accept 1–2 digits (so `3/4/26` parses
+  # under `en-GB`'s `dd/MM/y`).
+  #
+  # * Any 2-digit typed year pivots into the 80-back/20-forward
+  # window relative to the reference year (overridable via
+  # `:reference_date`).
+  #
+  # * Literal separators in the format pattern expand to the
+  # locale's CLDR `lenient-scope-date` equivalence class —
+  # `-`, `/`, `.`, non-breaking hyphen, etc. all match in
+  # locales where CLDR considers them equivalent.
+  #
+  # * Spaces between adjacent fields are accepted regardless of
+  # whether the pattern includes them — so
+  # `民國 115年5月16日` (with a space after the era marker)
+  # parses correctly under the CLDR pattern `Gy年M月d日`.
+  #
+  # * Non-Latin digits are transliterated to Latin before
+  # integer parsing using the locale's default number system.
+  # `٢٤` (Arabic-Indic 24) and `24` both parse identically.
+  #
+  # ### Era handling
+  #
+  # For era-aware calendars (Japanese imperial, Islamic Hijri,
+  # ROC, etc.), the `G` field in CLDR patterns marks the era
+  # marker (`平成`, `هـ`, `AH`, `BCE`, `民國`). The parser
+  # captures the era name, resolves it via
+  # `Localize.Calendar.eras/2`, and computes the calendar-year
+  # from the era-year for calendars that need it (Japanese).
+  #
 
   alias Localize.Calendar, as: LCalendar
   alias Localize.DateTime.Format

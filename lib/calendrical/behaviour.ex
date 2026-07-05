@@ -124,19 +124,19 @@ defmodule Calendrical.Behaviour do
 
   """
 
-  defmacro __using__(opts \\ []) do
-    epoch = Keyword.fetch!(opts, :epoch)
+  defmacro __using__(options \\ []) do
+    epoch = Keyword.fetch!(options, :epoch)
 
     {date, []} = Code.eval_quoted(epoch)
     epoch_iso_days = Calendrical.date_to_iso_days(date)
     epoch_day_of_week = date |> Date.convert!(Calendar.ISO) |> Date.day_of_week()
-    days_in_week = Keyword.get(opts, :days_in_week, 7)
-    first_day_of_week = Keyword.get(opts, :first_day_of_week, 1)
+    days_in_week = Keyword.get(options, :days_in_week, 7)
+    first_day_of_week = Keyword.get(options, :first_day_of_week, 1)
 
-    cldr_calendar_type = Keyword.get(opts, :cldr_calendar_type, :gregorian)
-    cldr_calendar_base = Keyword.get(opts, :cldr_calendar_base, :month)
-    months_in_ordinary_year = Keyword.get(opts, :months_in_ordinary_year, 12)
-    months_in_leap_year = Keyword.get(opts, :months_in_leap_year, months_in_ordinary_year)
+    cldr_calendar_type = Keyword.get(options, :cldr_calendar_type, :gregorian)
+    cldr_calendar_base = Keyword.get(options, :cldr_calendar_base, :month)
+    months_in_ordinary_year = Keyword.get(options, :months_in_ordinary_year, 12)
+    months_in_leap_year = Keyword.get(options, :months_in_leap_year, months_in_ordinary_year)
 
     # Resolve the year-less months_in_year/0 result at compile time. Both
     # values are compile-time literals, so emitting a runtime comparison

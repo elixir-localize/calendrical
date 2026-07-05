@@ -2,7 +2,6 @@ defmodule Calendrical.Time do
   @moduledoc """
   Time parsing helpers built on Localize's CLDR data.
 
-  See `Calendrical.Time.Parser` for the parsing engine.
 
   When the caller doesn't know in advance whether the input is a
   date, time, datetime, or range, use `Calendrical.parse/2` — it

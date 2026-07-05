@@ -14,6 +14,12 @@ The format is based on
 
 * `Calendrical.Persian.new_year_gregorian/1` and `year_end_gregorian/1` return `{:error, :year_out_of_range}` for years outside the supported equinox range instead of crashing.
 
+### Removed
+
+* The deprecated `Calendrical.Preference.calendar_for_territory/1` and `calendar_for_locale/1` delegates are removed. Use `calendar_from_territory/1` and `calendar_from_locale/1`.
+
+* The parser engine modules (`Calendrical.Parser`, `Calendrical.Date.Parser`, `Calendrical.DateTime.Parser`, `Calendrical.Time.Parser`) and the Gettext backend are no longer part of the documented public API. Use the `parse/2` functions on `Calendrical`, `Calendrical.Date`, `Calendrical.DateTime` and `Calendrical.Time`.
+
 ### Changed
 
 * Era data is now resolved from CLDR data at runtime and cached in `:persistent_term`. The generated `Calendrical.Era.<Type>` modules no longer exist; era setup no longer performs astronomy or module creation at compile time.

@@ -119,6 +119,12 @@ defmodule Calendrical.MixProject do
       "Other Calendars": ~r/^Calendrical\.(Persian|Composite|Coptic)$/,
       "Fiscal-year Calendars": ~r/^Calendrical\.FiscalYear$/,
       Behaviours: [Calendrical.Behaviour, Calendrical.Formatter],
+      Parsing: [
+        Calendrical.Date,
+        Calendrical.DateTime,
+        Calendrical.Time,
+        Calendrical.TimeZone
+      ],
       Formatting: ~r/^Calendrical\.Format$/,
       Intervals: ~r/^Calendrical\.Interval$/,
       "K-day Calculations": ~r/^Calendrical\.Kday$/,

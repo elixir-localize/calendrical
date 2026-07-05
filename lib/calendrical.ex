@@ -818,8 +818,8 @@ defmodule Calendrical do
 
   4. **DateTime** — `Calendrical.DateTime.parse/2`.
 
-  The first sub-parser to return `{:ok, _}` wins. See
-  `Calendrical.Parser` for the rationale behind the order.
+  The first sub-parser to return `{:ok, _}` wins; the order runs
+  from the most to the least structurally distinctive input shape.
 
   ### Arguments
 
@@ -2359,17 +2359,17 @@ defmodule Calendrical do
   # delegate to it. The struct clause supports the documented
   # `IEx.configure/1` usage, where the second argument is an
   # `t:Inspect.Opts.t/0` rather than a keyword list.
-  def inspect(term, opts \\ [])
+  def inspect(term, options \\ [])
 
-  def inspect(term, %Inspect.Opts{} = opts) do
+  def inspect(term, %Inspect.Opts{} = options) do
     term
-    |> Inspect.Algebra.to_doc(opts)
-    |> Inspect.Algebra.format(opts.width)
+    |> Inspect.Algebra.to_doc(options)
+    |> Inspect.Algebra.format(options.width)
     |> IO.iodata_to_binary()
   end
 
-  def inspect(term, opts) when is_list(opts) do
-    Kernel.inspect(term, opts)
+  def inspect(term, options) when is_list(options) do
+    Kernel.inspect(term, options)
   end
 
   @doc """

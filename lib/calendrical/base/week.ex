@@ -77,7 +77,7 @@ defmodule Calendrical.Base.Week do
   end
 
   def month_of_year(_year, @weeks_in_long_year, _day, _config) do
-    +12
+    12
   end
 
   def month_of_year(year, week, day, %Config{weeks_in_month: weeks_in_month} = config) do

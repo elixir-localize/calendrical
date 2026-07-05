@@ -1,36 +1,36 @@
 defmodule Calendrical.Parser do
-  @moduledoc """
-  Unified locale-aware parser that dispatches user input to the
-  appropriate domain parser (date, time, datetime, or date range).
+  @moduledoc false
 
-  Public entry point: `Calendrical.parse/2`.
-
-  ### Dispatch strategy
-
-  The parser tries each sub-parser in the following order and
-  returns the first success:
-
-  1. **Interval** — only attempted when the input contains an
-     interval-shaped separator (the locale's
-     `intervalFormatFallback` separator, or one of `–`, `—`, `−`,
-     `〜`, `~`, ` - `, ` / `, ` to `). Cheap fail-fast.
-
-  2. **Date** — `Calendrical.Date.parse/2`. Whole-string
-     anchored, so a date+time input won't accidentally match.
-
-  3. **Time** — `Calendrical.Time.parse/2`. Whole-string
-     anchored, so a date-only input won't match (no `:`).
-
-  4. **DateTime** — `Calendrical.DateTime.parse/2`. The most
-     expensive (it splits on every glue separator position and
-     runs the date+time parsers on each half), so it runs last as
-     a fallback for inputs that carry both a date and a time.
-
-  The order encodes a tiebreaker preference: for ambiguous inputs
-  (e.g. a bare 4-digit year that could be a date or a time) the
-  date interpretation wins.
-
-  """
+  # Unified locale-aware parser that dispatches user input to the
+  # appropriate domain parser (date, time, datetime, or date range).
+  #
+  # Public entry point: `Calendrical.parse/2`.
+  #
+  # ### Dispatch strategy
+  #
+  # The parser tries each sub-parser in the following order and
+  # returns the first success:
+  #
+  # 1. **Interval** — only attempted when the input contains an
+  # interval-shaped separator (the locale's
+  # `intervalFormatFallback` separator, or one of `–`, `—`, `−`,
+  # `〜`, `~`, ` - `, ` / `, ` to `). Cheap fail-fast.
+  #
+  # 2. **Date** — `Calendrical.Date.parse/2`. Whole-string
+  # anchored, so a date+time input won't accidentally match.
+  #
+  # 3. **Time** — `Calendrical.Time.parse/2`. Whole-string
+  # anchored, so a date-only input won't match (no `:`).
+  #
+  # 4. **DateTime** — `Calendrical.DateTime.parse/2`. The most
+  # expensive (it splits on every glue separator position and
+  # runs the date+time parsers on each half), so it runs last as
+  # a fallback for inputs that carry both a date and a time.
+  #
+  # The order encodes a tiebreaker preference: for ambiguous inputs
+  # (e.g. a bare 4-digit year that could be a date or a time) the
+  # date interpretation wins.
+  #
 
   alias Localize.DateTime.Format
   alias Calendrical.ParseError

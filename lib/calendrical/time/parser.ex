@@ -1,42 +1,42 @@
 defmodule Calendrical.Time.Parser do
-  @moduledoc """
-  Locale-aware parser for user-typed time strings.
+  @moduledoc false
 
-  Public entry point: `Calendrical.Time.parse/2`. Mirrors the
-  structure of `Calendrical.Date.Parser` — try bare ISO-8601
-  first, then the locale's CLDR `:short` / `:medium` / `:long`
-  / `:full` time patterns.
-
-  Implements the parts of [TR35 §Parsing Dates
-  Times](https://unicode.org/reports/tr35/tr35-dates.html#Parsing_Dates_Times)
-  and [§Parsing Day
-  Periods](https://unicode.org/reports/tr35/tr35-dates.html#Parsing_Day_Periods)
-  that matter for time-only input:
-
-  * Numeric hour tokens `h` (1-12), `H` (0-23), `K` (0-11),
-    `k` (1-24) — relaxed to 1-2 digits regardless of pattern
-    count, matching the ICU lenient mode behaviour.
-
-  * Minute `m`/`mm` and second `s`/`ss` — relaxed similarly.
-
-  * Fractional seconds `S` — variable-precision; we capture
-    1-9 digits and store as microseconds.
-
-  * Day-period tokens `a` (AM/PM) and `b` (AM/PM + noon /
-    midnight) — case-insensitive match against the locale's
-    `day_periods` data plus the universal ASCII forms
-    (`am`/`pm`/`a.m.`/`p.m.`/`AM`/`PM`).
-
-  * Locale's CLDR `lenient-scope-date` data drives separator
-    equivalences for `:`, fractional separator, and surrounding
-    whitespace.
-
-  Time-zone tokens (`z`, `Z`, `v`, `V`, `x`, `X`, `O`) are
-  captured permissively but not currently resolved to an IANA
-  zone. See `Calendrical.DateTime.Parser` for the datetime
-  case where timezone resolution actually matters.
-
-  """
+  # Locale-aware parser for user-typed time strings.
+  #
+  # Public entry point: `Calendrical.Time.parse/2`. Mirrors the
+  # structure of `Calendrical.Date.Parser` — try bare ISO-8601
+  # first, then the locale's CLDR `:short` / `:medium` / `:long`
+  # / `:full` time patterns.
+  #
+  # Implements the parts of [TR35 §Parsing Dates
+  # Times](https://unicode.org/reports/tr35/tr35-dates.html#Parsing_Dates_Times)
+  # and [§Parsing Day
+  # Periods](https://unicode.org/reports/tr35/tr35-dates.html#Parsing_Day_Periods)
+  # that matter for time-only input:
+  #
+  # * Numeric hour tokens `h` (1-12), `H` (0-23), `K` (0-11),
+  # `k` (1-24) — relaxed to 1-2 digits regardless of pattern
+  # count, matching the ICU lenient mode behaviour.
+  #
+  # * Minute `m`/`mm` and second `s`/`ss` — relaxed similarly.
+  #
+  # * Fractional seconds `S` — variable-precision; we capture
+  # 1-9 digits and store as microseconds.
+  #
+  # * Day-period tokens `a` (AM/PM) and `b` (AM/PM + noon /
+  # midnight) — case-insensitive match against the locale's
+  # `day_periods` data plus the universal ASCII forms
+  # (`am`/`pm`/`a.m.`/`p.m.`/`AM`/`PM`).
+  #
+  # * Locale's CLDR `lenient-scope-date` data drives separator
+  # equivalences for `:`, fractional separator, and surrounding
+  # whitespace.
+  #
+  # Time-zone tokens (`z`, `Z`, `v`, `V`, `x`, `X`, `O`) are
+  # captured permissively but not currently resolved to an IANA
+  # zone. See `Calendrical.DateTime.Parser` for the datetime
+  # case where timezone resolution actually matters.
+  #
 
   alias Localize.Calendar, as: LCalendar
   alias Localize.DateTime.Format

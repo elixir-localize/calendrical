@@ -4,16 +4,16 @@ defmodule Calendrical.Julian.Compiler do
   # See https://stevemorse.org/jcal/julian.html
 
   defmacro __before_compile__(env) do
-    opts =
+    options =
       Module.get_attribute(env.module, :options)
       |> Keyword.put(:calendar, env.module)
       |> Macro.escape()
 
-    quote bind_quoted: [opts: opts] do
+    quote bind_quoted: [options: options] do
       @behaviour Calendar
       @behaviour Calendrical
 
-      {start_month, start_day} = Keyword.get(opts, :new_year_starting_month_and_day, {1, 1})
+      {start_month, start_day} = Keyword.get(options, :new_year_starting_month_and_day, {1, 1})
 
       @new_year_starting_month start_month
       @new_year_starting_day start_day

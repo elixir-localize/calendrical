@@ -3,7 +3,6 @@ defmodule Calendrical.Date do
   Date parsing and helpers built on Calendrical's calendar
   implementations and Localize's CLDR data.
 
-  See `Calendrical.Date.Parser` for the parsing engine details.
 
   When the caller doesn't know in advance whether the input is a
   date, time, datetime, or range, use `Calendrical.parse/2` — it

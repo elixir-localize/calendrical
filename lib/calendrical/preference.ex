@@ -137,9 +137,6 @@ defmodule Calendrical.Preference do
     end
   end
 
-  @deprecated "Use calendar_from_territory/1"
-  defdelegate calendar_for_territory(territory), to: __MODULE__, as: :calendar_from_territory
-
   defp find_calendar(preferences) do
     error = {:error, Calendrical.unknown_calendar_error(preferences)}
 
@@ -272,9 +269,6 @@ defmodule Calendrical.Preference do
   defp territory_from(%LanguageTag{} = locale) do
     Localize.Territory.territory_from_locale(locale)
   end
-
-  @deprecated "Use calendar_from_locale/1"
-  defdelegate calendar_for_locale(locale), to: __MODULE__, as: :calendar_from_locale
 
   @known_calendars Localize.known_calendars()
 

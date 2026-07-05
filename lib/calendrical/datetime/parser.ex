@@ -1,38 +1,38 @@
 defmodule Calendrical.DateTime.Parser do
-  @moduledoc """
-  Locale-aware parser for user-typed date-time strings.
+  @moduledoc false
 
-  Public entry point: `Calendrical.DateTime.parse/2`.
-
-  Strategy:
-
-  1. Try bare ISO-8601 (`YYYY-MM-DDTHH:MM:SS[.frac][Z|±HH:MM]`).
-     This is the wire format and always works.
-
-  2. Otherwise, consult the locale's CLDR date-time glue
-     pattern (`{1}, {0}` in `en`, `{1} {0}` in `ja`, etc.),
-     split the input on the literal glue separator, and
-     delegate to `Calendrical.Date.parse/2` and
-     `Calendrical.Time.parse/2` for the two halves.
-
-  Implements the parts of [TR35 §Parsing Dates
-  Times](https://unicode.org/reports/tr35/tr35-dates.html#Parsing_Dates_Times)
-  that apply to date+time input. Time-zone resolution is
-  documented as a follow-up — when the input carries a `Z` or
-  `±HH:MM` suffix that ISO-8601 already accepts, we honour it;
-  named timezone suffixes (`EST`, `Asia/Tokyo`, etc.) need
-  per-zone IANA-database integration which lives outside this
-  parser.
-
-  ### Returns
-
-  * `{:ok, NaiveDateTime.t()}` when no zone info was present.
-  * `{:ok, DateTime.t()}` when the input carried an offset or
-    `Z` and `Calendar.DateTime.from_iso8601/1` could resolve
-    it.
-  * `{:error, Calendrical.DateTimeParseError.t()}` on failure.
-
-  """
+  # Locale-aware parser for user-typed date-time strings.
+  #
+  # Public entry point: `Calendrical.DateTime.parse/2`.
+  #
+  # Strategy:
+  #
+  # 1. Try bare ISO-8601 (`YYYY-MM-DDTHH:MM:SS[.frac][Z|±HH:MM]`).
+  # This is the wire format and always works.
+  #
+  # 2. Otherwise, consult the locale's CLDR date-time glue
+  # pattern (`{1}, {0}` in `en`, `{1} {0}` in `ja`, etc.),
+  # split the input on the literal glue separator, and
+  # delegate to `Calendrical.Date.parse/2` and
+  # `Calendrical.Time.parse/2` for the two halves.
+  #
+  # Implements the parts of [TR35 §Parsing Dates
+  # Times](https://unicode.org/reports/tr35/tr35-dates.html#Parsing_Dates_Times)
+  # that apply to date+time input. Time-zone resolution is
+  # documented as a follow-up — when the input carries a `Z` or
+  # `±HH:MM` suffix that ISO-8601 already accepts, we honour it;
+  # named timezone suffixes (`EST`, `Asia/Tokyo`, etc.) need
+  # per-zone IANA-database integration which lives outside this
+  # parser.
+  #
+  # ### Returns
+  #
+  # * `{:ok, NaiveDateTime.t()}` when no zone info was present.
+  # * `{:ok, DateTime.t()}` when the input carried an offset or
+  # `Z` and `Calendar.DateTime.from_iso8601/1` could resolve
+  # it.
+  # * `{:error, Calendrical.DateTimeParseError.t()}` on failure.
+  #
 
   alias Localize.DateTime.Format
   alias Calendrical.DateTimeParseError
