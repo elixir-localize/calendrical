@@ -544,7 +544,7 @@ defmodule Calendrical.Behaviour do
       def days_in_year(year) do
         this_year = date_to_iso_days(year, 1, 1)
         next_year = date_to_iso_days(year + 1, 1, 1)
-        next_year - this_year + 1
+        next_year - this_year
       end
 
       @doc """

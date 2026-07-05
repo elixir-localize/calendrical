@@ -241,31 +241,53 @@ defmodule Calendrical.Era do
     if Map.has_key?(span, :lunisolar) do
       Calendar.ISO.date_to_iso_days(year, month, day)
     else
-      case Calendrical.LunarJapanese.new(year - @lunar_japanese_year_offset, month, day) do
+      lunar_year = year - @lunar_japanese_year_offset
+
+      case Calendrical.LunarJapanese.new(lunar_year, month, day) do
         {:ok, date} ->
           date |> Date.convert!(Calendar.ISO) |> Date.to_gregorian_days()
 
-        {:error, reason} ->
-          # One known row (era 115 建保, [1213, 12, 6]) cannot be
-          # reconstructed astronomically: the historical 宣明暦
-          # intercalary placement for that lunar year diverges from
-          # the modern no-zhongqi rule (see japanese_eras.md, open
-          # question 5). Fall back to the raw Gregorian reading —
-          # the pre-existing behavior — rather than failing every
-          # Japanese era lookup. Curated data with a `:lunisolar`
-          # provenance field supersedes this fallback.
-          Logger.warning(
-            "[Calendrical] Japanese era #{era} start #{inspect([year, month, day])} " <>
-              "could not be resolved as a lunisolar date (#{inspect(reason)}); " <>
-              "using the raw Gregorian reading"
-          )
+        {:error, _reason} when day == 30 ->
+          # The historical 宣明暦-family calendars sometimes recorded
+          # a 30th day where the astronomical reconstruction gives
+          # the month 29 days (era 187 永正 [1504, 2, 30]). The
+          # proclamation day is then the day after the reconstructed
+          # month's last day (confirmed against the wiki-canonical
+          # 1504-03-26 in japanese_eras_research.json).
+          case Calendrical.LunarJapanese.new(lunar_year, month, 29) do
+            {:ok, date} ->
+              iso_days = date |> Date.convert!(Calendar.ISO) |> Date.to_gregorian_days()
+              iso_days + 1
 
-          Calendar.ISO.date_to_iso_days(year, month, day)
+            {:error, reason} ->
+              gregorian_fallback(era, [year, month, day], reason)
+          end
+
+        {:error, reason} ->
+          gregorian_fallback(era, [year, month, day], reason)
       end
     end
   end
 
   defp start_iso_days(_era, [year, month, day], _span, _cldr_calendar_type) do
+    Calendar.ISO.date_to_iso_days(year, month, day)
+  end
+
+  # Safety net: no CLDR row is currently known to hit this (era 115
+  # 建保 [1213, 12, 6] used to, before the lunisolar leap-year
+  # detection was fixed). Should a row ever fail to resolve
+  # astronomically, fall back to the raw Gregorian reading — with the
+  # day clamped to a valid ISO day — rather than failing every
+  # Japanese era lookup. Curated data with a `:lunisolar` provenance
+  # field supersedes this fallback.
+  defp gregorian_fallback(era, [year, month, day], reason) do
+    Logger.warning(
+      "[Calendrical] Japanese era #{era} start #{inspect([year, month, day])} " <>
+        "could not be resolved as a lunisolar date (#{inspect(reason)}); " <>
+        "using the raw Gregorian reading"
+    )
+
+    day = min(day, Calendar.ISO.days_in_month(year, month))
     Calendar.ISO.date_to_iso_days(year, month, day)
   end
 

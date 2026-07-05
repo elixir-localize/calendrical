@@ -24,6 +24,12 @@ The format is based on
 
 ### Fixed
 
+* Lunisolar leap-year detection no longer misclassifies 383-day 13-month years as ordinary (45 of the 1240 lunar years from 645 CE were affected). `leap_year?/1`, `months_in_year/1`, `leap_month/1` and `days_in_month/2` now agree with the month sequence for these years in the Chinese, Korean and LunarJapanese calendars.
+
+* Japanese era 115 (建保) now resolves astronomically to its lunisolar proclamation date (1214-01-25 proleptic Gregorian) instead of falling back to the raw Gregorian reading.
+
+* Traditional lunisolar date validation no longer accepts a day one past the end of a month, and the default `days_in_year/1` no longer counts one day too many for the Persian, Chinese, Korean and LunarJapanese calendars.
+
 * `year_of_era/{1,3}` and `day_of_era/3` are corrected for the Persian, Buddhist, Hebrew, Chinese, Korean, Indian, ROC and Islamic calendars. The year of era is now the calendar's own year (Persian 1405 → `{1405, 0}`), and before-eras (BCE, before ROC, before Hijra) count backwards from year zero.
 
 * `week_of_month/1` no longer returns month 13 for dates in week 53 of a long year; the leap week belongs to month 12.
