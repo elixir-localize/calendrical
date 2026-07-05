@@ -1,4 +1,4 @@
-defmodule Calendrical.ParseTest do
+defmodule Calendrical.IsoParseTest do
   @moduledoc """
   Tests for `Calendrical.Parse`, the ISO-8601-shaped parser behind
   every Behaviour calendar's `parse_date/1`, `parse_naive_datetime/1`

@@ -475,7 +475,10 @@ defmodule Calendrical.Julian do
   ### Examples
 
       iex> Calendrical.Julian.day_of_era(2025, 1, 1)
-      {739994, 1}
+      {739267, 1}
+
+      iex> Calendrical.Julian.day_of_era(1, 1, 1)
+      {1, 1}
 
   """
   @spec day_of_era(year, month, day) :: {day :: pos_integer(), era :: 0..1}
@@ -483,7 +486,14 @@ defmodule Calendrical.Julian do
   def day_of_era(year, month, day) do
     {_, era} = year_of_era(year)
     days = date_to_iso_days(year, month, day)
-    {days + epoch(), era}
+
+    # Day 1 of the CE era is Julian 0001-01-01 (the epoch); the BCE
+    # era counts backwards from the day before the epoch.
+    if era == 1 do
+      {days - epoch() + 1, era}
+    else
+      {epoch() - days, era}
+    end
   end
 
   @doc """

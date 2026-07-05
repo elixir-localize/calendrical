@@ -3145,11 +3145,15 @@ defmodule Calendrical do
       {_, 0}, date ->
         date
 
+      # Year and month shifts clamp the day to the end of the target
+      # month, matching the Calendar.ISO shift contract — otherwise
+      # an invalid date such as February 31 escapes into a Date
+      # struct.
       {:year, value}, {year, month, day} ->
-        calendar.plus(year, month, day, :years, value)
+        calendar.plus(year, month, day, :years, value, coerce: true)
 
       {:month, value}, {year, month, day} ->
-        calendar.plus(year, month, day, :months, value)
+        calendar.plus(year, month, day, :months, value, coerce: true)
 
       {:week, value}, {year, month, day} ->
         calendar.plus(year, month, day, :weeks, value)
@@ -3177,12 +3181,18 @@ defmodule Calendrical do
       {_, 0}, naive_datetime ->
         naive_datetime
 
+      # Year and month shifts clamp the day to the end of the target
+      # month, matching the Calendar.ISO shift contract.
       {:year, value}, {year, month, day, hour, minute, second, microsecond} ->
-        {new_year, new_month, new_day} = calendar.plus(year, month, day, :years, value)
+        {new_year, new_month, new_day} =
+          calendar.plus(year, month, day, :years, value, coerce: true)
+
         {new_year, new_month, new_day, hour, minute, second, microsecond}
 
       {:month, value}, {year, month, day, hour, minute, second, microsecond} ->
-        {new_year, new_month, new_day} = calendar.plus(year, month, day, :months, value)
+        {new_year, new_month, new_day} =
+          calendar.plus(year, month, day, :months, value, coerce: true)
+
         {new_year, new_month, new_day, hour, minute, second, microsecond}
 
       {time_unit, value}, naive_datetime ->
