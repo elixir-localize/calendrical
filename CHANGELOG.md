@@ -32,6 +32,10 @@ The format is based on
 
 * `Calendrical.Formatter.Options` returns an option error instead of crashing when day names cannot be derived, and `Calendrical.Preference` falls back to the world territory when the process locale has none.
 
+* `calendar_from_locale/1` now honours the BCP 47 `-u-ca-` and `-u-fw-` locale extensions. The pattern clauses matched a field name that no longer exists on `Localize.LanguageTag`, so explicit calendar requests such as `en-u-ca-coptic` silently fell through to the territory preference. An explicit `-u-ca-gregory` resolves through the territory so localized week conventions still apply.
+
+* The HTML month template now closes its `<caption>` tag and separates the `id` attribute from `class`; `Calendrical.Formatter.HTML.Basic` no longer emits a deprecation warning on every rendered day.
+
 ## [0.10.0] — 2026-07-02
 
 ### Added
