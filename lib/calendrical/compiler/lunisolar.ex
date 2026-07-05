@@ -250,7 +250,10 @@ defmodule Calendrical.Lunisolar do
   def leap_year?(year, epoch, location_fun) do
     start_of_this_year = date_to_iso_days(year, 1, 1, epoch, location_fun)
     start_of_next_year = date_to_iso_days(year + 1, 1, 1, epoch, location_fun)
-    floor((start_of_next_year - start_of_this_year) / Time.mean_synodic_month()) == 13
+    # A 13-month year spans 383..385 days and an ordinary year 353..355.
+    # `round/1` maps both ranges correctly; `floor/1` would truncate a
+    # 383-day leap year to 12 months (383 / 29.53 ≈ 12.97).
+    round((start_of_next_year - start_of_this_year) / Time.mean_synodic_month()) == 13
   end
 
   @doc """
@@ -412,8 +415,8 @@ defmodule Calendrical.Lunisolar do
 
   defp months_in_year(year, epoch, location_fun) do
     if leap_year?(year, epoch, location_fun),
-      do: @lunar_calendar_months_in_year,
-      else: @lunar_calendar_months_in_year + 1
+      do: @lunar_calendar_months_in_year + 1,
+      else: @lunar_calendar_months_in_year
   end
 
   defp days_in_lunar_month(year, lunar_month, epoch, location_fun) do
@@ -437,7 +440,9 @@ defmodule Calendrical.Lunisolar do
         date_to_iso_days(year, month + 1, 1, epoch, location_fun)
       end
 
-    last - first + 1
+    # `last` is the first day of the following month, so the month
+    # length is the difference without adding one.
+    last - first
   end
 
   defp lunar_month_to_calendar_month(year, lunar_month, epoch, location_fun)
