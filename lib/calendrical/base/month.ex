@@ -14,6 +14,8 @@ defmodule Calendrical.Base.Month do
       missing_year_error: 2
     ]
 
+  import Calendrical.Base.Common, only: [is_date: 3]
+
   @days_in_week 7
   @quarters_in_year 4
 
@@ -40,12 +42,6 @@ defmodule Calendrical.Base.Month do
     end
   end
 
-  defguard is_date(year, month, day)
-           when is_integer(year) and is_integer(month) and is_integer(day)
-
-  defguard is_date(date)
-           when is_map_key(date, :year) and is_map_key(date, :month) and is_map_key(date, :day)
-
   def valid_date?(year, month, day, %Config{month_of_year: 1}) do
     Calendar.ISO.valid_date?(year, month, day)
   end
@@ -60,26 +56,7 @@ defmodule Calendrical.Base.Month do
   # calendars this is not necessarily true. So we have to decide whether
   # the beginning or ending Gregorian year is the year we consider.
 
-  def year_of_era(year, %{year: :ending} = config) when is_integer(year) do
-    {_, year} = Calendrical.start_end_gregorian_years(year, config)
-    Calendar.ISO.year_of_era(year)
-  end
-
-  def year_of_era(year, %{year: :beginning} = config) when is_integer(year) do
-    {year, _} = Calendrical.start_end_gregorian_years(year, config)
-    Calendar.ISO.year_of_era(year)
-  end
-
-  def year_of_era(year, %{year: :majority, month_of_year: starts} = config)
-      when is_integer(year) and starts <= 6 do
-    {year, _} = Calendrical.start_end_gregorian_years(year, config)
-    Calendar.ISO.year_of_era(year)
-  end
-
-  def year_of_era(year, %{year: :majority} = config) do
-    {_, year} = Calendrical.start_end_gregorian_years(year, config)
-    Calendar.ISO.year_of_era(year)
-  end
+  defdelegate year_of_era(year, config), to: Calendrical.Base.Common
 
   def quarter_of_year(year, month, _day, config) when is_integer(year) and is_integer(month) do
     ceil(month / (months_in_year(year, config) / @quarters_in_year))
@@ -334,13 +311,8 @@ defmodule Calendrical.Base.Month do
     Localize.Utils.Math.amod(calendar_start_month - 1 + month, @months_in_gregorian_year)
   end
 
-  def days_in_week do
-    @days_in_week
-  end
-
-  def days_in_week(_year, _week) do
-    @days_in_week
-  end
+  defdelegate days_in_week(), to: Calendrical.Base.Common
+  defdelegate days_in_week(year, week), to: Calendrical.Base.Common
 
   def year(year, config) do
     last_month = months_in_year(year, config)

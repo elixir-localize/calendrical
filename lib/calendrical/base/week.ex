@@ -9,6 +9,8 @@ defmodule Calendrical.Base.Week do
   import Calendrical,
     only: [missing_date_error: 4, missing_day_error: 2, missing_year_error: 2]
 
+  import Calendrical.Base.Common, only: [is_date: 3]
+
   @days_in_week 7
   @weeks_in_quarter 13
   @months_in_quarter 3
@@ -29,12 +31,6 @@ defmodule Calendrical.Base.Week do
     end
   end
 
-  defguard is_date(year, week, day)
-           when is_integer(year) and is_integer(week) and is_integer(day)
-
-  defguard is_date(date)
-           when is_map_key(date, :year) and is_map_key(date, :month) and is_map_key(date, :day)
-
   def valid_date?(year, week, day, config) do
     {weeks_in_year, _days_in_last_week} = weeks_in_year(year, config)
     week in 1..weeks_in_year and day in 1..days_in_week()
@@ -45,25 +41,7 @@ defmodule Calendrical.Base.Week do
   # calendars this is not necessarily true. So we have to decide whether
   # the beginning or ending Gregorian year is the year we consider.
 
-  def year_of_era(year, %{year: :ending} = config) do
-    {_, year} = Calendrical.start_end_gregorian_years(year, config)
-    Calendar.ISO.year_of_era(year)
-  end
-
-  def year_of_era(year, %{year: :beginning} = config) do
-    {year, _} = Calendrical.start_end_gregorian_years(year, config)
-    Calendar.ISO.year_of_era(year)
-  end
-
-  def year_of_era(year, %{year: :majority, month_of_year: starts} = config) when starts <= 6 do
-    {year, _} = Calendrical.start_end_gregorian_years(year, config)
-    Calendar.ISO.year_of_era(year)
-  end
-
-  def year_of_era(year, %{year: :majority} = config) do
-    {_, year} = Calendrical.start_end_gregorian_years(year, config)
-    Calendar.ISO.year_of_era(year)
-  end
+  defdelegate year_of_era(year, config), to: Calendrical.Base.Common
 
   # Quarters are 13 weeks but if there
   # are 53 weeks in a year then 4th
@@ -101,8 +79,8 @@ defmodule Calendrical.Base.Week do
     {year, week}
   end
 
-  def week_of_year(year, month, day, _config) do
-    {:error, missing_date_error("week_of_year", year, month, day)}
+  def week_of_year(year, week, day, _config) do
+    {:error, missing_date_error("week_of_year", year, week, day)}
   end
 
   def iso_week_of_year(year, week, day, config) when is_date(year, week, day) do
@@ -243,13 +221,8 @@ defmodule Calendrical.Base.Week do
     {:error, missing_year_error("days_in_month", month)}
   end
 
-  def days_in_week do
-    @days_in_week
-  end
-
-  def days_in_week(_year, _week) do
-    @days_in_week
-  end
+  defdelegate days_in_week(), to: Calendrical.Base.Common
+  defdelegate days_in_week(year, week), to: Calendrical.Base.Common
 
   def year(year, config) do
     with {:ok, first_day} <- Date.new(year, 1, 1, config.calendar),

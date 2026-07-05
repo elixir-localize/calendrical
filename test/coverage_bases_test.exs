@@ -36,21 +36,18 @@ defmodule CoverageBasesTest do
 
   use ExUnit.Case, async: true
 
-  require Calendrical.Base.Month
-  require Calendrical.Base.Week
+  require Calendrical.Base.Common
 
-  alias Calendrical.Base.{Month, Week}
+  alias Calendrical.Base.{Common, Month, Week}
   alias Calendrical.{BasicWeek, Config, CSCO, Gregorian, ISOWeek, NRF}
   alias Calendrical.CoverageTest.{MonthBeginning, WeekEnding}
 
   describe "Base guards" do
-    test "is_date guards accept integer triples and date-shaped maps" do
-      assert Month.is_date(2025, 1, 1)
-      refute Month.is_date(2025, nil, 1)
-      assert Month.is_date(%{year: 2025, month: 1, day: 1})
-      assert Week.is_date(2025, 1, 1)
-      refute Week.is_date(2025, 1, nil)
-      assert Week.is_date(%{year: 2025, month: 1, day: 1})
+    test "is_date/3 accepts integer triples and rejects non-integers" do
+      assert Common.is_date(2025, 1, 1)
+      refute Common.is_date(2025, nil, 1)
+      refute Common.is_date(2025, 1, nil)
+      refute Common.is_date("2025", 1, 1)
     end
   end
 

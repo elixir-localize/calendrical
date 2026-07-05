@@ -59,7 +59,7 @@ Two properties of this path to be aware of: module names come from `Module.conca
 
 * `behaviour.ex` generates from one ~750-line quoted block, and the compiler modules are of similar scale. `.credo.exs` excludes them from `LongQuoteBlocks`/complexity checks by design; the trade-off is documented there.
 
-* `Calendrical.Base.Month` and `Calendrical.Base.Week` are structurally parallel (roughly 29 shared function names) and must be kept in sync by hand. The parallel structure is partly intrinsic (the arithmetic genuinely differs) and partly duplication (era mapping, gregorian-anchor functions, guards, ISO delegates are near-identical).
+* `Calendrical.Base.Month` and `Calendrical.Base.Week` are structurally parallel (roughly 27 shared function names). The verbatim-identical pieces — the era-year mapping, `days_in_week`, the date guards — live in `Calendrical.Base.Common`; everything else that shares a name differs in substance because month arithmetic and week arithmetic genuinely differ, and further merging would obscure rather than deduplicate. Keep new shared logic in `Base.Common`; keep unit-specific logic in the respective base.
 
 * Multi-month arithmetic on week calendars is O(n): `Calendrical.Base.Week.plus/7` adds months one at a time because leap-week accounting across long years has no closed form in the current implementation. The limitation is commented at the site.
 
