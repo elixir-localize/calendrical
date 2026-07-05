@@ -6,6 +6,32 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] — Unreleased
+
+### Added
+
+* `Calendrical.UnsupportedDateRangeError` is raised when a date lies outside the range an astronomical calendar can compute (Persian: Gregorian years 1001 to 3000; observational Islamic calendars: the JPL ephemeris coverage). Previously these crashed with `FunctionClauseError` or `MatchError`.
+
+* `Calendrical.Persian.new_year_gregorian/1` and `year_end_gregorian/1` return `{:error, :year_out_of_range}` for years outside the supported equinox range instead of crashing.
+
+### Changed
+
+* Era data is now resolved from CLDR data at runtime and cached in `:persistent_term`. The generated `Calendrical.Era.<Type>` modules no longer exist; era setup no longer performs astronomy or module creation at compile time.
+
+* Pre-Meiji Japanese era boundaries are now resolved from their lunisolar proclamation dates via `Calendrical.LunarJapanese`, correcting boundaries that were 25 days to 6 weeks early. Meiji and later remain proleptic Gregorian per government proclamation.
+
+* Require `astro >= 2.3.3` so out-of-ephemeris moon events and out-of-range equinox/solstice return tagged errors.
+
+### Fixed
+
+* `year_of_era/{1,3}` and `day_of_era/3` are corrected for the Persian, Buddhist, Hebrew, Chinese, Korean, Indian, ROC and Islamic calendars. The year of era is now the calendar's own year (Persian 1405 → `{1405, 0}`), and before-eras (BCE, before ROC, before Hijra) count backwards from year zero.
+
+* `week_of_month/1` no longer returns month 13 for dates in week 53 of a long year; the leap week belongs to month 12.
+
+* The Julian year-shift variants (`March1`, `March25`, `Sept1`, `Dec25`) now validate leap days, compute weekdays, weeks, eras and parse dates against the Julian year that actually contains the date, instead of the variant's label year.
+
+* `Calendrical.Formatter.Options` returns an option error instead of crashing when day names cannot be derived, and `Calendrical.Preference` falls back to the world territory when the process locale has none.
+
 ## [0.10.0] — 2026-07-02
 
 ### Added
