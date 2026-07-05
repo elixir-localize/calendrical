@@ -16,6 +16,10 @@ defmodule Calendrical.Base.Month do
 
   @days_in_week 7
   @quarters_in_year 4
+
+  # Any year works for deriving the config's constant month slide;
+  # see slide/1.
+  @slide_probe_year 2000
   @months_in_quarter 3
   @months_in_gregorian_year 12
   @weeks_in_quarter 13
@@ -339,9 +343,8 @@ defmodule Calendrical.Base.Month do
   end
 
   def year(year, config) do
-    calendar = config.calendar
-    last_month = calendar.months_in_year(year)
-    days_in_last_month = calendar.days_in_month(year, last_month)
+    last_month = months_in_year(year, config)
+    days_in_last_month = days_in_month(year, last_month, config)
 
     with {:ok, start_date} <- Date.new(year, 1, 1, config.calendar),
          {:ok, end_date} <- Date.new(year, last_month, days_in_last_month, config.calendar) do
@@ -368,7 +371,7 @@ defmodule Calendrical.Base.Month do
   end
 
   def month(year, month, config) do
-    if month in 1..months_in_year(year, month) do
+    if month in 1..months_in_year(year, config) do
       starting_day = 1
       ending_day = days_in_month(year, month, config)
 
@@ -394,13 +397,13 @@ defmodule Calendrical.Base.Month do
       start_day = first_day + (week - 1) * @days_in_week
       end_day = min(start_day + @days_in_week - 1, last_day)
 
-      {year, month, day} = date_from_iso_days(start_day, config)
-      {:ok, start_date} = Date.new(year, month, day, config.calendar)
+      {start_year, start_month, start_day} = date_from_iso_days(start_day, config)
+      {end_year, end_month, end_day} = date_from_iso_days(end_day, config)
 
-      {year, month, day} = date_from_iso_days(end_day, config)
-      {:ok, end_date} = Date.new(year, month, day, config.calendar)
-
-      Date.range(start_date, end_date)
+      with {:ok, start_date} <- Date.new(start_year, start_month, start_day, config.calendar),
+           {:ok, end_date} <- Date.new(end_year, end_month, end_day, config.calendar) do
+        Date.range(start_date, end_date)
+      end
     else
       {:error, :invalid_date}
     end
@@ -561,10 +564,16 @@ defmodule Calendrical.Base.Month do
     end
   end
 
-  @random_year 2000
+  # The slide is a constant for a given config. For a January year
+  # start — every standard calendar — it is provably 0 regardless of
+  # the other config fields ((1 - 1) * direction is 0, amod(0, 12) is
+  # 12, and a slide of month 12 is 0), so the dominant conversion
+  # path skips the year-boundary derivation entirely.
+  defp slide(%Config{month_of_year: 1}), do: 0
+
   defp slide(%Config{month_of_year: month} = config) do
-    {starts, _ends} = Calendrical.start_end_gregorian_years(@random_year, config)
-    direction = if starts < @random_year, do: -1, else: +1
+    {starts, _ends} = Calendrical.start_end_gregorian_years(@slide_probe_year, config)
+    direction = if starts < @slide_probe_year, do: -1, else: +1
     month = Math.amod((month - 1) * direction, ISO.months_in_year(starts))
     if month == 12, do: 0, else: month * direction * -1
   end

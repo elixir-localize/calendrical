@@ -6,6 +6,18 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+* `Calendrical.new/3` returns `{:error, exception}` when runtime calendar compilation fails, instead of crashing the compiler server and every queued caller; the call timeout is raised to 30 seconds.
+
+* `year/1` week ranges on month-based calendars return the range builder's error instead of raising a `MatchError` when a boundary date cannot be constructed.
+
+### Changed
+
+* Date conversion on month-based calendars with a January year start skips the year-boundary slide derivation, removing the dominant cost from the `date_to_iso_days/3` hot path.
+
 ## [0.11.0] — 2026-07-05
 
 ### Added

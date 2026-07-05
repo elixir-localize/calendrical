@@ -5,8 +5,9 @@ defmodule Calendrical.Config do
             # Each quarter has three
             # 'months` each of 13 weeks
             # in either of a 4,4,5; 4,5,4
-            # of 5,4,4 layout
-            weeks_in_month: [4, 4, 5],
+            # or 5,4,4 layout. The default
+            # matches extract_options/1.
+            weeks_in_month: [4, 5, 4],
 
             # Indicates if the anchor
             # represents the beginning
@@ -53,7 +54,7 @@ defmodule Calendrical.Config do
           first_or_last: :first | :last,
           day_of_week: Calendrical.day_of_week() | :first,
           month_of_year: pos_integer(),
-          year: :majority | :starts | :ends,
+          year: :majority | :beginning | :ending,
           min_days_in_first_week: 1..7
         }
 
