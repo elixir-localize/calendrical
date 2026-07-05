@@ -286,7 +286,21 @@ defmodule Calendrical.DateTime.Parser do
           []
       end
 
-    (cldr ++ @fallback_glue_separators)
+    # CLDR 42+ carries a second set of glue patterns (atTime) whose
+    # separators differ from the standard set — fr's full/long glue
+    # is `{1} 'à' {0}` there, for example.
+    at_time =
+      case Format.date_time_at_formats(locale, :gregorian) do
+        {:ok, %{standard: at_map}} when is_map(at_map) ->
+          @standard_formats
+          |> Enum.map(&Map.get(at_map, &1))
+          |> Enum.flat_map(&extract_separator/1)
+
+        _ ->
+          []
+      end
+
+    (cldr ++ at_time ++ @fallback_glue_separators)
     |> Enum.uniq()
     |> Enum.sort_by(&(-byte_size(&1)))
   end
@@ -296,12 +310,22 @@ defmodule Calendrical.DateTime.Parser do
   # one; we wrap in a list for `flat_map` ergonomics).
   defp extract_separator(pattern) when is_binary(pattern) do
     case Regex.run(~r/\{1\}(.*?)\{0\}/u, pattern) do
-      [_, sep] when sep != "" -> [sep]
+      [_, sep] when sep != "" -> [unquote_cldr_literal(sep)]
       _ -> []
     end
   end
 
   defp extract_separator(_), do: []
+
+  # CLDR quotes literal pattern text in single quotes (fr's glue is
+  # `{1} 'à' {0}`) and escapes a real apostrophe as `''`. Without
+  # unquoting, the separator ` 'à' ` never matches user input.
+  defp unquote_cldr_literal(text) do
+    text
+    |> String.replace("''", <<0>>)
+    |> String.replace(~r/'([^']*)'/u, "\\1")
+    |> String.replace(<<0>>, "'")
+  end
 
   # ── Errors ───────────────────────────────────────────────────
 

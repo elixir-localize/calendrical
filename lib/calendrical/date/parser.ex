@@ -451,10 +451,17 @@ defmodule Calendrical.Date.Parser do
       # so informal orderings like `"23 - 25 May, 2026"` and
       # `"5 May – 10 June, 2026"` parse alongside the CLDR-canonical
       # `"May 23 – 25, 2026"`.
+      # Try day-bearing patterns before month/year-only ones, longest
+      # first within each group. The CLDR interval data arrives as a
+      # map whose iteration order is arbitrary, and without this an
+      # M/y pattern can claim "May 5 – May 10" in map mode as
+      # year 5 / year 2010 depending on which pattern happens to be
+      # tried first.
       patterns =
         cldr_patterns
         |> Enum.flat_map(fn p -> [p | synthesize_day_first_variants(p)] end)
         |> Enum.uniq()
+        |> Enum.sort_by(&interval_pattern_specificity/1)
 
       Enum.find_value(patterns, :error, fn pattern ->
         case match_interval_pattern(
@@ -556,6 +563,14 @@ defmodule Calendrical.Date.Parser do
   # partial.
   defp interval_partial_meaningful?(%{year: nil, month: nil, day: nil}), do: false
   defp interval_partial_meaningful?(_), do: true
+
+  # Sort key: day-bearing patterns first, then longer (more
+  # specific) patterns within each group. Quoted literals are
+  # stripped so a literal "d" in text does not count as a field.
+  defp interval_pattern_specificity(pattern) do
+    fields = String.replace(pattern, ~r/'[^']*'/u, "")
+    {if(String.contains?(fields, "d"), do: 0, else: 1), -String.length(pattern)}
+  end
 
   # Walk the token stream: a field that's already been seen
   # marks the start of the right endpoint. The tokens between

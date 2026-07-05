@@ -925,4 +925,28 @@ defmodule Calendrical.CoverageParsingTest do
       assert Calendrical.Parser.parse("2026-05-16") == {:ok, ~D[2026-05-16]}
     end
   end
+
+  describe "regression: glue, day periods and interval determinism" do
+    test "fr atTime glue separator parses" do
+      assert Calendrical.DateTime.parse("16 mai 2026 à 14:30", locale: :fr) ==
+               {:ok, ~N[2026-05-16 14:30:00]}
+    end
+
+    test "es day periods accept ASCII spaces for the shipped NBSP names" do
+      assert Calendrical.Time.parse("3:30 a. m.", locale: :es) == {:ok, ~T[03:30:00]}
+      assert Calendrical.Time.parse("3:30 p. m.", locale: :es) == {:ok, ~T[15:30:00]}
+    end
+
+    test "locale day-period names resolve AM/PM" do
+      assert Calendrical.Time.parse("午後2:30", locale: :ja) == {:ok, ~T[14:30:00]}
+      assert Calendrical.Time.parse("午前2:30", locale: :ja) == {:ok, ~T[02:30:00]}
+    end
+
+    test "map-mode ranges prefer day-bearing interval patterns deterministically" do
+      assert Calendrical.Date.parse_range("May 5 – May 10", locale: :en, as: :map) ==
+               {:ok,
+                {%{calendar: Calendar.ISO, month: 5, day: 5},
+                 %{calendar: Calendar.ISO, month: 5, day: 10}}}
+    end
+  end
 end

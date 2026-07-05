@@ -451,7 +451,7 @@ defmodule Calendrical.Time.Parser do
       names
       |> Enum.uniq()
       |> Enum.sort_by(&(-byte_size(&1)))
-      |> Enum.map(&Regex.escape/1)
+      |> Enum.map(&escape_with_flexible_spaces/1)
       |> Enum.join("|")
 
     # `(?i:...)` per CLDR TR35 §6.5 — day-period name matching
@@ -465,6 +465,16 @@ defmodule Calendrical.Time.Parser do
     # assertion requires the match to be followed by a non-letter
     # (or end of input).
     "(?P<day_period>(?i:#{alternation}))(?![\\p{L}])"
+  end
+
+  # CLDR ships some day-period names with NBSP or narrow NBSP
+  # (es "a.\u202Fm."), but users type ASCII spaces. Escape each
+  # non-space segment and accept any space flavour between them.
+  defp escape_with_flexible_spaces(name) do
+    name
+    |> String.split(~r/[\s\x{00A0}\x{202F}]+/u)
+    |> Enum.map(&Regex.escape/1)
+    |> Enum.join("[\\s\\x{00A0}\\x{202F}]")
   end
 
   defp collect_period_names(day_periods, letter) do
@@ -659,6 +669,8 @@ defmodule Calendrical.Time.Parser do
   defp locale_period_kind("", _day_periods), do: nil
 
   defp locale_period_kind(period, day_periods) do
+    period = normalize_period_spaces(period)
+
     cond do
       period in downcased_period_names(day_periods, :pm) -> :pm
       period in downcased_period_names(day_periods, :am) -> :am
@@ -672,7 +684,13 @@ defmodule Calendrical.Time.Parser do
         {period, entry} <- get_in(day_periods, [context, width]) || %{},
         period == key,
         name <- entry_to_names(entry),
-        do: String.downcase(name)
+        do: name |> String.downcase() |> normalize_period_spaces()
+  end
+
+  # CLDR names may use NBSP or narrow NBSP where users type ASCII
+  # spaces; compare with all space flavours collapsed.
+  defp normalize_period_spaces(text) do
+    String.replace(text, ~r/[\s\x{00A0}\x{202F}]+/u, " ")
   end
 
   # The `B` regex emits one branch per `(period_key, name)`

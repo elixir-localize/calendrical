@@ -84,6 +84,14 @@ The format is based on
 
 * `Calendrical.Format` accepts an explicit `:territory` option; previously any supplied territory was rejected as an invalid option.
 
+* `Calendrical.DateTime.parse/2` recognises the CLDR atTime glue patterns and unquotes literal separators, so `"16 mai 2026 à 14:30"` parses under `:fr`.
+
+* Day-period matching accepts ASCII spaces where CLDR ships NBSP or narrow NBSP inside a name, so `"3:30 p. m."` parses under `:es`.
+
+* Map-mode range parsing tries day-bearing interval patterns before month/year-only ones, so `"May 5 – May 10"` with `as: :map` deterministically yields day fields instead of sometimes misreading `"10"` as a year.
+
+* Composite calendars compute `days_in_year/1` and `days_in_month/2` correctly in a year whose new-year style changes mid-year: England's 1751 ran from Lady Day to 31 December (282 days) and its March had 7 days.
+
 * `Calendrical.Composite.new/2` returns `{:error, :no_calendars_configured}` instead of a bare `:error` when the `:calendars` option is missing.
 
 * `previous/3` for a `Date.Range` and `:day` returns a `Date.Range` like every other range clause; week-calendar `iso_week_of_year/4` returns its missing-fields error instead of raising; `days_in_month/1` with a non-integer month returns an error instead of raising `ArithmeticError`.
@@ -130,7 +138,7 @@ The format is based on
 
 * Lenient input handling on `Calendrical.parse/2`, `Calendrical.Date.parse/2`, and `Calendrical.DateTime.parse/2`: internal double-whitespace is collapsed to a single space; abbreviated month names accept an optional trailing period (`"Jun."` matches CLDR `"Jun"`, `"janv"` matches CLDR `"janv."`); the M↔d swap variants now also produce comma-stripped and dash/slash/period-separated forms, so `"23 Feb 2013"`, `"01-Feb-18"`, `"01/Jun./2018"`, and `"01.Feb.2018"` all parse under `:en` even though CLDR ships only `MMM d, y`.
 
-* `Calendrical.DateTime.parse/2` accepts bare space, `" - "`, and `" @ "` as universal fallback glue separators in every locale, on top of CLDR's locale-specific glue. Catches `"01/01/2018 14:44"`, `"01/01/2018 - 17:06"`, and `"23-05-2019 @ 10:01"` shapes common in admin UIs and human-written notes.
+* `Calendrical.DateTime.parse/2` accepts bare space, `" - "`, and `" @ "` as universal fallback glue separators in every locale, on top of CLDR's locale-specific glue. Catches `"01/01/2018 14:44"`, `"01/01/2018 - 17:06"`, and (under day-first locales such as `:de`) `"23-05-2019 @ 10:01"` shapes common in admin UIs and human-written notes.
 
 * Locale-aware weekday-prefix stripping — `"Sun, 01 January 2017"`, `"Tuesday, November 29, 2016"`, `"lundi, 1 janvier 2025"`, `"Wednesday 3rd March 2023 3:45 PM"`. The recognised weekday set is sourced from CLDR `format` + `stand-alone` × `wide`/`abbreviated`/`short` widths (narrow forms excluded to avoid single-letter false matches), with optional trailing `.`/`,`/`;` consumed.
 
@@ -196,7 +204,7 @@ The format is based on
 
 * The `:calendar` option on all parsers now accepts either a CLDR calendar key atom (`:gregorian`, `:hebrew`, …) or a calendar module (`Calendar.ISO`, `Calendrical.Hebrew`, …). Modules are coerced via the `cldr_calendar_type/0` callback; `Calendar.ISO` is treated as `:gregorian`.
 
-* `Calendrical.Date.parse/2` now accepts month-name + day input in either order regardless of the locale's preferred ordering. For any CLDR pattern with a name-form month (`MMM`/`MMMM`/`MMMMM`) and a numeric day, the parser also tries the reversed token order — so `"May 23"` parses in French (CLDR has `d MMM`) and `"23 May"` parses in English (CLDR has `MMM d, y`). Numeric `M`/`MM` are excluded because the swap would be ambiguous with `d`. Applies to year-bearing and weekday-bearing variants too; non-M-and-d tokens stay in place.
+* `Calendrical.Date.parse/2` now accepts month-name + day input in either order regardless of the locale's preferred ordering. For any CLDR pattern with a name-form month (`MMM`/`MMMM`/`MMMMM`) and a numeric day, the parser also tries the reversed token order — so `"mai 23"` parses in French (CLDR has `d MMM`) and `"23 May"` parses in English (CLDR has `MMM d, y`). Numeric `M`/`MM` are excluded because the swap would be ambiguous with `d`. Applies to year-bearing and weekday-bearing variants too; non-M-and-d tokens stay in place.
 
 * ISO 8601 forms beyond Elixir stdlib are now accepted: **basic format** (`20260523`), **ordinal date** (`2026-143`), and **ISO week date** (`2026-W21-6`). `Calendrical.Date.parse/2` recognises all three in every locale as a universal escape hatch alongside the existing extended format (`2026-05-23`).
 

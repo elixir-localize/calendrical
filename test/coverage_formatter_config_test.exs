@@ -351,4 +351,17 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
       assert Calendrical.new(Calendrical.ISOWeek, :week, []) == {:ok, Calendrical.ISOWeek}
     end
   end
+
+  describe "regression: composite transition-year arithmetic" do
+    test "England 1751 ran from Lady Day to the year end" do
+      # 25 March 1751 through 31 December 1751 (Julian).
+      assert Calendrical.England.days_in_year(1751) == 282
+      assert Calendrical.England.days_in_month(1751, 3) == 7
+    end
+
+    test "England 1752 lost eleven days in September" do
+      assert Calendrical.England.days_in_year(1752) == 355
+      assert Calendrical.England.days_in_month(1752, 9) == 19
+    end
+  end
 end

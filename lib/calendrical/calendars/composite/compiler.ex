@@ -233,9 +233,28 @@ defmodule Calendrical.Composite.Compiler do
       """
       @impl true
       def days_in_year(year) do
-        starts = date_to_iso_days(year, 1, 1)
-        ends = date_to_iso_days(year + 1, 1, 1)
-        ends - starts
+        first_iso_day_of_year(year + 1) - first_iso_day_of_year(year)
+      end
+
+      # In the year a new-year-style transition takes effect, the
+      # labels before the transition day belong to the prior year
+      # (England's 1751 begins on Lady Day, 25 March), so {year, 1, 1}
+      # is not a valid date and the year starts on the transition day.
+      defp first_iso_day_of_year(year) do
+        if valid_date?(year, 1, 1) do
+          date_to_iso_days(year, 1, 1)
+        else
+          transition_starting_year(year)
+        end
+      end
+
+      for {iso_days, y, _m, _d, _calendar} <- Enum.uniq_by(config, fn {_, y, _, _, _} -> y end) do
+        defp transition_starting_year(unquote(y)), do: unquote(iso_days)
+      end
+
+      defp transition_starting_year(year) do
+        raise ArgumentError,
+              "#{inspect(__MODULE__)} has no valid start for year #{inspect(year)}"
       end
 
       @doc """
@@ -256,10 +275,20 @@ defmodule Calendrical.Composite.Compiler do
       @impl true
       define_transition_functions(config, fn
         # Transitions from one calendar to another
-        {_, old_year, old_month, _, old_calendar}, [{_, new_year, new_month, _, new_calendar} | _] ->
+        {_, old_year, old_month, _, old_calendar},
+        [{new_iso_days, new_year, new_month, _, new_calendar} | _] ->
           def days_in_month(year, month)
               when year == unquote(new_year) and month == unquote(new_month) do
-            starts = date_to_iso_days(year, month, 1)
+            # When the transition changes the year-start style, the
+            # labels before the transition day belong to the prior
+            # year and {year, month, 1} is invalid — the month then
+            # begins on the transition day itself.
+            starts =
+              if valid_date?(year, month, 1) do
+                date_to_iso_days(year, month, 1)
+              else
+                unquote(new_iso_days)
+              end
 
             ends =
               date_to_iso_days(year, month, unquote(new_calendar).days_in_month(year, month))
