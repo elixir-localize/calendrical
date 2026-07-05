@@ -137,7 +137,19 @@ jobs:
       - name: Compile (warnings as errors)
         run: mix compile --warnings-as-errors
 
+      # Coverage instrumentation is broken on OTP 27: cover's
+      # line-counter transform of `x in @module_attribute` guards is
+      # rejected by OTP 27's compile:forms as an unsafe variable
+      # (works on OTP 26, 28 and 29). Coverage is a code metric, not
+      # a per-toolchain property, so the threshold gate runs once on
+      # the canonical lint toolchain and the rest of the matrix runs
+      # the plain suite.
+      - name: Run tests
+        if: ${{ !matrix.lint }}
+        run: mix test
+
       - name: Run tests with coverage threshold
+        if: matrix.lint
         run: mix test --cover
 
       - name: Restore PLT cache
