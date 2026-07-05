@@ -116,11 +116,11 @@ defmodule Calendrical.Behaviour do
 
   ## Era support
 
-  When the using module is compiled, an `@after_compile` hook generates a
-  `Calendrical.Era.<CalendarType>` module from CLDR era data and uses it
-  to implement the default `year_of_era/{1, 3}` and `day_of_era/3`
-  functions. Calendars whose era logic does not match the CLDR data can
-  override these callbacks directly.
+  The default `year_of_era/{1, 3}` and `day_of_era/3` functions
+  delegate to `Calendrical.Era`, which resolves CLDR era data for
+  the calendar's `:cldr_calendar_type` at runtime. Calendars whose
+  era logic does not match the CLDR data can override these
+  callbacks directly.
 
   """
 
@@ -155,8 +155,6 @@ defmodule Calendrical.Behaviour do
 
       @behaviour Calendar
       @behaviour Calendrical
-
-      @after_compile Calendrical.Behaviour
 
       @days_in_week unquote(days_in_week)
       @quarters_in_year 4
@@ -241,13 +239,11 @@ defmodule Calendrical.Behaviour do
 
       """
 
-      @era_module Calendrical.Era.era_module(unquote(cldr_calendar_type))
-
       @spec year_of_era(Calendar.year()) :: {year :: Calendar.year(), era :: Calendar.era()}
 
       def year_of_era(year) do
         iso_days = date_to_iso_days(year, 1, 1)
-        @era_module.year_of_era(iso_days, year)
+        Calendrical.Era.year_of_era(unquote(cldr_calendar_type), iso_days, year)
       end
 
       @doc """
@@ -260,7 +256,7 @@ defmodule Calendrical.Behaviour do
       @impl true
       def year_of_era(year, month, day) do
         iso_days = date_to_iso_days(year, month, day)
-        @era_module.year_of_era(iso_days, year)
+        Calendrical.Era.year_of_era(unquote(cldr_calendar_type), iso_days, year)
       end
 
       @doc """
@@ -399,7 +395,7 @@ defmodule Calendrical.Behaviour do
       @impl true
       def day_of_era(year, month, day) do
         iso_days = date_to_iso_days(year, month, day)
-        @era_module.day_of_era(iso_days)
+        Calendrical.Era.day_of_era(unquote(cldr_calendar_type), iso_days)
       end
 
       @doc """
@@ -858,9 +854,5 @@ defmodule Calendrical.Behaviour do
       defoverridable related_gregorian_year: 3
       defoverridable cyclic_year: 3
     end
-  end
-
-  def __after_compile__(env, _bytecode) do
-    Calendrical.Era.define_era_module(env.module)
   end
 end

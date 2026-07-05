@@ -17,7 +17,12 @@ defmodule Calendrical.Japanese.Test do
 
     assert Calendrical.year_of_era(~D[1912-06-16 Calendrical.Japanese]) == {45, 232}
 
-    assert Calendrical.year_of_era(~D[1865-04-07 Calendrical.Japanese]) == {1, 231}
+    # Keiō (era 231) was proclaimed on 元治2年4月7日 — the lunisolar
+    # date CLDR records raw as [1865, 4, 7] — which is proleptic
+    # Gregorian 1865-05-01. Gregorian April 7 is therefore still
+    # Genji 2 (era 230).
+    assert Calendrical.year_of_era(~D[1865-04-07 Calendrical.Japanese]) == {2, 230}
+    assert Calendrical.year_of_era(~D[1865-05-01 Calendrical.Japanese]) == {1, 231}
     assert Calendrical.year_of_era(~D[1868-09-07 Calendrical.Japanese]) == {4, 231}
 
     assert Calendrical.year_of_era(~D[1868-10-23 Calendrical.Japanese]) == {1, 232}

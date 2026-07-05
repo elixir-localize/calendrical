@@ -1,313 +1,283 @@
 defmodule Calendrical.Era do
   @moduledoc """
-  Encapsulates the era information for
-  known CLDR calendars.
+  Era arithmetic for CLDR calendars.
 
-  The [era data in CLDR](https://github.com/unicode-org/cldr/blob/master/common/supplemental/supplementalData.xml)
-  is presented in different calendars at different times. The current
-  best understanding is:
+  Era definitions come from the [era data in CLDR](https://github.com/unicode-org/cldr/blob/main/common/supplemental/supplementalData.xml),
+  where era boundaries are expressed as proleptic Gregorian dates —
+  with one exception: Japanese eras before Meiji are lunisolar
+  passthroughs (the proclamation's traditional `年月日` numerals
+  copied into the Western fields unconverted) and are resolved
+  through `Calendrical.LunarJapanese`. On first access the
+  boundaries for a calendar type are resolved to ISO day counts and
+  cached in `:persistent_term`, so lookups are lock-free and
+  copy-free with no compile-time code generation.
 
-  ### Japanese Calendar
+  Two year-numbering styles cover all CLDR calendars:
 
-  * From Taisho (1912), the date is Gregorian year,
-    month and day.
+  * Most calendars number their years from the epoch of their
+    primary era, so the year of era is the calendar year itself
+    (`{year, era}`). Years at or before zero belong to a
+    "before" era when CLDR defines one (BCE, before ROC, before
+    Hijra) and count backwards: year 0 is year 1 of that era.
 
-  * For Tenshō (Momoyama period) to Meji era (1868)
-    inclusive its Gregorian year but lunar month and day.
-
-  * For earlier eras it is Julian year with lunar month and
-    day (but the Julian and Gregorian years coincide; there are
-    no era dates where the Gregorian year would be different
-    to the Julian year).
-
-  ### Other Calendars
-
-  * For Chinese and Korean (dangi) the era dates are
-    Gregorian year with lunar month and lunar day
-
-  * For Coptic, Ethiopic and Islamic calendars the eras are
-    Julian dates (Julian day, month and year).
-
-  * Persian era is Julian year with persian month and day.
-
-  * Gregorian is, well, Gregorian date.
+  * The Japanese calendar numbers years in Gregorian years while
+    eras begin mid-year, so the era is selected by the date and
+    the year of era is counted from each era's first Gregorian
+    year.
 
   """
 
-  # Just after a calendar is defined this function
-  # is called to create a module that provides a
-  # lookup function returning the appropriate era
-  # number for a given date in a given calendar.
-  #
-  # If the calendar does not have a known CLDR
-  # calendar name associated with it then no
-  # module is produced and no error is returned.
+  require Logger
 
-  @doc false
-  def define_era_module(calendar_module) do
-    if Localize.Utils.Code.ensure_compiled?(calendar_module) &&
-         function_exported?(calendar_module, :cldr_calendar_type, 0) do
-      cldr_calendar = calendar_module.cldr_calendar_type()
-      era_module = era_module(cldr_calendar)
+  @typedoc "A CLDR calendar type, such as `:gregorian` or `:persian`."
+  @type cldr_calendar_type :: atom()
 
-      unless Code.ensure_loaded?(era_module) || era_module_claimed?(era_module) do
-        claim_era_module(era_module)
+  @doc """
+  Returns the year of era and era number for a date.
 
-        cldr_calendar
-        |> eras_for_calendar()
-        |> eras_to_iso_days(cldr_calendar, calendar_module)
-        |> define_era_module(calendar_module, era_module)
-      end
-    else
-      :no_op
-    end
-  end
+  ### Arguments
 
-  # Use an ETS table to coordinate era module creation during parallel compilation.
-  # This prevents duplicate module definition when multiple calendars share the
-  # same cldr_calendar_type (e.g., Chinese and LunarJapanese both use :chinese).
+  * `cldr_calendar_type` is the CLDR calendar type of the
+    calendar, such as `:persian` or `:japanese`.
 
-  @era_lock_table :calendrical_era_lock
+  * `iso_days` is the date as a count of days since the
+    proleptic ISO epoch.
 
-  defp era_module_claimed?(module) do
-    if :ets.whereis(@era_lock_table) == :undefined do
-      :ets.new(@era_lock_table, [:set, :public, :named_table])
-      false
-    else
-      :ets.member(@era_lock_table, module)
-    end
-  rescue
-    ArgumentError -> :ets.member(@era_lock_table, module)
-  end
+  * `year` is the year of the date in the calendar's own
+    numbering.
 
-  defp claim_era_module(module) do
-    :ets.insert(@era_lock_table, {module, true})
-  end
+  ### Returns
 
-  # Returns a list of eras with the most
-  # recent era first (we want this sort
-  # order so that when we generate function
-  # clauses, most recent dates match first and
-  # those are the dates most likely to be used).
+  * A two-tuple `{year_of_era, era}`.
 
-  @doc false
-  def eras_for_calendar(calendar) do
-    Localize.SupplementalData.calendars()
-    |> Map.fetch!(calendar)
-    |> Map.fetch!(:eras)
-    |> Enum.reverse()
-  end
+  ### Examples
 
-  @eras_in_gregorian_year [
-    :chinese,
-    :dangi,
-    :persian,
-    :gregorian,
-    :hebrew,
-    :buddhist,
-    :roc,
-    :indian
-  ]
+      iex> iso_days = Date.to_gregorian_days(~D[2019-05-01])
+      iex> Calendrical.Era.year_of_era(:japanese, iso_days, 2019)
+      {1, 236}
 
-  @eras_in_julian_calendar [
-    :coptic,
-    :ethiopic,
-    :ethiopic_amete_alem,
-    :islamic,
-    :islamic_civil,
-    :islamic_rgsa,
-    :islamic_tbla,
-    :islamic_umalqura
-  ]
+      iex> Calendrical.Era.year_of_era(:persian, 0, 1405)
+      {1405, 0}
 
-  # Four of the era dates below are invalid in the CLDR data
-  # as of April 10th, 2023 and CLDR 4r3.
+  """
+  @spec year_of_era(cldr_calendar_type(), integer(), Calendar.year()) ::
+          {Calendar.year(), Calendar.era()}
+  def year_of_era(cldr_calendar_type, iso_days, year) do
+    era_data = era_data(cldr_calendar_type)
 
-  @doc false
-  def eras_to_iso_days(eras, :japanese, _calendar) do
-    Enum.map(eras, fn
-      [era, %{start: [1504 = year, 2 = month, 30]} = span] ->
-        [
-          era,
-          start: Calendrical.Gregorian.date_to_iso_days(year, month, 29),
-          year: year,
-          code: span[:code]
-        ]
+    case era_data.year_mode do
+      :gregorian_offset ->
+        record = find_era(era_data.records, iso_days, cldr_calendar_type)
 
-      [era, %{start: [1624 = year, 2 = month, 30]} = span] ->
-        [
-          era,
-          start: Calendrical.Gregorian.date_to_iso_days(year, month, 28),
-          year: year,
-          code: span[:code]
-        ]
+        if year < record.gregorian_year do
+          {1, record.era}
+        else
+          {year - record.gregorian_year + 1, record.era}
+        end
 
-      [era, %{start: [1501 = year, 2 = month, 29]} = span] ->
-        [
-          era,
-          start: Calendrical.Gregorian.date_to_iso_days(year, month, 28),
-          year: year,
-          code: span[:code]
-        ]
-
-      [era, %{start: [1278 = year, 2 = month, 29]} = span] ->
-        [
-          era,
-          start: Calendrical.Gregorian.date_to_iso_days(year, month, 28),
-          year: year,
-          code: span[:code]
-        ]
-
-      [era, %{start: [year, month, day]} = span] ->
-        [
-          era,
-          start: Calendrical.Gregorian.date_to_iso_days(year, month, day),
-          year: year,
-          code: span[:code]
-        ]
-
-      [era, %{end: [year, month, day]} = span] ->
-        [
-          era,
-          end: Calendrical.Gregorian.date_to_iso_days(year, month, day),
-          year: year,
-          code: span[:code]
-        ]
-    end)
-  end
-
-  def eras_to_iso_days(eras, cldr_calendar, calendar)
-      when cldr_calendar in @eras_in_gregorian_year do
-    Enum.map(eras, fn
-      [era, %{start: [year, month, day]} = span] ->
-        [era, start: calendar.date_to_iso_days(year, month, day), year: year, code: span[:code]]
-
-      [era, %{end: [year, month, day]} = span] ->
-        [era, end: calendar.date_to_iso_days(year, month, day), year: year, code: span[:code]]
-    end)
-  end
-
-  def eras_to_iso_days(eras, cldr_calendar, _calendar)
-      when cldr_calendar in @eras_in_julian_calendar do
-    Enum.map(eras, fn
-      [era, %{start: [year, month, day]} = span] ->
-        [
-          era,
-          start: Calendrical.Julian.date_to_iso_days(year, month, day),
-          year: year,
-          code: span[:code]
-        ]
-
-      [era, %{end: [year, month, day]} = span] ->
-        [
-          era,
-          end: Calendrical.Julian.date_to_iso_days(year, month, day),
-          year: year,
-          code: span[:code]
-        ]
-    end)
-  end
-
-  defp define_era_module(eras, calendar, module) do
-    module_body = [moduledoc(module), default(calendar) | function_body(eras)]
-    Module.create(module, module_body, Macro.Env.location(__ENV__))
-  end
-
-  defp moduledoc(module) do
-    quote do
-      @moduledoc """
-      Implements a `year_of_era/{1, 2}` function to return
-      the year of era and the era number for the
-      `#{inspect(unquote(module))}` calendar.
-
-      This module is generated at compile time from
-      CLDR era data.
-
-      """
-
-      @doc false
-      @spec year_of_era(integer(), Calendar.year()) :: {Calendar.year(), Calendar.era()}
-    end
-  end
-
-  defp default(calendar) do
-    quote do
-      @doc """
-      Returns the year of era and the era number
-      for a given date in `iso_days`.
-
-      """
-      @spec year_of_era(integer()) :: {Calendar.year(), Calendar.era()}
-
-      def year_of_era(iso_days) do
-        {year, _month, _day} = unquote(calendar).date_from_iso_days(iso_days)
-        year_of_era(iso_days, year)
-      end
-
-      @doc """
-      Returns the day of era and the era number
-      for a given date in `iso_days`.
-
-      """
-      @spec day_of_era(integer()) :: {Calendar.day(), Calendar.era()}
-
-      def day_of_era(iso_days)
-
-      @doc false
-      def era(iso_days)
-    end
-  end
-
-  defp function_body(eras) do
-    for [era, {position, date}, {:year, era_year}, {:code, _code}] <- eras do
-      case position do
-        :start ->
-          quote do
-            def year_of_era(iso_days, year)
-                when iso_days >= unquote(date) and year < unquote(era_year) do
-              {1, unquote(era)}
-            end
-
-            def year_of_era(iso_days, year) when iso_days >= unquote(date) do
-              {year - unquote(era_year) + 1, unquote(era)}
-            end
-
-            def day_of_era(iso_days) when iso_days >= unquote(date) do
-              {iso_days - unquote(date) + 1, unquote(era)}
-            end
-
-            def era(iso_days) when iso_days >= unquote(date) do
-              {unquote(date), nil, unquote(era)}
-            end
-          end
-
-        :end ->
-          quote do
-            def year_of_era(iso_days, year) when iso_days <= unquote(date) do
-              {year - unquote(era_year) + 1, unquote(era)}
-            end
-
-            def day_of_era(iso_days) when iso_days <= unquote(date) do
-              {iso_days + 1, unquote(era)}
-            end
-
-            def era(iso_days) when iso_days >= unquote(date) do
-              {nil, unquote(date), unquote(era)}
-            end
-          end
-      end
+      :identity ->
+        cond do
+          year >= 1 or era_data.before_era == nil -> {year, era_data.forward_era}
+          true -> {1 - year, era_data.before_era}
+        end
     end
   end
 
   @doc """
-  Return the era module for a given
-  cldr calendar type.
+  Returns the day of era and era number for a date.
+
+  ### Arguments
+
+  * `cldr_calendar_type` is the CLDR calendar type of the
+    calendar, such as `:persian` or `:japanese`.
+
+  * `iso_days` is the date as a count of days since the
+    proleptic ISO epoch.
+
+  ### Returns
+
+  * A two-tuple `{day_of_era, era}` where `day_of_era` is the
+    count of days since the era began.
+
+  ### Examples
+
+      iex> iso_days = Date.to_gregorian_days(~D[2019-05-01])
+      iex> Calendrical.Era.day_of_era(:japanese, iso_days)
+      {1, 236}
 
   """
-  @era_module_base Calendrical.Era
+  @spec day_of_era(cldr_calendar_type(), integer()) :: {Calendar.day(), Calendar.era()}
+  def day_of_era(cldr_calendar_type, iso_days) do
+    record = find_era(era_data(cldr_calendar_type).records, iso_days, cldr_calendar_type)
 
-  def era_module(cldr_calendar) do
-    module = to_string(cldr_calendar) |> String.capitalize()
-    Module.concat(@era_module_base, module)
+    case record do
+      %{from: from} when is_integer(from) -> {iso_days - from + 1, record.era}
+      %{to: _to} -> {iso_days + 1, record.era}
+    end
+  end
+
+  @doc """
+  Returns the resolved era data for a CLDR calendar type.
+
+  The data is computed on first access and cached in
+  `:persistent_term`.
+
+  ### Arguments
+
+  * `cldr_calendar_type` is the CLDR calendar type of the
+    calendar, such as `:persian` or `:japanese`.
+
+  ### Returns
+
+  * A map with the era records (most recent era first), the
+    year-numbering mode and the forward/before era numbers.
+
+  """
+  @spec era_data(cldr_calendar_type()) :: map()
+  def era_data(cldr_calendar_type) when is_atom(cldr_calendar_type) do
+    key = {__MODULE__, cldr_calendar_type}
+
+    case :persistent_term.get(key, :__not_loaded__) do
+      :__not_loaded__ ->
+        value = build_era_data(cldr_calendar_type)
+        :persistent_term.put(key, value)
+        value
+
+      value ->
+        value
+    end
+  end
+
+  # Scan the records (most recent first) for the era containing
+  # `iso_days`, mirroring the clause ordering of the previous
+  # generated-module implementation.
+  defp find_era(records, iso_days, cldr_calendar_type) do
+    Enum.find(records, fn
+      %{from: from} when is_integer(from) -> iso_days >= from
+      %{to: to} when is_integer(to) -> iso_days <= to
+    end) ||
+      raise ArgumentError,
+            "date with iso days #{inspect(iso_days)} is before all eras " <>
+              "of the #{inspect(cldr_calendar_type)} calendar"
+  end
+
+  # The Japanese calendar numbers years in Gregorian years while
+  # its eras begin mid-year.
+  @gregorian_offset_types [:japanese]
+
+  # Japanese eras before Meiji (era index 232) are recorded in CLDR
+  # as lunisolar passthroughs: the proclamation's traditional
+  # `年月日` numerals copied into the Western fields with no
+  # calendar conversion. Meiji onwards the dates are true proleptic
+  # Gregorian, fixed by government proclamation. See the validation
+  # research in the localize repository, plans/japanese_eras.md.
+  @first_gregorian_japanese_era 232
+
+  # `Calendrical.LunarJapanese` year 1 corresponds to 645 CE, so a
+  # CLDR raw year converts to a lunisolar year by subtracting 644.
+  @lunar_japanese_year_offset 644
+
+  defp build_era_data(cldr_calendar_type) do
+    records =
+      cldr_calendar_type
+      |> eras_for_calendar()
+      |> Enum.reverse()
+      |> Enum.map(&era_record(&1, cldr_calendar_type))
+
+    year_mode =
+      if cldr_calendar_type in @gregorian_offset_types, do: :gregorian_offset, else: :identity
+
+    forward_era =
+      Enum.find_value(records, fn
+        %{from: from, era: era} when is_integer(from) -> era
+        _other -> nil
+      end)
+
+    before_era =
+      Enum.find_value(records, fn
+        %{to: to, era: era} when is_integer(to) -> era
+        _other -> nil
+      end)
+
+    %{
+      cldr_calendar_type: cldr_calendar_type,
+      year_mode: year_mode,
+      records: records,
+      forward_era: forward_era,
+      before_era: before_era
+    }
+  end
+
+  # CLDR era boundaries are proleptic Gregorian dates for every
+  # calendar type except the pre-Meiji Japanese eras, which are
+  # handled in `start_iso_days/4` below. The `gregorian_year` kept
+  # on each record is the raw CLDR year label, which is what the
+  # Japanese year-of-era arithmetic counts from.
+  defp era_record([era, %{start: [year, _month, _day] = date} = span], cldr_calendar_type) do
+    %{
+      era: era,
+      from: start_iso_days(era, date, span, cldr_calendar_type),
+      gregorian_year: year,
+      code: span[:code]
+    }
+  end
+
+  defp era_record([era, %{end: [year, month, day]} = span], _cldr_calendar_type) do
+    %{
+      era: era,
+      to: Calendar.ISO.date_to_iso_days(year, month, day),
+      gregorian_year: year,
+      code: span[:code]
+    }
+  end
+
+  # Pre-Meiji Japanese era dates are lunisolar passthroughs, so the
+  # boundary is resolved by converting the traditional lunisolar
+  # date. Curated entries (identified by a `:lunisolar` provenance
+  # field, per the japanese_eras plan) already carry a proleptic
+  # Gregorian `:start` and are used directly.
+  defp start_iso_days(era, [year, month, day], span, :japanese)
+       when era < @first_gregorian_japanese_era do
+    if Map.has_key?(span, :lunisolar) do
+      Calendar.ISO.date_to_iso_days(year, month, day)
+    else
+      case Calendrical.LunarJapanese.new(year - @lunar_japanese_year_offset, month, day) do
+        {:ok, date} ->
+          date |> Date.convert!(Calendar.ISO) |> Date.to_gregorian_days()
+
+        {:error, reason} ->
+          # One known row (era 115 建保, [1213, 12, 6]) cannot be
+          # reconstructed astronomically: the historical 宣明暦
+          # intercalary placement for that lunar year diverges from
+          # the modern no-zhongqi rule (see japanese_eras.md, open
+          # question 5). Fall back to the raw Gregorian reading —
+          # the pre-existing behavior — rather than failing every
+          # Japanese era lookup. Curated data with a `:lunisolar`
+          # provenance field supersedes this fallback.
+          Logger.warning(
+            "[Calendrical] Japanese era #{era} start #{inspect([year, month, day])} " <>
+              "could not be resolved as a lunisolar date (#{inspect(reason)}); " <>
+              "using the raw Gregorian reading"
+          )
+
+          Calendar.ISO.date_to_iso_days(year, month, day)
+      end
+    end
+  end
+
+  defp start_iso_days(_era, [year, month, day], _span, _cldr_calendar_type) do
+    Calendar.ISO.date_to_iso_days(year, month, day)
+  end
+
+  defp eras_for_calendar(cldr_calendar_type) do
+    case Map.fetch(Localize.SupplementalData.calendars(), cldr_calendar_type) do
+      {:ok, %{eras: eras}} ->
+        eras
+
+      _other ->
+        raise ArgumentError,
+              "unknown CLDR calendar type #{inspect(cldr_calendar_type)}. " <>
+                "Known types are #{inspect(Map.keys(Localize.SupplementalData.calendars()))}"
+    end
   end
 end
