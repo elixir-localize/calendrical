@@ -36,6 +36,10 @@ The format is based on
 
 * The HTML month template now closes its `<caption>` tag and separates the `id` attribute from `class`; `Calendrical.Formatter.HTML.Basic` no longer emits a deprecation warning on every rendered day.
 
+* `Date.shift/2` and `NaiveDateTime.shift/2` on Calendrical calendars now clamp year and month shifts to the end of the target month per the `Calendar.ISO` contract. Previously an invalid date such as February 31 escaped into the returned struct.
+
+* `Calendrical.Julian.day_of_era/3` now counts days from the era boundary (Julian 0001-01-01) instead of returning a meaningless sum; BCE days count backwards from the day before the epoch.
+
 ## [0.10.0] — 2026-07-02
 
 ### Added
