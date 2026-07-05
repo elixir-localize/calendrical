@@ -271,16 +271,25 @@ defmodule Calendrical.Behaviour do
       end
 
       @doc """
-      Returns the related gregorain year as displayed
+      Returns the related Gregorian year as displayed
       on rendered calendars.
+
+      Per TR35 this is the Gregorian year in which this
+      calendar's `year` begins, so it is constant for every
+      date of the calendar year.
 
       """
       @spec related_gregorian_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
               Calendar.year()
 
       @impl true
-      def related_gregorian_year(year, month, day) do
-        year
+      def related_gregorian_year(year, _month, _day) do
+        {gregorian_year, _month, _day} =
+          year
+          |> date_to_iso_days(1, 1)
+          |> Calendar.ISO.date_from_iso_days()
+
+        gregorian_year
       end
 
       @doc """

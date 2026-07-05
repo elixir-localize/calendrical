@@ -39,9 +39,11 @@ defmodule Calendrical.Base.Egyptian do
   def year_of_era(year) when year > 0, do: {year, 1}
   def year_of_era(year) when year < 0, do: {abs(year), 0}
 
-  def related_gregorian_year(year, month, day, epoch) do
+  # Per TR35 the related year is the Gregorian year in which the
+  # calendar year begins, constant for every date of that year.
+  def related_gregorian_year(year, _month, _day, epoch) do
     {gregorian_year, _, _} =
-      date_to_iso_days(year, month, day, epoch)
+      date_to_iso_days(year, 1, 1, epoch)
       |> Calendar.ISO.date_from_iso_days()
 
     gregorian_year

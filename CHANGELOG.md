@@ -102,6 +102,8 @@ The format is based on
 
 * `Calendrical.localize/3` now accepts `:cyclic_year` and returns the localized sexagesimal cycle name (2026 → "bing-wu" in `:en`, 丙午 in `:ja`). The part was rejected by option validation, and the lookup keyed on elapsed years instead of the 1..60 cycle position, so it could never match a CLDR name.
 
+* `related_gregorian_year/3` now returns the Gregorian year in which the calendar year begins per TR35, constant across the calendar year. Previously the Behaviour calendars returned their own year number unchanged (Chinese 4663 instead of 2026), and the Coptic, Ethiopic and Julian calendars returned the Gregorian year of the date itself, drifting forward for dates past December 31.
+
 * `Calendrical.LunarJapanese.year_of_era/{1,3}`, `day_of_era/3` and `calendar_year/3` now consult the Japanese era table, so lunisolar dates carry 元号 era years (2026 → Reiwa 8, and an era begins on its proclamation day mid-lunar-year, as the chronicles record). Previously they used the Chinese-type identity mapping and returned the raw elapsed year.
 
 * `Calendrical.localize/3` with `:era` now renders era names for the lunisolar Japanese calendar (令和, 安政) via the new optional `era_calendar_type/0` callback, which lets a calendar take era names from a different CLDR calendar than its other localized names.

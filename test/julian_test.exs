@@ -67,10 +67,12 @@ defmodule Calendrical.JulianTest do
       assert Julian.year_of_era(-100, 1, 1) == {100, 0}
     end
 
-    test "related_gregorian_year crosses the year boundary correctly" do
-      # Julian Christmas 2026 falls on Gregorian 2027-01-07.
-      assert Julian.related_gregorian_year(2026, 12, 25) == 2027
+    test "related_gregorian_year is constant across the calendar year per TR35" do
+      # Julian Christmas 2026 falls on Gregorian 2027-01-07, but the
+      # related year is the Gregorian year in which Julian 2026 began.
+      assert Julian.related_gregorian_year(2026, 12, 25) == 2026
       assert Julian.related_gregorian_year(2026, 6, 22) == 2026
+      assert Julian.related_gregorian_year(2026, 1, 1) == 2026
     end
 
     test "day_of_era counts from the epoch in both eras" do

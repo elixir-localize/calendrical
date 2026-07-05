@@ -237,8 +237,13 @@ defmodule Calendrical.Julian do
   end
 
   @doc """
-  Returns the proleptic Gregorian year that contains the given Julian
-  date.
+  Returns the proleptic Gregorian year in which the given Julian
+  year begins.
+
+  Per TR35 the related year is constant for every date of the
+  calendar year: Julian 2025 begins on Gregorian 2025-01-14, so
+  every Julian 2025 date — including 2025-12-25, which falls on
+  Gregorian 2026-01-07 — has related year 2025.
 
   ### Arguments
 
@@ -257,11 +262,14 @@ defmodule Calendrical.Julian do
       iex> Calendrical.Julian.related_gregorian_year(2025, 1, 1)
       2025
 
+      iex> Calendrical.Julian.related_gregorian_year(2025, 12, 25)
+      2025
+
   """
   @spec related_gregorian_year(year, month, day) :: Calendar.year()
   @impl Calendrical
-  def related_gregorian_year(year, month, day) do
-    iso_days = date_to_iso_days(year, month, day)
+  def related_gregorian_year(year, _month, _day) do
+    iso_days = date_to_iso_days(year, 1, 1)
     {year, _month, _day} = Calendrical.Gregorian.date_from_iso_days(iso_days)
     year
   end
