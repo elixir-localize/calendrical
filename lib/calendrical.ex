@@ -3710,6 +3710,10 @@ defmodule Calendrical do
       iex> Calendrical.iso_days_to_day_of_week(days) == Calendrical.tuesday()
       true
 
+      iex> days = Calendrical.date_to_iso_days(~D[2026-07-05])
+      iex> Calendrical.iso_days_to_day_of_week(days) == Calendrical.sunday()
+      true
+
   """
   @spec iso_days_to_day_of_week(Calendar.iso_days() | Calendar.day()) :: day_of_week()
   def iso_days_to_day_of_week({days, _}) do
@@ -3717,7 +3721,9 @@ defmodule Calendrical do
   end
 
   def iso_days_to_day_of_week(iso_day_number) when is_integer(iso_day_number) do
-    Integer.mod(iso_day_number + 6, 7)
+    # amod keeps the documented 1..7 range: a plain mod returns 0
+    # for Sunday, contradicting `sunday/0`.
+    Localize.Utils.Math.amod(iso_day_number + 6, 7)
   end
 
   @doc """

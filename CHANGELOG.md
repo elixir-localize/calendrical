@@ -46,6 +46,8 @@ The format is based on
 
 * `Calendrical.Julian.day_of_era/3` now counts days from the era boundary (Julian 0001-01-01) instead of returning a meaningless sum; BCE days count backwards from the day before the epoch.
 
+* `Calendrical.iso_days_to_day_of_week/1` now returns `7` for Sunday per its documented 1..7 contract, instead of `0`. `Calendrical.Kday` results are unchanged; it computes its zero-based weekday internally.
+
 ## [0.10.0] — 2026-07-02
 
 ### Added

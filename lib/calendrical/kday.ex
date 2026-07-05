@@ -8,7 +8,6 @@ defmodule Calendrical.Kday do
     only: [
       date_to_iso_days: 1,
       date_from_iso_days: 2,
-      iso_days_to_day_of_week: 1,
       weeks_to_days: 1
     ]
 
@@ -56,7 +55,12 @@ defmodule Calendrical.Kday do
   end
 
   def kday_on_or_before(iso_days, k) when is_integer(iso_days) do
-    iso_days - iso_days_to_day_of_week(iso_days - k)
+    # The Reingold formula needs a zero-based weekday (Sunday = 0):
+    # when `iso_days - k` falls on a Sunday the subtraction must be
+    # zero, not seven. `Calendrical.iso_days_to_day_of_week/1`
+    # returns the documented 1..7 range, so compute the zero-based
+    # value directly.
+    iso_days - Integer.mod(iso_days - k + 6, 7)
   end
 
   @doc """
