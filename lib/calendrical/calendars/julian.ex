@@ -1023,7 +1023,18 @@ defmodule Calendrical.Julian do
 
   def plus(year, month, day, :months, months, options) do
     months_in_year = months_in_year(year)
-    {year_increment, new_month} = Localize.Utils.Math.div_amod(month + months, months_in_year)
+
+    # Normalize a non-positive month from div_amod into the prior
+    # year — otherwise subtracting months can produce {2025, -2, 1}.
+    {year_increment, new_month} =
+      case Localize.Utils.Math.div_amod(month + months, months_in_year) do
+        {year_increment, new_month} when new_month > 0 ->
+          {year_increment, new_month}
+
+        {year_increment, new_month} ->
+          {year_increment - 1, months_in_year + new_month}
+      end
+
     new_year = skip_year_zero(year + year_increment, year)
 
     new_day =

@@ -81,6 +81,13 @@ defmodule Calendrical.Formatter.Options do
     Localize.Territory.territory_from_locale(locale)
   end
 
+  # An explicit territory option is validated rather than rejected;
+  # previously only the nil (derive-from-locale) clause existed and a
+  # supplied territory fell through to the invalid-option catch-all.
+  def validate_option(:territory, _options, territory) do
+    Localize.validate_territory(territory)
+  end
+
   def validate_option(:formatter, _options, nil) do
     {:ok, Calendrical.Format.default_formatter_module()}
   end

@@ -70,6 +70,24 @@ The format is based on
 
 * `min_days_for_territory/1`, `first_day_for_territory/1`, `weekend/1`, `weekdays/1` and therefore `calendar_for_territory/1` no longer loop forever for a valid ISO territory absent from CLDR week data (private-use codes such as `:XX`); they take the world defaults.
 
+* Time parsing resolves locale day-period names against the locale's own AM/PM name sets, so `午後2:30` (`:ja`) parses as 14:30 and `3:30 μ.μ.` (`:el`) as 15:30. Previously only ASCII "pm" heuristics applied and such inputs silently parsed as AM.
+
+* Calendars built on `Calendrical.Behaviour` support `plus/6` for `:years`, `:weeks` and `:days` (previously only `:months`), so `Date.shift/2` with year, week or day durations no longer raises on the Coptic, Ethiopic, Hebrew, Persian, lunisolar and Islamic calendars.
+
+* `plus/6` with a negative month count now normalizes into the prior year on Behaviour calendars and `Calendrical.Julian`, instead of returning an invalid negative month.
+
+* `day_of_era/3` on the Coptic and Ethiopic calendars counts from the era boundary instead of returning a meaningless sum (the same defect fixed for `Calendrical.Julian` earlier in this release).
+
+* The lunisolar solar-term functions work: `solar_longitude_on_or_after/3` (and the major/minor term searches built on it) no longer raises on every call, and `current_minor_solar_term/2` groups its arithmetic per Reingold & Dershowitz.
+
+* `Calendrical.TimeZone.resolve/3` resolves CLDR localized zone names ("British Summer Time" → Europe/London) and lowercase IANA ids by canonicalizing case-insensitively against the time zone database, and rejects out-of-range offsets such as `+05:99`.
+
+* `Calendrical.Format` accepts an explicit `:territory` option; previously any supplied territory was rejected as an invalid option.
+
+* `Calendrical.Composite.new/2` returns `{:error, :no_calendars_configured}` instead of a bare `:error` when the `:calendars` option is missing.
+
+* `previous/3` for a `Date.Range` and `:day` returns a `Date.Range` like every other range clause; week-calendar `iso_week_of_year/4` returns its missing-fields error instead of raising; `days_in_month/1` with a non-integer month returns an error instead of raising `ArithmeticError`.
+
 * `Calendrical.localize/3` now accepts `:cyclic_year` and returns the localized sexagesimal cycle name (2026 → "bing-wu" in `:en`, 丙午 in `:ja`). The part was rejected by option validation, and the lookup keyed on elapsed years instead of the 1..60 cycle position, so it could never match a CLDR name.
 
 * `Calendrical.LunarJapanese.year_of_era/{1,3}`, `day_of_era/3` and `calendar_year/3` now consult the Japanese era table, so lunisolar dates carry 元号 era years (2026 → Reiwa 8, and an era begins on its proclamation day mid-lunar-year, as the chronicles record). Previously they used the Chinese-type identity mapping and returned the raw elapsed year.

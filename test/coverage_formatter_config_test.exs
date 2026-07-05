@@ -34,9 +34,12 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
                Options.validate_options(number_system: :nope)
     end
 
-    test "an unknown territory is rejected" do
-      assert {:error, %Calendrical.Formatter.InvalidOptionError{option: :territory, value: :ZZ}} =
-               Options.validate_options(territory: :ZZ)
+    test "an explicit territory is validated" do
+      # :ZZ is a valid private-use code and is accepted.
+      assert {:ok, %Options{territory: :ZZ}} = Options.validate_options(territory: :ZZ)
+
+      assert {:error, %Localize.UnknownTerritoryError{}} =
+               Options.validate_options(territory: :invalid)
     end
 
     test "a module that is not a formatter is rejected" do

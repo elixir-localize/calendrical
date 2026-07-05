@@ -592,36 +592,22 @@ defmodule Calendrical.Coverage.LunisolarTest do
 
       assert Lunisolar.current_major_solar_term(iso_days, &location/1) == 11
 
-      # Characterization value. The formula in current_minor_solar_term/2
-      # reads `floor(s - deg(15) / deg(30))`, which computes
-      # `floor(s - 0.5)` rather than the Reingold & Dershowitz
-      # `quotient(s - 15, 30)`; with the intended grouping this would
-      # return 11 for this date, not 6.
-      assert Lunisolar.current_minor_solar_term(iso_days, &location/1) == 6
+      assert Lunisolar.current_minor_solar_term(iso_days, &location/1) == 11
       assert Lunisolar.no_major_solar_term?(iso_days, &location/1)
       assert Lunisolar.midnight_in_location(iso_days, &location/1) == 739_981.6666666666
     end
 
-    # Characterization tests: `solar_longitude_on_or_after/3` passes the
-    # full `{latitude, longitude, altitude, offset}` tuple to
-    # `Astro.Time.standard_from_universal/2`, which only accepts a zone
-    # name or a numeric offset, so it (and the two `_on_or_after`
-    # solar-term functions built on it) currently always raises. When
-    # that is fixed these tests should be replaced with value assertions.
-    test "solar term on-or-after functions currently raise (suspected bug)" do
+    test "solar term on-or-after functions return event moments" do
       iso_days = Calendar.ISO.date_to_iso_days(2026, 1, 1)
 
-      assert_raise FunctionClauseError, fn ->
-        Lunisolar.solar_longitude_on_or_after(300, iso_days, &location/1)
-      end
+      # 大寒 (sun at 300 degrees) falls on 2026-01-20 Beijing time.
+      major = Lunisolar.major_solar_term_on_or_after(iso_days, &location/1)
+      assert Calendar.ISO.date_from_iso_days(floor(major)) == {2026, 1, 20}
+      assert Lunisolar.solar_longitude_on_or_after(300, iso_days, &location/1) == major
 
-      assert_raise FunctionClauseError, fn ->
-        Lunisolar.major_solar_term_on_or_after(iso_days, &location/1)
-      end
-
-      assert_raise FunctionClauseError, fn ->
-        Lunisolar.minor_solar_term_on_or_after(iso_days, &location/1)
-      end
+      # 小寒 (sun at 285 degrees) falls on 2026-01-05 Beijing time.
+      minor = Lunisolar.minor_solar_term_on_or_after(iso_days, &location/1)
+      assert Calendar.ISO.date_from_iso_days(floor(minor)) == {2026, 1, 5}
     end
 
     test "is_prior_leap_month?/3 returns false when the range is empty" do

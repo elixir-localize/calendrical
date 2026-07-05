@@ -415,7 +415,7 @@ defmodule CoverageBasesTest do
                NRF.week_of_year(nil, 1, 1)
 
       assert {:error, %Calendrical.MissingFieldsError{function: "iso_week_of_year"}} =
-               Week.iso_week_of_year(nil, 1, 1)
+               NRF.iso_week_of_year(nil, 1, 1)
 
       assert {:error, %Calendrical.MissingFieldsError{function: "week_of_month"}} =
                NRF.week_of_month(nil, 1, 1)

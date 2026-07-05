@@ -167,17 +167,17 @@ defmodule Calendrical.TimeZone do
     |> String.replace(":", "")
     |> case do
       <<h::binary-size(2), m::binary-size(2), s::binary-size(2)>> ->
-        with {hh, ""} <- Integer.parse(h),
-             {mm, ""} <- Integer.parse(m),
-             {ss, ""} <- Integer.parse(s) do
+        with {hh, ""} when hh <= 14 <- Integer.parse(h),
+             {mm, ""} when mm < 60 <- Integer.parse(m),
+             {ss, ""} when ss < 60 <- Integer.parse(s) do
           {:ok, hh * 3600 + mm * 60 + ss}
         else
           _ -> :error
         end
 
       <<h::binary-size(2), m::binary-size(2)>> ->
-        with {hh, ""} <- Integer.parse(h),
-             {mm, ""} <- Integer.parse(m) do
+        with {hh, ""} when hh <= 14 <- Integer.parse(h),
+             {mm, ""} when mm < 60 <- Integer.parse(m) do
           {:ok, hh * 3600 + mm * 60}
         else
           _ -> :error
@@ -185,7 +185,7 @@ defmodule Calendrical.TimeZone do
 
       <<h::binary-size(2)>> ->
         case Integer.parse(h) do
-          {hh, ""} -> {:ok, hh * 3600}
+          {hh, ""} when hh <= 14 -> {:ok, hh * 3600}
           _ -> :error
         end
 
@@ -237,6 +237,8 @@ defmodule Calendrical.TimeZone do
         {:error, :no_tz_database_loaded}
 
       module ->
+        zone = canonical_iana_zone(zone)
+
         case DateTime.from_naive(naive_dt, zone, module) do
           {:ok, dt} ->
             {:ok, dt}
@@ -299,6 +301,33 @@ defmodule Calendrical.TimeZone do
       "NZST" => "Pacific/Auckland",
       "NZDT" => "Pacific/Auckland"
     }
+  end
+
+  # IANA zone ids are case-sensitive, but CLDR locale data keys
+  # them lowercased and users type freely. Map case-insensitively
+  # onto the canonical zone list (cached in persistent_term).
+  defp canonical_iana_zone(zone) do
+    Map.get(canonical_zone_map(), String.downcase(zone), zone)
+  end
+
+  defp canonical_zone_map do
+    key = {__MODULE__, :canonical_zones}
+
+    case :persistent_term.get(key, :__not_loaded__) do
+      :__not_loaded__ ->
+        value =
+          if Code.ensure_loaded?(Tzdata) do
+            Map.new(Tzdata.zone_list(), fn zone -> {String.downcase(zone), zone} end)
+          else
+            %{}
+          end
+
+        :persistent_term.put(key, value)
+        value
+
+      value ->
+        value
+    end
   end
 
   # ── CLDR locale-name zones ─────────────────────────────────

@@ -675,9 +675,11 @@ defmodule Calendrical.CoverageMainTest do
                  ~D[2026-06-28 Calendrical.Gregorian]
                )
 
-      # Note: unlike the other range clauses, previous/3 for :day
-      # currently returns a Date rather than a Date.Range.
-      assert Calendrical.previous(week, :day) == ~D[2026-06-28 Calendrical.Gregorian]
+      assert Calendrical.previous(week, :day) ==
+               Date.range(
+                 ~D[2026-06-28 Calendrical.Gregorian],
+                 ~D[2026-06-28 Calendrical.Gregorian]
+               )
 
       assert Calendrical.previous(~D[2026-07-05], :year) == ~D[2025-07-05]
     end

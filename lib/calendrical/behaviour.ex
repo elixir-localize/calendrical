@@ -652,16 +652,42 @@ defmodule Calendrical.Behaviour do
       Adds an `increment` number of `date_part`s
       to a `year-month-day`.
 
-      `date_part` can be `:months` only.
+      `date_part` can be `:years`, `:months`, `:weeks` or `:days`.
 
       """
       @impl true
 
       def plus(year, month, day, date_part, increment, options \\ [])
 
+      def plus(year, month, day, :years, years, options) do
+        new_year = year + years
+
+        {new_month, new_day} =
+          if Keyword.get(options, :coerce, false) do
+            new_month = min(month, months_in_year(new_year))
+            {new_month, min(day, days_in_month(new_year, new_month))}
+          else
+            {month, day}
+          end
+
+        {new_year, new_month, new_day}
+      end
+
       def plus(year, month, day, :months, months, options) do
         months_in_year = months_in_year(year)
-        {year_increment, new_month} = Localize.Utils.Math.div_amod(month + months, months_in_year)
+
+        # Normalize a non-positive month from div_amod into the
+        # prior year, as Calendrical.Base.Month does — otherwise
+        # subtracting months can produce results like {2018, -1, 1}.
+        {year_increment, new_month} =
+          case Localize.Utils.Math.div_amod(month + months, months_in_year) do
+            {year_increment, new_month} when new_month > 0 ->
+              {year_increment, new_month}
+
+            {year_increment, new_month} ->
+              {year_increment - 1, months_in_year + new_month}
+          end
+
         new_year = year + year_increment
 
         new_day =
@@ -673,6 +699,15 @@ defmodule Calendrical.Behaviour do
           end
 
         {new_year, new_month, new_day}
+      end
+
+      def plus(year, month, day, :weeks, weeks, options) do
+        plus(year, month, day, :days, weeks * days_in_week(), options)
+      end
+
+      def plus(year, month, day, :days, days, _options) do
+        iso_days = date_to_iso_days(year, month, day) + days
+        date_from_iso_days(iso_days)
       end
 
       @doc """

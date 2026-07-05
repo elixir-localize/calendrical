@@ -222,7 +222,7 @@ defmodule Calendrical.Time.Parser do
 
     with %Regex{} <- regex,
          %{} = caps <- Regex.named_captures(regex, input),
-         {:ok, hour} <- extract_hour(caps, tokens) do
+         {:ok, hour} <- extract_hour(caps, tokens, day_periods) do
       zone = extract_zone(caps)
 
       case as do
@@ -568,7 +568,7 @@ defmodule Calendrical.Time.Parser do
 
   # ── Field extraction ────────────────────────────────────────
 
-  defp extract_hour(caps, tokens) do
+  defp extract_hour(caps, tokens, day_periods) do
     # Find which hour-letter actually fired. We named each as
     # `hour_h` / `hour_H` / `hour_K` / `hour_k` so we can
     # discriminate.
@@ -580,7 +580,7 @@ defmodule Calendrical.Time.Parser do
     with raw when is_binary(raw) and raw != "" <- caps[hour_field],
          {n, ""} <- Integer.parse(raw) do
       letter = hour_field |> String.replace_prefix("hour_", "") |> String.to_atom()
-      resolve_hour(n, letter, caps, tokens)
+      resolve_hour(n, letter, caps, tokens, day_periods)
     else
       _ -> :error
     end
@@ -591,11 +591,11 @@ defmodule Calendrical.Time.Parser do
   #   H: 0-23, no AM/PM
   #   K: 0-11, paired with a/b
   #   k: 1-24 (k=24 == midnight start of day)
-  defp resolve_hour(n, :H, _caps, _tokens) when n in 0..23, do: {:ok, n}
-  defp resolve_hour(24, :k, _caps, _tokens), do: {:ok, 0}
-  defp resolve_hour(n, :k, _caps, _tokens) when n in 1..23, do: {:ok, n}
+  defp resolve_hour(n, :H, _caps, _tokens, _day_periods) when n in 0..23, do: {:ok, n}
+  defp resolve_hour(24, :k, _caps, _tokens, _day_periods), do: {:ok, 0}
+  defp resolve_hour(n, :k, _caps, _tokens, _day_periods) when n in 1..23, do: {:ok, n}
 
-  defp resolve_hour(n, letter, caps, _tokens) when letter in [:h, :K] do
+  defp resolve_hour(n, letter, caps, _tokens, day_periods) when letter in [:h, :K] do
     base = if letter == :h, do: rem(n, 12), else: n
 
     period = caps |> Map.get("day_period", "") |> String.downcase()
@@ -604,6 +604,15 @@ defmodule Calendrical.Time.Parser do
     cond do
       period in ["pm", "p.m."] ->
         {:ok, base + 12}
+
+      # Locale day-period names that carry no ASCII am/pm signal
+      # (ja 午前/午後, el π.μ./μ.μ., narrow "a"/"p") resolve
+      # against the locale's own am/pm name sets.
+      locale_period_kind(period, day_periods) == :pm ->
+        {:ok, base + 12}
+
+      locale_period_kind(period, day_periods) == :am ->
+        {:ok, base}
 
       period in ["am", "a.m.", ""] and flex == nil ->
         {:ok, base}
@@ -643,7 +652,28 @@ defmodule Calendrical.Time.Parser do
     end
   end
 
-  defp resolve_hour(_, _, _, _), do: :error
+  defp resolve_hour(_, _, _, _, _), do: :error
+
+  # Classifies a captured day-period string against the locale's
+  # am/pm names (all contexts and widths, case-insensitive).
+  defp locale_period_kind("", _day_periods), do: nil
+
+  defp locale_period_kind(period, day_periods) do
+    cond do
+      period in downcased_period_names(day_periods, :pm) -> :pm
+      period in downcased_period_names(day_periods, :am) -> :am
+      true -> nil
+    end
+  end
+
+  defp downcased_period_names(day_periods, key) do
+    for context <- [:format, :stand_alone],
+        width <- [:wide, :abbreviated, :narrow],
+        {period, entry} <- get_in(day_periods, [context, width]) || %{},
+        period == key,
+        name <- entry_to_names(entry),
+        do: String.downcase(name)
+  end
 
   # The `B` regex emits one branch per `(period_key, name)`
   # tuple, named `__bp_<key>`. Find which one fired and

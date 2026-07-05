@@ -2867,7 +2867,8 @@ defmodule Calendrical do
   end
 
   def previous(%Date.Range{first: date}, :day, options) do
-    previous(date, :day, options)
+    # Symmetric with next/3: range in, range out.
+    previous(date, :day, options) |> Interval.day()
   end
 
   def previous(date, :day, _options) do

@@ -38,6 +38,8 @@ defmodule Calendrical.Composite.Config do
       else
         {:error, :must_be_a_list_of_dates}
       end
+    else
+      :error -> {:error, :no_calendars_configured}
     end
   end
 

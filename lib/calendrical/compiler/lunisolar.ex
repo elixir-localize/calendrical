@@ -672,7 +672,11 @@ defmodule Calendrical.Lunisolar do
     d = Time.universal_from_standard(iso_days, offset)
     t = Solar.solar_ecliptic_longitude_after(lambda, d)
 
-    Time.standard_from_universal(t, location_fun.(t))
+    # The location function returns a {lat, lng, alt, offset} tuple;
+    # standard_from_universal takes just the offset. Passing the whole
+    # tuple raised FunctionClauseError on every call.
+    {_lat, _lng, _alt, offset_at_t} = location_fun.(t)
+    Time.standard_from_universal(t, offset_at_t)
   end
 
   @doc """
@@ -707,7 +711,9 @@ defmodule Calendrical.Lunisolar do
     {_lat, _lng, _alt, offset} = location_fun.(iso_days)
     d = Time.universal_from_standard(iso_days, offset)
     s = Solar.solar_ecliptic_longitude(d)
-    amod(3 + floor(s - deg(15) / deg(30)), 12)
+    # Parenthesized per Reingold & Dershowitz: floor((s - 15) / 30).
+    # The unparenthesized form computed floor(s - 0.5).
+    amod(3 + floor((s - deg(15)) / deg(30)), 12)
   end
 
   @doc """

@@ -214,7 +214,10 @@ defmodule Calendrical.Coptic do
   ### Examples
 
       iex> Calendrical.Coptic.day_of_era(1742, 1, 1)
-      {843840, 1}
+      {635901, 1}
+
+      iex> Calendrical.Coptic.day_of_era(1, 1, 1)
+      {1, 1}
 
   """
   @impl true
@@ -222,7 +225,14 @@ defmodule Calendrical.Coptic do
   def day_of_era(year, month, day) do
     {_, era} = year_of_era(year)
     days = date_to_iso_days(year, month, day)
-    {days + epoch(), era}
+
+    # Day one of the era is the epoch; the pre-era counts backwards
+    # from the day before it.
+    if era == 1 do
+      {days - epoch() + 1, era}
+    else
+      {epoch() - days, era}
+    end
   end
 
   @doc """

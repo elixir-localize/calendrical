@@ -112,7 +112,7 @@ defmodule Calendrical.Base.Week do
     end
   end
 
-  def iso_week_of_year(year, week, day) do
+  def iso_week_of_year(year, week, day, _config) do
     {:error, missing_date_error("iso_week_of_year", year, week, day)}
   end
 
@@ -228,7 +228,8 @@ defmodule Calendrical.Base.Week do
   # number of days in a long year.
   @any_year 2000
 
-  def days_in_month(month, %Config{weeks_in_month: [_, _, weeks_in_last_month]} = config) do
+  def days_in_month(month, %Config{weeks_in_month: [_, _, weeks_in_last_month]} = config)
+      when is_integer(month) do
     if month == @months_in_year do
       long_year_days = trunc((weeks_in_last_month + 1) * days_in_week())
       short_year_days = trunc(weeks_in_last_month * days_in_week())

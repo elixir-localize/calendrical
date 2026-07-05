@@ -137,13 +137,9 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
       assert {:error, :invalid_offset} = TimeZone.resolve("+ab", @july)
     end
 
-    test "minutes greater than 59 are not rejected (current behaviour)" do
-      # +05:99 is not a valid ISO 8601 offset but the parser only
-      # checks digit shape, not the 0..59 minute range, so it is
-      # accepted and normalised to +06:39. See the coverage report
-      # for the suspected-bug note on this branch.
-      assert {:ok, %DateTime{utc_offset: offset}} = TimeZone.resolve("+05:99", @july)
-      assert offset == 5 * 3600 + 99 * 60
+    test "minutes greater than 59 are rejected" do
+      assert {:error, :invalid_offset} = TimeZone.resolve("+05:99", @july)
+      assert {:error, :invalid_offset} = TimeZone.resolve("+15:00", @july)
     end
   end
 
@@ -151,23 +147,28 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
 
   describe "TimeZone.resolve/3 with CLDR locale names" do
     # These exercise resolve_locale_name/3, lookup_cldr_zone_name/2,
-    # find_zone_id/2, find_in_branch/3 and name_matches?/2. The CLDR
-    # match currently produces lowercase zone ids ("europe/london")
-    # that the tz database rejects, so even matching names resolve to
-    # {:error, :unresolvable_zone} — see the suspected-bug note.
+    # find_zone_id/2, find_in_branch/3 and name_matches?/2. CLDR ids
+    # are lowercased in the data; resolve/3 canonicalizes them against
+    # the tz database's zone list.
 
-    test "a CLDR long daylight name is scanned but does not resolve" do
-      assert {:error, :unresolvable_zone} = TimeZone.resolve("British Summer Time", @july)
+    test "a CLDR long daylight name resolves" do
+      assert {:ok, %DateTime{time_zone: "Europe/London"}} =
+               TimeZone.resolve("British Summer Time", @july)
     end
 
-    test "a CLDR long standard name is scanned but does not resolve" do
-      assert {:error, :unresolvable_zone} =
+    test "a CLDR long standard name resolves" do
+      assert {:ok, %DateTime{utc_offset: 0}} =
                TimeZone.resolve("Coordinated Universal Time", @july)
     end
 
     test "an explicit :locale option is honoured for the CLDR scan" do
-      assert {:error, :unresolvable_zone} =
+      assert {:ok, %DateTime{time_zone: "Europe/Dublin"}} =
                TimeZone.resolve("Irish Standard Time", @july, locale: :en)
+    end
+
+    test "a lowercase IANA id canonicalizes" do
+      assert {:ok, %DateTime{time_zone: "Europe/London"}} =
+               TimeZone.resolve("europe/london", @july)
     end
 
     test "an unknown locale falls back cleanly" do
