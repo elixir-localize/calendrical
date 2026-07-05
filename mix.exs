@@ -20,10 +20,15 @@ defmodule Calendrical.MixProject do
       ],
       test_coverage: [
         summary: [threshold: 90],
+        # Macro-only modules execute at compile time, which the
+        # coverage tool cannot instrument — their generated code is
+        # measured in the calendars that use them instead.
         # Test-support calendars, generators and fixtures compiled from
         # test/support are not part of the library surface and would
         # distort the coverage total.
         ignore_modules: [
+          Calendrical.Behaviour,
+          Calendrical.Julian.Compiler,
           Calendrical.BasicWeek,
           Calendrical.Behaviour.Basic,
           Calendrical.Behaviour.Gregorian,
