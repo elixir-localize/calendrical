@@ -248,21 +248,58 @@ defmodule Calendrical.Julian.Compiler do
         last_iso_day_of_year(year) - first_iso_day_of_year(year) + 1 == 366
       end
 
-      defdelegate valid_date?(year, month, day), to: Calendrical.Julian
+      # Dates before the variant's new-year day carry the prior label
+      # year: their plain-Julian year is `year + 1`. Functions that
+      # delegate a `{year, month, day}` to `Calendrical.Julian` must
+      # normalize the label year first, otherwise a rollover date such
+      # as {2023, 2, 29} in the March1 variant reaches plain Julian as
+      # the (invalid) date 2023-02-29 instead of 2024-02-29.
+      defp julian_year(year, month, day) when year_rollover(month, day), do: year + 1
+      defp julian_year(year, _month, _day), do: year
+
+      def valid_date?(year, month, day) do
+        Calendrical.Julian.valid_date?(julian_year(year, month, day), month, day)
+      end
+
+      def day_of_week(year, month, day, starts_on) do
+        Calendrical.Julian.day_of_week(julian_year(year, month, day), month, day, starts_on)
+      end
+
+      def day_of_era(year, month, day) do
+        Calendrical.Julian.day_of_era(julian_year(year, month, day), month, day)
+      end
+
+      def iso_week_of_year(year, month, day) do
+        Calendrical.Julian.iso_week_of_year(julian_year(year, month, day), month, day)
+      end
+
+      def week_of_year(year, month, day) do
+        Calendrical.Julian.week_of_year(julian_year(year, month, day), month, day)
+      end
+
+      def year_of_era(year, month, day) do
+        Calendrical.Julian.year_of_era(julian_year(year, month, day), month, day)
+      end
+
       defdelegate week(year, week), to: Calendrical.Julian
       defdelegate weeks_in_year(year), to: Calendrical.Julian
       defdelegate months_in_year(year), to: Calendrical.Julian
       defdelegate periods_in_year(year), to: Calendrical.Julian
-      defdelegate day_of_week(year, month, day, starts_on), to: Calendrical.Julian
-      defdelegate day_of_era(year, month, day), to: Calendrical.Julian
-      defdelegate iso_week_of_year(year, month, day), to: Calendrical.Julian
-      defdelegate week_of_year(year, month, day), to: Calendrical.Julian
-      defdelegate year_of_era(year, month, day), to: Calendrical.Julian
-      defdelegate parse_date(date), to: Calendrical.Julian
+      # Parsing must validate against this variant's own year labeling
+      # (a leap day can be valid here in a different label year than in
+      # plain Julian), so parse with this module as the calendar.
+      def parse_date(string) do
+        Calendrical.Parse.parse_date(string, __MODULE__)
+      end
+
       defdelegate date_to_string(year, month, day), to: Calendrical.Julian
       defdelegate cldr_calendar_type(), to: Calendrical.Julian
       defdelegate calendar_base(), to: Calendrical.Julian
-      defdelegate week_of_month(year, month, day), to: Calendrical.Julian
+
+      def week_of_month(year, month, day) do
+        Calendrical.Julian.week_of_month(julian_year(year, month, day), month, day)
+      end
+
       defdelegate valid_time?(hour, minute, second, millisecond), to: Calendrical.Julian
       defdelegate time_to_string(hour, minute, second, millisecond), to: Calendrical.Julian
 
@@ -288,9 +325,17 @@ defmodule Calendrical.Julian.Compiler do
 
       defdelegate iso_days_to_end_of_day(iso_days), to: Calendrical.Julian
       defdelegate iso_days_to_beginning_of_day(iso_days), to: Calendrical.Julian
-      defdelegate parse_utc_datetime(string), to: Calendrical.Julian
+
+      def parse_utc_datetime(string) do
+        Calendrical.Parse.parse_utc_datetime(string, __MODULE__)
+      end
+
       defdelegate parse_time(string), to: Calendrical.Julian
-      defdelegate parse_naive_datetime(string), to: Calendrical.Julian
+
+      def parse_naive_datetime(string) do
+        Calendrical.Parse.parse_naive_datetime(string, __MODULE__)
+      end
+
       defdelegate day_rollover_relative_to_midnight_utc, to: Calendrical.Julian
 
       defdelegate datetime_to_string(
