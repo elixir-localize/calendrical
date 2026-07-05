@@ -277,6 +277,7 @@ defmodule Calendrical.Hebrew do
 
   """
   @impl true
+  @spec valid_date?(year, month, day) :: boolean()
   def valid_date?(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) and
              year >= 1 and month in 1..13 and day in 1..30 do

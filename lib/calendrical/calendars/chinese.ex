@@ -147,8 +147,9 @@ defmodule Calendrical.Chinese do
 
   * `year` is any year in the `Calendrical.Chinese` calendar.
 
-  * `month` is either an integer ordinal month or a `{month, :leap}`
-    tuple representing the traditional intercalary month.
+  * `month` is either a traditional month number between 1 and 12, or
+    for an intercalary month the 2-tuple `{month, :leap}` where `month`
+    is the preceding traditional month number.
 
   * `day` is a day-of-month valid for the year and month.
 
@@ -158,6 +159,14 @@ defmodule Calendrical.Chinese do
 
   * Raises `ArgumentError` if the date is not valid in this
     calendar.
+
+  ### Examples
+
+      iex> Calendrical.Chinese.new!(4660, 1, 1)
+      ~D[4660-01-01 Calendrical.Chinese]
+
+      iex> Calendrical.Chinese.new!(4660, {2, :leap}, 1)
+      ~D[4660-03-01 Calendrical.Chinese]
 
   """
   @spec new!(year :: Calendar.year(), month :: Lunisolar.lunar_month(), day :: Calendar.day()) ::
@@ -421,6 +430,35 @@ defmodule Calendrical.Chinese do
     lunar_month_of_year(year, month)
   end
 
+  @doc """
+  Returns the lunar month of the year for a given calendar year and
+  ordinal month.
+
+  This is the year-and-month variant of `lunar_month_of_year/1`. See
+  that function and the moduledoc for the ordinal-vs-traditional
+  month numbering discussion.
+
+  ### Arguments
+
+  * `year` is any year in the `#{inspect(__MODULE__)}` calendar.
+
+  * `month` is any ordinal month number in the `#{inspect(__MODULE__)}`
+    calendar.
+
+  ### Returns
+
+  * the lunar month as either an integer between 1 and 12 or a
+    tuple of the form `{lunar_month, :leap}`.
+
+  ### Examples
+
+      iex> Calendrical.Chinese.lunar_month_of_year(4660, 3)
+      {2, :leap}
+
+      iex> Calendrical.Chinese.lunar_month_of_year(4660, 4)
+      3
+
+  """
   @spec lunar_month_of_year(year :: Calendar.year(), month :: Calendar.month()) ::
           Lunisolar.lunar_month()
   def lunar_month_of_year(year, month) do
@@ -429,6 +467,7 @@ defmodule Calendrical.Chinese do
 
   # Compatibility with Calendrical.localize
   @doc false
+  @impl true
   def month_of_year(year, month, _day) do
     lunar_month_of_year(year, month)
   end
@@ -444,13 +483,30 @@ defmodule Calendrical.Chinese do
   * `lunar_month` is either a cardinal month number between 1 and 12 or
     for a leap month the 2-tuple in the format `{month, :leap}`.
 
-  * `day` is any day number valid for `year` and `lunar_month`.
+  * `lunar_day` is any day number valid for `gregorian_year` and
+    `lunar_month`.
 
   ### Returns
 
-  * A gregorian date `t:Date.t()`.
+  * A gregorian date `t:Date.t/0`.
+
+  ### Examples
+
+      # Lunar new year of 2026 (start of lunar year 4663)
+      iex> Calendrical.Chinese.gregorian_date_for_lunar(2026, 1, 1)
+      ~D[2026-02-17]
+
+      # First day of the intercalary 6th month (閏6月) of lunar
+      # year 4662
+      iex> Calendrical.Chinese.gregorian_date_for_lunar(2025, {6, :leap}, 1)
+      ~D[2025-07-25]
 
   """
+  @spec gregorian_date_for_lunar(
+          gregorian_year :: Calendar.year(),
+          lunar_month :: Lunisolar.lunar_month(),
+          lunar_day :: Calendar.day()
+        ) :: Date.t()
   def gregorian_date_for_lunar(gregorian_year, lunar_month, lunar_day) do
     {year, month, day} =
       Lunisolar.gregorian_date_for_lunar(
@@ -477,7 +533,7 @@ defmodule Calendrical.Chinese do
   * a `t:Calendar.date/0` representing the Gregorian date of
     the lunar year of the given Gregorian year.
 
-  ### Example
+  ### Examples
 
       iex> Calendrical.Chinese.new_year_for_gregorian_year(2021)
       ~D[2021-02-12]
@@ -537,6 +593,33 @@ defmodule Calendrical.Chinese do
     cyclic_year(year, month)
   end
 
+  @doc """
+  Returns the year in the lunisolar sexagesimal 60-year cycle for
+  a given calendar year and month.
+
+  This is the year-and-month variant of `cyclic_year/1`.
+
+  ### Arguments
+
+  * `year` is any year in the `#{inspect(__MODULE__)}` calendar.
+
+  * `month` is any ordinal month number in the `#{inspect(__MODULE__)}`
+    calendar.
+
+  ### Returns
+
+  * the integer year within the sexagesimal cycle of 60 years.
+
+  ### Examples
+
+      iex> Calendrical.Chinese.cyclic_year(4662, 4)
+      42
+
+      iex> Calendrical.Chinese.cyclic_year(4321, 1)
+      1
+
+  """
+  @spec cyclic_year(year :: Calendar.year(), month :: Calendar.month()) :: Lunisolar.cycle()
   def cyclic_year(year, month) do
     Lunisolar.cyclic_year(year, month, 1)
   end
@@ -555,7 +638,7 @@ defmodule Calendrical.Chinese do
   * The gregorian date of the dragon festival for
     the given year.
 
-  ### Example
+  ### Examples
 
       iex> Calendrical.Chinese.dragon_festival_for_gregorian_year(2021)
       ~D[2021-06-14]
@@ -630,18 +713,17 @@ defmodule Calendrical.Chinese do
 
   # The following are for testing purposes only
 
-  # @doc false
+  @doc false
   def chinese_date_from_iso_days(iso_days) do
     Lunisolar.cyclical_date_from_iso_days(iso_days, epoch(), &location/1)
   end
 
-  # @doc false
+  @doc false
   def alt_chinese_date_from_iso_days(iso_days) do
     Lunisolar.alt_cyclical_date_from_iso_days(iso_days, epoch(), &location/1)
   end
 
-  #
-  # @doc false
+  @doc false
   def chinese_date_to_iso_days({cycle, cyclic_year, lunar_month, lunar_day}) do
     chinese_date_to_iso_days(cycle, cyclic_year, lunar_month, lunar_day)
   end

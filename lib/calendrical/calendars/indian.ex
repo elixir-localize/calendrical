@@ -210,6 +210,7 @@ defmodule Calendrical.Indian do
 
   """
   @impl true
+  @spec days_in_year(year) :: 365..366
   def days_in_year(year) do
     if leap_year?(year), do: 366, else: 365
   end
@@ -243,6 +244,7 @@ defmodule Calendrical.Indian do
 
   """
   @impl true
+  @spec valid_date?(year, month, day) :: boolean()
   def valid_date?(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) and
              month in 1..12 and day in 1..31 do

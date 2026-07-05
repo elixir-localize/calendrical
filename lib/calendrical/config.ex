@@ -75,6 +75,7 @@ defmodule Calendrical.Config do
     }
   end
 
+  @doc false
   def min_days_for_locale(options) do
     default =
       if locale = Keyword.get(options, :locale) do
@@ -86,6 +87,7 @@ defmodule Calendrical.Config do
     Keyword.get(options, :min_days_in_first_week, default)
   end
 
+  @doc false
   def first_day_for_locale(options) do
     default =
       if locale = Keyword.get(options, :locale) do

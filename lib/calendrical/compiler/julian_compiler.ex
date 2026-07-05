@@ -353,6 +353,10 @@ defmodule Calendrical.Julian.Compiler do
                   ),
                   to: Calendrical.Julian
 
+      # The /12 target is not a Calendar callback and is hidden on
+      # Calendrical.Julian; hide the delegate too so ExDoc does not
+      # emit a reference-to-hidden-function warning per variant.
+      @doc false
       defdelegate datetime_to_string(
                     year,
                     month,

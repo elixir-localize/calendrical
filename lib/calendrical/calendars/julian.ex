@@ -58,6 +58,7 @@ defmodule Calendrical.Julian do
       :gregorian
 
   """
+  @spec cldr_calendar_type() :: :gregorian
   @impl Calendrical
   def cldr_calendar_type do
     :gregorian
@@ -76,6 +77,7 @@ defmodule Calendrical.Julian do
       :month
 
   """
+  @spec calendar_base() :: :month
   @impl Calendrical
   def calendar_base do
     :month
@@ -117,6 +119,7 @@ defmodule Calendrical.Julian do
       false
 
   """
+  @spec valid_date?(Calendar.year(), Calendar.month(), Calendar.day()) :: boolean()
   @impl Calendar
   def valid_date?(0, _month, _day) do
     false
@@ -708,6 +711,7 @@ defmodule Calendrical.Julian do
       12
 
   """
+  @spec periods_in_year(year) :: Calendar.month()
   @impl Calendrical
   def periods_in_year(_year) do
     @months_in_year
@@ -739,6 +743,7 @@ defmodule Calendrical.Julian do
       365
 
   """
+  @spec days_in_year(year) :: 365 | 366
   @impl Calendrical
   def days_in_year(year) do
     if leap_year?(year), do: 366, else: 365
@@ -827,6 +832,7 @@ defmodule Calendrical.Julian do
       7
 
   """
+  @spec days_in_week() :: 7
   def days_in_week do
     @days_in_week
   end
@@ -848,6 +854,7 @@ defmodule Calendrical.Julian do
       Date.range(~D[2025-01-01 Calendrical.Julian], ~D[2025-12-31 Calendrical.Julian])
 
   """
+  @spec year(year) :: Date.Range.t()
   @impl Calendrical
   def year(year) do
     last_month = months_in_year(year)
@@ -879,6 +886,7 @@ defmodule Calendrical.Julian do
       Date.range(~D[2025-01-01 Calendrical.Julian], ~D[2025-03-31 Calendrical.Julian])
 
   """
+  @spec quarter(year, Calendrical.quarter()) :: Date.Range.t()
   @impl Calendrical
   def quarter(year, quarter) do
     months_in_quarter = div(months_in_year(year), @quarters_in_year)
@@ -914,6 +922,7 @@ defmodule Calendrical.Julian do
       Date.range(~D[2025-02-01 Calendrical.Julian], ~D[2025-02-28 Calendrical.Julian])
 
   """
+  @spec month(year, month) :: Date.Range.t()
   @impl Calendrical
   def month(year, month) do
     starting_day = 1
@@ -945,6 +954,7 @@ defmodule Calendrical.Julian do
       {:error, :not_defined}
 
   """
+  @spec week(year, Calendrical.week()) :: {:error, :not_defined}
   @impl Calendrical
   def week(_year, _week) do
     {:error, :not_defined}
@@ -987,6 +997,8 @@ defmodule Calendrical.Julian do
       {2025, 1, 2}
 
   """
+  @spec plus(year, month, day, :years | :quarters | :months | :days, integer(), Keyword.t()) ::
+          {Calendar.year(), Calendar.month(), Calendar.day()}
   @impl Calendrical
   def plus(year, month, day, date_part, increment, options \\ [])
 
@@ -1276,6 +1288,7 @@ defmodule Calendrical.Julian do
               ),
               to: Calendar.ISO
 
+  @doc false
   defdelegate datetime_to_string(
                 year,
                 month,

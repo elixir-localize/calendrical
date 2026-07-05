@@ -68,6 +68,16 @@ defmodule Calendrical.Islamic.Observational do
   Returns the geographic location used to determine crescent
   visibility for this calendar.
 
+  ### Returns
+
+  * A `t:Geo.PointZ.t/0` for Cairo, Egypt (Reingold's canonical
+    "Islamic location").
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Observational.location().coordinates
+      {31.3, 30.1, 200.0}
+
   """
   @spec location() :: Geo.PointZ.t()
   def location, do: @cairo
@@ -82,6 +92,22 @@ defmodule Calendrical.Islamic.Observational do
   crescent sightings, so this must be computed by comparing the
   starts of two successive years.
 
+  ### Arguments
+
+  * `year` is any Hijri year as an integer.
+
+  ### Returns
+
+  * `true` if the year contains 355 days; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Observational.leap_year?(1447)
+      true
+
+      iex> Calendrical.Islamic.Observational.leap_year?(1446)
+      false
+
   """
   @impl true
   @spec leap_year?(year) :: boolean()
@@ -90,10 +116,24 @@ defmodule Calendrical.Islamic.Observational do
   end
 
   @doc """
-  Returns the number of days in the given Hijri `year` (354 or 355).
+  Returns the number of days in the given Hijri `year`.
+
+  ### Arguments
+
+  * `year` is any Hijri year as an integer.
+
+  ### Returns
+
+  * `354` for an ordinary year or `355` for a leap year.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Observational.days_in_year(1446)
+      354
 
   """
   @impl true
+  @spec days_in_year(year) :: 354..355
   def days_in_year(year) do
     date_to_iso_days(year + 1, 1, 1) - date_to_iso_days(year, 1, 1)
   end
@@ -101,6 +141,24 @@ defmodule Calendrical.Islamic.Observational do
   @doc """
   Returns the number of days in the given Hijri `year` and `month`
   (29 or 30, determined by actual crescent visibility).
+
+  ### Arguments
+
+  * `year` is any Hijri year as an integer.
+
+  * `month` is a Hijri month in the range `1..12`.
+
+  ### Returns
+
+  * The number of days in the month (`29` or `30`).
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Observational.days_in_month(1446, 1)
+      30
+
+      iex> Calendrical.Islamic.Observational.days_in_month(1446, 5)
+      29
 
   """
   @impl true
@@ -115,8 +173,29 @@ defmodule Calendrical.Islamic.Observational do
   Determines if the given `year`, `month`, and `day` form a valid
   observational Islamic date.
 
+  ### Arguments
+
+  * `year` is any positive Hijri year as an integer.
+
+  * `month` is a Hijri month in the range `1..12`.
+
+  * `day` is a Hijri day-of-month in the range `1..30`.
+
+  ### Returns
+
+  * `true` if the date is valid; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Observational.valid_date?(1446, 1, 30)
+      true
+
+      iex> Calendrical.Islamic.Observational.valid_date?(1446, 5, 30)
+      false
+
   """
   @impl true
+  @spec valid_date?(year, month, day) :: boolean()
   def valid_date?(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) and
              year >= 1 and month in 1..12 and day in 1..30 do
@@ -131,6 +210,26 @@ defmodule Calendrical.Islamic.Observational do
   Returns the number of ISO days for the given observational
   Islamic `year`, `month`, and `day`.
 
+  ### Arguments
+
+  * `year` is any Hijri year as an integer.
+
+  * `month` is a Hijri month in the range `1..12`.
+
+  * `day` is a Hijri day-of-month in the range `1..30`.
+
+  ### Returns
+
+  * An integer count of days since the proleptic ISO epoch.
+
+  * Raises `Calendrical.UnsupportedDateRangeError` if the date falls
+    outside the range of the underlying JPL ephemeris.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Observational.date_to_iso_days(1446, 1, 1)
+      739439
+
   """
   @spec date_to_iso_days(year, month, day) :: integer()
   def date_to_iso_days(year, month, day) do
@@ -140,6 +239,24 @@ defmodule Calendrical.Islamic.Observational do
   @doc """
   Returns an observational Islamic `{year, month, day}` for the
   given ISO day number.
+
+  ### Arguments
+
+  * `iso_days` is an integer count of days since the proleptic
+    ISO epoch.
+
+  ### Returns
+
+  * A three-tuple `{year, month, day}` in the observational Islamic
+    calendar.
+
+  * Raises `Calendrical.UnsupportedDateRangeError` if `iso_days`
+    falls outside the range of the underlying JPL ephemeris.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Observational.date_from_iso_days(739_252)
+      {1445, 6, 20}
 
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}

@@ -65,6 +65,7 @@ defmodule Calendrical.Coptic do
 
   """
   @impl true
+  @spec valid_date?(year, month, day) :: boolean()
   def valid_date?(_year, month, day) when month in @months_with_30_days and day in 1..30 do
     true
   end
@@ -132,6 +133,7 @@ defmodule Calendrical.Coptic do
 
   """
   @impl true
+  @spec year_of_era(year, month, day) :: {pos_integer(), 0..1}
   def year_of_era(year, _month, _day), do: year_of_era(year)
 
   @doc """
@@ -156,6 +158,7 @@ defmodule Calendrical.Coptic do
 
   """
   @impl true
+  @spec related_gregorian_year(year, month, day) :: Calendar.year()
   def related_gregorian_year(year, month, day) do
     {gregorian_year, _, _} =
       date_to_iso_days(year, month, day)
@@ -215,6 +218,7 @@ defmodule Calendrical.Coptic do
 
   """
   @impl true
+  @spec day_of_era(year, month, day) :: {non_neg_integer(), 0..1}
   def day_of_era(year, month, day) do
     {_, era} = year_of_era(year)
     days = date_to_iso_days(year, month, day)
@@ -250,6 +254,7 @@ defmodule Calendrical.Coptic do
 
   """
   @impl true
+  @spec day_of_week(year, month, day, :default) :: {1..7, 6, 5}
   def day_of_week(year, month, day, :default) do
     days = date_to_iso_days(year, month, day)
     days_after_saturday = rem(days, 7)
@@ -317,6 +322,7 @@ defmodule Calendrical.Coptic do
 
   """
   @impl true
+  @spec days_in_year(year) :: 365..366
   def days_in_year(year) do
     if leap_year?(year), do: 366, else: 365
   end
@@ -345,6 +351,7 @@ defmodule Calendrical.Coptic do
 
   """
   @impl true
+  @spec leap_year?(year) :: boolean()
   def leap_year?(year) do
     mod(year, 4) == 3
   end

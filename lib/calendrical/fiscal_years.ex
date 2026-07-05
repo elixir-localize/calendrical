@@ -18,8 +18,7 @@ defmodule Calendrical.FiscalYear do
 
   ## Examples
 
-      iex> {:ok, us_fy} = Calendrical.FiscalYear.calendar_for(:US)
-      iex> us_fy
+      iex> Calendrical.FiscalYear.calendar_for(:US) |> elem(1)
       Calendrical.FiscalYear.US
 
       iex> :US in Calendrical.FiscalYear.known_fiscal_calendars()
@@ -96,6 +95,7 @@ defmodule Calendrical.FiscalYear do
       true
 
   """
+  @spec known_fiscal_years() :: %{atom() => Keyword.t()}
   def known_fiscal_years do
     @fiscal_year_by_territory
   end
@@ -114,6 +114,7 @@ defmodule Calendrical.FiscalYear do
       true
 
   """
+  @spec known_fiscal_calendars() :: [atom()]
   def known_fiscal_calendars do
     @known_fiscal_calendars
   end
@@ -123,8 +124,8 @@ defmodule Calendrical.FiscalYear do
   territory code.
 
   The calendar module is created on first use and cached as a normal Elixir
-  module (e.g. `Calendrical.FiscalYear.US`). Subsequent calls return the same
-  module.
+  module (e.g. `Calendrical.FiscalYear.US`). Later calls for the same
+  territory return the same module, tagged `:module_already_exists`.
 
   ### Arguments
 
@@ -133,19 +134,26 @@ defmodule Calendrical.FiscalYear do
 
   ### Returns
 
-  * `{:ok, calendar_module}` on success, where `calendar_module` is a module
-    implementing both the `Calendar` and `Calendrical` behaviours.
+  * `{:ok, calendar_module}` when the calendar module is created for the
+    first time. `calendar_module` implements both the `Calendar` and
+    `Calendrical` behaviours.
+
+  * `{:module_already_exists, calendar_module}` when the calendar module was
+    already created by an earlier call.
 
   * `{:error, exception}` if the territory is unknown or has no pre-built
     fiscal calendar.
 
   ### Examples
 
-      iex> {:ok, us_fy} = Calendrical.FiscalYear.calendar_for(:US)
-      iex> us_fy
+      iex> Calendrical.FiscalYear.calendar_for(:US) |> elem(1)
       Calendrical.FiscalYear.US
 
   """
+  @spec calendar_for(atom() | String.t()) ::
+          {:ok, module()}
+          | {:module_already_exists, module()}
+          | {:error, Exception.t() | String.t()}
   def calendar_for(territory) do
     with {:ok, territory} <- Localize.validate_territory(territory),
          {:ok, territory} <- known_fiscal_calendar(territory) do

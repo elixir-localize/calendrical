@@ -375,6 +375,20 @@ defmodule Calendrical do
   @optional_callbacks months_in_year: 0
 
   @doc """
+  Returns the CLDR calendar type used for era names, when it differs
+  from `cldr_calendar_type/0`.
+
+  The lunisolar Japanese calendar takes its month names from the
+  Chinese CLDR calendar but its era names (元号) from the Japanese
+  one. `Calendrical.localize/3` consults this callback, when
+  implemented, to localize the `:era` part.
+
+  """
+  @callback era_calendar_type() :: atom()
+
+  @optional_callbacks era_calendar_type: 0
+
+  @doc """
   Returns a the year in a calendar year.
 
   """
@@ -488,7 +502,17 @@ defmodule Calendrical do
   @doc """
   Returns the default calendar.
 
+  ### Returns
+
+  * The default calendar module, `Calendrical.Gregorian`.
+
+  ### Examples
+
+      iex> Calendrical.default_calendar()
+      Calendrical.Gregorian
+
   """
+  @spec default_calendar :: calendar()
   def default_calendar do
     @default_calendar
   end
@@ -540,6 +564,8 @@ defmodule Calendrical do
   for `:IR`.
 
   """
+  @spec calendar_from_territory(atom() | String.t()) ::
+          {:ok, calendar()} | {:error, Exception.t()}
   def calendar_from_territory(territory) do
     Calendrical.Preference.calendar_from_territory(territory)
   end
@@ -575,6 +601,8 @@ defmodule Calendrical do
       {:ok, Calendrical.IR}
 
   """
+  @spec calendar_from_locale(LanguageTag.t() | String.t() | atom()) ::
+          {:ok, calendar()} | {:error, Exception.t()}
   def calendar_from_locale(%LanguageTag{} = locale) do
     Calendrical.Preference.calendar_from_locale(locale)
   end
@@ -719,7 +747,31 @@ defmodule Calendrical do
   Returns a calendar configured according to
   the preferences defined for a territory.
 
+  ### Arguments
+
+  * `territory` is any valid ISO3166-2 code as
+    an `t:String.t/0` or upcased `atom`.
+
+  * `config` is a Keyword list defining the configuration
+    of the calendar. See `Calendrical.new/3` for the
+    available options. The default is `[]`.
+
+  ### Returns
+
+  * `{:ok, calendar_module}` or
+
+  * `{:error, exception}` where `exception` is an exception struct.
+
+  ### Examples
+
+      iex> Calendrical.calendar_for_territory(:US)
+      {:ok, Calendrical.US}
+
+      iex> {:error, %Localize.UnknownTerritoryError{}} = Calendrical.calendar_for_territory(:YY)
+
   """
+  @spec calendar_for_territory(atom() | String.t(), Keyword.t()) ::
+          {:ok, calendar()} | {:error, Exception.t() | String.t()}
   def calendar_for_territory(territory, config \\ []) do
     with {:ok, territory} <- Localize.validate_territory(territory) do
       calendar_name = Module.concat(__MODULE__, territory)
@@ -741,7 +793,25 @@ defmodule Calendrical do
   Returns a boolean indicating if a module
   is a `Calendrical` module.
 
+  ### Arguments
+
+  * `module` is any module name as an `atom`.
+
+  ### Returns
+
+  * `true` if `module` is a calendar module conforming to
+    the `Calendrical` behaviour, otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.calendar_module?(Calendrical.Gregorian)
+      true
+
+      iex> Calendrical.calendar_module?(Enum)
+      false
+
   """
+  @spec calendar_module?(module()) :: boolean()
   def calendar_module?(module) when is_atom(module) do
     Code.ensure_loaded?(module) &&
       function_exported?(module, :cldr_calendar_type, 0)
@@ -916,6 +986,7 @@ defmodule Calendrical do
       "יום ב׳"
 
   """
+  @spec strftime(any_date_time(), String.t(), Keyword.t()) :: String.t()
   def strftime(date_or_time_or_datetime, format, options \\ []) do
     calendar = Map.get(date_or_time_or_datetime, :calendar)
     options = Keyword.merge(options, calendar: calendar)
@@ -961,6 +1032,7 @@ defmodule Calendrical do
       "Mon"
 
   """
+  @spec strftime_options!(Keyword.t()) :: Keyword.t()
   def strftime_options!(options \\ []) do
     locale = Keyword.get(options, :locale, Localize.get_locale())
     calendar = Keyword.get(options, :calendar, @default_calendar)
@@ -1224,8 +1296,7 @@ defmodule Calendrical do
       ~D[2019-01-01]
 
   """
-  @spec first_gregorian_day_of_year(year() | date(), calendar()) ::
-          Date.t() | {:error, :invalid_date}
+  @spec first_gregorian_day_of_year(date()) :: Date.t() | {:error, :invalid_date}
 
   def first_gregorian_day_of_year(%Date{year: year, calendar: Calendar.ISO}) do
     year
@@ -1238,6 +1309,34 @@ defmodule Calendrical do
     first_gregorian_day_of_year(year, calendar)
   end
 
+  @doc """
+  Returns the gregorian date of the first day of a `year`
+  for a `calendar`.
+
+  ### Arguments
+
+  * `year` is any integer year number.
+
+  * `calendar` is any module that implements the `Calendar` and
+    `Calendrical` behaviours or `Calendar.ISO`.
+
+  ### Returns
+
+  * A `t:Date.t/0` in the `Calendrical.Gregorian` calendar or
+
+  * `{:error, :invalid_date}`.
+
+  ### Examples
+
+      iex> Calendrical.first_gregorian_day_of_year(2019, Calendrical.Gregorian)
+      %Date{calendar: Calendrical.Gregorian, day: 1, month: 1, year: 2019}
+
+      iex> Calendrical.first_gregorian_day_of_year(2019, Calendrical.NRF)
+      %Date{calendar: Calendrical.Gregorian, day: 3, month: 2, year: 2019}
+
+  """
+  @spec first_gregorian_day_of_year(year(), calendar()) ::
+          Date.t() | {:error, :invalid_date}
   def first_gregorian_day_of_year(year, calendar) do
     {year, month, day} =
       year
@@ -1272,8 +1371,7 @@ defmodule Calendrical do
       ~D[2019-12-31]
 
   """
-  @spec last_gregorian_day_of_year(date() | year(), calendar()) ::
-          Date.t() | {:error, :invalid_date}
+  @spec last_gregorian_day_of_year(date()) :: Date.t() | {:error, :invalid_date}
 
   def last_gregorian_day_of_year(%Date{year: year, calendar: Calendar.ISO}) do
     year
@@ -1286,6 +1384,34 @@ defmodule Calendrical do
     last_gregorian_day_of_year(year, calendar)
   end
 
+  @doc """
+  Returns the gregorian date of the last day of a `year`
+  for a `calendar`.
+
+  ### Arguments
+
+  * `year` is any integer year number.
+
+  * `calendar` is any module that implements the `Calendar` and
+    `Calendrical` behaviours or `Calendar.ISO`.
+
+  ### Returns
+
+  * A `t:Date.t/0` in the `Calendrical.Gregorian` calendar or
+
+  * `{:error, :invalid_date}`.
+
+  ### Examples
+
+      iex> Calendrical.last_gregorian_day_of_year(2019, Calendrical.Gregorian)
+      %Date{calendar: Calendrical.Gregorian, day: 31, month: 12, year: 2019}
+
+      iex> Calendrical.last_gregorian_day_of_year(2019, Calendrical.NRF)
+      %Date{calendar: Calendrical.Gregorian, day: 1, month: 2, year: 2020}
+
+  """
+  @spec last_gregorian_day_of_year(year(), calendar()) ::
+          Date.t() | {:error, :invalid_date}
   def last_gregorian_day_of_year(year, calendar) when is_integer(year) do
     {year, month, day} =
       year
@@ -1463,6 +1589,7 @@ defmodule Calendrical do
 
   """
   @mjd_epoch_in_iso_days 678_941
+  @spec modified_julian_day(Date.t() | DateTime.t()) :: float()
   def modified_julian_day(%DateTime{} = datetime) do
     date = DateTime.to_date(datetime)
     {seconds, _microseconds} = datetime |> DateTime.to_time() |> Time.to_seconds_after_midnight()
@@ -1504,6 +1631,7 @@ defmodule Calendrical do
   """
   @mjd_epoch_in_mjd 678_576
   @unix_epoch_fixed 719_163
+  @spec datetime_from_modified_julian_date(number()) :: DateTime.t()
   def datetime_from_modified_julian_date(mjd) when is_number(mjd) do
     # fixed date conversion taken from Calixir library
     mjd_fixed = mjd + @mjd_epoch_in_mjd
@@ -1959,6 +2087,32 @@ defmodule Calendrical do
     calendar.weeks_in_year(year)
   end
 
+  @doc """
+  Returns the number of weeks in a `year` for
+  a `calendar`.
+
+  ### Arguments
+
+  * `year` is any integer year number.
+
+  * `calendar` is any module that implements the `Calendar` and
+    `Calendrical` behaviours or `Calendar.ISO`.
+
+  ### Returns
+
+  * `{weeks_in_year, days_in_last_week}` or
+
+  * `{:error, exception}` where `exception` is an exception struct.
+
+  ### Examples
+
+      iex> Calendrical.weeks_in_year(2023, Calendar.ISO)
+      {53, 7}
+
+      iex> Calendrical.weeks_in_year(2020, Calendrical.ISOWeek)
+      {53, 7}
+
+  """
   @spec weeks_in_year(year(), calendar) ::
           {Calendrical.week(), Calendar.day_of_week()} | {:error, Exception.t()}
   def weeks_in_year(year, Calendar.ISO) do
@@ -2133,13 +2287,65 @@ defmodule Calendrical do
   Note that the first day of the first week is commonly
   not aligned with the first day of the year.
 
+  ### Arguments
+
+  * `locale` is any locale or locale name validated
+    by `Localize.validate_locale/1`.
+
+  ### Returns
+
+  * The first day of the week for the territory
+    associated with `locale` where `1` means `Monday`
+    and `7` means `Sunday` or
+
+  * `{:error, exception}` where `exception` is an exception struct.
+
+  ### Examples
+
+      iex> Calendrical.first_day_for_locale(:en)
+      7
+
+      iex> Calendrical.first_day_for_locale("en-GB")
+      1
+
   """
+  @spec first_day_for_locale(LanguageTag.t() | String.t() | atom()) ::
+          day_of_week() | {:error, Exception.t()}
   def first_day_for_locale(%LanguageTag{} = locale) do
     with {:ok, territory} <- Localize.Territory.territory_from_locale(locale) do
       first_day_for_territory(territory)
     end
   end
 
+  @doc """
+  Returns the first day of a week for a given
+  locale name where `1` means `Monday` and `7`
+  means `Sunday`.
+
+  ### Arguments
+
+  * `locale` is any locale name, as a string or atom,
+    validated by `Localize.validate_locale/1`.
+
+  * `options` is a keyword list of options. No options
+    are currently defined.
+
+  ### Returns
+
+  * The first day of the week for the territory
+    associated with `locale` where `1` means `Monday`
+    and `7` means `Sunday` or
+
+  * `{:error, exception}` where `exception` is an exception struct.
+
+  ### Examples
+
+      iex> Calendrical.first_day_for_locale("en-US")
+      7
+
+  """
+  @spec first_day_for_locale(String.t() | atom(), Keyword.t()) ::
+          day_of_week() | {:error, Exception.t()}
   def first_day_for_locale(locale, _options \\ []) when is_locale_reference(locale) do
     with {:ok, locale} <- Localize.validate_locale(locale) do
       first_day_for_locale(locale)
@@ -2150,13 +2356,62 @@ defmodule Calendrical do
   Returns the minimum days in the first week of a year
   for a given locale.
 
+  ### Arguments
+
+  * `locale` is any locale or locale name validated
+    by `Localize.validate_locale/1`.
+
+  ### Returns
+
+  * The minimum number of days in the first week of
+    the year for the territory associated with `locale` or
+
+  * `{:error, exception}` where `exception` is an exception struct.
+
+  ### Examples
+
+      iex> Calendrical.min_days_for_locale(:en)
+      1
+
+      iex> Calendrical.min_days_for_locale("en-GB")
+      4
+
   """
+  @spec min_days_for_locale(LanguageTag.t() | String.t() | atom()) ::
+          1..7 | {:error, Exception.t()}
   def min_days_for_locale(%LanguageTag{} = locale) do
     with {:ok, territory} <- Localize.Territory.territory_from_locale(locale) do
       min_days_for_territory(territory)
     end
   end
 
+  @doc """
+  Returns the minimum days in the first week of a year
+  for a given locale name.
+
+  ### Arguments
+
+  * `locale` is any locale name, as a string or atom,
+    validated by `Localize.validate_locale/1`.
+
+  * `options` is a keyword list of options. No options
+    are currently defined.
+
+  ### Returns
+
+  * The minimum number of days in the first week of
+    the year for the territory associated with `locale` or
+
+  * `{:error, exception}` where `exception` is an exception struct.
+
+  ### Examples
+
+      iex> Calendrical.min_days_for_locale("en-US")
+      1
+
+  """
+  @spec min_days_for_locale(String.t() | atom(), Keyword.t()) ::
+          1..7 | {:error, Exception.t()}
   def min_days_for_locale(locale, _options \\ []) when is_locale_reference(locale) do
     with {:ok, locale} <- Localize.validate_locale(locale) do
       min_days_for_locale(locale)
@@ -2192,6 +2447,7 @@ defmodule Calendrical do
       iex> {:error, %Localize.UnknownTerritoryError{}} = Calendrical.weekend("yy")
 
   """
+  @spec weekend(atom() | String.t()) :: [day_of_week()] | {:error, Exception.t()}
   def weekend(territory)
 
   @doc """
@@ -2228,6 +2484,7 @@ defmodule Calendrical do
       iex> {:error, %Localize.UnknownTerritoryError{}} = Calendrical.weekdays("yy")
 
   """
+  @spec weekdays(atom() | String.t()) :: [day_of_week()] | {:error, Exception.t()}
   def weekdays(territory)
 
   @doc """
@@ -2240,11 +2497,51 @@ defmodule Calendrical do
 
   ### Returns
 
-  * The first day of the week for this territory.
-    Here `1` means `Monday` and `7` means `Sunday`.
+  * The first day of the week for this territory
+    where `1` means `Monday` and `7` means `Sunday` or
+
+  * `{:error, exception}` where `exception` is an exception struct.
+
+  ### Examples
+
+      iex> Calendrical.first_day_for_territory(:US)
+      7
+
+      iex> Calendrical.first_day_for_territory("GB")
+      1
 
   """
+  @spec first_day_for_territory(atom() | String.t()) ::
+          day_of_week() | {:error, Exception.t()}
   def first_day_for_territory(territory)
+
+  @doc """
+  Returns the minimum days in the first week of
+  a year for a given territory.
+
+  ### Arguments
+
+  * `territory` is any valid ISO3166-2 code.
+
+  ### Returns
+
+  * The minimum number of days in the first week of
+    the year for this territory or
+
+  * `{:error, exception}` where `exception` is an exception struct.
+
+  ### Examples
+
+      iex> Calendrical.min_days_for_territory(:US)
+      1
+
+      iex> Calendrical.min_days_for_territory(:GB)
+      4
+
+  """
+  @spec min_days_for_territory(atom() | String.t()) ::
+          1..7 | {:error, Exception.t()}
+  def min_days_for_territory(territory)
 
   @week_info Localize.SupplementalData.weeks()
 
@@ -2397,6 +2694,8 @@ defmodule Calendrical do
       ~D[2019-01-01]
 
   """
+  @spec current(date() | Date.Range.t(), :year | :quarter | :month | :week | :day) ::
+          date() | Date.Range.t()
   def current(%Date.Range{first: date}, :year) do
     current(date, :year)
     |> Interval.year()
@@ -2476,6 +2775,8 @@ defmodule Calendrical do
       ~D[2020-01-01]
 
   """
+  @spec next(date() | Date.Range.t(), :year | :quarter | :month | :week | :day, Keyword.t()) ::
+          Date.t() | Date.Range.t()
   def next(date_or_date_range, date_part, options \\ [])
 
   def next(%Date.Range{last: date}, :year, options) do
@@ -2559,6 +2860,11 @@ defmodule Calendrical do
       ~D[2018-01-01]
 
   """
+  @spec previous(
+          date() | Date.Range.t(),
+          :year | :quarter | :month | :week | :day,
+          Keyword.t()
+        ) :: Date.t() | Date.Range.t()
   def previous(date_or_date_range, date_part, options \\ [])
 
   def previous(%Date.Range{first: date}, :year, options) do
@@ -2768,7 +3074,7 @@ defmodule Calendrical do
 
   def localize(datetime, :era, _type, format, locale, options) do
     calendar = Map.get(datetime, :calendar, @default_calendar)
-    calendar_type = calendar.cldr_calendar_type()
+    calendar_type = era_calendar_type(calendar)
     variant? = options[:era] == :variant
 
     with {_, era} <- day_of_era(datetime) do
@@ -2954,6 +3260,19 @@ defmodule Calendrical do
     get_in(day_periods_data, [type, format, day_period])
   end
 
+  # Era names may come from a different CLDR calendar than the other
+  # localized names: the lunisolar Japanese calendar takes month names
+  # from the Chinese calendar but era names (元号) from the Japanese
+  # one. Calendars declare this with the optional `era_calendar_type/0`
+  # callback.
+  defp era_calendar_type(calendar) do
+    if function_exported?(calendar, :era_calendar_type, 0) do
+      calendar.era_calendar_type()
+    else
+      calendar.cldr_calendar_type()
+    end
+  end
+
   defp am_pm(hour) when hour < 12 or rem(hour, 24) < 12 do
     :am
   end
@@ -2992,6 +3311,7 @@ defmodule Calendrical do
     end
   end
 
+  @doc false
   def do_cardinal_day_of_week(day, %{day_of_week: 1}) do
     day
   end
@@ -3018,7 +3338,7 @@ defmodule Calendrical do
   * `:type` is one of `:stand_alone` or `:format`. The default
     is `:format`.
 
-  * `:format` is one of `:abbreviated`, `Lwide` or `:narrow`.
+  * `:format` is one of `:abbreviated`, `:wide` or `:narrow`.
     The default is `:abbreviated`.
 
   ### Returns
@@ -3623,6 +3943,10 @@ defmodule Calendrical do
       {:error, :invalid_date}
 
   """
+  @spec date_from_tuple(
+          {Calendar.year(), Calendar.month(), Calendar.day()},
+          calendar()
+        ) :: Date.t() | {:error, :invalid_date}
   def date_from_tuple({year, month, day}, calendar \\ Calendrical.Gregorian) do
     with {:ok, date} <- Date.new(year, month, day, calendar) do
       date
@@ -3657,6 +3981,7 @@ defmodule Calendrical do
       {:error, :invalid_date}
 
   """
+  @spec date_from_list(Keyword.t(), calendar()) :: Date.t() | {:error, :invalid_date}
   def date_from_list([{atom, _value} | _rest] = list, calendar \\ Calendrical.Gregorian)
       when is_atom(atom) do
     with {:ok, year} <- Keyword.fetch(list, :year),
@@ -3692,7 +4017,17 @@ defmodule Calendrical do
 
   * `{:error, :invalid_date}`
 
+  ### Examples
+
+      iex> Calendrical.date_from_day_of_year(2019, 32)
+      ~D[2019-02-01]
+
+      iex> Calendrical.date_from_day_of_year(2019, 366)
+      {:error, :invalid_date}
+
   """
+  @spec date_from_day_of_year(Calendar.year(), pos_integer(), calendar()) ::
+          Date.t() | {:error, :invalid_date}
   def date_from_day_of_year(year, day_of_year, calendar \\ Calendrical.Gregorian)
 
   def date_from_day_of_year(year, day_of_year, calendar)
@@ -3780,6 +4115,7 @@ defmodule Calendrical do
       ...>   Calendrical.validate_calendar(:not_a_calendar)
 
   """
+  @spec validate_calendar(term()) :: {:ok, calendar()} | {:error, Exception.t()}
   def validate_calendar(Calendar.ISO) do
     {:ok, Calendrical.Gregorian}
   end
@@ -4071,9 +4407,97 @@ defmodule Calendrical do
     Calendrical.MissingFieldsError.exception(function: function, fields: [day: day])
   end
 
+  @doc """
+  Returns the day of the week for a date.
+
+  Delegates to `Date.day_of_week/1`.
+
+  ### Arguments
+
+  * `date` is any `t:Calendar.date/0`.
+
+  ### Returns
+
+  * An integer day of the week where `1` means `Monday`
+    and `7` means `Sunday`.
+
+  ### Examples
+
+      iex> Calendrical.day_of_week(~D[2026-07-05])
+      7
+
+  """
+  @spec day_of_week(date()) :: Calendar.day_of_week()
   defdelegate day_of_week(date), to: Date
+
+  @doc """
+  Returns the day of the week for a date with the
+  week starting on a given day.
+
+  Delegates to `Date.day_of_week/2`.
+
+  ### Arguments
+
+  * `date` is any `t:Calendar.date/0`.
+
+  * `starting_on` is `:default` or an atom day name
+    such as `:monday` or `:sunday`. See `Date.day_of_week/2`.
+
+  ### Returns
+
+  * An integer day of the week relative to `starting_on`.
+
+  ### Examples
+
+      iex> Calendrical.day_of_week(~D[2026-07-05], :sunday)
+      1
+
+  """
+  @spec day_of_week(date(), atom()) :: Calendar.day_of_week()
   defdelegate day_of_week(date, starting_on), to: Date
+
+  @doc """
+  Returns the number of days in the month of a date.
+
+  Delegates to `Date.days_in_month/1`.
+
+  ### Arguments
+
+  * `date` is any `t:Calendar.date/0`.
+
+  ### Returns
+
+  * The number of days in the month of `date`.
+
+  ### Examples
+
+      iex> Calendrical.days_in_month(~D[2026-07-05])
+      31
+
+  """
+  @spec days_in_month(date()) :: Calendar.day()
   defdelegate days_in_month(date), to: Date
+
+  @doc """
+  Returns the number of months in the year of a date.
+
+  Delegates to `Date.months_in_year/1`.
+
+  ### Arguments
+
+  * `date` is any `t:Calendar.date/0`.
+
+  ### Returns
+
+  * The number of months in the year of `date`.
+
+  ### Examples
+
+      iex> Calendrical.months_in_year(~D[2026-07-05])
+      12
+
+  """
+  @spec months_in_year(date()) :: Calendar.month()
   defdelegate months_in_year(date), to: Date
 
   # Error helpers
@@ -4105,6 +4529,8 @@ defmodule Calendrical do
   * A map of era data.
 
   """
+  @spec eras(LanguageTag.t() | String.t() | atom(), atom()) ::
+          {:ok, map()} | {:error, Exception.t()}
   def eras(locale \\ Localize.get_locale(), calendar \\ :gregorian) do
     Localize.Calendar.eras(locale, calendar)
   end
@@ -4124,6 +4550,8 @@ defmodule Calendrical do
   * A map of month name data.
 
   """
+  @spec months(LanguageTag.t() | String.t() | atom(), atom()) ::
+          {:ok, map()} | {:error, Exception.t()}
   def months(locale \\ Localize.get_locale(), calendar \\ :gregorian) do
     Localize.Calendar.months(locale, calendar)
   end
@@ -4143,6 +4571,8 @@ defmodule Calendrical do
   * A map of day name data.
 
   """
+  @spec days(LanguageTag.t() | String.t() | atom(), atom()) ::
+          {:ok, map()} | {:error, Exception.t()}
   def days(locale \\ Localize.get_locale(), calendar \\ :gregorian) do
     Localize.Calendar.days(locale, calendar)
   end
@@ -4162,6 +4592,8 @@ defmodule Calendrical do
   * A map of quarter name data.
 
   """
+  @spec quarters(LanguageTag.t() | String.t() | atom(), atom()) ::
+          {:ok, map()} | {:error, Exception.t()}
   def quarters(locale \\ Localize.get_locale(), calendar \\ :gregorian) do
     Localize.Calendar.quarters(locale, calendar)
   end
@@ -4181,6 +4613,8 @@ defmodule Calendrical do
   * A map of day period data.
 
   """
+  @spec day_periods(LanguageTag.t() | String.t() | atom(), atom()) ::
+          {:ok, map()} | {:error, Exception.t()}
   def day_periods(locale \\ Localize.get_locale(), calendar \\ :gregorian) do
     Localize.Calendar.day_periods(locale, calendar)
   end
@@ -4200,6 +4634,8 @@ defmodule Calendrical do
   * A map of cyclic year data.
 
   """
+  @spec cyclic_years(LanguageTag.t() | String.t() | atom(), atom()) ::
+          {:ok, map()} | {:error, Exception.t()}
   def cyclic_years(locale \\ Localize.get_locale(), calendar \\ :gregorian) do
     Localize.Calendar.cyclic_years(locale, calendar)
   end
@@ -4219,6 +4655,8 @@ defmodule Calendrical do
   * A map of month pattern data, or `nil` if no patterns exist.
 
   """
+  @spec month_patterns(LanguageTag.t() | String.t() | atom(), atom()) ::
+          {:ok, map() | nil} | {:error, Exception.t()}
   def month_patterns(locale \\ Localize.get_locale(), calendar \\ :gregorian) do
     Localize.Calendar.month_patterns(locale, calendar)
   end

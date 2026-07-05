@@ -76,6 +76,64 @@ defmodule Calendrical.EraTest do
     end
   end
 
+  describe "year_of_era/3 for the lunisolar Japanese calendar" do
+    test "modern dates carry the current era" do
+      date = Date.convert!(~D[2026-07-05], Calendrical.LunarJapanese)
+      assert Calendrical.LunarJapanese.year_of_era(date.year, date.month, date.day) == {8, 236}
+      assert Calendrical.LunarJapanese.calendar_year(date.year, date.month, date.day) == 8
+    end
+
+    test "an era begins on its proclamation day, mid-lunar-year" do
+      # 安政 (Ansei, era 227) was proclaimed on 嘉永7年11月27日,
+      # proleptic Gregorian 1855-01-15. The rest of that lunar year
+      # is 安政元年; the day before remains 嘉永7年.
+      ansei_day = Date.convert!(~D[1855-01-15], Calendrical.LunarJapanese)
+      kaei_day = Date.convert!(~D[1855-01-14], Calendrical.LunarJapanese)
+
+      assert Calendrical.LunarJapanese.year_of_era(ansei_day.year, ansei_day.month, ansei_day.day) ==
+               {1, 227}
+
+      assert Calendrical.LunarJapanese.year_of_era(kaei_day.year, kaei_day.month, kaei_day.day) ==
+               {7, 226}
+    end
+
+    test "the Reiwa transition is exact" do
+      reiwa = Date.convert!(~D[2019-05-01], Calendrical.LunarJapanese)
+      heisei = Date.convert!(~D[2019-04-30], Calendrical.LunarJapanese)
+
+      assert Calendrical.LunarJapanese.year_of_era(reiwa.year, reiwa.month, reiwa.day) ==
+               {1, 236}
+
+      assert Calendrical.LunarJapanese.year_of_era(heisei.year, heisei.month, heisei.day) ==
+               {31, 235}
+    end
+
+    test "year_of_era/1 uses the first day of the lunar year" do
+      assert Calendrical.LunarJapanese.year_of_era(1382) == {8, 236}
+    end
+
+    test "era names localize from the Japanese calendar" do
+      date = Date.convert!(~D[2026-07-05], Calendrical.LunarJapanese)
+
+      assert Calendrical.localize(date, :era, locale: :en) == "Reiwa"
+      assert Calendrical.localize(date, :era, locale: :ja) == "令和"
+      assert Calendrical.localize(date, :era, format: :narrow, locale: :en) == "R"
+
+      ansei = Date.convert!(~D[1855-01-15], Calendrical.LunarJapanese)
+      assert Calendrical.localize(ansei, :era, locale: :ja) == "安政"
+    end
+
+    test "day_of_era counts from the era proclamation day" do
+      reiwa_day_one = Date.convert!(~D[2019-05-01], Calendrical.LunarJapanese)
+
+      assert Calendrical.LunarJapanese.day_of_era(
+               reiwa_day_one.year,
+               reiwa_day_one.month,
+               reiwa_day_one.day
+             ) == {1, 236}
+    end
+  end
+
   describe "day_of_era/2" do
     test "first day of an era is day one" do
       assert Era.day_of_era(:japanese, iso_days(~D[2019-05-01])) == {1, 236}

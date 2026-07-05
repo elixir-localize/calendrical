@@ -11,6 +11,18 @@ defmodule Calendrical.Kday do
       weeks_to_days: 1
     ]
 
+  @typedoc """
+  The result of a k-day computation.
+
+  When a k-day function is given a date, the result is a date in the
+  calendar of that date. When it is given an integer number of ISO
+  days, the result is an integer number of ISO days. An error tuple
+  is returned if the result cannot be expressed as a date.
+
+  """
+  @type kday_result ::
+          Calendar.day() | Date.t() | {:error, :incompatible_calendars | :invalid_date}
+
   @doc """
   Returns the date of the `day_of_week` on or before the
   specified `date`.
@@ -44,7 +56,7 @@ defmodule Calendrical.Kday do
 
   """
   @spec kday_on_or_before(Calendar.day() | Date.t(), Calendrical.day_of_week()) ::
-          Calendar.day() | Date.t() | {:error, :incompatible_calendars | :invalid_date}
+          kday_result()
 
   def kday_on_or_before(%{year: _, month: _, day: _, calendar: calendar} = date, k)
       when k in 1..7 do
@@ -96,7 +108,7 @@ defmodule Calendrical.Kday do
 
   """
   @spec kday_on_or_after(Calendar.day() | Date.t(), Calendrical.day_of_week()) ::
-          Calendar.day() | Date.t() | {:error, :incompatible_calendars | :invalid_date}
+          kday_result()
 
   def kday_on_or_after(%{year: _, month: _, day: _, calendar: calendar} = date, k)
       when k in 1..7 do
@@ -140,7 +152,7 @@ defmodule Calendrical.Kday do
 
   """
   @spec kday_nearest(Calendar.day() | Date.t(), Calendrical.day_of_week()) ::
-          Calendar.day() | Date.t() | {:error, :incompatible_calendars | :invalid_date}
+          kday_result()
 
   def kday_nearest(%{year: _, month: _, day: _, calendar: calendar} = date, k)
       when k in 1..7 do
@@ -187,7 +199,7 @@ defmodule Calendrical.Kday do
 
   """
   @spec kday_before(Calendar.day() | Date.t(), Calendrical.day_of_week()) ::
-          Calendar.day() | Date.t() | {:error, :incompatible_calendars | :invalid_date}
+          kday_result()
 
   def kday_before(%{year: _, month: _, day: _, calendar: calendar} = date, k)
       when k in 1..7 do
@@ -234,7 +246,7 @@ defmodule Calendrical.Kday do
 
   """
   @spec kday_after(Calendar.day() | Date.t(), Calendrical.day_of_week()) ::
-          Calendar.day() | Date.t() | {:error, :incompatible_calendars | :invalid_date}
+          kday_result()
 
   def kday_after(%{year: _, month: _, day: _, calendar: calendar} = date, k)
       when k in 1..7 do
@@ -284,7 +296,7 @@ defmodule Calendrical.Kday do
 
   """
   @spec nth_kday(Calendar.day() | Date.t(), integer(), Calendrical.day_of_week()) ::
-          Calendar.day() | Date.t() | {:error, :incompatible_calendars | :invalid_date}
+          kday_result()
 
   def nth_kday(%{year: _, month: _, day: _, calendar: calendar} = date, n, k)
       when k in 1..7 and is_integer(n) do
@@ -331,7 +343,7 @@ defmodule Calendrical.Kday do
 
   """
   @spec first_kday(Calendar.day() | Date.t(), Calendrical.day_of_week()) ::
-          Calendar.day() | Date.t() | {:error, :incompatible_calendars | :invalid_date}
+          kday_result()
 
   def first_kday(%{year: _, month: _, day: _, calendar: calendar} = date, k)
       when k in 1..7 do
@@ -370,7 +382,7 @@ defmodule Calendrical.Kday do
 
   """
   @spec last_kday(Calendar.day() | Date.t(), Calendrical.day_of_week()) ::
-          Calendar.day() | Date.t() | {:error, :incompatible_calendars | :invalid_date}
+          kday_result()
 
   def last_kday(%{year: _, month: _, day: _, calendar: calendar} = date, k)
       when k in 1..7 do

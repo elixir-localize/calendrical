@@ -60,28 +60,131 @@ defmodule Calendrical.Islamic.Rgsa do
   @doc """
   Returns the geographic location used to determine crescent
   visibility for this calendar.
+
+  ### Returns
+
+  * A `t:Geo.PointZ.t/0` for Mecca, Saudi Arabia (the
+    *al-Masjid al-Ḥarām*).
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Rgsa.location().coordinates
+      {39.8262, 21.4225, 277.0}
+
   """
   @spec location() :: Geo.PointZ.t()
   def location, do: @mecca
 
   # ── Configuration overrides ──────────────────────────────────────────────
 
+  @doc """
+  Returns whether the given Hijri `year` is a 355-day year (the
+  sighting-based analogue of a "leap year").
+
+  Year length varies between 354 and 355 days depending on predicted
+  crescent sightings at Mecca, so this is computed by comparing the
+  starts of two successive years.
+
+  ### Arguments
+
+  * `year` is any Hijri year as an integer.
+
+  ### Returns
+
+  * `true` if the year contains 355 days; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Rgsa.leap_year?(1447)
+      true
+
+      iex> Calendrical.Islamic.Rgsa.leap_year?(1446)
+      false
+
+  """
   @impl true
   @spec leap_year?(year) :: boolean()
   def leap_year?(year), do: days_in_year(year) > 354
 
+  @doc """
+  Returns the number of days in the given Hijri `year`.
+
+  ### Arguments
+
+  * `year` is any Hijri year as an integer.
+
+  ### Returns
+
+  * `354` for an ordinary year or `355` for a leap year.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Rgsa.days_in_year(1446)
+      354
+
+  """
   @impl true
+  @spec days_in_year(year) :: 354..355
   def days_in_year(year) do
     date_to_iso_days(year + 1, 1, 1) - date_to_iso_days(year, 1, 1)
   end
 
+  @doc """
+  Returns the number of days in the given Hijri `year` and `month`
+  (29 or 30, determined by predicted crescent visibility at Mecca).
+
+  ### Arguments
+
+  * `year` is any Hijri year as an integer.
+
+  * `month` is a Hijri month in the range `1..12`.
+
+  ### Returns
+
+  * The number of days in the month (`29` or `30`).
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Rgsa.days_in_month(1446, 1)
+      30
+
+      iex> Calendrical.Islamic.Rgsa.days_in_month(1446, 4)
+      29
+
+  """
   @impl true
   @spec days_in_month(year, month) :: 29..30
   def days_in_month(year, month) when month in 1..12 do
     first_day_of_month(year, month + 1) - first_day_of_month(year, month)
   end
 
+  @doc """
+  Returns whether the given `year`, `month`, and `day` form a valid
+  Saudi sighting-based Islamic date.
+
+  ### Arguments
+
+  * `year` is any positive Hijri year as an integer.
+
+  * `month` is a Hijri month in the range `1..12`.
+
+  * `day` is a Hijri day-of-month in the range `1..30`.
+
+  ### Returns
+
+  * `true` if the date is valid; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Rgsa.valid_date?(1446, 1, 30)
+      true
+
+      iex> Calendrical.Islamic.Rgsa.valid_date?(1446, 4, 30)
+      false
+
+  """
   @impl true
+  @spec valid_date?(year, month, day) :: boolean()
   def valid_date?(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) and
              year >= 1 and month in 1..12 and day in 1..30 do
@@ -96,6 +199,26 @@ defmodule Calendrical.Islamic.Rgsa do
   Returns the number of ISO days for the given Saudi sighting-based
   Islamic `year`, `month`, and `day`.
 
+  ### Arguments
+
+  * `year` is any Hijri year as an integer.
+
+  * `month` is a Hijri month in the range `1..12`.
+
+  * `day` is a Hijri day-of-month in the range `1..30`.
+
+  ### Returns
+
+  * An integer count of days since the proleptic ISO epoch.
+
+  * Raises `Calendrical.UnsupportedDateRangeError` if the date falls
+    outside the range of the underlying JPL ephemeris.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Rgsa.date_to_iso_days(1446, 1, 1)
+      739439
+
   """
   @spec date_to_iso_days(year, month, day) :: integer()
   def date_to_iso_days(year, month, day) do
@@ -105,6 +228,24 @@ defmodule Calendrical.Islamic.Rgsa do
   @doc """
   Returns a Saudi sighting-based Islamic `{year, month, day}` for
   the given ISO day number.
+
+  ### Arguments
+
+  * `iso_days` is an integer count of days since the proleptic
+    ISO epoch.
+
+  ### Returns
+
+  * A three-tuple `{year, month, day}` in the Saudi sighting-based
+    Islamic calendar.
+
+  * Raises `Calendrical.UnsupportedDateRangeError` if `iso_days`
+    falls outside the range of the underlying JPL ephemeris.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Rgsa.date_from_iso_days(739_252)
+      {1445, 6, 20}
 
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}

@@ -111,27 +111,150 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
 
   # ── Configuration overrides ──────────────────────────────────────────────
 
+  @doc """
+  Returns whether the given Amete Alem `year` is a leap year.
+
+  The leap-year rule is that of `Calendrical.Ethiopic` applied to
+  the corresponding Amete Mihret year.
+
+  ### Arguments
+
+  * `year` is any Amete Alem year as an integer.
+
+  ### Returns
+
+  * `true` if the year contains 366 days; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.AmeteAlem.leap_year?(7519)
+      true
+
+      iex> Calendrical.Ethiopic.AmeteAlem.leap_year?(7518)
+      false
+
+  """
   @impl true
   @spec leap_year?(year) :: boolean()
   def leap_year?(year) do
     Calendrical.Ethiopic.leap_year?(amete_mihret_year(year))
   end
 
+  @doc """
+  Returns the number of days in the given Amete Alem `year` and
+  `month`.
+
+  Months 1-12 always have 30 days; month 13 has 5 days, or 6
+  in a leap year.
+
+  ### Arguments
+
+  * `year` is any Amete Alem year as an integer.
+
+  * `month` is an Ethiopic month in the range `1..13`.
+
+  ### Returns
+
+  * An integer number of days.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.AmeteAlem.days_in_month(7518, 13)
+      5
+
+      iex> Calendrical.Ethiopic.AmeteAlem.days_in_month(7519, 13)
+      6
+
+  """
   @impl true
   @spec days_in_month(year, month) :: 5..30
   def days_in_month(year, month) do
     Calendrical.Ethiopic.days_in_month(amete_mihret_year(year), month)
   end
 
+  @doc """
+  Returns the number of days in the given Amete Alem `year`.
+
+  ### Arguments
+
+  * `year` is any Amete Alem year as an integer.
+
+  ### Returns
+
+  * `365` for an ordinary year or `366` for a leap year.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.AmeteAlem.days_in_year(7518)
+      365
+
+      iex> Calendrical.Ethiopic.AmeteAlem.days_in_year(7519)
+      366
+
+  """
   @impl true
+  @spec days_in_year(year) :: 365..366
   def days_in_year(year) do
     Calendrical.Ethiopic.days_in_year(amete_mihret_year(year))
   end
 
+  @doc """
+  Returns `{:error, :not_defined}` because the Ethiopic calendar
+  does not define quarters; the year has 13 months and so does not
+  divide evenly into four quarters.
+
+  ### Arguments
+
+  * `year` is any Amete Alem year as an integer.
+
+  * `month` is an Ethiopic month in the range `1..13`.
+
+  * `day` is an Ethiopic day-of-month.
+
+  ### Returns
+
+  * `{:error, :not_defined}`.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.AmeteAlem.quarter_of_year(7518, 1, 1)
+      {:error, :not_defined}
+
+  """
   @impl true
   def quarter_of_year(_year, _month, _day), do: {:error, :not_defined}
 
+  @doc """
+  Returns whether the given `year`, `month`, and `day` form a valid
+  Amete Alem date.
+
+  ### Arguments
+
+  * `year` is any Amete Alem year as an integer.
+
+  * `month` is an Ethiopic month in the range `1..13`.
+
+  * `day` is an Ethiopic day-of-month. Months `1..12` have 30 days;
+    month 13 has 5 days, or 6 in a leap year.
+
+  ### Returns
+
+  * `true` if the date is valid; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.AmeteAlem.valid_date?(7518, 1, 30)
+      true
+
+      iex> Calendrical.Ethiopic.AmeteAlem.valid_date?(7519, 13, 6)
+      true
+
+      iex> Calendrical.Ethiopic.AmeteAlem.valid_date?(7518, 13, 6)
+      false
+
+  """
   @impl true
+  @spec valid_date?(year, month, day) :: boolean()
   def valid_date?(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     Calendrical.Ethiopic.valid_date?(amete_mihret_year(year), month, day)
@@ -139,7 +262,36 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
 
   def valid_date?(_year, _month, _day), do: false
 
+  @doc """
+  Returns the day of the week for the given Amete Alem `year`,
+  `month`, and `day`.
+
+  Ethiopic weeks begin on Saturday, so the returned tuple has
+  `first_day_of_week = 6` and `last_day_of_week = 5`.
+
+  ### Arguments
+
+  * `year` is any Amete Alem year as an integer.
+
+  * `month` is an Ethiopic month in the range `1..13`.
+
+  * `day` is an Ethiopic day-of-month.
+
+  * `starting_on` is `:default` for the calendar's natural week
+    boundary (Saturday).
+
+  ### Returns
+
+  * A three-tuple `{day_of_week, first_day_of_week, last_day_of_week}`.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.AmeteAlem.day_of_week(7518, 1, 1, :default)
+      {4, 6, 5}
+
+  """
   @impl true
+  @spec day_of_week(year, month, day, :default) :: {1..7, 6, 5}
   def day_of_week(year, month, day, starting_on) do
     Calendrical.Ethiopic.day_of_week(amete_mihret_year(year), month, day, starting_on)
   end

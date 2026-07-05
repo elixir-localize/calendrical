@@ -186,6 +186,7 @@ defmodule Calendrical.Buddhist do
 
   """
   @impl true
+  @spec days_in_year(year) :: 365..366
   def days_in_year(year) do
     if leap_year?(year), do: 366, else: 365
   end
@@ -216,6 +217,7 @@ defmodule Calendrical.Buddhist do
 
   """
   @impl true
+  @spec valid_date?(year, month, day) :: boolean()
   def valid_date?(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     Calendrical.Gregorian.valid_date?(gregorian_year(year), month, day)

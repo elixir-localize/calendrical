@@ -62,6 +62,23 @@ defmodule Calendrical.TimeZone do
   * `{:error, reason}` when the zone string isn't
     recognizable.
 
+  ### Examples
+
+      iex> {:ok, datetime} = Calendrical.TimeZone.resolve("+05:30", ~N[2024-07-15 14:00:00])
+      iex> to_string(datetime)
+      "2024-07-15 14:00:00+05:30"
+
+      iex> {:ok, datetime} = Calendrical.TimeZone.resolve("GMT+02:00", ~N[2024-01-15 09:00:00])
+      iex> to_string(datetime)
+      "2024-01-15 09:00:00+02:00"
+
+      iex> {:ok, datetime} = Calendrical.TimeZone.resolve("Asia/Tokyo", ~N[2024-07-15 14:00:00])
+      iex> {datetime.zone_abbr, datetime.utc_offset}
+      {"JST", 32400}
+
+      iex> Calendrical.TimeZone.resolve("Middle Earth Time", ~N[2024-07-15 14:00:00])
+      {:error, :unresolvable_zone}
+
   """
   @spec resolve(String.t(), NaiveDateTime.t(), Keyword.t()) ::
           {:ok, DateTime.t()} | {:error, atom() | Exception.t()}
@@ -95,6 +112,19 @@ defmodule Calendrical.TimeZone do
   Consumers that want IANA name resolution should add one of
   these to their dependency list. The resolver works without
   them but rejects IANA names.
+
+  ### Returns
+
+  * `Tzdata.TimeZoneDatabase` or `Tz.TimeZoneDatabase` when the
+    respective library is loaded (`Tzdata` is preferred when both
+    are available).
+
+  * `nil` when neither library is loaded.
+
+  ### Examples
+
+      iex> Calendrical.TimeZone.tz_database()
+      Tzdata.TimeZoneDatabase
 
   """
   @spec tz_database() :: module() | nil

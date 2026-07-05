@@ -34,6 +34,7 @@ defmodule Calendrical.Format do
       Calendrical.Formatter.HTML.Basic
 
   """
+  @spec default_formatter_module() :: module()
   def default_formatter_module do
     @default_format_module
   end
@@ -54,6 +55,7 @@ defmodule Calendrical.Format do
       "cldr_calendar"
 
   """
+  @spec default_calendar_css_class() :: String.t()
   def default_calendar_css_class do
     @default_calendar_css_class
   end
@@ -82,6 +84,7 @@ defmodule Calendrical.Format do
       false
 
   """
+  @spec formatter_module?(module()) :: boolean()
   def formatter_module?(formatter) do
     Code.ensure_loaded?(formatter) && function_exported?(formatter, :format_year, 3)
   end
@@ -112,15 +115,19 @@ defmodule Calendrical.Format do
   ### Returns
 
   * The value returned by the `format_year/3` callback of the configured
-    formatter.
+    formatter. The built-in formatters return a string.
+
+  * `{:error, exception}` if the options are invalid.
 
   ### Examples
 
-      => Calendrical.Format.year(2019)
+      iex> year = Calendrical.Format.year(2019)
+      iex> String.starts_with?(year, "<div class=\\"cldr_calendar_year\\">")
+      true
 
-      => Calendrical.Format.year(2019, formatter: Calendrical.Formatter.Markdown)
-
-      => Calendrical.Format.year(2019, formatter: Calendrical.Formatter.Markdown, locale: "fr")
+      iex> markdown = Calendrical.Format.year(2019, formatter: Calendrical.Formatter.Markdown)
+      iex> is_binary(markdown)
+      true
 
   """
   @spec year(Calendar.year(), Keyword.t() | map()) :: any()
@@ -176,15 +183,18 @@ defmodule Calendrical.Format do
   ### Returns
 
   * The value returned by the `format_month/4` callback of the configured
-    formatter.
+    formatter. The built-in formatters return a string.
+
+  * `{:error, exception}` if the options are invalid.
 
   ### Examples
 
-      => Calendrical.Format.month(2019, 4)
+      iex> month = Calendrical.Format.month(2019, 4)
+      iex> String.starts_with?(month, "<table class=\\"cldr_calendar\\">")
+      true
 
-      => Calendrical.Format.month(2019, 4)
-
-      => Calendrical.Format.month(2019, 4, formatter: Calendrical.Formatter.Markdown, locale: "fr")
+      iex> Calendrical.Format.month(2019, 4, formatter: NotAFormatter)
+      {:error, %Calendrical.Formatter.UnknownFormatterError{formatter: NotAFormatter}}
 
   """
   @spec month(Calendar.year(), Calendar.month(), Keyword.t() | map()) :: any()
