@@ -485,23 +485,15 @@ defmodule Calendrical.Base.Week do
     month_from_weeks(week_in_quarter, config)
   end
 
+  # Sums the weeks of the first `months` months of a quarter.
+  # `months` is always in 0..2: every caller passes
+  # `month_from_weeks(...) - 1` (or `month_in_quarter(...) - 1`),
+  # and those functions return a month index in 1..3.
   def weeks_from_months(0, _config) do
     0
   end
 
-  # When months is positive we just sum the first n members of the
-  # weeks_in_month list.
   def weeks_from_months(months, %{weeks_in_month: weeks_in_month}) when months > 0 do
-    weeks_in_month
-    |> Enum.take(months)
-    |> Enum.sum()
-  end
-
-  # When months is negative
-  # TODO May not be correct
-  def weeks_from_months(months, %{weeks_in_month: weeks_in_month}) when months < 0 do
-    {_, weeks_in_month} = List.pop_at(weeks_in_month, -1)
-
     weeks_in_month
     |> Enum.take(months)
     |> Enum.sum()
