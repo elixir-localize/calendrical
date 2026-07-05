@@ -18,6 +18,30 @@ defmodule Calendrical.MixProject do
       dialyzer: [
         plt_add_apps: ~w(inets json mix calendar_interval)a
       ],
+      test_coverage: [
+        summary: [threshold: 90],
+        # Test-support calendars, generators and fixtures compiled from
+        # test/support are not part of the library surface and would
+        # distort the coverage total.
+        ignore_modules: [
+          Calendrical.BasicWeek,
+          Calendrical.Behaviour.Basic,
+          Calendrical.Behaviour.Gregorian,
+          Calendrical.CSCO,
+          Calendrical.England,
+          Calendrical.Fiscal.AU,
+          Calendrical.Fiscal.UK,
+          Calendrical.Fiscal.US,
+          Calendrical.Helper,
+          Calendrical.IL,
+          Calendrical.Persian.TestData,
+          Calendrical.Russia,
+          Calendrical.SequentialWeeks,
+          ~r/^Calendrical\.Test\./,
+          ~r/^Calendrical\.Range(\.|$)/,
+          ~r/\.DateGenerator$/
+        ]
+      ],
       compilers: Mix.compilers()
     ]
   end
