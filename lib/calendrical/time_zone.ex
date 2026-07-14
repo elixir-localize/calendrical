@@ -130,23 +130,23 @@ defmodule Calendrical.TimeZone do
 
   ### Returns
 
-  * `Tzdata.TimeZoneDatabase` or `Tz.TimeZoneDatabase` when the
-    respective library is loaded (`Tzdata` is preferred when both
-    are available).
+  * Tz.TimeZoneDatabase or `Tzdata.TimeZoneDatabase` when the
+    respective library is loaded (Tz is preferred when both are
+    available).
 
   * `nil` when neither library is loaded.
 
   ### Examples
 
       iex> Calendrical.TimeZone.tz_database()
-      Tzdata.TimeZoneDatabase
+      Tz.TimeZoneDatabase
 
   """
   @spec tz_database() :: module() | nil
   def tz_database do
     cond do
-      Code.ensure_loaded?(Tzdata.TimeZoneDatabase) -> Tzdata.TimeZoneDatabase
       Code.ensure_loaded?(Tz.TimeZoneDatabase) -> Tz.TimeZoneDatabase
+      Code.ensure_loaded?(Tzdata.TimeZoneDatabase) -> Tzdata.TimeZoneDatabase
       true -> nil
     end
   end
@@ -318,7 +318,10 @@ defmodule Calendrical.TimeZone do
 
   # IANA zone ids are case-sensitive, but CLDR locale data keys
   # them lowercased and users type freely. Map case-insensitively
-  # onto the canonical zone list (cached in persistent_term).
+  # onto the canonical zone list (cached in persistent_term). Only
+  # Tzdata exposes a zone list; with other databases (e.g. Tz) the
+  # map is empty and zone names resolve exact-case only — the
+  # `Map.get` fallback passes the name through unchanged.
   defp canonical_iana_zone(zone) do
     Map.get(canonical_zone_map(), String.downcase(zone), zone)
   end

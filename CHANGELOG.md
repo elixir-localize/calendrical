@@ -6,6 +6,12 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+* `Calendrical.TimeZone.tz_database/0` prefers `Tz.TimeZoneDatabase` over `Tzdata.TimeZoneDatabase` when both optional dependencies are loaded, and `tz` is now the database used for calendrical's own dev and test. Calendrical remains time zone database agnostic — neither database is forced on consumers, and IANA-name resolution works with either. Case-insensitive IANA name canonicalisation continues to require `tzdata` (the only database exposing a zone list); with other databases zone names resolve exact-case.
+
 ## [0.12.0] — 2026-07-06
 
 ### Fixed

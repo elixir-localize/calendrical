@@ -163,7 +163,12 @@ defmodule Calendrical.MixProject do
       {:localize, "~> 0.45"},
       {:astro, "~> 2.3 and >= 2.3.3"},
       {:tz_world, "~> 1.0", optional: true},
+      # Optional time zone databases. The dependency edges keep compile
+      # ordering correct when a consumer picks one; neither is forced on
+      # consumers. `tz` is preferred when both are loaded and is the
+      # database used for calendrical's own dev and test.
       {:tzdata, "~> 1.1", optional: true},
+      {:tz, "~> 0.26", optional: true},
       {:gettext, "~> 1.0"},
       {:calendar_interval, "~> 0.2", optional: true},
       {:ex_doc, "~> 0.38", optional: true, runtime: false},

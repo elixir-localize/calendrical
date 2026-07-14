@@ -86,6 +86,6 @@ defmodule Calendrical.TimeZoneTest do
   end
 
   test "tz_database/0 returns the configured database module" do
-    assert Calendrical.TimeZone.tz_database() == Tzdata.TimeZoneDatabase
+    assert Calendrical.TimeZone.tz_database() == Tz.TimeZoneDatabase
   end
 end
