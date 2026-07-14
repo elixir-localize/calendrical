@@ -121,20 +121,30 @@ defmodule Calendrical.TimeZone do
   end
 
   @doc """
-  Returns the configured time-zone database module, or `nil`
-  when neither `Tzdata` nor `Tz` is loaded.
+  Returns the time-zone database module, or `nil` when none is
+  configured and no known implementation is loaded.
 
-  Consumers that want IANA name resolution should add one of
-  these to their dependency list. The resolver works without
-  them but rejects IANA names.
+  The database resolves, in order, from:
+
+  1. The `:elixir` `:time_zone_database` application environment
+     (`config :elixir, :time_zone_database, Tz.TimeZoneDatabase`) —
+     Elixir's own UTC-only default is treated as "not configured".
+
+  2. Tz.TimeZoneDatabase or `Tzdata.TimeZoneDatabase` when the
+     respective library is loaded (Tz is preferred when both are
+     available).
+
+  Consumers that want IANA name resolution should add a
+  `Calendar.TimeZoneDatabase` implementation to their dependency
+  list and configure it. The resolver works without one but
+  rejects IANA names.
 
   ### Returns
 
-  * Tz.TimeZoneDatabase or `Tzdata.TimeZoneDatabase` when the
-    respective library is loaded (Tz is preferred when both are
-    available).
+  * A module implementing `Calendar.TimeZoneDatabase`, or
 
-  * `nil` when neither library is loaded.
+  * `nil` when nothing is configured and neither known library
+    is loaded.
 
   ### Examples
 
@@ -144,10 +154,19 @@ defmodule Calendrical.TimeZone do
   """
   @spec tz_database() :: module() | nil
   def tz_database do
-    cond do
-      Code.ensure_loaded?(Tz.TimeZoneDatabase) -> Tz.TimeZoneDatabase
-      Code.ensure_loaded?(Tzdata.TimeZoneDatabase) -> Tzdata.TimeZoneDatabase
-      true -> nil
+    configured_time_zone_database() ||
+      cond do
+        Code.ensure_loaded?(Tz.TimeZoneDatabase) -> Tz.TimeZoneDatabase
+        Code.ensure_loaded?(Tzdata.TimeZoneDatabase) -> Tzdata.TimeZoneDatabase
+        true -> nil
+      end
+  end
+
+  defp configured_time_zone_database do
+    case Application.get_env(:elixir, :time_zone_database) do
+      nil -> nil
+      Calendar.UTCOnlyTimeZoneDatabase -> nil
+      module -> module
     end
   end
 
@@ -318,12 +337,34 @@ defmodule Calendrical.TimeZone do
 
   # IANA zone ids are case-sensitive, but CLDR locale data keys
   # them lowercased and users type freely. Map case-insensitively
-  # onto the canonical zone list (cached in persistent_term). Only
-  # Tzdata exposes a zone list; with other databases (e.g. Tz) the
-  # map is empty and zone names resolve exact-case only — the
-  # `Map.get` fallback passes the name through unchanged.
+  # onto the canonical zone list (cached in persistent_term). The
+  # list is built from Localize's CLDR bcp47 timezone data — every
+  # IANA id and alias in its canonical spelling — so it works with
+  # any `Calendar.TimeZoneDatabase` implementation.
   defp canonical_iana_zone(zone) do
     Map.get(canonical_zone_map(), String.downcase(zone), zone)
+  end
+
+  # The territory-less `Etc/*` family (and its top-level aliases) is
+  # absent from CLDR's per-territory data. The set is fixed by the
+  # IANA `etcetera` file and has been stable for decades, so it is
+  # embedded rather than read from a zone database.
+  defp etc_zones do
+    [
+      "Etc/UTC",
+      "Etc/UCT",
+      "Etc/GMT",
+      "Etc/GMT0",
+      "Etc/Greenwich",
+      "Etc/Universal",
+      "Etc/Zulu",
+      "UTC",
+      "GMT",
+      "Universal",
+      "Zulu"
+    ] ++
+      Enum.map(1..12, &"Etc/GMT+#{&1}") ++
+      Enum.map(1..14, &"Etc/GMT-#{&1}")
   end
 
   defp canonical_zone_map do
@@ -332,11 +373,12 @@ defmodule Calendrical.TimeZone do
     case :persistent_term.get(key, :__not_loaded__) do
       :__not_loaded__ ->
         value =
-          if Code.ensure_loaded?(Tzdata) do
-            Map.new(Tzdata.zone_list(), fn zone -> {String.downcase(zone), zone} end)
-          else
-            %{}
-          end
+          Localize.DateTime.Timezone.timezones_by_territory()
+          |> Map.values()
+          |> List.flatten()
+          |> Enum.flat_map(& &1.aliases)
+          |> Kernel.++(etc_zones())
+          |> Map.new(fn zone -> {String.downcase(zone), zone} end)
 
         :persistent_term.put(key, value)
         value
