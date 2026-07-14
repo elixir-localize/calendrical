@@ -345,24 +345,42 @@ defmodule Calendrical.TimeZone do
     Map.get(canonical_zone_map(), String.downcase(zone), zone)
   end
 
-  # The territory-less `Etc/*` family (and its top-level aliases) is
-  # absent from CLDR's per-territory data. The set is fixed by the
-  # IANA `etcetera` file and has been stable for decades, so it is
-  # embedded rather than read from a zone database.
+  # The territory-less zones. Per TR35, only LOCODE-derived short
+  # codes carry an implicit region; the `gmt`, `utc`, `utce01–14`,
+  # and `utcw01–12` codes are region-less by design, which is why
+  # they are absent from CLDR's per-territory data. This list is the
+  # exact long-alias inventory of those codes from CLDR's
+  # `bcp47/timezone.xml` (guaranteed stable by TR35). `Etc/Unknown`
+  # (`unk`) is deliberately excluded — it is TR35's unknown-zone
+  # sentinel, not a resolvable zone.
   defp etc_zones do
-    [
-      "Etc/UTC",
-      "Etc/UCT",
+    # bcp47 `gmt`: Etc/GMT Etc/GMT+0 Etc/GMT-0 Etc/GMT0 Etc/Greenwich
+    #              GMT GMT+0 GMT-0 GMT0 Greenwich
+    # bcp47 `utc`: Etc/UTC Etc/UCT Etc/Universal Etc/Zulu
+    #              UCT UTC Universal Zulu
+    gmt_and_utc = [
       "Etc/GMT",
+      "Etc/GMT+0",
+      "Etc/GMT-0",
       "Etc/GMT0",
       "Etc/Greenwich",
+      "GMT",
+      "GMT+0",
+      "GMT-0",
+      "GMT0",
+      "Greenwich",
+      "Etc/UTC",
+      "Etc/UCT",
       "Etc/Universal",
       "Etc/Zulu",
+      "UCT",
       "UTC",
-      "GMT",
       "Universal",
       "Zulu"
-    ] ++
+    ]
+
+    # bcp47 `utcw01–12` (behind UTC) and `utce01–14` (ahead of UTC).
+    gmt_and_utc ++
       Enum.map(1..12, &"Etc/GMT+#{&1}") ++
       Enum.map(1..14, &"Etc/GMT-#{&1}")
   end
