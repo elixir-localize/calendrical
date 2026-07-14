@@ -1036,7 +1036,7 @@ defmodule Calendrical do
     calendar = Keyword.get(options, :calendar, @default_calendar)
 
     calendar_type =
-      if function_exported?(calendar, :cldr_calendar_type, 0),
+      if Code.ensure_loaded?(calendar) && function_exported?(calendar, :cldr_calendar_type, 0),
         do: calendar.cldr_calendar_type(),
         else: :gregorian
 
@@ -3244,7 +3244,7 @@ defmodule Calendrical do
   # one. Calendars declare this with the optional `era_calendar_type/0`
   # callback.
   defp era_calendar_type(calendar) do
-    if function_exported?(calendar, :era_calendar_type, 0) do
+    if Code.ensure_loaded?(calendar) && function_exported?(calendar, :era_calendar_type, 0) do
       calendar.era_calendar_type()
     else
       calendar.cldr_calendar_type()
@@ -3263,7 +3263,7 @@ defmodule Calendrical do
   # in the gregorian calendar (starting in January)
   @doc false
   def cardinal_month(month, calendar, months_in_year) do
-    if function_exported?(calendar, :__config__, 0) do
+    if Code.ensure_loaded?(calendar) && function_exported?(calendar, :__config__, 0) do
       do_cardinal_month(month, calendar.__config__(), months_in_year)
     else
       month
@@ -3282,7 +3282,7 @@ defmodule Calendrical do
   # of the week in Calendar.ISO which starts with 1 == Monday.
   @doc false
   def cardinal_day_of_week(day, calendar) do
-    if function_exported?(calendar, :__config__, 0) do
+    if Code.ensure_loaded?(calendar) && function_exported?(calendar, :__config__, 0) do
       do_cardinal_day_of_week(day, calendar.__config__())
     else
       day
@@ -3391,7 +3391,7 @@ defmodule Calendrical do
     format = Keyword.get(options, :format, :abbreviated)
 
     calendar_type =
-      if function_exported?(calendar, :cldr_calendar_type, 0),
+      if Code.ensure_loaded?(calendar) && function_exported?(calendar, :cldr_calendar_type, 0),
         do: calendar.cldr_calendar_type(),
         else: :gregorian
 
