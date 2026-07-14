@@ -6,6 +6,12 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+* Calendar-module probes (`strftime_options!/1`, `month_names/2`, `era_calendar_type/1`, `cardinal_month/3`, `cardinal_day_of_week/2`) ensure the module is loaded before `function_exported?/3`, so a cold calendar module no longer silently falls back to `:gregorian` naming or uncorrected month/day mapping.
+
 ## [0.13.0] — 2026-07-15
 
 ### Changed
