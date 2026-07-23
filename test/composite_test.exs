@@ -73,14 +73,19 @@ defmodule Calendrical.CompositeTest do
 
   describe "Calendrical.Composite.new/2" do
     test "creates a composite calendar at runtime" do
-      assert {:ok, MyTest.Composite.Denmark} =
+      # Binding the module from the return value keeps the compiler
+      # from flagging remote calls to a module that only exists once
+      # this test has run.
+      assert {:ok, denmark} =
                Calendrical.Composite.new(MyTest.Composite.Denmark,
                  calendars: [~D[1700-03-01 Calendrical.Gregorian]]
                )
 
+      assert denmark == MyTest.Composite.Denmark
+
       # Should be in effect: Julian before 1700-03-01, Gregorian after.
-      assert MyTest.Composite.Denmark.valid_date?(1700, 3, 1)
-      assert MyTest.Composite.Denmark.valid_date?(1700, 1, 1)
+      assert denmark.valid_date?(1700, 3, 1)
+      assert denmark.valid_date?(1700, 1, 1)
     end
 
     test "returns :module_already_exists if the module is already loaded" do

@@ -148,9 +148,12 @@ jobs:
         if: ${{ !matrix.lint }}
         run: mix test
 
+      # The lint entry also runs the :full-tagged exhaustive sweeps
+      # (excluded from default runs in test_helper.exs) so the
+      # lunisolar round-trip canaries still gate every push.
       - name: Run tests with coverage threshold
         if: matrix.lint
-        run: mix test --cover
+        run: mix test --cover --include full
 
       - name: Restore PLT cache
         if: matrix.lint
