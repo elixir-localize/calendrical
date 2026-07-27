@@ -6,6 +6,16 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-rc.2] — 2026-07-28
+
+### Changed
+
+* **Breaking:** `Calendrical.localize/3` and `Calendrical.month_names/2` rename the width option `:format` to `:style`, and `Calendrical.localize/3` renames the `:am_pm` part and its variant option to `:day_period`, aligning with Localize 1.0.0-rc.7. `Calendrical.InvalidFormatError` (fields `:format`, `:valid_formats`) becomes `Calendrical.InvalidStyleError` (fields `:style`, `:valid_styles`).
+
+### Fixed
+
+* `Calendrical.Behaviour` resolves the year-less `months_in_year/0` result at compile time, eliminating the dialyzer `pattern_match`/`exact_compare` warnings the generated runtime comparison produced in every calendar module.
+
 ## [1.0.0-rc.1] — 2026-07-15
 
 ### Changed

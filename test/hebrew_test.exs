@@ -251,29 +251,29 @@ defmodule Calendrical.HebrewTest do
 
       for {year, month, expected_name} <- cases do
         {:ok, date} = Date.new(year, month, 1, Hebrew)
-        assert Calendrical.localize(date, :month, locale: "en", format: :wide) == expected_name
+        assert Calendrical.localize(date, :month, locale: "en", style: :wide) == expected_name
       end
     end
 
     test "leap year produces 'Adar I' and 'Adar II' for months 6 and 7" do
       {:ok, adar_i} = Date.new(5784, 6, 1, Hebrew)
-      assert Calendrical.localize(adar_i, :month, locale: "en", format: :wide) == "Adar I"
+      assert Calendrical.localize(adar_i, :month, locale: "en", style: :wide) == "Adar I"
 
       {:ok, adar_ii} = Date.new(5784, 7, 1, Hebrew)
-      assert Calendrical.localize(adar_ii, :month, locale: "en", format: :wide) == "Adar II"
+      assert Calendrical.localize(adar_ii, :month, locale: "en", style: :wide) == "Adar II"
     end
 
     test "abbreviated month names" do
       {:ok, tishri} = Date.new(5785, 1, 1, Hebrew)
-      assert Calendrical.localize(tishri, :month, locale: "en", format: :abbreviated) == "Tishri"
+      assert Calendrical.localize(tishri, :month, locale: "en", style: :abbreviated) == "Tishri"
 
       {:ok, nisan} = Date.new(5785, 8, 1, Hebrew)
-      assert Calendrical.localize(nisan, :month, locale: "en", format: :abbreviated) == "Nisan"
+      assert Calendrical.localize(nisan, :month, locale: "en", style: :abbreviated) == "Nisan"
     end
 
     test "Hebrew locale month names are returned in Hebrew script" do
       {:ok, tishri} = Date.new(5785, 1, 1, Hebrew)
-      name = Calendrical.localize(tishri, :month, locale: "he", format: :wide)
+      name = Calendrical.localize(tishri, :month, locale: "he", style: :wide)
       # Tishri in Hebrew is תשרי
       assert name == "תשרי"
     end
@@ -283,13 +283,13 @@ defmodule Calendrical.HebrewTest do
     test "English day names" do
       {:ok, h} = Date.new(5784, 1, 1, Hebrew)
       # 1 Tishri 5784 = 16 September 2023, which was a Saturday
-      assert Calendrical.localize(h, :day_of_week, locale: "en", format: :wide) == "Saturday"
-      assert Calendrical.localize(h, :day_of_week, locale: "en", format: :abbreviated) == "Sat"
+      assert Calendrical.localize(h, :day_of_week, locale: "en", style: :wide) == "Saturday"
+      assert Calendrical.localize(h, :day_of_week, locale: "en", style: :abbreviated) == "Sat"
     end
 
     test "Hebrew locale day names are returned in Hebrew script" do
       {:ok, h} = Date.new(5784, 1, 1, Hebrew)
-      name = Calendrical.localize(h, :day_of_week, locale: "he", format: :wide)
+      name = Calendrical.localize(h, :day_of_week, locale: "he", style: :wide)
       # Saturday in Hebrew is "יום שבת"
       assert name == "יום שבת"
     end
@@ -304,7 +304,7 @@ defmodule Calendrical.HebrewTest do
         for offset <- 0..6 do
           {y, m, d} = Calendrical.Hebrew.date_from_iso_days(iso + offset)
           {:ok, date} = Date.new(y, m, d, Hebrew)
-          Calendrical.localize(date, :day_of_week, locale: "en", format: :abbreviated)
+          Calendrical.localize(date, :day_of_week, locale: "en", style: :abbreviated)
         end
 
       assert Enum.sort(names) == ~w[Fri Mon Sat Sun Thu Tue Wed]

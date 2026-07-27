@@ -21,7 +21,7 @@ defmodule Calendrical.ExceptionMessageTest do
      [from: ~U[2026-01-01 00:00:00Z], to: "Australia/Sydney"]},
     {Calendrical.InvalidCalendarModuleError, [module: NotACalendar]},
     {Calendrical.InvalidDateOrderError, [from: ~D[2026-06-01], to: ~D[2026-01-01]]},
-    {Calendrical.InvalidFormatError, [format: :bogus, valid_formats: [:short, :long]]},
+    {Calendrical.InvalidStyleError, [style: :bogus, valid_styles: [:short, :long]]},
     {Calendrical.InvalidPartError, [part: :bogus, valid_parts: [:year, :month]]},
     {Calendrical.InvalidTypeError, [type: :bogus, valid_types: [:date, :time]]},
     {Calendrical.IslamicYearOutOfRangeError, [year: 5000, min_year: 1318, max_year: 1650]},

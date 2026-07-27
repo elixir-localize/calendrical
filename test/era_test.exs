@@ -117,7 +117,7 @@ defmodule Calendrical.EraTest do
 
       assert Calendrical.localize(date, :era, locale: :en) == "Reiwa"
       assert Calendrical.localize(date, :era, locale: :ja) == "令和"
-      assert Calendrical.localize(date, :era, format: :narrow, locale: :en) == "R"
+      assert Calendrical.localize(date, :era, style: :narrow, locale: :en) == "R"
 
       ansei = Date.convert!(~D[1855-01-15], Calendrical.LunarJapanese)
       assert Calendrical.localize(ansei, :era, locale: :ja) == "安政"

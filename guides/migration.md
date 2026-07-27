@@ -136,7 +136,7 @@ New exceptions introduced by this refactor (replacing inline `{ArgumentError, ".
 |---|---|---|
 | `Calendrical.InvalidPartError` | `:part`, `:valid_parts` | `Calendrical.localize/3` |
 | `Calendrical.InvalidTypeError` | `:type`, `:valid_types` | `Calendrical.localize/3` |
-| `Calendrical.InvalidFormatError` | `:format`, `:valid_formats` | `Calendrical.localize/3` |
+| `Calendrical.InvalidStyleError` | `:style`, `:valid_styles` | `Calendrical.localize/3` |
 
 ### Error return convention
 
@@ -281,13 +281,13 @@ Calendrical.next(year_range, :year)
 Calendrical.localize(~D[2024-06-15], :month)
 # => "Jun"
 
-Calendrical.localize(~D[2024-06-15], :month, format: :wide, locale: "fr")
+Calendrical.localize(~D[2024-06-15], :month, style: :wide, locale: "fr")
 # => "juin"
 
 Calendrical.localize(~D[2024-06-15], :day_of_week)
 # => "Sat"
 
-Calendrical.localize(%{hour: 14}, :am_pm)
+Calendrical.localize(%{hour: 14}, :day_period)
 # => "PM"
 ```
 

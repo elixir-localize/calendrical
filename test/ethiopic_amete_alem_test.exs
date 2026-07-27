@@ -87,7 +87,7 @@ defmodule Calendrical.Ethiopic.AmeteAlemTest do
 
       for {month, expected} <- cases do
         {:ok, date} = Date.new(7517, month, 1, AmeteAlem)
-        assert Calendrical.localize(date, :month, locale: "en", format: :wide) == expected
+        assert Calendrical.localize(date, :month, locale: "en", style: :wide) == expected
       end
     end
   end
@@ -97,7 +97,7 @@ defmodule Calendrical.Ethiopic.AmeteAlemTest do
       # 1 Meskerem 7517 AA = 11 September 2024 = Wednesday
       {:ok, date} = Date.new(7517, 1, 1, AmeteAlem)
 
-      assert Calendrical.localize(date, :day_of_week, locale: "en", format: :wide) ==
+      assert Calendrical.localize(date, :day_of_week, locale: "en", style: :wide) ==
                "Wednesday"
     end
   end

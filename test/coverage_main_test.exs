@@ -10,13 +10,13 @@ defmodule Calendrical.CoverageMainTest do
       date = ~D[2026-07-05]
 
       assert Calendrical.localize(date, :month, locale: :en) == "Jul"
-      assert Calendrical.localize(date, :month, locale: :en, format: :wide) == "July"
-      assert Calendrical.localize(date, :month, locale: :en, format: :narrow) == "J"
+      assert Calendrical.localize(date, :month, locale: :en, style: :wide) == "July"
+      assert Calendrical.localize(date, :month, locale: :en, style: :narrow) == "J"
 
       assert Calendrical.localize(date, :month,
                locale: :en,
                type: :stand_alone,
-               format: :wide
+               style: :wide
              ) == "July"
     end
 
@@ -24,13 +24,13 @@ defmodule Calendrical.CoverageMainTest do
       date = ~D[2026-07-05]
 
       assert Calendrical.localize(date, :quarter, locale: :en) == "Q3"
-      assert Calendrical.localize(date, :quarter, locale: :en, format: :wide) == "3rd quarter"
-      assert Calendrical.localize(date, :quarter, locale: :en, format: :narrow) == "3"
+      assert Calendrical.localize(date, :quarter, locale: :en, style: :wide) == "3rd quarter"
+      assert Calendrical.localize(date, :quarter, locale: :en, style: :narrow) == "3"
 
       assert Calendrical.localize(date, :quarter,
                locale: :en,
                type: :stand_alone,
-               format: :wide
+               style: :wide
              ) == "3rd quarter"
     end
 
@@ -43,8 +43,8 @@ defmodule Calendrical.CoverageMainTest do
       date = ~D[2026-07-05]
 
       assert Calendrical.localize(date, :day_of_week, locale: :en) == "Sun"
-      assert Calendrical.localize(date, :day_of_week, locale: :en, format: :wide) == "Sunday"
-      assert Calendrical.localize(date, :day_of_week, locale: :en, format: :narrow) == "S"
+      assert Calendrical.localize(date, :day_of_week, locale: :en, style: :wide) == "Sunday"
+      assert Calendrical.localize(date, :day_of_week, locale: :en, style: :narrow) == "S"
     end
 
     test "days_of_week in abbreviated and wide widths" do
@@ -61,7 +61,7 @@ defmodule Calendrical.CoverageMainTest do
                  {7, "Sun"}
                ]
 
-      assert Calendrical.localize(date, :days_of_week, locale: :en, format: :wide) ==
+      assert Calendrical.localize(date, :days_of_week, locale: :en, style: :wide) ==
                [
                  {1, "Monday"},
                  {2, "Tuesday"},
@@ -74,21 +74,26 @@ defmodule Calendrical.CoverageMainTest do
     end
 
     test "am_pm variants and format options" do
-      assert Calendrical.localize(~T[10:15:00], :am_pm, locale: :en) == "AM"
-      assert Calendrical.localize(~T[22:15:00], :am_pm, locale: :en) == "PM"
-      assert Calendrical.localize(~T[10:15:00], :am_pm, locale: :en, am_pm: :variant) == "am"
-      assert Calendrical.localize(~T[10:15:00], :am_pm, locale: :en, period: :variant) == "am"
-      assert Calendrical.localize(~T[10:15:00], :am_pm, locale: :en, format: :wide) == "AM"
+      assert Calendrical.localize(~T[10:15:00], :day_period, locale: :en) == "AM"
+      assert Calendrical.localize(~T[22:15:00], :day_period, locale: :en) == "PM"
+
+      assert Calendrical.localize(~T[10:15:00], :day_period, locale: :en, day_period: :variant) ==
+               "am"
+
+      assert Calendrical.localize(~T[10:15:00], :day_period, locale: :en, day_period: :variant) ==
+               "am"
+
+      assert Calendrical.localize(~T[10:15:00], :day_period, locale: :en, style: :wide) == "AM"
     end
 
     test "day_periods localization" do
       assert Calendrical.localize(:morning1, :day_periods, locale: :en) == "in the morning"
-      assert Calendrical.localize(:noon, :day_periods, locale: :en, format: :wide) == "noon"
+      assert Calendrical.localize(:noon, :day_periods, locale: :en, style: :wide) == "noon"
 
       assert Calendrical.localize(:night1, :day_periods,
                locale: :en,
                type: :stand_alone,
-               format: :wide
+               style: :wide
              ) == "night"
     end
 
@@ -97,7 +102,7 @@ defmodule Calendrical.CoverageMainTest do
 
       assert Calendrical.localize(chinese_date, :cyclic_year, locale: :en) == "bing-wu"
 
-      assert Calendrical.localize(chinese_date, :cyclic_year, locale: :en, format: :wide) ==
+      assert Calendrical.localize(chinese_date, :cyclic_year, locale: :en, style: :wide) ==
                "bing-wu"
 
       # Gregorian has no cyclic year data so the year is returned as a string.
@@ -117,8 +122,8 @@ defmodule Calendrical.CoverageMainTest do
     end
 
     test "invalid format" do
-      assert {:error, %Calendrical.InvalidFormatError{format: :bogus}} =
-               Calendrical.localize(~D[2026-07-05], :month, locale: :en, format: :bogus)
+      assert {:error, %Calendrical.InvalidStyleError{style: :bogus}} =
+               Calendrical.localize(~D[2026-07-05], :month, locale: :en, style: :bogus)
     end
 
     test "invalid locale" do
@@ -173,7 +178,7 @@ defmodule Calendrical.CoverageMainTest do
 
       assert Calendrical.localize(leap_date, :month, locale: :en) == "Mo2bis"
 
-      assert Calendrical.localize(leap_date, :month, locale: :en, format: :wide) ==
+      assert Calendrical.localize(leap_date, :month, locale: :en, style: :wide) ==
                "Second Monthbis"
     end
 
@@ -186,7 +191,7 @@ defmodule Calendrical.CoverageMainTest do
 
       # Narrow month names have no leap variant and Hebrew has no
       # month patterns, so the month falls back to the base name.
-      assert Calendrical.localize(adar_ii, :month, locale: :en, format: :narrow) == "7"
+      assert Calendrical.localize(adar_ii, :month, locale: :en, style: :narrow) == "7"
     end
 
     test "partial maps produce missing-field errors", %{locale: locale} do
@@ -364,13 +369,13 @@ defmodule Calendrical.CoverageMainTest do
     end
 
     test "narrow format in French" do
-      names = Calendrical.month_names(Calendrical.Gregorian, locale: :fr, format: :narrow)
+      names = Calendrical.month_names(Calendrical.Gregorian, locale: :fr, style: :narrow)
       assert names[1] == "J"
       assert names[12] == "D"
     end
 
     test "for a non-Gregorian calendar" do
-      names = Calendrical.month_names(Calendrical.Hebrew, locale: :en, format: :wide)
+      names = Calendrical.month_names(Calendrical.Hebrew, locale: :en, style: :wide)
       assert names[1] == "Tishri"
       assert names[7] == "Adar"
     end
@@ -380,8 +385,8 @@ defmodule Calendrical.CoverageMainTest do
     end
 
     test "error branches" do
-      assert {:error, %Calendrical.InvalidFormatError{}} =
-               Calendrical.month_names(Calendrical.Gregorian, locale: :en, format: :bogus)
+      assert {:error, %Calendrical.InvalidStyleError{}} =
+               Calendrical.month_names(Calendrical.Gregorian, locale: :en, style: :bogus)
 
       assert {:error, %Calendrical.InvalidTypeError{}} =
                Calendrical.month_names(Calendrical.Gregorian, locale: :en, type: :bogus)

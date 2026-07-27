@@ -64,7 +64,7 @@ defmodule Calendrical.Formatter.HTML.Basic do
 
     month_name =
       date
-      |> Calendrical.localize(:month, format: :wide)
+      |> Calendrical.localize(:month, style: :wide)
 
     year_string =
       year

@@ -237,7 +237,7 @@ defmodule Calendrical do
     :month,
     :day_of_week,
     :days_of_week,
-    :am_pm,
+    :day_period,
     :day_periods
   ]
   type = &Enum.reduce(&1, fn x, acc -> {:|, [], [x, acc]} end)
@@ -2966,14 +2966,14 @@ defmodule Calendrical do
   * `:locale` is a locale identifier atom, string, or a
     `t:Localize.LanguageTag.t/0`. The default is `Localize.get_locale/0`.
 
-  * `:format` is one of `:wide`, `:abbreviated` or `:narrow`. The
+  * `:style` is one of `:wide`, `:abbreviated` or `:narrow`. The
     default is `:abbreviated`.
 
   * `:era` will, if set to `:variant` localize the era using
     the variant data. In the `:en` locale, this will produce `CE` and
     `BCE` rather than the default `AD` and `BC`.
 
-  * `:am_pm` will, if set to `:variant` localize the "AM"/"PM"
+  * `:day_period` will, if set to `:variant` localize the "AM"/"PM"
     time period indicator with the variant data. In the `:en` locale,
     this will produce `am` and `pm` rather than the default `AM` and `PM`.
 
@@ -3016,10 +3016,10 @@ defmodule Calendrical do
       iex> Calendrical.localize(~D[2019-06-01], :day_of_week)
       "Sat"
 
-      iex> Calendrical.localize(~D[2019-06-01], :day_of_week, format: :wide)
+      iex> Calendrical.localize(~D[2019-06-01], :day_of_week, style: :wide)
       "Saturday"
 
-      iex> Calendrical.localize(~D[2019-06-01], :day_of_week, format: :narrow)
+      iex> Calendrical.localize(~D[2019-06-01], :day_of_week, style: :narrow)
       "S"
 
       iex> Calendrical.localize(~D[2019-06-01], :day_of_week, locale: "ar")
@@ -3039,20 +3039,20 @@ defmodule Calendrical do
   def localize(datetime, part, options) do
     locale = Keyword.get(options, :locale, Localize.get_locale())
     type = Keyword.get(options, :type, :format)
-    format = Keyword.get(options, :format, :abbreviated)
+    style = Keyword.get(options, :style, :abbreviated)
 
     with {:ok, locale} <- Localize.validate_locale(locale),
          {:ok, part} <- validate_part(part),
          {:ok, type} <- validate_type(type),
-         {:ok, format} <- validate_format(format) do
-      localize(datetime, part, type, format, locale, options)
+         {:ok, style} <- validate_style(style) do
+      localize(datetime, part, type, style, locale, options)
     end
   end
 
   @doc false
-  def localize(datetime, part, type, format, locale, options \\ [])
+  def localize(datetime, part, type, style, locale, options \\ [])
 
-  def localize(datetime, :era, _type, format, locale, options) do
+  def localize(datetime, :era, _type, style, locale, options) do
     calendar = Map.get(datetime, :calendar, @default_calendar)
     calendar_type = era_calendar_type(calendar)
     variant? = options[:era] == :variant
@@ -3061,11 +3061,11 @@ defmodule Calendrical do
       era_key = if variant?, do: -era - 1, else: era
       eras = unwrap!(Localize.Calendar.eras(locale, calendar_type))
 
-      get_in(eras, [format, era_key])
+      get_in(eras, [style, era_key])
     end
   end
 
-  def localize(datetime, :cyclic_year, type, format, locale, _options) do
+  def localize(datetime, :cyclic_year, type, style, locale, _options) do
     calendar = Map.get(datetime, :calendar, @default_calendar)
     calendar_type = calendar.cldr_calendar_type()
 
@@ -3082,7 +3082,7 @@ defmodule Calendrical do
 
         with {:ok, cyclic_year_data} <- Localize.Calendar.cyclic_years(locale, calendar_type),
              localized when is_binary(localized) <-
-               get_in(cyclic_year_data, [:years, type, format, cycle_position]) do
+               get_in(cyclic_year_data, [:years, type, style, cycle_position]) do
           localized
         else
           _no_data -> to_string(cyclic_year)
@@ -3091,7 +3091,7 @@ defmodule Calendrical do
   end
 
   @doc false
-  def localize(datetime, :quarter, type, format, locale, _options) do
+  def localize(datetime, :quarter, type, style, locale, _options) do
     calendar_type = datetime.calendar.cldr_calendar_type()
 
     case quarter_of_year(datetime) do
@@ -3100,12 +3100,12 @@ defmodule Calendrical do
 
       quarter ->
         quarters = unwrap!(Localize.Calendar.quarters(locale, calendar_type))
-        get_in(quarters, [type, format, quarter])
+        get_in(quarters, [type, style, quarter])
     end
   end
 
   @doc false
-  def localize(datetime, :month, :numeric, _format, locale, _options) do
+  def localize(datetime, :month, :numeric, _style, locale, _options) do
     calendar = Map.get(datetime, :calendar, @default_calendar)
     calendar_type = calendar.cldr_calendar_type()
 
@@ -3130,7 +3130,7 @@ defmodule Calendrical do
     end
   end
 
-  def localize(datetime, :month, type, format, locale, _options) do
+  def localize(datetime, :month, type, style, locale, _options) do
     calendar = Map.get(datetime, :calendar, @default_calendar)
     calendar_type = calendar.cldr_calendar_type()
 
@@ -3147,7 +3147,7 @@ defmodule Calendrical do
           cardinal_month(month, calendar, months_in_year)
 
         months_data = unwrap!(Localize.Calendar.months(locale, calendar_type))
-        get_in(months_data, [type, format, cardinal_month])
+        get_in(months_data, [type, style, cardinal_month])
 
       {month, :leap} when is_number(month) ->
         cardinal_month =
@@ -3161,7 +3161,7 @@ defmodule Calendrical do
         # `month_patterns` substitution mechanism used by lunisolar
         # calendars.
         leap_variant_key = :"#{cardinal_month}_yeartype_leap"
-        variant = get_in(months_data, [type, format, leap_variant_key])
+        variant = get_in(months_data, [type, style, leap_variant_key])
 
         if is_binary(variant) do
           variant
@@ -3169,10 +3169,10 @@ defmodule Calendrical do
           month_patterns =
             unwrap!(Localize.Calendar.month_patterns(locale, calendar_type))
 
-          month = get_in(months_data, [type, format, cardinal_month])
+          month = get_in(months_data, [type, style, cardinal_month])
 
           if is_map(month_patterns) do
-            leap_pattern = get_in(month_patterns, [type, format, :leap])
+            leap_pattern = get_in(month_patterns, [type, style, :leap])
 
             Localize.Substitution.substitute([to_string(month)], leap_pattern)
             |> :erlang.iolist_to_binary()
@@ -3187,22 +3187,22 @@ defmodule Calendrical do
   end
 
   @doc false
-  def localize(datetime, :day_of_week, type, format, locale, _options)
+  def localize(datetime, :day_of_week, type, style, locale, _options)
       when is_full_date(datetime) do
     calendar = Map.get(datetime, :calendar, @default_calendar)
     calendar_type = calendar.cldr_calendar_type()
 
     day = iso_day_of_week(datetime)
     days_data = unwrap!(Localize.Calendar.days(locale, calendar_type))
-    get_in(days_data, [type, format, day])
+    get_in(days_data, [type, style, day])
   end
 
-  def localize(date, :day_of_week, _type, _format, _locale, _options) do
+  def localize(date, :day_of_week, _type, _style, _locale, _options) do
     {:error, missing_date_error("localize", date[:year], date[:month], date[:day])}
   end
 
   @doc false
-  def localize(datetime, :days_of_week, type, format, locale, _options) do
+  def localize(datetime, :days_of_week, type, style, locale, _options) do
     for date <- Interval.week(datetime) do
       day_of_week = day_of_week(date)
       cardinal_day_of_week = iso_day_of_week(date)
@@ -3210,32 +3210,32 @@ defmodule Calendrical do
       days_data = unwrap!(Localize.Calendar.days(locale, date.calendar.cldr_calendar_type()))
 
       day_name =
-        get_in(days_data, [type, format, cardinal_day_of_week])
+        get_in(days_data, [type, style, cardinal_day_of_week])
 
       {day_of_week, day_name}
     end
   end
 
   @doc false
-  def localize(%{hour: hour} = time, :am_pm, type, format, locale, options) do
+  def localize(%{hour: hour} = time, :day_period, type, style, locale, options) do
     calendar = Map.get(time, :calendar, @default_calendar)
     calendar_type = calendar.cldr_calendar_type()
 
     am_pm = am_pm(hour)
-    preference = options[:am_pm] || options[:period]
+    preference = options[:day_period]
     default_or_variant = if preference == :variant, do: :variant, else: :default
     day_periods = unwrap!(Localize.Calendar.day_periods(locale, calendar_type))
-    am_pm = get_in(day_periods, [type, format, am_pm])
+    am_pm = get_in(day_periods, [type, style, am_pm])
     Map.get(am_pm, default_or_variant) || Map.get(am_pm, :default)
   end
 
   @doc false
-  def localize(day_period, :day_periods, type, format, locale, options) do
+  def localize(day_period, :day_periods, type, style, locale, options) do
     calendar = Keyword.get(options, :calendar, @default_calendar)
     calendar_type = calendar.cldr_calendar_type()
 
     day_periods_data = unwrap!(Localize.Calendar.day_periods(locale, calendar_type))
-    get_in(day_periods_data, [type, format, day_period])
+    get_in(day_periods_data, [type, style, day_period])
   end
 
   # Era names may come from a different CLDR calendar than the other
@@ -3316,7 +3316,7 @@ defmodule Calendrical do
   * `:type` is one of `:stand_alone` or `:format`. The default
     is `:format`.
 
-  * `:format` is one of `:abbreviated`, `:wide` or `:narrow`.
+  * `:style` is one of `:abbreviated`, `:wide` or `:narrow`.
     The default is `:abbreviated`.
 
   ### Returns
@@ -3325,7 +3325,7 @@ defmodule Calendrical do
 
   ### Examples
 
-      iex> Calendrical.month_names(Calendar.ISO, format: :wide)
+      iex> Calendrical.month_names(Calendar.ISO, style: :wide)
       %{
         1 => "January",
         2 => "February",
@@ -3357,7 +3357,7 @@ defmodule Calendrical do
         12 => "Dez."
       }
 
-      iex> Calendrical.month_names(Calendrical.Gregorian, locale: :fr, format: :narrow)
+      iex> Calendrical.month_names(Calendrical.Gregorian, locale: :fr, style: :narrow)
       %{
         1 => "J",
         2 => "F",
@@ -3388,7 +3388,7 @@ defmodule Calendrical do
   def month_names(calendar, options) do
     locale = Keyword.get(options, :locale, Localize.get_locale())
     type = Keyword.get(options, :type, :format)
-    format = Keyword.get(options, :format, :abbreviated)
+    style = Keyword.get(options, :style, :abbreviated)
 
     calendar_type =
       if Code.ensure_loaded?(calendar) && function_exported?(calendar, :cldr_calendar_type, 0),
@@ -3397,9 +3397,9 @@ defmodule Calendrical do
 
     with {:ok, locale} <- Localize.validate_locale(locale),
          {:ok, type} <- validate_type(type),
-         {:ok, format} <- validate_format(format) do
+         {:ok, style} <- validate_style(style) do
       month_names = unwrap!(Localize.Calendar.months(locale, calendar_type))
-      get_in(month_names, [type, format])
+      get_in(month_names, [type, style])
     end
   end
 
@@ -3410,7 +3410,7 @@ defmodule Calendrical do
     :month,
     :day_of_week,
     :days_of_week,
-    :am_pm,
+    :day_period,
     :day_periods
   ]
   defp validate_part(part) do
@@ -3430,13 +3430,12 @@ defmodule Calendrical do
     end
   end
 
-  @valid_formats [:wide, :abbreviated, :narrow]
-  defp validate_format(format) do
-    if format in @valid_formats do
-      {:ok, format}
+  @valid_styles [:wide, :abbreviated, :narrow]
+  defp validate_style(style) do
+    if style in @valid_styles do
+      {:ok, style}
     else
-      {:error,
-       Calendrical.InvalidFormatError.exception(format: format, valid_formats: @valid_formats)}
+      {:error, Calendrical.InvalidStyleError.exception(style: style, valid_styles: @valid_styles)}
     end
   end
 

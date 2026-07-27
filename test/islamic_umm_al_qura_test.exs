@@ -218,18 +218,18 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
 
       for {month, expected} <- cases do
         {:ok, date} = Date.new(1446, month, 1, UmmAlQura)
-        assert Calendrical.localize(date, :month, locale: "en", format: :wide) == expected
+        assert Calendrical.localize(date, :month, locale: "en", style: :wide) == expected
       end
     end
 
     test "abbreviated month names" do
       {:ok, date} = Date.new(1446, 9, 1, UmmAlQura)
-      assert Calendrical.localize(date, :month, locale: "en", format: :abbreviated) == "Ram."
+      assert Calendrical.localize(date, :month, locale: "en", style: :abbreviated) == "Ram."
     end
 
     test "Arabic month names" do
       {:ok, date} = Date.new(1446, 9, 1, UmmAlQura)
-      assert Calendrical.localize(date, :month, locale: "ar", format: :wide) == "رمضان"
+      assert Calendrical.localize(date, :month, locale: "ar", style: :wide) == "رمضان"
     end
   end
 
@@ -237,15 +237,15 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
     test "English day names" do
       # 1 Ramadan 1446 AH = 1 March 2025 (Saturday)
       {:ok, date} = Date.new(1446, 9, 1, UmmAlQura)
-      assert Calendrical.localize(date, :day_of_week, locale: "en", format: :wide) == "Saturday"
+      assert Calendrical.localize(date, :day_of_week, locale: "en", style: :wide) == "Saturday"
 
-      assert Calendrical.localize(date, :day_of_week, locale: "en", format: :abbreviated) ==
+      assert Calendrical.localize(date, :day_of_week, locale: "en", style: :abbreviated) ==
                "Sat"
     end
 
     test "Arabic day names" do
       {:ok, date} = Date.new(1446, 9, 1, UmmAlQura)
-      name = Calendrical.localize(date, :day_of_week, locale: "ar", format: :wide)
+      name = Calendrical.localize(date, :day_of_week, locale: "ar", style: :wide)
       # السبت = "Saturday" in Arabic
       assert name == "السبت"
     end
@@ -258,7 +258,7 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
         for offset <- 0..6 do
           {y, m, d} = UmmAlQura.date_from_iso_days(iso + offset)
           {:ok, date} = Date.new(y, m, d, UmmAlQura)
-          Calendrical.localize(date, :day_of_week, locale: "en", format: :abbreviated)
+          Calendrical.localize(date, :day_of_week, locale: "en", style: :abbreviated)
         end
 
       assert Enum.sort(names) == ~w[Fri Mon Sat Sun Thu Tue Wed]

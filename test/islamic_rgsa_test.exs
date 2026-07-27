@@ -73,12 +73,12 @@ defmodule Calendrical.Islamic.RgsaTest do
   describe "month name localization" do
     test "English month names" do
       {:ok, m9} = Date.new(1446, 9, 1, Rgsa)
-      assert Calendrical.localize(m9, :month, locale: "en", format: :wide) == "Ramadan"
+      assert Calendrical.localize(m9, :month, locale: "en", style: :wide) == "Ramadan"
     end
 
     test "Arabic month name for Ramadan" do
       {:ok, ramadan} = Date.new(1446, 9, 1, Rgsa)
-      assert Calendrical.localize(ramadan, :month, locale: "ar", format: :wide) == "رمضان"
+      assert Calendrical.localize(ramadan, :month, locale: "ar", style: :wide) == "رمضان"
     end
   end
 
@@ -91,7 +91,7 @@ defmodule Calendrical.Islamic.RgsaTest do
         for offset <- 0..6 do
           {y, m, d} = Rgsa.date_from_iso_days(iso + offset)
           {:ok, date} = Date.new(y, m, d, Rgsa)
-          Calendrical.localize(date, :day_of_week, locale: "en", format: :abbreviated)
+          Calendrical.localize(date, :day_of_week, locale: "en", style: :abbreviated)
         end
 
       assert Enum.sort(names) == ~w[Fri Mon Sat Sun Thu Tue Wed]

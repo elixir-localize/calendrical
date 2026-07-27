@@ -83,7 +83,7 @@ defmodule Calendrical.Test do
   end
 
   test "that we default the year and calendar when localizing a partial date that has only a month" do
-    assert "January" = Calendrical.localize(%{month: 1}, :month, format: :wide)
+    assert "January" = Calendrical.localize(%{month: 1}, :month, style: :wide)
   end
 
   test "stand alone month names are resolved" do

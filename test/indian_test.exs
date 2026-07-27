@@ -132,7 +132,7 @@ defmodule Calendrical.IndianTest do
 
       for {month, expected} <- cases do
         {:ok, date} = Date.new(1947, month, 1, Indian)
-        assert Calendrical.localize(date, :month, locale: "en", format: :wide) == expected
+        assert Calendrical.localize(date, :month, locale: "en", style: :wide) == expected
       end
     end
   end
@@ -140,7 +140,7 @@ defmodule Calendrical.IndianTest do
   describe "day-of-week localization" do
     test "English day name for 1 Chaitra 1947 (= 22 March 2025, Saturday)" do
       {:ok, date} = Date.new(1947, 1, 1, Indian)
-      assert Calendrical.localize(date, :day_of_week, locale: "en", format: :wide) == "Saturday"
+      assert Calendrical.localize(date, :day_of_week, locale: "en", style: :wide) == "Saturday"
     end
 
     test "all 7 days of the week are localized" do
@@ -151,7 +151,7 @@ defmodule Calendrical.IndianTest do
         for offset <- 0..6 do
           {y, m, d} = Indian.date_from_iso_days(iso + offset)
           {:ok, date} = Date.new(y, m, d, Indian)
-          Calendrical.localize(date, :day_of_week, locale: "en", format: :abbreviated)
+          Calendrical.localize(date, :day_of_week, locale: "en", style: :abbreviated)
         end
 
       assert Enum.sort(names) == ~w[Fri Mon Sat Sun Thu Tue Wed]

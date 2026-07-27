@@ -146,23 +146,23 @@ defmodule Calendrical.BuddhistTest do
 
       for {month, expected} <- cases do
         {:ok, date} = Date.new(2567, month, 1, Buddhist)
-        assert Calendrical.localize(date, :month, locale: "en", format: :wide) == expected
+        assert Calendrical.localize(date, :month, locale: "en", style: :wide) == expected
       end
     end
 
     test "abbreviated English month names" do
       {:ok, date} = Date.new(2569, 4, 1, Buddhist)
-      assert Calendrical.localize(date, :month, locale: "en", format: :abbreviated) == "Apr"
+      assert Calendrical.localize(date, :month, locale: "en", style: :abbreviated) == "Apr"
     end
 
     test "Thai month names are returned in Thai script" do
       {:ok, april} = Date.new(2569, 4, 1, Buddhist)
       # April in Thai is เมษายน (mesayon)
-      assert Calendrical.localize(april, :month, locale: "th", format: :wide) == "เมษายน"
+      assert Calendrical.localize(april, :month, locale: "th", style: :wide) == "เมษายน"
 
       {:ok, december} = Date.new(2569, 12, 1, Buddhist)
       # December in Thai is ธันวาคม (thanwakhom)
-      assert Calendrical.localize(december, :month, locale: "th", format: :wide) == "ธันวาคม"
+      assert Calendrical.localize(december, :month, locale: "th", style: :wide) == "ธันวาคม"
     end
   end
 
@@ -170,13 +170,13 @@ defmodule Calendrical.BuddhistTest do
     test "English day names" do
       # 1 January 2567 BE = 1 January 2024 (Monday)
       {:ok, date} = Date.new(2567, 1, 1, Buddhist)
-      assert Calendrical.localize(date, :day_of_week, locale: "en", format: :wide) == "Monday"
-      assert Calendrical.localize(date, :day_of_week, locale: "en", format: :abbreviated) == "Mon"
+      assert Calendrical.localize(date, :day_of_week, locale: "en", style: :wide) == "Monday"
+      assert Calendrical.localize(date, :day_of_week, locale: "en", style: :abbreviated) == "Mon"
     end
 
     test "Thai day names are returned in Thai script" do
       {:ok, date} = Date.new(2567, 1, 1, Buddhist)
-      name = Calendrical.localize(date, :day_of_week, locale: "th", format: :wide)
+      name = Calendrical.localize(date, :day_of_week, locale: "th", style: :wide)
       # Verify the result contains Thai characters
       assert String.match?(name, ~r/[\x{0E00}-\x{0E7F}]/u)
     end
@@ -189,7 +189,7 @@ defmodule Calendrical.BuddhistTest do
         for offset <- 0..6 do
           {y, m, d} = Buddhist.date_from_iso_days(iso + offset)
           {:ok, date} = Date.new(y, m, d, Buddhist)
-          Calendrical.localize(date, :day_of_week, locale: "en", format: :abbreviated)
+          Calendrical.localize(date, :day_of_week, locale: "en", style: :abbreviated)
         end
 
       assert Enum.sort(names) == ~w[Fri Mon Sat Sun Thu Tue Wed]

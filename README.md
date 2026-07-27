@@ -59,7 +59,7 @@ iex> # Localize the month name
 iex> Calendrical.localize(hebrew, :month, locale: "en")
 "Tishri"
 
-iex> Calendrical.localize(hebrew, :month, locale: "he", format: :wide)
+iex> Calendrical.localize(hebrew, :month, locale: "he", style: :wide)
 "תשרי"
 
 iex> # Convert to the Islamic Umm al-Qura calendar
@@ -137,17 +137,17 @@ See [`guides/calendar_behaviour.md`](https://hexdocs.pm/calendrical/calendar_beh
 
 ## Localization
 
-All calendars participate in CLDR localization automatically. Calling `Calendrical.localize/3` with a date and a part (`:era`, `:month`, `:quarter`, `:day_of_week`, `:days_of_week`, `:am_pm`, `:day_periods`) returns the locale-specific name through the `Localize.Calendar` data layer.
+All calendars participate in CLDR localization automatically. Calling `Calendrical.localize/3` with a date and a part (`:era`, `:month`, `:quarter`, `:day_of_week`, `:days_of_week`, `:day_period`, `:day_periods`) returns the locale-specific name through the `Localize.Calendar` data layer.
 
 ```elixir
 iex> {:ok, date} = Date.new(1446, 9, 1, Calendrical.Islamic.UmmAlQura)
-iex> Calendrical.localize(date, :month, locale: "en", format: :wide)
+iex> Calendrical.localize(date, :month, locale: "en", style: :wide)
 "Ramadan"
 
 iex> Calendrical.localize(date, :month, locale: "ar")
 "رمضان"
 
-iex> Calendrical.localize(date, :day_of_week, locale: "en", format: :wide)
+iex> Calendrical.localize(date, :day_of_week, locale: "en", style: :wide)
 "Saturday"
 ```
 

@@ -103,13 +103,13 @@ defmodule Calendrical.RocTest do
 
       for {month, expected} <- cases do
         {:ok, date} = Date.new(113, month, 1, Roc)
-        assert Calendrical.localize(date, :month, locale: "en", format: :wide) == expected
+        assert Calendrical.localize(date, :month, locale: "en", style: :wide) == expected
       end
     end
 
     test "Chinese month names" do
       {:ok, date} = Date.new(113, 1, 1, Roc)
-      name = Calendrical.localize(date, :month, locale: "zh-Hant", format: :wide)
+      name = Calendrical.localize(date, :month, locale: "zh-Hant", style: :wide)
       # Verify the result contains CJK characters
       assert String.match?(name, ~r/[\x{4E00}-\x{9FFF}]/u)
     end
@@ -119,7 +119,7 @@ defmodule Calendrical.RocTest do
     test "English day name for 1 January 113 ROC" do
       # 1 January 2024 was a Monday
       {:ok, date} = Date.new(113, 1, 1, Roc)
-      assert Calendrical.localize(date, :day_of_week, locale: "en", format: :wide) == "Monday"
+      assert Calendrical.localize(date, :day_of_week, locale: "en", style: :wide) == "Monday"
     end
 
     test "all 7 days of the week are localized" do
@@ -130,7 +130,7 @@ defmodule Calendrical.RocTest do
         for offset <- 0..6 do
           {y, m, d} = Roc.date_from_iso_days(iso + offset)
           {:ok, date} = Date.new(y, m, d, Roc)
-          Calendrical.localize(date, :day_of_week, locale: "en", format: :abbreviated)
+          Calendrical.localize(date, :day_of_week, locale: "en", style: :abbreviated)
         end
 
       assert Enum.sort(names) == ~w[Fri Mon Sat Sun Thu Tue Wed]

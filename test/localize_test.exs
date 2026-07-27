@@ -7,8 +7,8 @@ defmodule Calendrical.LocalizeTest do
   end
 
   test "Localized am/pm with variant" do
-    assert Calendrical.localize(%{hour: 11}, :am_pm, am_pm: :variant) == "am"
-    assert Calendrical.localize(%{hour: 12}, :am_pm, am_pm: :variant) == "pm"
+    assert Calendrical.localize(%{hour: 11}, :day_period, day_period: :variant) == "am"
+    assert Calendrical.localize(%{hour: 12}, :day_period, day_period: :variant) == "pm"
   end
 
   test "Localizing a day of week in a calendar whose weeks don't start on Monday" do
