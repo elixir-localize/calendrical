@@ -93,7 +93,8 @@ defmodule Calendrical.Persian do
 
   """
   @spec date_to_iso_days(Calendar.year(), Calendar.month(), Calendar.day()) :: integer()
-  def date_to_iso_days(year, month, day) do
+  def date_to_iso_days(year, month, day)
+      when is_integer(year) and is_integer(month) and is_integer(day) do
     new_year =
       new_year_on_or_before(
         (epoch() + 180 +
@@ -138,10 +139,10 @@ defmodule Calendrical.Persian do
     month =
       if day_of_year <= 186,
         do: ceil(day_of_year / 31),
-        else: :math.ceil((day_of_year - 6) / 30)
+        else: ceil((day_of_year - 6) / 30)
 
     day = iso_days - date_to_iso_days(year, month, 1) + 1
-    {year, trunc(month), trunc(day)}
+    {year, month, trunc(day)}
   end
 
   @doc """

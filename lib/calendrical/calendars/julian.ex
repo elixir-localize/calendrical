@@ -862,7 +862,7 @@ defmodule Calendrical.Julian do
       Date.range(~D[2025-01-01 Calendrical.Julian], ~D[2025-12-31 Calendrical.Julian])
 
   """
-  @spec year(year) :: Date.Range.t()
+  @spec year(year) :: Date.Range.t() | {:error, :invalid_date}
   @impl Calendrical
   def year(year) do
     last_month = months_in_year(year)
@@ -894,7 +894,7 @@ defmodule Calendrical.Julian do
       Date.range(~D[2025-01-01 Calendrical.Julian], ~D[2025-03-31 Calendrical.Julian])
 
   """
-  @spec quarter(year, Calendrical.quarter()) :: Date.Range.t()
+  @spec quarter(year, Calendrical.quarter()) :: Date.Range.t() | {:error, :invalid_date}
   @impl Calendrical
   def quarter(year, quarter) do
     months_in_quarter = div(months_in_year(year), @quarters_in_year)
@@ -930,7 +930,7 @@ defmodule Calendrical.Julian do
       Date.range(~D[2025-02-01 Calendrical.Julian], ~D[2025-02-28 Calendrical.Julian])
 
   """
-  @spec month(year, month) :: Date.Range.t()
+  @spec month(year, month) :: Date.Range.t() | {:error, :invalid_date}
   @impl Calendrical
   def month(year, month) do
     starting_day = 1
@@ -1132,7 +1132,8 @@ defmodule Calendrical.Julian do
 
   """
   @spec date_to_iso_days(year, month, day) :: integer()
-  def date_to_iso_days(year, month, day) do
+  def date_to_iso_days(year, month, day)
+      when is_integer(year) and is_integer(month) and is_integer(day) do
     adjustment = adjustment(year, month, day)
     year = if year < 0, do: year + 1, else: year
 

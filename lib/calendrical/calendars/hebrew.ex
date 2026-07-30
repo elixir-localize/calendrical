@@ -353,7 +353,8 @@ defmodule Calendrical.Hebrew do
 
   """
   @spec date_to_iso_days(year, month, day) :: integer()
-  def date_to_iso_days(year, month, day) do
+  def date_to_iso_days(year, month, day)
+      when is_integer(year) and is_integer(month) and is_integer(day) do
     hebrew_new_year(year) + day - 1 + month_offset(year, month)
   end
 

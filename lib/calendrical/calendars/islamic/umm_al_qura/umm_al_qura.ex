@@ -229,7 +229,8 @@ defmodule Calendrical.Islamic.UmmAlQura do
   outside the embedded reference range.
   """
   @spec date_to_iso_days(year, month, day) :: integer()
-  def date_to_iso_days(year, month, day) do
+  def date_to_iso_days(year, month, day)
+      when is_integer(year) and is_integer(month) and is_integer(day) do
     case Map.fetch(@first_day_iso, {year, month}) do
       {:ok, first} -> first + day - 1
       :error -> raise out_of_range_error(year)

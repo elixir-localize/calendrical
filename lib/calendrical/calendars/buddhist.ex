@@ -87,7 +87,8 @@ defmodule Calendrical.Buddhist do
 
   """
   @spec gregorian_year(year) :: integer()
-  def gregorian_year(buddhist_year), do: buddhist_year - @gregorian_offset
+  def gregorian_year(buddhist_year) when is_integer(buddhist_year),
+    do: buddhist_year - @gregorian_offset
 
   @doc """
   Returns the Buddhist year corresponding to the given Gregorian year.
@@ -107,7 +108,8 @@ defmodule Calendrical.Buddhist do
 
   """
   @spec buddhist_year(integer()) :: year
-  def buddhist_year(gregorian_year), do: gregorian_year + @gregorian_offset
+  def buddhist_year(gregorian_year) when is_integer(gregorian_year),
+    do: gregorian_year + @gregorian_offset
 
   # ── Configuration overrides ──────────────────────────────────────────────
 

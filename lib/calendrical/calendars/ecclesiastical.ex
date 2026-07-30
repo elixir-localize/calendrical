@@ -440,7 +440,7 @@ defmodule Calendrical.Ecclesiastical do
 
   """
   @spec astronomical_easter_sunday(Calendar.year()) ::
-          {:ok, Date.t()} | {:error, Exception.t()}
+          {:ok, Date.t()} | {:error, Exception.t()} | {:error, :year_out_of_range}
   def astronomical_easter_sunday(gregorian_year)
       when is_integer(gregorian_year) and gregorian_year in 1000..3000 do
     with {:ok, pfm} <- paschal_full_moon(gregorian_year) do
@@ -474,7 +474,7 @@ defmodule Calendrical.Ecclesiastical do
 
   """
   @spec astronomical_good_friday(Calendar.year()) ::
-          {:ok, Date.t()} | {:error, Exception.t()}
+          {:ok, Date.t()} | {:error, Exception.t()} | {:error, :year_out_of_range}
   def astronomical_good_friday(gregorian_year)
       when is_integer(gregorian_year) and gregorian_year in 1000..3000 do
     with {:ok, easter} <- astronomical_easter_sunday(gregorian_year) do
@@ -520,7 +520,7 @@ defmodule Calendrical.Ecclesiastical do
 
   """
   @spec paschal_full_moon(Calendar.year()) ::
-          {:ok, Date.t()} | {:error, Exception.t()}
+          {:ok, Date.t()} | {:error, Exception.t()} | {:error, :year_out_of_range}
   def paschal_full_moon(gregorian_year)
       when is_integer(gregorian_year) and gregorian_year in 1000..3000 do
     with {:ok, equinox} <- Astro.equinox(gregorian_year, :march),

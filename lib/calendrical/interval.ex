@@ -189,7 +189,7 @@ defmodule Calendrical.Interval do
   """
   @spec week(Calendar.year(), Calendrical.week(), Calendrical.calendar()) ::
           Date.Range.t() | {:error, :not_defined}
-  @spec week(Date.t()) :: Date.Range.t()
+  @spec week(Date.t()) :: Date.Range.t() | {:error, :not_defined}
 
   def week(%{calendar: Calendar.ISO} = date) do
     %{date | calendar: Calendrical.Gregorian}

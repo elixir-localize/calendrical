@@ -73,7 +73,7 @@ defmodule Calendrical.Roc do
 
   """
   @spec gregorian_year(year) :: integer()
-  def gregorian_year(roc_year), do: roc_year + @gregorian_offset
+  def gregorian_year(roc_year) when is_integer(roc_year), do: roc_year + @gregorian_offset
 
   @doc """
   Returns the ROC year corresponding to the given Gregorian year.
@@ -93,7 +93,8 @@ defmodule Calendrical.Roc do
 
   """
   @spec roc_year(integer()) :: year
-  def roc_year(gregorian_year), do: gregorian_year - @gregorian_offset
+  def roc_year(gregorian_year) when is_integer(gregorian_year),
+    do: gregorian_year - @gregorian_offset
 
   # ── Configuration overrides ──────────────────────────────────────────────
 

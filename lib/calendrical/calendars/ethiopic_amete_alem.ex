@@ -85,7 +85,8 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
 
   """
   @spec amete_mihret_year(year) :: integer()
-  def amete_mihret_year(amete_alem_year), do: amete_alem_year - @era_offset
+  def amete_mihret_year(amete_alem_year) when is_integer(amete_alem_year),
+    do: amete_alem_year - @era_offset
 
   @doc """
   Returns the Amete Alem year for the given Amete Mihret
@@ -107,7 +108,8 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
 
   """
   @spec amete_alem_year(integer()) :: year
-  def amete_alem_year(amete_mihret_year), do: amete_mihret_year + @era_offset
+  def amete_alem_year(amete_mihret_year) when is_integer(amete_mihret_year),
+    do: amete_mihret_year + @era_offset
 
   # ── Configuration overrides ──────────────────────────────────────────────
 

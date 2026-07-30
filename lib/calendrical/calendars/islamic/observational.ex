@@ -232,7 +232,8 @@ defmodule Calendrical.Islamic.Observational do
 
   """
   @spec date_to_iso_days(year, month, day) :: integer()
-  def date_to_iso_days(year, month, day) do
+  def date_to_iso_days(year, month, day)
+      when is_integer(year) and is_integer(month) and is_integer(day) do
     first_day_of_month(year, month) + day - 1
   end
 

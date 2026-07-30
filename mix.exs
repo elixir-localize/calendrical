@@ -1,7 +1,7 @@
 defmodule Calendrical.MixProject do
   use Mix.Project
 
-  @version "1.0.0-rc.2"
+  @version "1.0.0"
 
   def project do
     [
@@ -16,7 +16,15 @@ defmodule Calendrical.MixProject do
       package: package(),
       docs: docs(),
       dialyzer: [
-        plt_add_apps: ~w(inets json mix calendar_interval)a
+        plt_add_apps: ~w(inets json mix calendar_interval)a,
+        ignore_warnings: ".dialyzer_ignore.exs",
+        flags: [
+          :error_handling,
+          :unknown,
+          :underspecs,
+          :extra_return,
+          :missing_return
+        ]
       ],
       test_coverage: [
         summary: [threshold: 90],
@@ -160,7 +168,7 @@ defmodule Calendrical.MixProject do
 
   defp deps do
     [
-      {:localize, "~> 1.0-rc"},
+      {:localize, "~> 1.0"},
       {:astro, "~> 2.3 and >= 2.3.3"},
       {:tz_world, "~> 1.0", optional: true},
       {:tz, "~> 0.26", optional: true},

@@ -104,7 +104,7 @@ defmodule Calendrical.Indian do
 
   """
   @spec gregorian_year(year) :: integer()
-  def gregorian_year(saka_year), do: saka_year + @gregorian_offset
+  def gregorian_year(saka_year) when is_integer(saka_year), do: saka_year + @gregorian_offset
 
   @doc """
   Returns the Saka year corresponding to the given Gregorian year.
@@ -124,7 +124,8 @@ defmodule Calendrical.Indian do
 
   """
   @spec saka_year(integer()) :: year
-  def saka_year(gregorian_year), do: gregorian_year - @gregorian_offset
+  def saka_year(gregorian_year) when is_integer(gregorian_year),
+    do: gregorian_year - @gregorian_offset
 
   # ── Configuration overrides ──────────────────────────────────────────────
 
@@ -278,7 +279,8 @@ defmodule Calendrical.Indian do
 
   """
   @spec date_to_iso_days(year, month, day) :: integer()
-  def date_to_iso_days(year, month, day) do
+  def date_to_iso_days(year, month, day)
+      when is_integer(year) and is_integer(month) and is_integer(day) do
     chaitra_1(year) + month_offset(year, month) + day - 1
   end
 

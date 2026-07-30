@@ -6,6 +6,24 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] — 2026-07-31
+
+The first stable release, built on Localize 1.0.
+
+### Fixed
+
+* `Calendrical.Persian.date_from_iso_days/1` computed the month with `:math.ceil/1` in one branch and `Kernel.ceil/1` in the other, so any date after the 186th day of the Persian year carried a float month back into `date_to_iso_days/3`. The returned month was truncated and therefore correct, but the intermediate arithmetic ran on floats.
+
+* Specifications that omitted error returns the function can actually make are corrected, so a caller reading the spec now sees every value it can receive. `Calendrical.next/3` and `previous/3` return `{:error, :not_defined}`; `Calendrical.Julian.year/1`, `quarter/2` and `month/2` return `{:error, :invalid_date}`; `Calendrical.Interval.week/1` returns `{:error, :not_defined}`; `Calendrical.Composite.new/2` returns `{:error, :must_be_a_list_of_dates | :no_calendars_configured}`; and the astronomical Ecclesiastical functions return `{:error, :year_out_of_range}`.
+
+### Changed
+
+* Requires `localize ~> 1.0`.
+
+* Year-conversion helpers (`Calendrical.Roc.gregorian_year/1`, `Calendrical.Buddhist.buddhist_year/1`, the Indian and Ethiopic equivalents) and the per-calendar `date_to_iso_days/3` implementations now guard their arguments with `is_integer/1`. A non-integer argument raises `FunctionClauseError` rather than silently computing a float result.
+
+* Dialyzer runs with the Localize flag set (`:error_handling`, `:unknown`, `:underspecs`, `:extra_return`, `:missing_return`). The exclusions in `.dialyzer_ignore.exs` are documented individually.
+
 ## [1.0.0-rc.2] — 2026-07-28
 
 ### Changed
@@ -16,7 +34,7 @@ The format is based on
 
 * `Calendrical.Behaviour` resolves the year-less `months_in_year/0` result at compile time, eliminating the dialyzer `pattern_match`/`exact_compare` warnings the generated runtime comparison produced in every calendar module.
 
-## [1.0.0-rc.1] — 2026-07-15
+## [1.0.0-rc.1] — 2026-07-27
 
 ### Changed
 

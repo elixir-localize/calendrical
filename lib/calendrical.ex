@@ -2755,7 +2755,7 @@ defmodule Calendrical do
 
   """
   @spec next(date() | Date.Range.t(), :year | :quarter | :month | :week | :day, Keyword.t()) ::
-          Date.t() | Date.Range.t()
+          Date.t() | Date.Range.t() | {:error, :not_defined}
   def next(date_or_date_range, date_part, options \\ [])
 
   def next(%Date.Range{last: date}, :year, options) do
@@ -2843,7 +2843,7 @@ defmodule Calendrical do
           date() | Date.Range.t(),
           :year | :quarter | :month | :week | :day,
           Keyword.t()
-        ) :: Date.t() | Date.Range.t()
+        ) :: Date.t() | Date.Range.t() | {:error, :not_defined}
   def previous(date_or_date_range, date_part, options \\ [])
 
   def previous(%Date.Range{first: date}, :year, options) do

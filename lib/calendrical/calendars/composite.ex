@@ -128,7 +128,9 @@ defmodule Calendrical.Composite do
 
   """
   @spec new(module(), Keyword.t()) ::
-          {:ok, Calendrical.calendar()} | {:module_already_exists, module()}
+          {:ok, Calendrical.calendar()}
+          | {:module_already_exists, module()}
+          | {:error, :must_be_a_list_of_dates | :no_calendars_configured}
   def new(calendar_module, options) when is_atom(calendar_module) and is_list(options) do
     if Code.ensure_loaded?(calendar_module) do
       {:module_already_exists, calendar_module}

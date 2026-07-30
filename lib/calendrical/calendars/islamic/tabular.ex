@@ -45,7 +45,8 @@ defmodule Calendrical.Islamic.Tabular do
   `epoch` (in ISO days).
   """
   @spec date_to_iso_days(integer(), 1..12, 1..30, integer()) :: integer()
-  def date_to_iso_days(year, month, day, epoch) do
+  def date_to_iso_days(year, month, day, epoch)
+      when is_integer(year) and is_integer(month) and is_integer(day) do
     epoch - 1 +
       354 * (year - 1) +
       div(3 + 11 * year, 30) +

@@ -356,7 +356,7 @@ defmodule Calendrical.Behaviour do
       @spec cyclic_year(Calendar.year(), Calendar.month(), Calendar.day()) :: Calendar.year()
 
       @impl true
-      def cyclic_year(year, month, day) do
+      def cyclic_year(year, month, day) when is_integer(year) do
         year
       end
     end
