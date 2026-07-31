@@ -114,6 +114,26 @@ jobs:
       - name: Install dependencies
         run: mix deps.get
 
+      # calendrical pulls in astro, which downloads a ~32Mb JPL ephemeris file
+      # from NASA when the application starts. That download times out on some
+      # runners and fails the whole test run, so cache the file and fetch it
+      # explicitly with retries rather than relying on the lazy download.
+      - name: Restore Astro ephemeris
+        id: astro-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/astro
+          key: astro-ephemeris-de440s
+
+      - name: Download Astro ephemeris
+        if: steps.astro-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.cache/astro"
+          curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors \
+            -o "$HOME/.cache/astro/de440s.bsp" \
+            https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp
+
       # Restore the ephemeris primed by the `ephemeris` job above. astro's
       # runtime resolver reads it from `:filename.basedir(:user_cache, "astro")`
       # (i.e. ~/.cache/astro on Linux), so compile and tests find it with no
