@@ -302,10 +302,14 @@ defmodule Calendrical.Composite.Compiler do
             unquote(old_calendar).days_in_month(year, month)
           end
 
-        # All other months after the final transition
-        {_, _, _, _, calendar}, [] ->
+        # Any month not split by a transition: delegate to whichever
+        # member calendar is in effect for that month. Using
+        # `calendar_for_date/3` (rather than the final calendar) keeps
+        # months inside an intermediate segment — e.g. February in the
+        # Swedish transitional era — answering from the correct calendar.
+        {_, _, _, _, _calendar}, [] ->
           def days_in_month(year, month) do
-            unquote(calendar).days_in_month(year, month)
+            calendar_for_date(year, month, 1).days_in_month(year, month)
           end
       end)
 
@@ -392,7 +396,12 @@ defmodule Calendrical.Composite.Compiler do
       def week(year, week) do
         base_calendar = calendar_for_date(year, 1, 1)
 
-        case base_calendar.week(year, week) do
+        # Dispatch via `apply/3` so the compiler does not statically resolve
+        # the return type to a single member calendar. Composites whose member
+        # calendars all return `{:error, :not_defined}` (e.g. a lunisolar base
+        # with no week support) would otherwise flag the `Date.Range` clause
+        # as unreachable.
+        case apply(base_calendar, :week, [year, week]) do
           %Date.Range{first_in_iso_days: first_days, last_in_iso_days: last_days} ->
             {y1, m1, d1} = date_from_iso_days(first_days)
             {y2, m2, d2} = date_from_iso_days(last_days)

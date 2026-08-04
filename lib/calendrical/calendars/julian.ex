@@ -1285,9 +1285,16 @@ defmodule Calendrical.Julian do
   @impl Calendar
   defdelegate time_to_day_fraction(hour, minute, second, microsecond), to: Calendar.ISO
 
+  # Date parsing must validate against the Julian leap rule, not the
+  # Gregorian one that `Calendar.ISO` applies. Delegating to `Calendar.ISO`
+  # rejected Julian-valid dates such as 29 February 1700 (a Julian leap year
+  # but not a Gregorian one). Time parsing is calendar-agnostic and stays
+  # with `Calendar.ISO`.
   @doc false
   @impl Calendar
-  defdelegate parse_date(date_string), to: Calendar.ISO
+  def parse_date(date_string) do
+    Calendrical.Parse.parse_date(date_string, __MODULE__)
+  end
 
   @doc false
   @impl Calendar
@@ -1295,11 +1302,15 @@ defmodule Calendrical.Julian do
 
   @doc false
   @impl Calendar
-  defdelegate parse_utc_datetime(dt_string), to: Calendar.ISO
+  def parse_utc_datetime(dt_string) do
+    Calendrical.Parse.parse_utc_datetime(dt_string, __MODULE__)
+  end
 
   @doc false
   @impl Calendar
-  defdelegate parse_naive_datetime(dt_string), to: Calendar.ISO
+  def parse_naive_datetime(dt_string) do
+    Calendrical.Parse.parse_naive_datetime(dt_string, __MODULE__)
+  end
 
   @doc false
   @impl Calendar

@@ -6,6 +6,18 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+* `Calendrical.Reform` builds per-territory Julian-to-Gregorian reform calendars from the `ncal(1)` reform-date table, via `calendar_for/1` (accepting a territory code or a `Localize.LanguageTag`) with `reforms/0` returning the full table. It prefers curated composites where they matter: `Calendrical.Reform.Sweden` models Sweden's 1700–1753 transition including the unique 30 February 1712, and `Calendrical.Reform.Japan` models the lunisolar-to-Gregorian change of 1873.
+
+### Fixed
+
+* `Calendrical.Julian.parse_date/1` and the naive/UTC datetime parsers validated dates with Gregorian leap rules via `Calendar.ISO`, wrongly rejecting Julian-valid dates such as 29 February 1700; they now validate against the Julian calendar.
+
+* Composite calendars derived `days_in_month/2` from the final segment's calendar for months wholly inside an intermediate segment, returning the wrong length (e.g. February 1712 in the Swedish transitional era); the month is now answered by the calendar actually in effect.
+
 ## [1.0.0] — 2026-07-31
 
 The first stable release, built on Localize 1.0.

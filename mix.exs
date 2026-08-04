@@ -42,6 +42,8 @@ defmodule Calendrical.MixProject do
           Calendrical.Behaviour.Gregorian,
           Calendrical.CSCO,
           Calendrical.England,
+          Calendrical.Reform.Sweden,
+          Calendrical.Reform.Japan,
           Calendrical.Fiscal.AU,
           Calendrical.Fiscal.UK,
           Calendrical.Fiscal.US,
@@ -125,6 +127,7 @@ defmodule Calendrical.MixProject do
         ~r/^Calendrical\.Islamic\.(Civil|Tbla|Observational|Rgsa|UmmAlQura(\.Astronomical|\.ReferenceData)?)$/,
       "Ecclesiastical Calendars": ~r/^Calendrical\.Ecclesiastical$/,
       "Other Calendars": ~r/^Calendrical\.(Persian|Composite|Coptic)$/,
+      "Reform Calendars": ~r/^Calendrical\.Reform(\.(Sweden(\.Transitional)?|Japan))?$/,
       "Fiscal-year Calendars": ~r/^Calendrical\.FiscalYear$/,
       Behaviours: [Calendrical.Behaviour, Calendrical.Formatter],
       Parsing: [
@@ -147,6 +150,7 @@ defmodule Calendrical.MixProject do
       Guides: [
         "guides/calendar_summary.md",
         "guides/calendar_behaviour.md",
+        "guides/composite_calendars.md",
         "guides/parsing.md",
         "guides/migration.md"
       ]
