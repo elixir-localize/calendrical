@@ -396,12 +396,7 @@ defmodule Calendrical.Composite.Compiler do
       def week(year, week) do
         base_calendar = calendar_for_date(year, 1, 1)
 
-        # Dispatch via `apply/3` so the compiler does not statically resolve
-        # the return type to a single member calendar. Composites whose member
-        # calendars all return `{:error, :not_defined}` (e.g. a lunisolar base
-        # with no week support) would otherwise flag the `Date.Range` clause
-        # as unreachable.
-        case apply(base_calendar, :week, [year, week]) do
+        case member_week(base_calendar, year, week) do
           %Date.Range{first_in_iso_days: first_days, last_in_iso_days: last_days} ->
             {y1, m1, d1} = date_from_iso_days(first_days)
             {y2, m2, d2} = date_from_iso_days(last_days)
@@ -414,6 +409,17 @@ defmodule Calendrical.Composite.Compiler do
           other ->
             other
         end
+      end
+
+      # Dispatches `week/2` to the member calendar in effect. The widening
+      # spec keeps the `Date.Range` clause in `week/2` reachable for the type
+      # checker: composites whose member calendars all return
+      # `{:error, :not_defined}` (e.g. a lunisolar base with no week support)
+      # would otherwise have that clause flagged as unreachable.
+      @spec member_week(module(), Calendar.year(), non_neg_integer()) ::
+              Date.Range.t() | {:error, :not_defined}
+      defp member_week(calendar, year, week) do
+        calendar.week(year, week)
       end
 
       @doc """
