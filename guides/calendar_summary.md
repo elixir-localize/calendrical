@@ -4,6 +4,10 @@ This guide describes every CLDR-aligned calendar that ships with Calendrical, gr
 
 The 17 CLDR-acceptable calendar types are all implemented. Each section below cites the corresponding CLDR identifier and the Calendrical module that exposes it.
 
+> #### The astronomical calendars and the ephemeris
+>
+> Several calendars are **astronomical** — the Persian, Chinese, Korean and Lunar Japanese calendars, and the observational Islamic calendars (`Observational`, `Rgsa`, `UmmAlQura.Astronomical`) — computing month and year starts from the position of the sun and moon via the [Astro](https://hex.pm/packages/astro) library. Since Astro 2.5 a compact ephemeris covering **1900–2100** ships with the package, so these calendars work immediately after installation with no download step. Dates outside that range return `Calendrical.UnsupportedDateRangeError`; running `mix astro.download_ephemeris` installs the full **1849–2150** ephemeris and widens the supported range accordingly.
+
 ---
 
 ## Gregorian calendars

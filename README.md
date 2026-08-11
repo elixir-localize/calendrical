@@ -24,7 +24,7 @@ Calendrical extends Elixir's standard `Calendar` and `Date` modules with compreh
 
 * **Calendar formatters** — `Calendrical.Format` and `Calendrical.Formatter` provide a behaviour-based plugin system for rendering calendars as HTML, Markdown, or any custom format.
 
-* **Astronomical calendar support** — observational lunar calendars (Persian, Chinese, Korean, Lunar Japanese, observational Islamic, Saudi Rgsa, astronomical Umm al-Qura) use the [Astro](https://hex.pm/packages/astro) library for equinox, lunar phase, and crescent visibility calculations.
+* **Astronomical calendar support** — observational lunar calendars (Persian, Chinese, Korean, Lunar Japanese, observational Islamic, Saudi Rgsa, astronomical Umm al-Qura) use the [Astro](https://hex.pm/packages/astro) library for equinox, lunar phase, and crescent visibility calculations. Astro ships a bundled ephemeris covering **1900–2100**, so these calendars work out of the box with no download step; `mix astro.download_ephemeris` installs the full **1849–2150** ephemeris when a wider range is needed.
 
 * **Sigils** — every Calendrical calendar works with Elixir's native `~D`/`~U`/`~N` sigils via the standard calendar suffix: `~D[2024-09-01 Calendrical.Hebrew]`, `~D[1446-09-01 Calendrical.Islamic.UmmAlQura]`.
 

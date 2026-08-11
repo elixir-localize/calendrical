@@ -6,6 +6,12 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+* Requires `astro ~> 2.5`, which ships a bundled ephemeris covering 1900–2100, so the astronomical calendars (Persian, Chinese, Korean, Lunar Japanese and the observational Islamic calendars) now work immediately after installation with no ephemeris download. `mix astro.download_ephemeris` still installs the full 1849–2150 range when a wider span is needed.
+
 ## [1.1.0] — 2026-08-05
 
 ### Added
