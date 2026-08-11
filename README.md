@@ -208,5 +208,5 @@ Full API documentation is available on [HexDocs](https://hexdocs.pm/calendrical)
 
 ## License
 
-Apache License 2.0. See the [LICENSE](https://github.com/elixir-localize/calendrical/blob/v1.0.0/LICENSE.md) file for details.
+Apache License 2.0. See the [LICENSE](https://hexdocs.pm/calendrical/license.html) file for details.
 
