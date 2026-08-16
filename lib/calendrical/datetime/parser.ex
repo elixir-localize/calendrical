@@ -154,9 +154,12 @@ defmodule Calendrical.DateTime.Parser do
   end
 
   defp try_split_as_struct({_sep, left, right}, options) do
-    with {:ok, date} <- Calendrical.Date.parse(left, options),
-         {:ok, time, zone} <-
+    # Check the time half first: it is cheaper to parse and far more
+    # selective (a time needs an hour), so a failing right half
+    # short-circuits the expensive date parse on every non-time split.
+    with {:ok, time, zone} <-
            Calendrical.Time.Parser.parse_with_zone(right, options),
+         {:ok, date} <- Calendrical.Date.parse(left, options),
          {:ok, ndt} <- NaiveDateTime.new(date, time) do
       # If the time half carried a zone, resolve it
       # into a `DateTime`. Resolution failure (e.g.
@@ -182,9 +185,11 @@ defmodule Calendrical.DateTime.Parser do
     date_opts = Keyword.put(options, :as, :map)
     time_opts = Keyword.put(options, :as, :map)
 
-    with {:ok, %{} = date_map} <- Calendrical.Date.parse(left, date_opts),
-         {:ok, %{} = time_map, _zone} <-
-           Calendrical.Time.Parser.parse_with_zone(right, time_opts) do
+    # Time half first — cheaper and more selective — so a failing right
+    # half short-circuits the expensive date parse (see try_split_as_struct).
+    with {:ok, %{} = time_map, _zone} <-
+           Calendrical.Time.Parser.parse_with_zone(right, time_opts),
+         {:ok, %{} = date_map} <- Calendrical.Date.parse(left, date_opts) do
       # Date map carries `:calendar`; time map carries the time
       # fields plus `:time_zone` if any. Merge — date's
       # `:calendar` wins (the time map has no calendar key).

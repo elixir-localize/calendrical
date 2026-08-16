@@ -120,16 +120,49 @@ defmodule Calendrical.Time.Parser do
          {:ok, day_periods} <- LCalendar.day_periods(locale, :gregorian) do
       patterns = collect_patterns(available)
       lenient = load_lenient_date(locale)
+      regexes = pattern_regexes(patterns, locale, day_periods, lenient)
 
       result =
         Enum.find_value(patterns, fn {_kind, pattern} ->
-          case match_pattern(input, pattern, day_periods, lenient, as) do
+          {regex, tokens} = Map.get(regexes, pattern, {nil, nil})
+
+          case match_pattern(input, regex, tokens, day_periods, as) do
             {:ok, value, zone} -> {:ok, value, zone}
             :error -> nil
           end
         end)
 
       result || {:error, no_match_error(input, locale)}
+    end
+  end
+
+  # %{pattern => {compiled_regex_or_nil, tokens}} cached in :persistent_term
+  # keyed by locale. The regex and tokens are pure functions of the locale's
+  # day-period names and lenient rules, so the whole set is built once.
+  defp pattern_regexes(patterns, locale, day_periods, lenient) do
+    key = {__MODULE__, :pattern_regexes, locale}
+
+    case :persistent_term.get(key, nil) do
+      nil ->
+        compiled =
+          Map.new(patterns, fn {_kind, pattern} ->
+            tokens = tokenize_pattern(pattern)
+            regex_string = compile_regex(tokens, day_periods, lenient)
+
+            regex =
+              case Regex.compile(regex_string, "u") do
+                {:ok, r} -> r
+                {:error, _} -> nil
+              end
+
+            {pattern, {regex, tokens}}
+          end)
+
+        :persistent_term.put(key, compiled)
+        compiled
+
+      compiled ->
+        compiled
     end
   end
 
@@ -210,16 +243,7 @@ defmodule Calendrical.Time.Parser do
 
   # ── Pattern → regex ──────────────────────────────────────────
 
-  defp match_pattern(input, pattern, day_periods, lenient, as) do
-    tokens = tokenize_pattern(pattern)
-    regex_string = compile_regex(tokens, day_periods, lenient)
-
-    regex =
-      case Regex.compile(regex_string, "u") do
-        {:ok, r} -> r
-        {:error, _} -> nil
-      end
-
+  defp match_pattern(input, regex, tokens, day_periods, as) do
     with %Regex{} <- regex,
          %{} = caps <- Regex.named_captures(regex, input),
          {:ok, hour} <- extract_hour(caps, tokens, day_periods) do

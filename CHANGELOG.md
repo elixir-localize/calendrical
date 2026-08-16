@@ -6,6 +6,12 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+* Date and time parsing are much faster on inputs that fail to parse. Per-locale derived data — the compiled CLDR regex set, the RBNF-probed ordinal affixes, and the lenient-parse equivalence map — is now cached in `:persistent_term` instead of being rebuilt on every call, and the datetime glue-splitter tries the cheaper, more selective time half before the date half so a non-time split short-circuits. A full `Calendrical.parse/2` miss drops ≈13×, with no change to results.
+
 ## [1.2.0] — 2026-08-12
 
 ### Changed

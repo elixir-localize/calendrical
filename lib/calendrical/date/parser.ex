@@ -279,7 +279,24 @@ defmodule Calendrical.Date.Parser do
   # `_`) once leading periods have been peeled (Spanish-style
   # `"1.º"` peels to `"º"` which is a real, unambiguous
   # indicator).
+  # The ordinal suffixes/prefixes are a pure function of locale (derived by
+  # probing RBNF `digits-ordinal`), so the result is cached. Without this,
+  # every failing parse re-ran ~11 RBNF conversions to rediscover them.
   defp ordinal_affixes(locale) do
+    key = {__MODULE__, :ordinal_affixes, locale}
+
+    case :persistent_term.get(key, nil) do
+      nil ->
+        affixes = compute_ordinal_affixes(locale)
+        :persistent_term.put(key, affixes)
+        affixes
+
+      affixes ->
+        affixes
+    end
+  end
+
+  defp compute_ordinal_affixes(locale) do
     Enum.reduce(@ordinal_probe_digits, {[], []}, fn n, {suffs, prefs} ->
       case Localize.Number.Rbnf.to_string(n, "digits-ordinal", locale: locale) do
         {:ok, rendered} -> collect_ordinal_affix(rendered, n, {suffs, prefs})
@@ -1167,6 +1184,13 @@ defmodule Calendrical.Date.Parser do
         calendar_module: calendar_module
       }
 
+      # The compiled regex for each pattern is a pure function of
+      # (locale, calendar) — the CLDR name data and lenient rules are
+      # both derived from them — so the whole set is built once and
+      # cached. Without this every parse (especially a *failing* one,
+      # which exhausts all ~60 patterns) rebuilds and recompiles them.
+      ctx = Map.put(ctx, :regexes, pattern_regexes(patterns, ctx))
+
       result =
         case as do
           :struct ->
@@ -1284,9 +1308,21 @@ defmodule Calendrical.Date.Parser do
   # ── Lenient-scope-date equivalence map ──────────────────────
 
   defp load_lenient_date(locale) do
-    case Localize.Locale.get(locale, [:lenient_parse, :date]) do
-      {:ok, data} when is_map(data) -> build_equivalence_map(data)
-      _ -> %{}
+    key = {__MODULE__, :lenient_date, locale}
+
+    case :persistent_term.get(key, nil) do
+      nil ->
+        map =
+          case Localize.Locale.get(locale, [:lenient_parse, :date]) do
+            {:ok, data} when is_map(data) -> build_equivalence_map(data)
+            _ -> %{}
+          end
+
+        :persistent_term.put(key, map)
+        map
+
+      map ->
+        map
     end
   end
 
@@ -1929,16 +1965,39 @@ defmodule Calendrical.Date.Parser do
   # `:lenient`, `:reference_year`, `:calendar_module`,
   # `:cldr_calendar`, plus the `:days`/`:quarters`/`:locale`
   # keys read by `field_regex/5`.
-  defp match_pattern(input, pattern, ctx, as) do
+  # Returns %{pattern => compiled_regex_or_nil} for every pattern, cached
+  # in :persistent_term keyed by {locale, calendar}. One write per cold
+  # (locale, calendar); every later parse reads precompiled regexes.
+  defp pattern_regexes(patterns, ctx) do
+    key = {__MODULE__, :pattern_regexes, ctx.locale, ctx.cldr_calendar}
+
+    case :persistent_term.get(key, nil) do
+      nil ->
+        compiled =
+          Map.new(patterns, fn {_kind, pattern} ->
+            {pattern, build_pattern_regex(pattern, ctx)}
+          end)
+
+        :persistent_term.put(key, compiled)
+        compiled
+
+      compiled ->
+        compiled
+    end
+  end
+
+  defp build_pattern_regex(pattern, ctx) do
     tokens = tokenize_pattern(pattern)
     regex_string = compile_regex(tokens, ctx.months, ctx.eras, ctx.lenient, ctx)
 
-    regex =
-      case Regex.compile(regex_string, "u") do
-        {:ok, r} -> r
-        {:error, _} -> nil
-      end
+    case Regex.compile(regex_string, "u") do
+      {:ok, regex} -> regex
+      {:error, _} -> nil
+    end
+  end
 
+  defp match_pattern(input, pattern, ctx, as) do
+    regex = Map.get(ctx.regexes, pattern)
     year_fallback = year_fallback_for(as, ctx.reference_year)
 
     with %Regex{} <- regex,
