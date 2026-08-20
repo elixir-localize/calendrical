@@ -79,6 +79,7 @@ defmodule Calendrical.MixProject do
         "guides",
         "mix.exs",
         "README*",
+        "usage-rules.md",
         "CHANGELOG*",
         "LICENSE*"
       ]
