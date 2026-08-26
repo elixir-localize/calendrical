@@ -310,6 +310,68 @@ defmodule Calendrical.Ethiopic do
   end
 
   @doc """
+  Returns `{year, week_in_year}` for the given Ethiopic date.
+
+  Weeks run Sunday (እሁድ, Ehud — “the first”) through Saturday, the
+  calendar's own week boundary. Week 1 is the week containing
+  1 Meskerem, so a year that opens mid-week has a short
+  first week. Every date numbers within its own year; weeks do
+  not spill into the adjacent year's numbering.
+
+  ### Arguments
+
+  * `year` is any Ethiopic year as an integer.
+
+  * `month` is a Ethiopic month number.
+
+  * `day` is a Ethiopic day-of-month.
+
+  ### Returns
+
+  * A two-tuple `{year, week_in_year}`.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.week_of_year(2018, 1, 1)
+      {2018, 1}
+
+      iex> Calendrical.Ethiopic.week_of_year(2018, 7, 1)
+      {2018, 27}
+
+  """
+  @impl true
+  @spec week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
+          {Calendar.year(), Calendar.week()}
+  def week_of_year(year, month, day) do
+    Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
+  end
+
+  @doc """
+  Returns the number of weeks in the given Ethiopic `year`.
+
+  ### Arguments
+
+  * `year` is any Ethiopic year as an integer.
+
+  ### Returns
+
+  * A two-tuple `{weeks_in_year, days_in_last_week}` where the
+    final week is short when the year does not end on the last
+    day of the calendar's week.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.weeks_in_year(2018)
+      {53, 5}
+
+  """
+  @impl true
+  @spec weeks_in_year(Calendar.year()) :: {Calendrical.week(), Calendar.day()}
+  def weeks_in_year(year) do
+    Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
+  end
+
+  @doc """
   Returns whether the given Ethiopic `year` is a leap year.
 
   An Ethiopic year is a leap year when it is one less than a

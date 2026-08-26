@@ -202,6 +202,68 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
   end
 
   @doc """
+  Returns `{year, week_in_year}` for the given Amete Alem date.
+
+  Weeks run Sunday (እሁድ, Ehud — “the first”) through Saturday, the
+  calendar's own week boundary. Week 1 is the week containing
+  1 Meskerem, so a year that opens mid-week has a short
+  first week. Every date numbers within its own year; weeks do
+  not spill into the adjacent year's numbering.
+
+  ### Arguments
+
+  * `year` is any Amete Alem year as an integer.
+
+  * `month` is a Amete Alem month number.
+
+  * `day` is a Amete Alem day-of-month.
+
+  ### Returns
+
+  * A two-tuple `{year, week_in_year}`.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.AmeteAlem.week_of_year(7518, 1, 1)
+      {7518, 1}
+
+      iex> Calendrical.Ethiopic.AmeteAlem.week_of_year(7518, 7, 1)
+      {7518, 27}
+
+  """
+  @impl true
+  @spec week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
+          {Calendar.year(), Calendar.week()}
+  def week_of_year(year, month, day) do
+    Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
+  end
+
+  @doc """
+  Returns the number of weeks in the given Amete Alem `year`.
+
+  ### Arguments
+
+  * `year` is any Amete Alem year as an integer.
+
+  ### Returns
+
+  * A two-tuple `{weeks_in_year, days_in_last_week}` where the
+    final week is short when the year does not end on the last
+    day of the calendar's week.
+
+  ### Examples
+
+      iex> Calendrical.Ethiopic.AmeteAlem.weeks_in_year(7518)
+      {53, 5}
+
+  """
+  @impl true
+  @spec weeks_in_year(Calendar.year()) :: {Calendrical.week(), Calendar.day()}
+  def weeks_in_year(year) do
+    Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
+  end
+
+  @doc """
   Returns `{:error, :not_defined}` because the Ethiopic calendar
   does not define quarters; the year has 13 months and so does not
   divide evenly into four quarters.

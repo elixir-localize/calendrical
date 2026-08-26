@@ -313,6 +313,68 @@ defmodule Calendrical.Coptic do
   end
 
   @doc """
+  Returns `{year, week_in_year}` for the given Coptic date.
+
+  Weeks run Sunday (Ⲧⲕⲩⲣⲓⲁⲕⲏ, the Lord's Day) through Saturday, the
+  calendar's own week boundary. Week 1 is the week containing
+  1 Thoout, so a year that opens mid-week has a short
+  first week. Every date numbers within its own year; weeks do
+  not spill into the adjacent year's numbering.
+
+  ### Arguments
+
+  * `year` is any Coptic year as an integer.
+
+  * `month` is a Coptic month number.
+
+  * `day` is a Coptic day-of-month.
+
+  ### Returns
+
+  * A two-tuple `{year, week_in_year}`.
+
+  ### Examples
+
+      iex> Calendrical.Coptic.week_of_year(1742, 1, 1)
+      {1742, 1}
+
+      iex> Calendrical.Coptic.week_of_year(1742, 7, 1)
+      {1742, 27}
+
+  """
+  @impl true
+  @spec week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
+          {Calendar.year(), Calendar.week()}
+  def week_of_year(year, month, day) do
+    Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
+  end
+
+  @doc """
+  Returns the number of weeks in the given Coptic `year`.
+
+  ### Arguments
+
+  * `year` is any Coptic year as an integer.
+
+  ### Returns
+
+  * A two-tuple `{weeks_in_year, days_in_last_week}` where the
+    final week is short when the year does not end on the last
+    day of the calendar's week.
+
+  ### Examples
+
+      iex> Calendrical.Coptic.weeks_in_year(1742)
+      {53, 5}
+
+  """
+  @impl true
+  @spec weeks_in_year(Calendar.year()) :: {Calendrical.week(), Calendar.day()}
+  def weeks_in_year(year) do
+    Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
+  end
+
+  @doc """
   Returns whether the given Coptic `year` is a leap year.
 
   A Coptic year is a leap year when it is one less than a multiple

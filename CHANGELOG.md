@@ -10,7 +10,7 @@ The format is based on
 
 ### Added
 
-* `week_of_year/3` and `weeks_in_year/1` for the Hebrew and Islamic calendars (civil, tabular, observational, RGSA and Umm al-Qura). Weeks run on the calendar's own Sunday-first boundary; week 1 is the week containing the first day of the year.
+* `week_of_year/3` and `weeks_in_year/1` for the Hebrew, Islamic (civil, tabular, observational, RGSA and Umm al-Qura), Coptic, Ethiopic, Amete Alem and Persian calendars. Weeks run on the calendar's own week boundary; week 1 is the week containing the first day of the year.
 
 ### Fixed
 

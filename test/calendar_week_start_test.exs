@@ -81,15 +81,7 @@ defmodule Calendrical.CalendarWeekStartTest do
 
   describe "week_of_year and weeks_in_year" do
     test "the first day of the year is in week 1" do
-      # Only the calendars that implement calendar-aligned weeks.
-      for calendar <- [
-            Calendrical.Hebrew,
-            Calendrical.Islamic.Civil,
-            Calendrical.Islamic.Tbla,
-            Calendrical.Islamic.Observational,
-            Calendrical.Islamic.Rgsa,
-            Calendrical.Islamic.UmmAlQura
-          ] do
+      for calendar <- [Calendrical.Persian | @sunday_first_calendars] do
         {:ok, %{year: year}} = Date.convert(@saturday, calendar)
         assert calendar.week_of_year(year, 1, 1) == {year, 1}
       end
