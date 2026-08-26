@@ -15,6 +15,8 @@ defmodule Calendrical.PersianTest do
   test "day of week" do
     {:ok, gregorian_date} = Date.new(2019, 12, 9, Calendrical.Gregorian)
     {:ok, persian_date} = Date.convert(gregorian_date, Calendrical.Persian)
-    assert Calendrical.day_of_week(persian_date) == 1
+    # 2019-12-09 is a Monday (Doshanbeh); Persian weeks number from
+    # Saturday (Shanbeh) = 1.
+    assert Calendrical.day_of_week(persian_date) == 3
   end
 end

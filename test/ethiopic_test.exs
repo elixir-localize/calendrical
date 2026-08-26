@@ -6,7 +6,8 @@ defmodule Calendrical.EthiopicTest do
   test "day of week" do
     {:ok, gregorian_date} = Date.new(2019, 12, 9, Calendrical.Gregorian)
     {:ok, ethiopic_date} = Date.convert(gregorian_date, Calendrical.Ethiopic)
-    assert Calendrical.day_of_week(ethiopic_date) == 1
+    # 2019-12-09 is a Monday; Ethiopic weeks number from Sunday = 1.
+    assert Calendrical.day_of_week(ethiopic_date) == 2
   end
 
   test "months in year" do

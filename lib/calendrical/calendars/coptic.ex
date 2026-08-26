@@ -17,7 +17,8 @@ defmodule Calendrical.Coptic do
     epoch: ~D[0284-08-29 Calendrical.Julian],
     cldr_calendar_type: :coptic,
     months_in_ordinary_year: 13,
-    months_in_leap_year: 13
+    months_in_leap_year: 13,
+    first_day_of_week: 7
 
   alias Calendrical.Base.Egyptian
 
@@ -211,8 +212,8 @@ defmodule Calendrical.Coptic do
   Returns the day of the week for the given Coptic `year`, `month`,
   and `day`.
 
-  Coptic weeks begin on Saturday, so the returned tuple has
-  `first_day_of_week = 6` and `last_day_of_week = 5`.
+  The Coptic liturgical week begins on Sunday (Ⲧⲕⲩⲣⲓⲁⲕⲏ, the
+  Lord's Day), so days number Sunday = 1 through Saturday = 7.
 
   ### Arguments
 
@@ -222,8 +223,10 @@ defmodule Calendrical.Coptic do
 
   * `day` is a Coptic day-of-month.
 
-  * `starting_on` is `:default` for the calendar's natural week
-    boundary (Saturday).
+  * `starting_on` is `:default` for the calendar's natural
+    Sunday-first numbering, or an explicit weekday
+    (`:monday` .. `:sunday`) to renumber the week relative to
+    that start.
 
   ### Returns
 
@@ -232,7 +235,10 @@ defmodule Calendrical.Coptic do
   ### Examples
 
       iex> Calendrical.Coptic.day_of_week(1742, 1, 1, :default)
-      {4, 6, 5}
+      {5, 1, 7}
+
+      iex> Calendrical.Coptic.day_of_week(1742, 1, 1, :monday)
+      {4, 1, 7}
 
   """
   @impl true
@@ -241,9 +247,9 @@ defmodule Calendrical.Coptic do
           month,
           day,
           :default | :monday | :tuesday | :wednesday | :thursday | :friday | :saturday | :sunday
-        ) :: {1..7, 1 | 6, 5 | 7}
+        ) :: {1..7, 1, 7}
   def day_of_week(year, month, day, starting_on) do
-    Egyptian.day_of_week(year, month, day, starting_on, epoch())
+    super(year, month, day, starting_on)
   end
 
   @doc """

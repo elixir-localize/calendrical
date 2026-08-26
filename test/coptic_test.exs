@@ -6,7 +6,8 @@ defmodule Calendrical.CopticTest do
   test "day of week" do
     {:ok, gregorian_date} = Date.new(2019, 12, 9, Calendrical.Gregorian)
     {:ok, coptic_date} = Date.convert(gregorian_date, Calendrical.Coptic)
-    assert Calendrical.day_of_week(coptic_date) == 1
+    # 2019-12-09 is a Monday; Coptic weeks number from Sunday = 1.
+    assert Calendrical.day_of_week(coptic_date) == 2
   end
 
   test "months in year" do

@@ -66,10 +66,10 @@
   {"lib/calendrical/calendars/chinese.ex", :missing_range, 66},
   {"lib/calendrical/calendars/chinese.ex", :missing_range, 631},
   {"lib/calendrical/calendars/gregorian.ex", :missing_range, 3},
-  {"lib/calendrical/calendars/hebrew.ex", :missing_range, 355},
+  {"lib/calendrical/calendars/hebrew.ex", :missing_range, 421},
   {"lib/calendrical/calendars/indian.ex", :missing_range, 281},
   {"lib/calendrical/calendars/islamic/tabular.ex", :missing_range, 47},
-  {"lib/calendrical/calendars/islamic/umm_al_qura/umm_al_qura.ex", :missing_range, 231},
+  {"lib/calendrical/calendars/islamic/umm_al_qura/umm_al_qura.ex", :missing_range, 294},
   {"lib/calendrical/calendars/iso.ex", :missing_range, 3},
   {"lib/calendrical/calendars/korean.ex", :missing_range, 52},
   {"lib/calendrical/calendars/korean.ex", :missing_range, 450},
@@ -78,8 +78,8 @@
 
   # 2. Deliberately abstract specs.
   {"lib/calendrical.ex", :contract_supertype, 515},
-  {"lib/calendrical/calendars/islamic/umm_al_qura/umm_al_qura.ex", :contract_supertype, 126},
-  {"lib/calendrical/calendars/islamic/umm_al_qura/umm_al_qura.ex", :contract_supertype, 133},
+  {"lib/calendrical/calendars/islamic/umm_al_qura/umm_al_qura.ex", :contract_supertype, 127},
+  {"lib/calendrical/calendars/islamic/umm_al_qura/umm_al_qura.ex", :contract_supertype, 134},
   {"lib/calendrical/calendars/islamic/visibility.ex", :contract_supertype, 34},
   {"lib/calendrical/calendars/islamic/visibility.ex", :contract_supertype, 61},
   {"lib/calendrical/compiler/lunisolar.ex", :contract_supertype, 668},

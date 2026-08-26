@@ -20,12 +20,12 @@ defmodule CoverageArithmeticTest do
   alias Calendrical.{Coptic, Era, Ethiopic, Interval, Julian, Preference}
 
   describe "Ethiopic and Coptic day_of_week/4 with explicit weekday starts" do
-    test "Ethiopic :default keeps the native Saturday-based numbering" do
-      assert Ethiopic.day_of_week(2018, 1, 1, :default) == {4, 6, 5}
+    test "Ethiopic :default uses the native Sunday-first numbering" do
+      assert Ethiopic.day_of_week(2018, 1, 1, :default) == {5, 1, 7}
     end
 
-    test "Coptic :default keeps the native Saturday-based numbering" do
-      assert Coptic.day_of_week(1742, 1, 1, :default) == {4, 6, 5}
+    test "Coptic :default uses the native Sunday-first numbering" do
+      assert Coptic.day_of_week(1742, 1, 1, :default) == {5, 1, 7}
     end
 
     test "Ethiopic explicit weekday starts renumber the week as {n, 1, 7}" do
@@ -188,8 +188,8 @@ defmodule CoverageArithmeticTest do
       assert Ethiopic.days_in_week() == 7
       assert Ethiopic.cldr_calendar_type() == :ethiopic
       assert Ethiopic.calendar_base() == :month
-      assert Ethiopic.first_day_of_week() == 1
-      assert Ethiopic.last_day_of_week() == 7
+      assert Ethiopic.first_day_of_week() == 7
+      assert Ethiopic.last_day_of_week() == 6
       assert Coptic.days_in_year(1742) == 365
       assert Coptic.days_in_year(1743) == 366
     end

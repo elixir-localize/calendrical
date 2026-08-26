@@ -57,7 +57,8 @@ defmodule Calendrical.Hebrew do
     epoch: Date.new!(-3761, 10, 7, Calendrical.Julian),
     cldr_calendar_type: :hebrew,
     months_in_ordinary_year: 12,
-    months_in_leap_year: 13
+    months_in_leap_year: 13,
+    first_day_of_week: 7
 
   # Quarters are not defined for a 12/13-month lunisolar calendar.
   @dialyzer [
@@ -244,6 +245,71 @@ defmodule Calendrical.Hebrew do
   @spec days_in_year(year) :: 353..355 | 383..385
   def days_in_year(year) do
     hebrew_new_year(year + 1) - hebrew_new_year(year)
+  end
+
+  @doc """
+  Returns `{year, week_in_year}` for the given Hebrew date.
+
+  Weeks run Sunday (Yom Rishon, “first day”) through Shabbat, the
+  calendar's own week boundary. Week 1 is the week containing
+  1 Tishri, so a year that opens mid-week has a short
+  first week. Every date numbers within its own year; weeks do
+  not spill into the adjacent year's numbering.
+
+  ### Arguments
+
+  * `year` is any Hebrew year as an integer.
+
+  * `month` is a Hebrew month number.
+
+  * `day` is a Hebrew day-of-month.
+
+  ### Returns
+
+  * A two-tuple `{year, week_in_year}`.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.week_of_year(5786, 1, 1)
+      {5786, 1}
+
+      iex> Calendrical.Hebrew.week_of_year(5786, 8, 15)
+      {5786, 28}
+
+  """
+  @impl true
+  @spec week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
+          {Calendar.year(), Calendar.week()}
+  def week_of_year(year, month, day) do
+    Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
+  end
+
+  @doc """
+  Returns the number of weeks in the given Hebrew `year`.
+
+  ### Arguments
+
+  * `year` is any Hebrew year as an integer.
+
+  ### Returns
+
+  * A two-tuple `{weeks_in_year, days_in_last_week}` where the
+    final week is short when the year does not end on the last
+    day of the calendar's week.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.weeks_in_year(5786)
+      {51, 6}
+
+      iex> Calendrical.Hebrew.weeks_in_year(5787)
+      {56, 6}
+
+  """
+  @impl true
+  @spec weeks_in_year(Calendar.year()) :: {Calendrical.week(), Calendar.day()}
+  def weeks_in_year(year) do
+    Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
   end
 
   @doc """

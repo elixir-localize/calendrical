@@ -2,10 +2,12 @@ defmodule Calendrical.Base.Common do
   @moduledoc false
 
   # Logic shared verbatim by Calendrical.Base.Month and
-  # Calendrical.Base.Week. Only functions whose semantics are
-  # identical for both units belong here; unit-specific arithmetic
-  # stays in the respective base module. See ARCHITECTURE.md for
-  # the division of labour between the compiled-calendar layers.
+  # Calendrical.Base.Week, plus calendar-aligned week numbering
+  # shared by the Behaviour calendars that define weeks (Hebrew and
+  # the Islamic family). Only functions whose semantics are
+  # identical across their users belong here; unit-specific
+  # arithmetic stays in the respective base module. See
+  # ARCHITECTURE.md for the division of labour between the layers.
 
   @days_in_week 7
 
@@ -48,5 +50,33 @@ defmodule Calendrical.Base.Common do
 
   def days_in_week(_year, _month_or_week) do
     @days_in_week
+  end
+
+  # Calendar-aligned week numbering for Behaviour calendars: weeks
+  # run on the calendar's own week boundary (its `first_day_of_week`
+  # option) and week 1 is the week containing the first day of the
+  # year, so a year that opens mid-week has a short week 1. Every
+  # date numbers within its own year — no ISO-style spill into the
+  # adjacent year's numbering.
+  def week_of_year(calendar, year, month, day) do
+    day_of_year =
+      calendar.date_to_iso_days(year, month, day) - calendar.date_to_iso_days(year, 1, 1) + 1
+
+    {year, div(day_of_year - 2 + first_day_offset(calendar, year), @days_in_week) + 1}
+  end
+
+  def weeks_in_year(calendar, year) do
+    days_in_year = calendar.days_in_year(year)
+    offset = first_day_offset(calendar, year)
+    weeks = div(days_in_year - 2 + offset, @days_in_week) + 1
+    days_in_last_week = days_in_year + offset - 1 - (weeks - 1) * @days_in_week
+    {weeks, days_in_last_week}
+  end
+
+  # Position of the year's first day within its (calendar-native)
+  # week, 1-based: 1 when the year opens on the week's first day.
+  defp first_day_offset(calendar, year) do
+    {first_dow, 1, 7} = calendar.day_of_week(year, 1, 1, :default)
+    first_dow
   end
 end

@@ -6,6 +6,18 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] — 2026-08-26
+
+### Added
+
+* `week_of_year/3` and `weeks_in_year/1` for the Hebrew and Islamic calendars (civil, tabular, observational, RGSA and Umm al-Qura). Weeks run on the calendar's own Sunday-first boundary; week 1 is the week containing the first day of the year.
+
+### Fixed
+
+* The Hebrew, Islamic and Persian calendars number days of the week per their own traditions instead of ISO: Hebrew and Islamic weeks run Sunday (day 1) through Saturday (day 7, Shabbat), Persian weeks run Saturday (Shanbeh, day 1) through Friday. `Date.beginning_of_week/1` on these calendars now returns the culturally-correct week start.
+
+* The Coptic and Ethiopic calendars (including Amete Alem) number days from Sunday (Ⲧⲕⲩⲣⲓⲁⲕⲏ / እሁድ, "the first") instead of the previous Saturday-start numbering, matching the liturgical week; the `day_of_week/4` triple is now `{day, 1, 7}` in the calendar's own numbering.
+
 ## [1.2.1] — 2026-08-16
 
 ### Changed

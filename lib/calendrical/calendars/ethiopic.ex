@@ -16,7 +16,8 @@ defmodule Calendrical.Ethiopic do
     epoch: ~D[0008-08-29 Calendrical.Julian],
     cldr_calendar_type: :ethiopic,
     months_in_ordinary_year: 13,
-    months_in_leap_year: 13
+    months_in_leap_year: 13,
+    first_day_of_week: 7
 
   alias Calendrical.Base.Egyptian
 
@@ -210,8 +211,9 @@ defmodule Calendrical.Ethiopic do
   Returns the day of the week for the given Ethiopic `year`,
   `month`, and `day`.
 
-  Ethiopic weeks begin on Saturday, so the returned tuple has
-  `first_day_of_week = 6` and `last_day_of_week = 5`.
+  The Ethiopic week begins on Sunday (እሁድ, Ehud — literally "the
+  first", after the Genesis creation sequence), so days number
+  Sunday = 1 through Saturday = 7.
 
   ### Arguments
 
@@ -221,8 +223,10 @@ defmodule Calendrical.Ethiopic do
 
   * `day` is an Ethiopic day-of-month.
 
-  * `starting_on` is `:default` for the calendar's natural week
-    boundary (Saturday).
+  * `starting_on` is `:default` for the calendar's natural
+    Sunday-first numbering, or an explicit weekday
+    (`:monday` .. `:sunday`) to renumber the week relative to
+    that start.
 
   ### Returns
 
@@ -231,7 +235,7 @@ defmodule Calendrical.Ethiopic do
   ### Examples
 
       iex> Calendrical.Ethiopic.day_of_week(2018, 1, 1, :default)
-      {4, 6, 5}
+      {5, 1, 7}
 
   """
   @impl true
@@ -240,9 +244,9 @@ defmodule Calendrical.Ethiopic do
           month,
           day,
           :default | :monday | :tuesday | :wednesday | :thursday | :friday | :saturday | :sunday
-        ) :: {1..7, 1 | 6, 5 | 7}
+        ) :: {1..7, 1, 7}
   def day_of_week(year, month, day, starting_on) do
-    Egyptian.day_of_week(year, month, day, starting_on, epoch())
+    super(year, month, day, starting_on)
   end
 
   @doc """

@@ -25,7 +25,8 @@ defmodule Calendrical.Persian do
 
   use Calendrical.Behaviour,
     epoch: ~D[0622-03-20 Calendrical.Julian],
-    cldr_calendar_type: :persian
+    cldr_calendar_type: :persian,
+    first_day_of_week: 6
 
   @mean_tropical_year 365.24219
 

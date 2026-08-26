@@ -44,7 +44,8 @@ defmodule Calendrical.Islamic.Rgsa do
     epoch: ~D[0622-07-19 Calendrical.Gregorian],
     cldr_calendar_type: :islamic_rgsa,
     months_in_ordinary_year: 12,
-    months_in_leap_year: 12
+    months_in_leap_year: 12,
+    first_day_of_week: 7
 
   alias Calendrical.Islamic.Visibility
 
@@ -127,6 +128,68 @@ defmodule Calendrical.Islamic.Rgsa do
   @spec days_in_year(year) :: 354..355
   def days_in_year(year) do
     date_to_iso_days(year + 1, 1, 1) - date_to_iso_days(year, 1, 1)
+  end
+
+  @doc """
+  Returns `{year, week_in_year}` for the given Islamic date.
+
+  Weeks run Sunday (al-Ahad, “the first”) through Saturday, the
+  calendar's own week boundary. Week 1 is the week containing
+  1 Muharram, so a year that opens mid-week has a short
+  first week. Every date numbers within its own year; weeks do
+  not spill into the adjacent year's numbering.
+
+  ### Arguments
+
+  * `year` is any Islamic year as an integer.
+
+  * `month` is a Islamic month number.
+
+  * `day` is a Islamic day-of-month.
+
+  ### Returns
+
+  * A two-tuple `{year, week_in_year}`.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Rgsa.week_of_year(1447, 1, 1)
+      {1447, 1}
+
+      iex> Calendrical.Islamic.Rgsa.week_of_year(1447, 9, 1)
+      {1447, 35}
+
+  """
+  @impl true
+  @spec week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
+          {Calendar.year(), Calendar.week()}
+  def week_of_year(year, month, day) do
+    Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
+  end
+
+  @doc """
+  Returns the number of weeks in the given Islamic `year`.
+
+  ### Arguments
+
+  * `year` is any Islamic year as an integer.
+
+  ### Returns
+
+  * A two-tuple `{weeks_in_year, days_in_last_week}` where the
+    final week is short when the year does not end on the last
+    day of the calendar's week.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Rgsa.weeks_in_year(1447)
+      {52, 2}
+
+  """
+  @impl true
+  @spec weeks_in_year(Calendar.year()) :: {Calendrical.week(), Calendar.day()}
+  def weeks_in_year(year) do
+    Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
   end
 
   @doc """

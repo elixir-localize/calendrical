@@ -32,7 +32,8 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
     epoch: Date.new!(-5492, 7, 17, Calendrical.Gregorian),
     cldr_calendar_type: :ethiopic_amete_alem,
     months_in_ordinary_year: 13,
-    months_in_leap_year: 13
+    months_in_leap_year: 13,
+    first_day_of_week: 7
 
   # The 13-month Ethiopic year does not define quarters.
   @dialyzer [
@@ -268,8 +269,8 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
   Returns the day of the week for the given Amete Alem `year`,
   `month`, and `day`.
 
-  Ethiopic weeks begin on Saturday, so the returned tuple has
-  `first_day_of_week = 6` and `last_day_of_week = 5`.
+  The Ethiopic week begins on Sunday (እሁድ, Ehud — literally "the
+  first"), so days number Sunday = 1 through Saturday = 7.
 
   ### Arguments
 
@@ -279,8 +280,10 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
 
   * `day` is an Ethiopic day-of-month.
 
-  * `starting_on` is `:default` for the calendar's natural week
-    boundary (Saturday).
+  * `starting_on` is `:default` for the calendar's natural
+    Sunday-first numbering, or an explicit weekday
+    (`:monday` .. `:sunday`) to renumber the week relative to
+    that start.
 
   ### Returns
 
@@ -289,11 +292,16 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
   ### Examples
 
       iex> Calendrical.Ethiopic.AmeteAlem.day_of_week(7518, 1, 1, :default)
-      {4, 6, 5}
+      {5, 1, 7}
 
   """
   @impl true
-  @spec day_of_week(year, month, day, :default) :: {1..7, 6, 5}
+  @spec day_of_week(
+          year,
+          month,
+          day,
+          :default | :monday | :tuesday | :wednesday | :thursday | :friday | :saturday | :sunday
+        ) :: {1..7, 1, 7}
   def day_of_week(year, month, day, starting_on) do
     Calendrical.Ethiopic.day_of_week(amete_mihret_year(year), month, day, starting_on)
   end
