@@ -170,6 +170,11 @@ defmodule Calendrical.TimeZone do
     end
   end
 
+  # Bidi controls that CLDR embeds in the `hourFormat` of `fa` and `he`,
+  # and that travel with an offset pasted out of rendered text. They
+  # carry no numeric meaning.
+  @bidi_marks ["\u200E", "\u200F", "\u061C"]
+
   # ── ISO offsets ──────────────────────────────────────────────
 
   defp iso_offset?("Z"), do: true
@@ -177,12 +182,17 @@ defmodule Calendrical.TimeZone do
   defp iso_offset?(<<sign, _::binary>>) when sign in [?+, ?-], do: true
   defp iso_offset?(_), do: false
 
-  defp resolve_iso_offset("Z", naive_dt), do: build_dt(naive_dt, 0, "UTC", "UTC")
+  defp resolve_iso_offset(zone, naive_dt) do
+    resolve_iso_offset(zone, naive_dt, :two_digit_hour)
+  end
 
-  defp resolve_iso_offset(<<sign, rest::binary>>, naive_dt) when sign in [?+, ?-] do
+  defp resolve_iso_offset("Z", naive_dt, _hour_digits), do: build_dt(naive_dt, 0, "UTC", "UTC")
+
+  defp resolve_iso_offset(<<sign, rest::binary>>, naive_dt, hour_digits)
+       when sign in [?+, ?-] do
     multiplier = if sign == ?+, do: 1, else: -1
 
-    case parse_offset_digits(rest) do
+    case parse_offset_digits(rest, hour_digits) do
       {:ok, total_seconds} ->
         build_dt(
           naive_dt,
@@ -196,35 +206,47 @@ defmodule Calendrical.TimeZone do
     end
   end
 
-  defp parse_offset_digits(rest) do
+  # Anything else carries no offset. Returning an error rather than
+  # failing to match is what keeps `resolve/3` total: `resolve_gmt/2`
+  # reaches here with whatever followed the GMT literal, which is
+  # arbitrary caller input.
+  defp resolve_iso_offset(_zone, _naive_dt, _hour_digits), do: {:error, :invalid_offset}
+
+  # `:two_digit_hour` is ISO 8601, which writes `+05`. `:short_hour` also
+  # accepts the one-digit hour of the localized GMT format — `GMT-8` is
+  # what CLDR's short `gmtFormat` renders, and `cs` and `fi` write
+  # `+H:mm` and `+H.mm`.
+  defp parse_offset_digits(rest, hour_digits) do
     rest
-    |> String.replace(":", "")
+    |> String.replace([":", "."], "")
     |> case do
       <<h::binary-size(2), m::binary-size(2), s::binary-size(2)>> ->
-        with {hh, ""} when hh <= 14 <- Integer.parse(h),
-             {mm, ""} when mm < 60 <- Integer.parse(m),
-             {ss, ""} when ss < 60 <- Integer.parse(s) do
-          {:ok, hh * 3600 + mm * 60 + ss}
-        else
-          _ -> :error
-        end
+        offset_total(h, m, s)
 
       <<h::binary-size(2), m::binary-size(2)>> ->
-        with {hh, ""} when hh <= 14 <- Integer.parse(h),
-             {mm, ""} when mm < 60 <- Integer.parse(m) do
-          {:ok, hh * 3600 + mm * 60}
-        else
-          _ -> :error
-        end
+        offset_total(h, m, "00")
+
+      <<h::binary-size(1), m::binary-size(2)>> when hour_digits == :short_hour ->
+        offset_total(h, m, "00")
 
       <<h::binary-size(2)>> ->
-        case Integer.parse(h) do
-          {hh, ""} when hh <= 14 -> {:ok, hh * 3600}
-          _ -> :error
-        end
+        offset_total(h, "00", "00")
+
+      <<h::binary-size(1)>> when hour_digits == :short_hour ->
+        offset_total(h, "00", "00")
 
       _ ->
         :error
+    end
+  end
+
+  defp offset_total(hours, minutes, seconds) do
+    with {hh, ""} when hh <= 14 <- Integer.parse(hours),
+         {mm, ""} when mm < 60 <- Integer.parse(minutes),
+         {ss, ""} when ss < 60 <- Integer.parse(seconds) do
+      {:ok, hh * 3600 + mm * 60 + ss}
+    else
+      _invalid -> :error
     end
   end
 
@@ -243,19 +265,38 @@ defmodule Calendrical.TimeZone do
   defp gmt_format?(zone), do: String.starts_with?(zone, ["GMT", "UTC", "UT"])
 
   defp resolve_gmt(zone, naive_dt) do
-    if zone in ["GMT", "UTC", "UT"] do
-      build_dt(naive_dt, 0, "Etc/UTC", "UTC")
-    else
-      offset_part =
-        zone
-        |> String.replace_prefix("GMT", "")
-        |> String.replace_prefix("UTC", "")
-        |> String.replace_prefix("UT", "")
+    offset_part =
+      zone
+      |> String.replace_prefix("GMT", "")
+      |> String.replace_prefix("UTC", "")
+      |> String.replace_prefix("UT", "")
+      |> String.replace(@bidi_marks, "")
+      |> String.trim()
 
-      case resolve_iso_offset(offset_part, naive_dt) do
-        {:ok, _} = ok -> ok
-        _ -> {:error, :invalid_gmt_offset}
-      end
+    cond do
+      # A bare literal, and the `["GMT ", 0]` spelling that 14 locales
+      # use, both leave nothing behind.
+      offset_part == "" ->
+        build_dt(naive_dt, 0, "Etc/UTC", "UTC")
+
+      # `GMT0`, `GMT+0` and `GMT-0` are canonical spellings of UTC and
+      # appear in `etc_zones/0`, but they reach here rather than the
+      # IANA branch because they carry no `/`.
+      zero_offset?(offset_part) ->
+        build_dt(naive_dt, 0, "Etc/UTC", "UTC")
+
+      true ->
+        case resolve_iso_offset(offset_part, naive_dt, :short_hour) do
+          {:ok, _} = ok -> ok
+          _not_an_offset -> {:error, :invalid_gmt_offset}
+        end
+    end
+  end
+
+  defp zero_offset?(offset_part) do
+    case String.replace(offset_part, ["+", "-", "\u2212", "\u2013", ":", "."], "") do
+      "" -> false
+      digits -> digits |> String.to_charlist() |> Enum.all?(&(&1 == ?0))
     end
   end
 
