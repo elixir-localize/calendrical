@@ -30,3 +30,6 @@ CLAUDE.md
 mise.toml
 .tool-versions
 
+
+# Session context (Claude Code), gitignored
+CLAUDE.local.md

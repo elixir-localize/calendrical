@@ -129,10 +129,6 @@ defmodule Calendrical.Islamic.UmmAlQura do
   # Saudi Arabia observes UTC+3 all year (no daylight saving).
   @mecca_utc_offset_seconds 3 * 60 * 60
 
-  @evening_day_start ~T[18:00:00]
-
-  @valid_day_starts [:midnight, :evening, :mecca_sunset]
-
   @doc """
   Returns the Umm al-Qura date in effect at a given instant, under a chosen
   day-start convention.
@@ -162,9 +158,9 @@ defmodule Calendrical.Islamic.UmmAlQura do
     * `:evening` — the day begins at 18:00 Mecca time, the fixed-clock proxy
       for sunset used by many implementations.
 
-    * `:mecca_sunset` — the day begins at true sunset (Maghrib) at Mecca,
-      computed astronomically via `Astro`. This is upper-limb sunset, which
-      differs by a minute or two from the centre-of-disk sunset that
+    * `:sunset` — the day begins at true sunset (Maghrib) at Mecca, computed
+      astronomically via `Astro`. This is upper-limb sunset, which differs by a
+      minute or two from the centre-of-disk sunset that
       `Calendrical.Islamic.UmmAlQura.Astronomical` uses to start each month.
 
   ### Returns
@@ -187,52 +183,13 @@ defmodule Calendrical.Islamic.UmmAlQura do
   """
   @spec date_at(DateTime.t(), Keyword.t()) :: {:ok, Date.t()} | {:error, term()}
   def date_at(%DateTime{} = datetime, options \\ []) do
-    day_start = Keyword.get(options, :day_start, :midnight)
-    {mecca_date, mecca_time, instant} = mecca_wall_clock(datetime)
-
-    with :ok <- validate_day_start(day_start),
-         {:ok, roll} <- day_roll(day_start, mecca_date, mecca_time, instant) do
-      mecca_date
-      |> Date.add(roll)
-      |> to_umm_al_qura()
-    end
-  end
-
-  defp validate_day_start(day_start) when day_start in @valid_day_starts, do: :ok
-  defp validate_day_start(other), do: {:error, {:invalid_day_start, other}}
-
-  # Convert the instant to Mecca (UTC+3) wall-clock, returning its Gregorian
-  # date, its time of day, and the original instant for absolute comparisons.
-  defp mecca_wall_clock(%DateTime{} = datetime) do
-    unix = DateTime.to_unix(datetime, :second)
-    mecca = DateTime.from_unix!(unix + @mecca_utc_offset_seconds)
-    {DateTime.to_date(mecca), DateTime.to_time(mecca), datetime}
-  end
-
-  defp day_roll(:midnight, _date, _time, _instant), do: {:ok, 0}
-
-  defp day_roll(:evening, _date, mecca_time, _instant) do
-    if Time.compare(mecca_time, @evening_day_start) in [:eq, :gt] do
-      {:ok, 1}
-    else
-      {:ok, 0}
-    end
-  end
-
-  defp day_roll(:mecca_sunset, mecca_date, _mecca_time, instant) do
-    case Astro.sunset(@mecca_location, mecca_date, time_zone: :utc) do
-      {:ok, sunset} ->
-        if DateTime.compare(instant, sunset) in [:eq, :gt], do: {:ok, 1}, else: {:ok, 0}
-
-      {:error, _reason} ->
-        {:error, :no_sunset}
-    end
-  end
-
-  defp to_umm_al_qura(%Date{} = gregorian_date) do
-    Date.convert(gregorian_date, __MODULE__)
-  rescue
-    error in Calendrical.IslamicYearOutOfRangeError -> {:error, error}
+    Calendrical.DayStart.date_at(
+      datetime,
+      __MODULE__,
+      @mecca_location,
+      @mecca_utc_offset_seconds,
+      options
+    )
   end
 
   @doc """

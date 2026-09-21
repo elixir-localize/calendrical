@@ -111,4 +111,31 @@ defmodule Calendrical.Islamic.ObservationalTest do
       assert Enum.sort(names) == ~w[Fri Mon Sat Sun Thu Tue Wed]
     end
   end
+
+  describe "date_at/2" do
+    test "defaults to midnight (the ordinary civil-day mapping)" do
+      assert Observational.date_at(~U[2025-03-01 06:00:00Z]) ==
+               {:ok, ~D[1446-09-01 Calendrical.Islamic.Observational]}
+    end
+
+    test ":sunset uses true Maghrib at Cairo, which here precedes the 18:00 proxy" do
+      # Cairo sunset on 2025-03-01 is 17:53 local; at 17:55 the astronomical
+      # boundary has rolled but the 18:00 proxy has not — they diverge.
+      diverge = ~U[2025-03-01 15:55:00Z]
+
+      assert Observational.date_at(diverge, day_start: :evening) ==
+               {:ok, ~D[1446-09-01 Calendrical.Islamic.Observational]}
+
+      assert Observational.date_at(diverge, day_start: :sunset) ==
+               {:ok, ~D[1446-09-02 Calendrical.Islamic.Observational]}
+    end
+
+    test "returns an error, never raises, on bad input or an unsupported range" do
+      assert {:error, {:invalid_day_start, :bogus}} =
+               Observational.date_at(~U[2025-03-01 12:00:00Z], day_start: :bogus)
+
+      assert {:error, _} =
+               Observational.date_at(~U[1700-01-01 06:00:00Z], day_start: :sunset)
+    end
+  end
 end

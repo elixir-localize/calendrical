@@ -76,6 +76,53 @@ defmodule Calendrical.Islamic.Rgsa do
   @spec location() :: Geo.PointZ.t()
   def location, do: @mecca
 
+  @doc """
+  Returns the Hijri date in effect at a given instant, under a chosen day-start
+  convention.
+
+  The Islamic day begins at sunset, so after sunset at Mecca (the calendar's
+  observation point) the date is already the following day. This maps an
+  absolute instant to the Hijri date, choosing the boundary with the
+  `:day_start` option, always evaluated **at Mecca**.
+
+  For the plain civil-day mapping (the calendar's default), convert a date
+  directly with `Date.convert/2` instead.
+
+  ### Arguments
+
+  * `datetime` is a `t:DateTime.t/0` — an absolute instant. Its own time zone
+    fixes the instant; the day boundary is always taken at Mecca.
+
+  ### Options
+
+  * `:day_start` selects the moment the day begins:
+
+    * `:midnight` (the default) — 00:00 Mecca time, the ordinary civil-day
+      mapping.
+
+    * `:evening` — 18:00 Mecca time, the fixed-clock proxy for sunset.
+
+    * `:sunset` — true sunset (Maghrib) at Mecca, computed via `Astro`.
+
+  ### Returns
+
+  * `{:ok, date}` — an Rgsa Hijri `t:Date.t/0`.
+
+  * `{:error, reason}` if the day-start option is invalid, the date lies outside
+    the supported range, or sunset cannot be computed.
+
+  ### Examples
+
+      iex> {:ok, date} = Calendrical.Islamic.Rgsa.date_at(~U[2025-03-01 06:00:00Z])
+      iex> date.calendar
+      Calendrical.Islamic.Rgsa
+
+  """
+  @spec date_at(DateTime.t(), Keyword.t()) :: {:ok, Date.t()} | {:error, term()}
+  def date_at(%DateTime{} = datetime, options \\ []) do
+    Calendrical.DayStart.date_at(datetime, __MODULE__, location(), 3 * 60 * 60, options)
+  end
+
   # ── Configuration overrides ──────────────────────────────────────────────
 
   @doc """

@@ -288,18 +288,18 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
                {:ok, ~D[1446-09-01 Calendrical.Islamic.UmmAlQura]}
     end
 
-    test ":mecca_sunset rolls at true Maghrib, diverging from the 18:00 proxy" do
+    test ":sunset rolls at true Maghrib, diverging from the 18:00 proxy" do
       # 18:10 Mecca: past the 18:00 proxy but before true sunset (18:25).
       diverge = ~U[2025-03-01 15:10:00Z]
 
       assert UmmAlQura.date_at(diverge, day_start: :evening) ==
                {:ok, ~D[1446-09-02 Calendrical.Islamic.UmmAlQura]}
 
-      assert UmmAlQura.date_at(diverge, day_start: :mecca_sunset) ==
+      assert UmmAlQura.date_at(diverge, day_start: :sunset) ==
                {:ok, ~D[1446-09-01 Calendrical.Islamic.UmmAlQura]}
 
       # After true sunset, both agree.
-      assert UmmAlQura.date_at(~U[2025-03-01 16:00:00Z], day_start: :mecca_sunset) ==
+      assert UmmAlQura.date_at(~U[2025-03-01 16:00:00Z], day_start: :sunset) ==
                {:ok, ~D[1446-09-02 Calendrical.Islamic.UmmAlQura]}
     end
 
@@ -314,8 +314,8 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
           std_offset: 0
       }
 
-      assert UmmAlQura.date_at(riyadh, day_start: :mecca_sunset) ==
-               UmmAlQura.date_at(utc, day_start: :mecca_sunset)
+      assert UmmAlQura.date_at(riyadh, day_start: :sunset) ==
+               UmmAlQura.date_at(utc, day_start: :sunset)
     end
 
     test "returns an error, never raises, on bad input" do

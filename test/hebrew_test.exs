@@ -310,4 +310,50 @@ defmodule Calendrical.HebrewTest do
       assert Enum.sort(names) == ~w[Fri Mon Sat Sun Thu Tue Wed]
     end
   end
+
+  describe "date_at/2" do
+    test "defaults to midnight (the ordinary civil-day mapping)" do
+      assert Hebrew.date_at(~U[2025-03-01 06:00:00Z]) ==
+               {:ok, ~D[5785-07-01 Calendrical.Hebrew]}
+    end
+
+    test ":sunset and :nightfall diverge across bein hashemashot" do
+      # Jerusalem, 1 Mar 2025: sunset 15:37Z, nightfall (8.5°) 16:13Z. At 16:00Z
+      # the Hebrew day has begun by sunset but not yet by nightfall.
+      dusk = ~U[2025-03-01 16:00:00Z]
+
+      assert Hebrew.date_at(dusk, day_start: :sunset) ==
+               {:ok, ~D[5785-07-02 Calendrical.Hebrew]}
+
+      assert Hebrew.date_at(dusk, day_start: :nightfall) ==
+               {:ok, ~D[5785-07-01 Calendrical.Hebrew]}
+    end
+
+    test ":nightfall_angle moves the boundary — a smaller depression rolls earlier" do
+      # A 4° dusk (15:52Z) has passed by 16:00Z, unlike the 8.5° default.
+      assert Hebrew.date_at(~U[2025-03-01 16:00:00Z], day_start: :nightfall, nightfall_angle: 4.0) ==
+               {:ok, ~D[5785-07-02 Calendrical.Hebrew]}
+    end
+
+    test "accepts a custom :location (the observer's, not Jerusalem)" do
+      new_york = %Geo.Point{coordinates: {-74.0060, 40.7128}}
+
+      assert Hebrew.date_at(~U[2025-03-01 12:00:00Z], location: new_york, day_start: :sunset) ==
+               {:ok, ~D[5785-07-01 Calendrical.Hebrew]}
+    end
+
+    test "returns an error, never raises, on bad input" do
+      assert {:error, {:invalid_day_start, :bogus}} =
+               Hebrew.date_at(~U[2025-03-01 12:00:00Z], day_start: :bogus)
+
+      assert {:error, {:invalid_location, :nope}} =
+               Hebrew.date_at(~U[2025-03-01 12:00:00Z], location: :nope)
+
+      assert {:error, {:invalid_nightfall_angle, :nope}} =
+               Hebrew.date_at(~U[2025-03-01 12:00:00Z],
+                 day_start: :nightfall,
+                 nightfall_angle: :nope
+               )
+    end
+  end
 end

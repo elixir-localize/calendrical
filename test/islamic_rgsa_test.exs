@@ -97,4 +97,28 @@ defmodule Calendrical.Islamic.RgsaTest do
       assert Enum.sort(names) == ~w[Fri Mon Sat Sun Thu Tue Wed]
     end
   end
+
+  describe "date_at/2" do
+    test "defaults to midnight (the ordinary civil-day mapping)" do
+      assert Rgsa.date_at(~U[2025-03-01 06:00:00Z]) ==
+               {:ok, ~D[1446-09-01 Calendrical.Islamic.Rgsa]}
+    end
+
+    test ":sunset uses true Maghrib at Mecca, which here follows the 18:00 proxy" do
+      # Mecca sunset on 2025-03-01 is 18:25 local; at 18:10 the 18:00 proxy has
+      # rolled but the astronomical boundary has not — they diverge.
+      diverge = ~U[2025-03-01 15:10:00Z]
+
+      assert Rgsa.date_at(diverge, day_start: :evening) ==
+               {:ok, ~D[1446-09-02 Calendrical.Islamic.Rgsa]}
+
+      assert Rgsa.date_at(diverge, day_start: :sunset) ==
+               {:ok, ~D[1446-09-01 Calendrical.Islamic.Rgsa]}
+    end
+
+    test "returns an error, never raises, on bad input" do
+      assert {:error, {:invalid_day_start, :bogus}} =
+               Rgsa.date_at(~U[2025-03-01 12:00:00Z], day_start: :bogus)
+    end
+  end
 end

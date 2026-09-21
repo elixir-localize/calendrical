@@ -89,6 +89,91 @@ defmodule Calendrical.Hebrew do
   @fixed_30_day_months [@tishri, @shevat, @nisan, @sivan, @av]
   @fixed_29_day_months [@tevet, @iyar, @tamuz, @elul]
 
+  # Jerusalem (Old City) — the default observation location for the Hebrew day
+  # boundary. The offset used for each location is its mean solar time
+  # (longitude), which is all the day-boundary reckoning needs.
+  @jerusalem %Geo.PointZ{coordinates: {35.2354, 31.7784, 754.0}}
+
+  @doc """
+  Returns the Hebrew date in effect at a given instant, under a chosen day-start
+  convention.
+
+  The Jewish day begins at sunset — more precisely the date fully changes at
+  *nightfall* (tzeit hakochavim) — so in the evening the Hebrew date is already
+  the following day. This maps an absolute instant to the Hebrew date, choosing
+  the boundary with the `:day_start` option. Unlike the Islamic calendars, whose
+  boundary is a fixed canonical city, the Hebrew boundary is the **observer's**
+  local sunset, so a `:location` is taken (defaulting to Jerusalem).
+
+  For the plain civil-day mapping (the calendar's default), convert a date
+  directly with `Date.convert/2` instead.
+
+  ### Arguments
+
+  * `datetime` is a `t:DateTime.t/0` — an absolute instant. Its own time zone
+    fixes the instant; the day boundary is taken at `:location`.
+
+  ### Options
+
+  * `:location` is a `t:Geo.PointZ.t/0` (or `t:Geo.Point.t/0`) giving the
+    observer's location. The default is Jerusalem.
+
+  * `:day_start` selects the moment the Hebrew day begins:
+
+    * `:midnight` (the default) — 00:00 local time, the ordinary civil-day
+      mapping.
+
+    * `:sunset` — true sunset (shkiah, upper-limb) at `:location`.
+
+    * `:nightfall` — nightfall (tzeit hakochavim), when the sun reaches a chosen
+      depression below the horizon. See `:nightfall_angle`.
+
+  * `:nightfall_angle` is the sun's depression below the horizon, in degrees,
+    that defines nightfall for `day_start: :nightfall`. The default is `8.5`
+    (the common "three small stars" tzeit).
+
+  ### Returns
+
+  * `{:ok, date}` — a Hebrew `t:Date.t/0`.
+
+  * `{:error, reason}` if an option is invalid, or sunset/nightfall cannot be
+    computed for the date and location.
+
+  ### Examples
+
+      # Morning in Jerusalem: still the civil-day date.
+      iex> {:ok, date} = Calendrical.Hebrew.date_at(~U[2025-03-01 06:00:00Z])
+      iex> date.calendar
+      Calendrical.Hebrew
+
+  """
+  @spec date_at(DateTime.t(), Keyword.t()) :: {:ok, Date.t()} | {:error, term()}
+  def date_at(%DateTime{} = datetime, options \\ []) do
+    case resolve_location(Keyword.get(options, :location, @jerusalem)) do
+      {:ok, location, utc_offset_seconds} ->
+        Calendrical.DayStart.date_at(datetime, __MODULE__, location, utc_offset_seconds, options)
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  # The reference offset is the location's mean solar time: 240 seconds per
+  # degree of (east-positive) longitude.
+  defp resolve_location(%Geo.PointZ{coordinates: {longitude, _lat, _elev}} = location)
+       when is_number(longitude) do
+    {:ok, location, round(longitude * 240)}
+  end
+
+  defp resolve_location(%Geo.Point{coordinates: {longitude, _lat}} = location)
+       when is_number(longitude) do
+    {:ok, location, round(longitude * 240)}
+  end
+
+  defp resolve_location(other) do
+    {:error, {:invalid_location, other}}
+  end
+
   # ── Configuration overrides ──────────────────────────────────────────────
 
   @doc """
