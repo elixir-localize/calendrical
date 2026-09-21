@@ -6,7 +6,7 @@ The 17 CLDR-acceptable calendar types are all implemented. Each section below ci
 
 > #### The astronomical calendars and the ephemeris
 >
-> Several calendars are **astronomical** — the Persian, Chinese, Korean and Lunar Japanese calendars, and the observational Islamic calendars (`Observational`, `Rgsa`, `UmmAlQura.Astronomical`) — computing month and year starts from the position of the sun and moon via the [Astro](https://hex.pm/packages/astro) library. Since Astro 2.5 a compact ephemeris covering **1900–2100** ships with the package, so these calendars work immediately after installation with no download step. Dates outside that range return `Calendrical.UnsupportedDateRangeError`; running `mix astro.download_ephemeris` installs the full **1849–2150** ephemeris and widens the supported range accordingly.
+> Several calendars are **astronomical** — the Persian, Chinese, Korean, Lunar Japanese and Vietnamese calendars, and the observational Islamic calendars (`Observational`, `Rgsa`, `UmmAlQura.Astronomical`) — computing month and year starts from the position of the sun and moon via the [Astro](https://hex.pm/packages/astro) library. Since Astro 2.5 a compact ephemeris covering **1900–2100** ships with the package, so these calendars work immediately after installation with no download step. Dates outside that range return `Calendrical.UnsupportedDateRangeError`; running `mix astro.download_ephemeris` installs the full **1849–2150** ephemeris and widens the supported range accordingly.
 
 ---
 
@@ -171,8 +171,9 @@ A **lunisolar** calendar tracks the synodic month *and* keeps the year aligned w
 | `Calendrical.Chinese` | `:chinese` | **Astronomical** (lunar phase + winter solstice at Beijing/China longitude) | Inserts a 13th leap month between the new moons that contain no major solar term. Uses the `Astro` library. |
 | `Calendrical.Korean` | `:dangi` | **Astronomical** (lunar phase + winter solstice at Seoul longitude) | Same algorithm as `Calendrical.Chinese` but observed from Seoul. The CLDR identifier `:dangi` refers to the *Dangi* era starting 2333 BCE. |
 | `Calendrical.LunarJapanese` | `:chinese` (shared) | **Astronomical** (lunar phase + winter solstice at Japan-standard-time longitude) | The historical Japanese lunisolar calendar used until 1873, when Japan switched to the proleptic Gregorian. |
+| `Calendrical.Vietnamese` | `:chinese` (shared) | **Astronomical** (lunar phase + winter solstice at the Hanoi 105° East meridian) | Same algorithm as `Calendrical.Chinese`, observed from Hanoi (UTC+7) from 1968 and following the Chinese calendar before then. Tết diverges from the Chinese New Year in 1985, 2007, 2030 and 2053. |
 
-**Year length.** All four lunisolar calendars produce year lengths of **353, 354, 355, 383, 384, or 385** days (Hebrew is restricted to these specific lengths by additional *dehiyyah* postponement rules; the Chinese family permits the full range).
+**Year length.** All five lunisolar calendars produce year lengths of **353, 354, 355, 383, 384, or 385** days (Hebrew is restricted to these specific lengths by additional *dehiyyah* postponement rules; the Chinese family permits the full range).
 
 **Worked example (Hebrew).**
 

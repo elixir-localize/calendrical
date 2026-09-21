@@ -1,12 +1,12 @@
 # Calendrical
 
-Localized month- and week-based calendars, fiscal-year support, calendar arithmetic, and 17+ CLDR-based calendar systems for Elixir, built on the [Unicode CLDR](https://cldr.unicode.org/) repository via [Localize](https://hex.pm/packages/localize).
+Localized month- and week-based calendars, fiscal-year support, calendar arithmetic, and 18+ CLDR-based calendar systems for Elixir, built on the [Unicode CLDR](https://cldr.unicode.org/) repository via [Localize](https://hex.pm/packages/localize).
 
 Calendrical extends Elixir's standard `Calendar` and `Date` modules with comprehensive support for the calendar systems used around the world, including arithmetic and astronomical lunar calendars, year-shifted variants such as Buddhist and ROC, and the official tabular and observational Islamic calendars.
 
 ## Features
 
-* **17 CLDR-aligned calendar implementations** — Gregorian, Persian, Coptic, Ethiopic (two eras), Japanese, Chinese, Korean (Dangi), Lunar Japanese, four Islamic variants (Civil, TBLA, Umm al-Qura, observational), Hebrew, Buddhist, Republic of China (Minguo), Indian National (Saka), and Julian.
+* **18 CLDR-aligned calendar implementations** — Gregorian, Persian, Coptic, Ethiopic (two eras), Japanese, Chinese, Korean (Dangi), Lunar Japanese, Vietnamese, four Islamic variants (Civil, TBLA, Umm al-Qura, observational), Hebrew, Buddhist, Republic of China (Minguo), Indian National (Saka), and Julian.
 
 * **`Calendrical.Behaviour`** — a `defmacro __using__` template that supplies default implementations of every `Calendar` and `Calendrical` callback. Users can define a new calendar in 60–200 lines by overriding only the parts that differ from the defaults.
 
@@ -97,7 +97,7 @@ iex> pfm
 
 ## Available calendars
 
-Calendrical implements all 17 calendar systems exposed by CLDR. They are grouped below by their underlying mechanism. See [`guides/calendar_summary.md`](https://hexdocs.pm/calendrical/calendar_summary.html) for the full descriptions, eras, month structures, and reference dates.
+Calendrical implements every calendar system exposed by CLDR, plus lunisolar variants observed from other meridians (Lunar Japanese and Vietnamese). They are grouped below by their underlying mechanism. See [`guides/calendar_summary.md`](https://hexdocs.pm/calendrical/calendar_summary.html) for the full descriptions, eras, month structures, and reference dates.
 
 | Family | Calendars |
 |---|---|
@@ -106,7 +106,7 @@ Calendrical implements all 17 calendar systems exposed by CLDR. They are grouped
 | **Solar (non-Gregorian)** | `Calendrical.Persian` (astronomical) |
 | **Lunar (tabular)** | `Calendrical.Coptic`, `Calendrical.Ethiopic`, `Calendrical.Ethiopic.AmeteAlem`, `Calendrical.Islamic.Civil`, `Calendrical.Islamic.Tbla`, `Calendrical.Islamic.UmmAlQura` |
 | **Lunar (observational/astronomical)** | `Calendrical.Islamic.Observational` (Cairo), `Calendrical.Islamic.Rgsa` (Mecca), `Calendrical.Islamic.UmmAlQura.Astronomical` |
-| **Lunisolar** | `Calendrical.Hebrew` (arithmetic), `Calendrical.Chinese`, `Calendrical.Korean` (Dangi), `Calendrical.LunarJapanese` |
+| **Lunisolar** | `Calendrical.Hebrew` (arithmetic), `Calendrical.Chinese`, `Calendrical.Korean` (Dangi), `Calendrical.LunarJapanese`, `Calendrical.Vietnamese` (Hanoi meridian) |
 | **Composite** | `Calendrical.Composite` (user-defined; e.g. England with Julian-to-Gregorian transition) |
 | **Fiscal-year** | `Calendrical.FiscalYear.US`, `.AU`, `.UK`, … (50+ territories) |
 
@@ -191,6 +191,7 @@ config :calendrical,
 | `:chinese_epoch` | `~D[-2636-02-15]` | The first sexagesimal cycle origin used by the Chinese calendar. |
 | `:korean_epoch` | `~D[-2332-02-15]` | The founding-of-Korea origin used by the Korean (Dangi) calendar. |
 | `:lunar_japanese_epoch` | `~D[0645-07-20]` | The Taika-era origin used by the Lunar Japanese calendar. |
+| `:vietnamese_epoch` | `~D[-2636-02-15]` | The sexagesimal cycle origin used by the Vietnamese calendar (shared with the Chinese calendar). |
 
 For Calendrical's underlying locale, default-locale, and locale-cache configuration, see the [Localize configuration documentation](https://hexdocs.pm/localize).
 

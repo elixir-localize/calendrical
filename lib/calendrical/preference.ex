@@ -127,6 +127,13 @@ defmodule Calendrical.Preference do
   end
 
   def calendar_from_territory(territory, calendar) when is_atom(territory) do
+    case territory_calendar_override_module(territory, calendar) do
+      nil -> calendar_from_territory_preference(territory, calendar)
+      calendar_module -> {:ok, calendar_module}
+    end
+  end
+
+  defp calendar_from_territory_preference(territory, calendar) do
     with {:ok, preferences} <- preferences_for_territory(territory),
          {:ok, calendar_module} <- find_calendar(preferences, calendar) do
       if calendar_module == Calendrical.default_calendar() do
@@ -230,6 +237,32 @@ defmodule Calendrical.Preference do
   end
 
   def calendar_from_locale(%LanguageTag{locale: %{ca: calendar}} = locale) do
+    case territory_calendar_override(locale, calendar) do
+      {:ok, module} ->
+        {:ok, module}
+
+      :none ->
+        calendar_from_locale_type(locale, calendar)
+    end
+  end
+
+  def calendar_from_locale(%LanguageTag{} = locale) do
+    with {:ok, territory} <- Localize.Territory.territory_from_locale(locale) do
+      calendar_from_territory(territory)
+    end
+  end
+
+  def calendar_from_locale(locale) when is_binary(locale) or is_atom(locale) do
+    with {:ok, locale} <- Localize.validate_locale(locale) do
+      calendar_from_locale(locale)
+    end
+  end
+
+  def calendar_from_locale(other) do
+    {:error, Localize.InvalidLocaleError.exception(locale_id: other)}
+  end
+
+  defp calendar_from_locale_type(locale, calendar) do
     calendar_module = Map.get(calendar_modules(), calendar)
 
     cond do
@@ -249,22 +282,6 @@ defmodule Calendrical.Preference do
           calendar_from_territory(territory, calendar)
         end
     end
-  end
-
-  def calendar_from_locale(%LanguageTag{} = locale) do
-    with {:ok, territory} <- Localize.Territory.territory_from_locale(locale) do
-      calendar_from_territory(territory)
-    end
-  end
-
-  def calendar_from_locale(locale) when is_binary(locale) or is_atom(locale) do
-    with {:ok, locale} <- Localize.validate_locale(locale) do
-      calendar_from_locale(locale)
-    end
-  end
-
-  def calendar_from_locale(other) do
-    {:error, Localize.InvalidLocaleError.exception(locale_id: other)}
   end
 
   @dialyzer {:nowarn_function, territory_from: 1}
@@ -287,6 +304,31 @@ defmodule Calendrical.Preference do
     ethiopic_amete_alem: Calendrical.Ethiopic.AmeteAlem,
     dangi: Calendrical.Korean
   }
+
+  # Some territories observe a lunisolar calendar computed from a different
+  # meridian than the CLDR calendar type's default module. Vietnam uses the
+  # Chinese lunisolar calendar observed from Hanoi (105° East), so a request
+  # for the `:chinese` calendar in a Vietnamese context resolves to
+  # `Calendrical.Vietnamese` rather than the Beijing-observed
+  # `Calendrical.Chinese`. This refines an explicit calendar choice; it does
+  # not change a territory's default (civil) calendar, which stays Gregorian.
+  @territory_calendar_overrides %{
+    {:VN, :chinese} => Calendrical.Vietnamese
+  }
+
+  defp territory_calendar_override_module(territory, calendar) do
+    Map.get(@territory_calendar_overrides, {territory, calendar})
+  end
+
+  defp territory_calendar_override(%LanguageTag{} = locale, calendar) do
+    with {:ok, territory} <- territory_from(locale),
+         module when not is_nil(module) <-
+           territory_calendar_override_module(territory, calendar) do
+      {:ok, module}
+    else
+      _ -> :none
+    end
+  end
 
   @calendar_modules @known_calendars
                     |> Enum.map(fn c ->

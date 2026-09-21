@@ -6,9 +6,11 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.0] — 2026-09-21
+## [1.4.0] — 2026-09-22
 
 ### Added
+
+* `Calendrical.Vietnamese` — the Chinese lunisolar calendar observed from the 105° East (Hanoi) meridian, so Tết diverges from the Chinese New Year in 1985 (by a month), 2007, 2030 and 2053. It borrows the `:chinese` CLDR type, and `vi-u-ca-chinese` (or `Preference.calendar_from_territory(:VN, :chinese)`) resolves to it rather than `Calendrical.Chinese`.
 
 * `dates_in_gregorian_year/3` on every calendar (and `Calendrical.dates_in_gregorian_year/4` for a runtime-chosen calendar) returns the zero, one or two dates of a calendar month and day that fall within a given Gregorian year, accounting for calendar-year drift and dates that exist only in leap years.
 
