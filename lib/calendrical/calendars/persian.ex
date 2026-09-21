@@ -160,9 +160,8 @@ defmodule Calendrical.Persian do
       when is_integer(year) and is_integer(month) and is_integer(day) do
     new_year =
       new_year_on_or_before(
-        (epoch() + 180 +
-           :math.floor(@mean_tropical_year * if(0 < year, do: year - 1, else: year)))
-        |> trunc
+        epoch() + 180 +
+          floor(@mean_tropical_year * if(0 < year, do: year - 1, else: year))
       )
 
     new_year - 1 + if(month <= 7, do: 31 * (month - 1), else: 30 * (month - 1) + 6) + day

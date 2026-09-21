@@ -12,6 +12,20 @@ The format is based on
 
 * `dates_in_gregorian_year/3` on every calendar (and `Calendrical.dates_in_gregorian_year/4` for a runtime-chosen calendar) returns the zero, one or two dates of a calendar month and day that fall within a given Gregorian year, accounting for calendar-year drift and dates that exist only in leap years.
 
+### Changed
+
+* Requires `localize ~> 1.3` for the overloaded `Localize.Utils.Math` contracts that type integer arithmetic as integer under dialyzer.
+
+* `first_day_for_territory/1` and `min_days_for_territory/1` (and their locale variants) resolve from Localize's runtime week data instead of clauses compiled from it, so the values follow the loaded CLDR data without recompiling Calendrical. Results are unchanged for every territory.
+
+* `Calendrical.Islamic.Visibility` specs the crescent-visibility criterion as `t:Calendrical.Islamic.Visibility.method/0` (`:odeh`, `:schaefer` or `:yallop`) instead of `atom()`, and several constant functions (`Calendrical.default_calendar/0`, `Calendrical.Format.default_formatter_module/0`, `Calendrical.Islamic.UmmAlQura.min_year/0` and `max_year/0`, `Calendrical.FiscalYear.known_fiscal_calendars/0`) narrow their specs to what they actually return.
+
+### Fixed
+
+* The exported calendar arithmetic guards its integer arguments (`Calendrical.start_end_gregorian_years/2`, the Egyptian and lunisolar conversion entry points, the lunisolar wrapper calendars' `date_to_iso_days/3` and `cyclic_year/2`), so a non-integer argument raises `FunctionClauseError` instead of silently computing a float result.
+
+* `.dialyzer_ignore.exs` is empty: all twenty-six suppressed warnings are fixed at the source via integer guards on exported arithmetic, explicit recursion where `Enum.reduce` widened an integer accumulator, pure integer arithmetic (`Integer.floor_div/2`) in the Egyptian and Persian conversions, and conversion through the spec'd public `Calendar.ISO.naive_datetime_to_iso_days/7`.
+
 ## [1.3.0] — 2026-08-26
 
 ### Added

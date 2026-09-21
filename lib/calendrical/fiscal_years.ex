@@ -114,7 +114,7 @@ defmodule Calendrical.FiscalYear do
       true
 
   """
-  @spec known_fiscal_calendars() :: [atom()]
+  @spec known_fiscal_calendars() :: [atom(), ...]
   def known_fiscal_calendars do
     @known_fiscal_calendars
   end

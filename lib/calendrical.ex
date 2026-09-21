@@ -529,7 +529,7 @@ defmodule Calendrical do
       Calendrical.Gregorian
 
   """
-  @spec default_calendar :: calendar()
+  @spec default_calendar :: Calendrical.Gregorian
   def default_calendar do
     @default_calendar
   end
@@ -2536,7 +2536,12 @@ defmodule Calendrical do
   """
   @spec first_day_for_territory(atom() | String.t()) ::
           day_of_week() | {:error, Exception.t()}
-  def first_day_for_territory(territory)
+  def first_day_for_territory(territory) do
+    case territory_week_data(:first_day, territory) do
+      day when day in 1..7 -> day
+      {:error, _reason} = error -> error
+    end
+  end
 
   @doc """
   Returns the minimum days in the first week of
@@ -2564,7 +2569,29 @@ defmodule Calendrical do
   """
   @spec min_days_for_territory(atom() | String.t()) ::
           1..7 | {:error, Exception.t()}
-  def min_days_for_territory(territory)
+  def min_days_for_territory(territory) do
+    case territory_week_data(:min_days, territory) do
+      min_days when min_days in 1..7 -> min_days
+      {:error, _reason} = error -> error
+    end
+  end
+
+  # Resolves first-day and minimum-days from Localize's runtime week
+  # data rather than clauses compiled from it, so the values follow
+  # the loaded CLDR data and the `in 1..7` domain guard above is the
+  # published contract. A validated territory absent from the week
+  # data (a valid ISO code such as the private-use range) takes the
+  # world default.
+  defp territory_week_data(key, territory) do
+    case Localize.validate_territory(territory) do
+      {:ok, validated} ->
+        week_info = Localize.SupplementalData.weeks()
+        get_in(week_info, [key, validated]) || get_in(week_info, [key, @the_world])
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
 
   @week_info Localize.SupplementalData.weeks()
 
@@ -2572,8 +2599,6 @@ defmodule Calendrical do
   # codes (private-use ranges) but absent from CLDR week data.
   @world_weekend_start get_in(@week_info, [:weekend_start, @the_world])
   @world_weekend_end get_in(@week_info, [:weekend_end, @the_world])
-  @world_first_day get_in(@week_info, [:first_day, @the_world])
-  @world_min_days get_in(@week_info, [:min_days, @the_world])
   @world_weekend Enum.to_list(@world_weekend_start..@world_weekend_end)
   @world_weekdays @days -- @world_weekend
 
@@ -2586,22 +2611,6 @@ defmodule Calendrical do
       get_in(@week_info, [:weekend_end, territory]) ||
         get_in(@week_info, [:weekend_end, @the_world])
 
-    first_day =
-      get_in(@week_info, [:first_day, territory]) ||
-        get_in(@week_info, [:first_day, @the_world])
-
-    min_days =
-      get_in(@week_info, [:min_days, territory]) ||
-        get_in(@week_info, [:min_days, @the_world])
-
-    def first_day_for_territory(unquote(territory)) do
-      unquote(first_day)
-    end
-
-    def min_days_for_territory(unquote(territory)) do
-      unquote(min_days)
-    end
-
     def weekend(unquote(territory)) do
       unquote(Enum.to_list(starts..ends))
     end
@@ -2611,26 +2620,10 @@ defmodule Calendrical do
     end
   end
 
-  # In each fallback below, a validated territory equal to the input
+  # In the fallback below, a validated territory equal to the input
   # has no generated clause (a valid ISO code absent from CLDR week
   # data, such as the private-use range), so it takes the world
   # default. Recursing unconditionally looped forever on such codes.
-  def first_day_for_territory(territory) do
-    case Localize.validate_territory(territory) do
-      {:ok, ^territory} -> @world_first_day
-      {:ok, validated} -> first_day_for_territory(validated)
-      {:error, _reason} = error -> error
-    end
-  end
-
-  def min_days_for_territory(territory) do
-    case Localize.validate_territory(territory) do
-      {:ok, ^territory} -> @world_min_days
-      {:ok, validated} -> min_days_for_territory(validated)
-      {:error, _reason} = error -> error
-    end
-  end
-
   def weekend(territory) do
     case Localize.validate_territory(territory) do
       {:ok, ^territory} -> @world_weekend
@@ -4274,12 +4267,16 @@ defmodule Calendrical do
 
   ## January starts end the same year, December ends starts the same year
   @doc false
-  def start_end_gregorian_years(year, %Config{first_or_last: :first, month_of_year: 1}) do
+  @spec start_end_gregorian_years(Calendar.year(), Config.t()) ::
+          {Calendar.year(), Calendar.year()}
+  def start_end_gregorian_years(year, %Config{first_or_last: :first, month_of_year: 1})
+      when is_integer(year) do
     {year, year}
   end
 
   @doc false
-  def start_end_gregorian_years(year, %Config{first_or_last: :last, month_of_year: 12}) do
+  def start_end_gregorian_years(year, %Config{first_or_last: :last, month_of_year: 12})
+      when is_integer(year) do
     {year, year}
   end
 
@@ -4290,7 +4287,7 @@ defmodule Calendrical do
         year: :majority,
         month_of_year: month
       })
-      when month <= 6 do
+      when is_integer(year) and month <= 6 do
     {year, year + 1}
   end
 
@@ -4300,7 +4297,7 @@ defmodule Calendrical do
         year: :majority,
         month_of_year: month
       })
-      when month > 6 do
+      when is_integer(year) and month > 6 do
     {year - 1, year}
   end
 
@@ -4310,7 +4307,7 @@ defmodule Calendrical do
         year: :majority,
         month_of_year: month
       })
-      when month > 6 do
+      when is_integer(year) and month > 6 do
     {year - 1, year}
   end
 
@@ -4320,19 +4317,21 @@ defmodule Calendrical do
         year: :majority,
         month_of_year: month
       })
-      when month <= 6 do
+      when is_integer(year) and month <= 6 do
     {year, year + 1}
   end
 
   ## Beginning years
   @doc false
-  def start_end_gregorian_years(year, %Config{first_or_last: :last, year: :beginning}) do
+  def start_end_gregorian_years(year, %Config{first_or_last: :last, year: :beginning})
+      when is_integer(year) do
     {year - 1, year}
   end
 
   ## Ending years
   @doc false
-  def start_end_gregorian_years(year, %Config{first_or_last: :first, year: :ending}) do
+  def start_end_gregorian_years(year, %Config{first_or_last: :first, year: :ending})
+      when is_integer(year) do
     {year, year + 1}
   end
 

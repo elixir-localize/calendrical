@@ -124,14 +124,18 @@ defmodule Calendrical.Islamic.UmmAlQura do
   Returns the first Hijri year covered by the embedded Umm al-Qura
   reference data.
   """
-  @spec min_year() :: pos_integer()
+  # The literal bound of the shipped reference table; dialyzer
+  # keeps this spec synchronized with the data.
+  @spec min_year() :: 1356
   def min_year, do: @min_year
 
   @doc """
   Returns the last Hijri year covered by the embedded Umm al-Qura
   reference data.
   """
-  @spec max_year() :: pos_integer()
+  # The literal bound of the shipped reference table; dialyzer
+  # keeps this spec synchronized with the data.
+  @spec max_year() :: 1500
   def max_year, do: @max_year
 
   @doc """
@@ -295,7 +299,7 @@ defmodule Calendrical.Islamic.UmmAlQura do
   def date_to_iso_days(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     case Map.fetch(@first_day_iso, {year, month}) do
-      {:ok, first} -> first + day - 1
+      {:ok, first} when is_integer(first) -> first + day - 1
       :error -> raise out_of_range_error(year)
     end
   end

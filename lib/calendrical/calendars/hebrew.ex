@@ -566,11 +566,20 @@ defmodule Calendrical.Hebrew do
   # Number of days from 1 Tishri of the given year to 1-of-the-given-month
   # of the same year (i.e. the days in all months that come before the
   # target month in the calendar order).
+  # Explicit recursion rather than Enum.reduce keeps the summed
+  # offset integer-typed under dialyzer; a higher-order fold types
+  # its accumulator as any().
   defp month_offset(year, month) do
     year
     |> valid_months()
     |> Enum.take_while(&(&1 != month))
-    |> Enum.reduce(0, fn m, acc -> acc + days_in_month(year, m) end)
+    |> sum_month_days(year, 0)
+  end
+
+  defp sum_month_days([], _year, sum), do: sum
+
+  defp sum_month_days([month | months], year, sum) do
+    sum_month_days(months, year, sum + days_in_month(year, month))
   end
 
   # Search forward from a candidate year for the first year whose

@@ -79,14 +79,14 @@ defmodule Calendrical.Base.Egyptian do
     mod(year, 4) == 3
   end
 
-  def date_to_iso_days(year, month, day, epoch) do
-    (epoch - 1 + 365 * (year - 1) + :math.floor(year / 4) + 30 * (month - 1) + day)
-    |> trunc()
+  def date_to_iso_days(year, month, day, epoch)
+      when is_integer(year) and is_integer(month) and is_integer(day) and is_integer(epoch) do
+    epoch - 1 + 365 * (year - 1) + Integer.floor_div(year, 4) + 30 * (month - 1) + day
   end
 
-  def date_from_iso_days(iso_days, epoch) do
-    year = trunc(:math.floor((4 * (iso_days - epoch) + 1463) / 1461))
-    month = trunc(:math.floor((iso_days - date_to_iso_days(year, 1, 1, epoch)) / 30)) + 1
+  def date_from_iso_days(iso_days, epoch) when is_integer(iso_days) and is_integer(epoch) do
+    year = Integer.floor_div(4 * (iso_days - epoch) + 1463, 1461)
+    month = Integer.floor_div(iso_days - date_to_iso_days(year, 1, 1, epoch), 30) + 1
     day = iso_days + 1 - date_to_iso_days(year, month, 1, epoch)
 
     {year, month, day}

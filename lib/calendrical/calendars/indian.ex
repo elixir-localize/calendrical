@@ -339,10 +339,18 @@ defmodule Calendrical.Indian do
 
   # Number of days from 1 Chaitra of the given year to 1-of-the-given
   # month of the same year.
+  # Explicit recursion rather than Enum.reduce keeps the summed
+  # offset integer-typed under dialyzer; a higher-order fold types
+  # its accumulator as any().
   defp month_offset(year, month) do
     table = if leap_year?(year), do: @month_lengths_leap, else: @month_lengths_ordinary
+    sum_month_lengths(table, month - 1, 0, 0)
+  end
 
-    Enum.reduce(0..(month - 2)//1, 0, fn idx, acc -> acc + elem(table, idx) end)
+  defp sum_month_lengths(_table, count, count, sum), do: sum
+
+  defp sum_month_lengths(table, count, index, sum) do
+    sum_month_lengths(table, count, index + 1, sum + elem(table, index))
   end
 
   # Find the (month, day_of_month) for the given 1-based day_of_year

@@ -24,6 +24,12 @@ defmodule Calendrical.Islamic.Visibility do
 
   @default_method :odeh
 
+  @typedoc """
+  A crescent-visibility criterion: the Odeh (2004), Yallop (1997)
+  or Schaefer empirical model.
+  """
+  @type method :: :odeh | :schaefer | :yallop
+
   @doc """
   Returns the ISO day number of the most recent date on or before
   `iso_days` on the eve of which the crescent moon was first visible
@@ -31,7 +37,7 @@ defmodule Calendrical.Islamic.Visibility do
 
   This is the *first day of the lunar month* containing `iso_days`.
   """
-  @spec phasis_on_or_before(integer(), Geo.PointZ.t(), atom()) :: integer()
+  @spec phasis_on_or_before(integer(), Geo.PointZ.t(), method()) :: integer()
   def phasis_on_or_before(iso_days, location, method \\ @default_method) do
     moon_iso = prior_new_moon_iso_days(iso_days)
     age = iso_days - moon_iso
@@ -58,7 +64,7 @@ defmodule Calendrical.Islamic.Visibility do
   itself the first day of a month, or the first day of the lunar
   month containing `iso_days + 30` otherwise.
   """
-  @spec phasis_on_or_after(integer(), Geo.PointZ.t(), atom()) :: integer()
+  @spec phasis_on_or_after(integer(), Geo.PointZ.t(), method()) :: integer()
   def phasis_on_or_after(iso_days, location, method \\ @default_method) do
     moon_iso = prior_new_moon_iso_days(iso_days)
     age = iso_days - moon_iso
@@ -84,7 +90,7 @@ defmodule Calendrical.Islamic.Visibility do
   `:yallop`, or `:schaefer`).
 
   """
-  @spec visible_crescent?(integer(), Geo.PointZ.t(), atom()) :: boolean()
+  @spec visible_crescent?(integer(), Geo.PointZ.t(), method()) :: boolean()
   def visible_crescent?(iso_days, location, method \\ @default_method) do
     date = Date.from_gregorian_days(iso_days)
 

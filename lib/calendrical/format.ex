@@ -34,7 +34,7 @@ defmodule Calendrical.Format do
       Calendrical.Formatter.HTML.Basic
 
   """
-  @spec default_formatter_module() :: module()
+  @spec default_formatter_module() :: Calendrical.Formatter.HTML.Basic
   def default_formatter_module do
     @default_format_module
   end

@@ -629,7 +629,7 @@ defmodule Calendrical.Chinese do
 
   """
   @spec cyclic_year(year :: Calendar.year(), month :: Calendar.month()) :: Lunisolar.cycle()
-  def cyclic_year(year, month) do
+  def cyclic_year(year, month) when is_integer(year) and is_integer(month) do
     Lunisolar.cyclic_year(year, month, 1)
   end
 
@@ -688,7 +688,8 @@ defmodule Calendrical.Chinese do
   end
 
   @doc false
-  def date_to_iso_days(year, month, day) do
+  def date_to_iso_days(year, month, day)
+      when is_integer(year) and is_integer(month) and is_integer(day) do
     Lunisolar.date_to_iso_days(year, month, day, epoch(), &location/1)
   end
 

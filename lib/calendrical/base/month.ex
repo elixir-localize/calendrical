@@ -166,14 +166,27 @@ defmodule Calendrical.Base.Month do
     {:error, missing_date_error("day_of_era", year, month, day)}
   end
 
+  @spec day_of_year(Calendar.year(), Calendar.month(), Calendar.day(), Config.t()) ::
+          pos_integer() | {:error, Exception.t()}
   def day_of_year(year, month, day, config) when is_date(year, month, day) do
     {iso_year, iso_month, iso_day} = date_to_iso_date(year, month, day, config)
-    iso_days = Calendar.ISO.date_to_iso_days(iso_year, iso_month, iso_day)
-    iso_days - first_gregorian_day_of_year(year, config) + 1
+
+    iso_date_to_iso_days(iso_year, iso_month, iso_day) - first_gregorian_day_of_year(year, config) +
+      1
   end
 
   def day_of_year(year, month, day, _config) do
     {:error, missing_date_error("day_of_year", year, month, day)}
+  end
+
+  # Calendar.ISO.date_to_iso_days/3 is doc-false internal API and
+  # carries no spec, so dialyzer cannot type its result; the public
+  # naive_datetime_to_iso_days/7 contract guarantees an integer.
+  defp iso_date_to_iso_days(year, month, day) do
+    {days, _day_fraction} =
+      Calendar.ISO.naive_datetime_to_iso_days(year, month, day, 0, 0, 0, {0, 6})
+
+    days
   end
 
   # Note this returns the ordinal day of week where `1` means
@@ -458,13 +471,17 @@ defmodule Calendrical.Base.Month do
     |> date_from_iso_days(config)
   end
 
-  def first_gregorian_day_of_year(year, %Config{month_of_year: 1}) do
-    ISO.date_to_iso_days(year, 1, 1)
+  @spec first_gregorian_day_of_year(Calendar.year(), Config.t()) :: integer()
+  def first_gregorian_day_of_year(year, %Config{month_of_year: 1}) when is_integer(year) do
+    iso_date_to_iso_days(year, 1, 1)
   end
 
-  def first_gregorian_day_of_year(year, %Config{month_of_year: first_month} = config) do
-    {beginning_year, _} = Calendrical.start_end_gregorian_years(year, config)
-    ISO.date_to_iso_days(beginning_year, first_month, 1)
+  def first_gregorian_day_of_year(year, %Config{month_of_year: first_month} = config)
+      when is_integer(year) and is_integer(first_month) do
+    case Calendrical.start_end_gregorian_years(year, config) do
+      {beginning_year, _ending_year} when is_integer(beginning_year) ->
+        iso_date_to_iso_days(beginning_year, first_month, 1)
+    end
   end
 
   def last_gregorian_day_of_year(year, %Config{month_of_year: first_month} = config) do
@@ -512,14 +529,16 @@ defmodule Calendrical.Base.Month do
   end
 
   @compile {:inline, date_to_iso_date: 4}
-  def date_to_iso_date(year, month, day, %Config{} = config) do
+  def date_to_iso_date(year, month, day, %Config{} = config)
+      when is_integer(year) and is_integer(month) and is_integer(day) do
     slide = slide(config)
     {iso_year, iso_month} = add_month(year, month, -slide)
     {iso_year, iso_month, day}
   end
 
   @compile {:inline, date_from_iso_date: 4}
-  def date_from_iso_date(iso_year, iso_month, day, %Config{} = config) do
+  def date_from_iso_date(iso_year, iso_month, day, %Config{} = config)
+      when is_integer(iso_year) and is_integer(iso_month) and is_integer(day) do
     slide = slide(config)
     {year, month} = add_month(iso_year, iso_month, slide)
     {year, month, day}
@@ -542,6 +561,10 @@ defmodule Calendrical.Base.Month do
   # 12, and a slide of month 12 is 0), so the dominant conversion
   # path skips the year-boundary derivation entirely.
   defp slide(%Config{month_of_year: 1}), do: 0
+
+  defp slide(%Config{month_of_year: month}) when not is_integer(month) do
+    raise ArgumentError, "config month_of_year must be an integer, found #{inspect(month)}"
+  end
 
   defp slide(%Config{month_of_year: month} = config) do
     {starts, _ends} = Calendrical.start_end_gregorian_years(@slide_probe_year, config)

@@ -174,7 +174,8 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc false
-  def cyclic_year(year, _month, _day) do
+  @spec cyclic_year(integer, Calendar.month(), Calendar.day()) :: integer
+  def cyclic_year(year, _month, _day) when is_integer(year) do
     {_cycle, year} = cycle_and_year(year)
     year
   end
@@ -325,7 +326,15 @@ defmodule Calendrical.Lunisolar do
   # months aligned to new moons. The complication is only determining
   # the start of the year and leap months.
 
-  def date_to_iso_days(year, month, day, epoch, location_fun) do
+  @spec date_to_iso_days(
+          integer,
+          integer,
+          integer,
+          integer,
+          (Time.time() -> {Astro.angle(), Astro.angle(), Astro.meters(), Time.hours()})
+        ) :: integer
+  def date_to_iso_days(year, month, day, epoch, location_fun)
+      when is_integer(year) and is_integer(month) and is_integer(day) and is_integer(epoch) do
     {cycle, cyclic_year} = cycle_and_year(year)
     cyclical_date_to_iso_days(cycle, cyclic_year, month, day, epoch, location_fun)
   end
@@ -334,7 +343,17 @@ defmodule Calendrical.Lunisolar do
   #   date_to_iso_days(year, month, day, epoch, location_fun)
   # end
 
-  def cyclical_date_to_iso_days(cycle, cyclical_year, month, day, epoch, location_fun) do
+  @spec cyclical_date_to_iso_days(
+          integer,
+          integer,
+          integer,
+          integer,
+          integer,
+          (Time.time() -> {Astro.angle(), Astro.angle(), Astro.meters(), Time.hours()})
+        ) :: integer
+  def cyclical_date_to_iso_days(cycle, cyclical_year, month, day, epoch, location_fun)
+      when is_integer(cycle) and is_integer(cyclical_year) and is_integer(month) and
+             is_integer(day) and is_integer(epoch) do
     new_year =
       cycle
       |> mid_year(cyclical_year, epoch)
@@ -406,7 +425,8 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc false
-  def cycle_and_year(elapsed_years) do
+  @spec cycle_and_year(integer) :: {integer, integer}
+  def cycle_and_year(elapsed_years) when is_integer(elapsed_years) do
     cycle = 1 + floor((elapsed_years - 1) / @years_in_cycle)
     cyclic_year = amod(elapsed_years, @years_in_cycle)
 
@@ -665,7 +685,11 @@ defmodule Calendrical.Lunisolar do
   will be 'lambda' degrees.
 
   """
-  @spec solar_longitude_on_or_after(Astro.angle(), number(), function()) :: Time.time()
+  @spec solar_longitude_on_or_after(
+          Astro.angle(),
+          number(),
+          (Time.time() -> {Astro.angle(), Astro.angle(), Astro.meters(), Time.hours()})
+        ) :: Time.time()
 
   def solar_longitude_on_or_after(lambda, iso_days, location_fun) do
     {_lat, _lng, _alt, offset} = location_fun.(iso_days)
