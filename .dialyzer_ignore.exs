@@ -62,7 +62,7 @@
 # minimum-days values, and a future CLDR release may use others.
 [
   # 1. Float over-approximation in calendar arithmetic.
-  {"lib/calendrical.ex", :missing_range, 4040},
+  {"lib/calendrical.ex", :missing_range, 4105},
   {"lib/calendrical/calendars/chinese.ex", :missing_range, 66},
   {"lib/calendrical/calendars/chinese.ex", :missing_range, 631},
   {"lib/calendrical/calendars/gregorian.ex", :missing_range, 3},
@@ -77,7 +77,7 @@
   {"lib/calendrical/calendars/lunar_japanese.ex", :missing_range, 552},
 
   # 2. Deliberately abstract specs.
-  {"lib/calendrical.ex", :contract_supertype, 515},
+  {"lib/calendrical.ex", :contract_supertype, 532},
   {"lib/calendrical/calendars/islamic/umm_al_qura/umm_al_qura.ex", :contract_supertype, 127},
   {"lib/calendrical/calendars/islamic/umm_al_qura/umm_al_qura.ex", :contract_supertype, 134},
   {"lib/calendrical/calendars/islamic/visibility.ex", :contract_supertype, 34},
@@ -87,8 +87,8 @@
   {"lib/calendrical/format.ex", :contract_supertype, 37},
 
   # 3. Domain types wider than the current CLDR data.
-  {"lib/calendrical.ex", :extra_range, 2326},
-  {"lib/calendrical.ex", :extra_range, 2365},
-  {"lib/calendrical.ex", :extra_range, 2472},
-  {"lib/calendrical.ex", :extra_range, 2500}
+  {"lib/calendrical.ex", :extra_range, 2391},
+  {"lib/calendrical.ex", :extra_range, 2430},
+  {"lib/calendrical.ex", :extra_range, 2537},
+  {"lib/calendrical.ex", :extra_range, 2565}
 ]
