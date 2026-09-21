@@ -14,8 +14,6 @@ The format is based on
 
 ### Changed
 
-* Requires `localize ~> 1.3` for the overloaded `Localize.Utils.Math` contracts that type integer arithmetic as integer under dialyzer.
-
 * `first_day_for_territory/1` and `min_days_for_territory/1` (and their locale variants) resolve from Localize's runtime week data instead of clauses compiled from it, so the values follow the loaded CLDR data without recompiling Calendrical. Results are unchanged for every territory.
 
 * `Calendrical.Islamic.Visibility` specs the crescent-visibility criterion as `t:Calendrical.Islamic.Visibility.method/0` (`:odeh`, `:schaefer` or `:yallop`) instead of `atom()`, and several constant functions (`Calendrical.default_calendar/0`, `Calendrical.Format.default_formatter_module/0`, `Calendrical.Islamic.UmmAlQura.min_year/0` and `max_year/0`, `Calendrical.FiscalYear.known_fiscal_calendars/0`) narrow their specs to what they actually return.

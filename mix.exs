@@ -173,7 +173,10 @@ defmodule Calendrical.MixProject do
 
   defp deps do
     [
-      {:localize, "~> 1.0"},
+      # TEMPORARY path override while verifying the Localize math
+      # overloaded contracts; restore {:localize, "~> 1.x"} once the
+      # fixed Localize is published.
+      {:localize, path: "../localize"},
       {:astro, "~> 2.5"},
       {:tz_world, "~> 1.0", optional: true},
       {:tz, "~> 0.26", optional: true},
