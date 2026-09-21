@@ -200,6 +200,7 @@ A **composite** calendar uses one base calendar before a specified date and a di
 | User-defined | `Calendrical.Composite` | The `defmacro __using__` template that builds a composite calendar from a list of transition dates. |
 | Pre-built | `Calendrical.Reform.Sweden` | Sweden's aborted 1700 reform, its unique 30 February 1712, and the final Julian → Gregorian switch in 1753. |
 | Pre-built | `Calendrical.Reform.Japan` | Japan's 1873 switch from the lunisolar calendar to the Gregorian calendar. |
+| Pre-built | `Calendrical.Reform.England` | England's three transitions: 1155 (March 25 year-start), 1751 (January 1 year-start), 1752 (Julian → Gregorian, dropping 11 days). |
 
 **Worked example (Sweden, 1753 transition).**
 

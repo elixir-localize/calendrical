@@ -14,6 +14,8 @@ The format is based on
 
 * `dates_in_gregorian_year/3` on every calendar (and `Calendrical.dates_in_gregorian_year/4` for a runtime-chosen calendar) returns the zero, one or two dates of a calendar month and day that fall within a given Gregorian year, accounting for calendar-year drift and dates that exist only in leap years.
 
+* `Calendrical.Reform.England` — a pre-built composite calendar for England's three transitions: the 1155 March 25 year-start, the 1751 January 1 year-start (making 1751 a 282-day year), and the 1752 Julian → Gregorian switch that dropped 3–13 September 1752.
+
 * `date_at/2` maps an instant to the calendar date under a chosen `:day_start` on the sunset-day-start calendars: `Calendrical.Islamic.UmmAlQura`, `.Rgsa` and `.Observational` (`:midnight`, an `:evening` 18:00 proxy, or true `:sunset`/Maghrib at Mecca or Cairo), and `Calendrical.Hebrew` (`:midnight`, `:sunset`, or `:nightfall`/tzeit at the observer's `:location` — default Jerusalem — with a configurable `:nightfall_angle`). Midnight stays the default, so the calendars are otherwise unchanged.
 
 ### Changed

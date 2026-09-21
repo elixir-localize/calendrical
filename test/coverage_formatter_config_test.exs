@@ -161,21 +161,21 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
     test "England leap years follow the calendar in force" do
       # 1100 is in the Julian era (divisible by 4 → leap); 1900 is in
       # the Gregorian era (century not divisible by 400 → not leap).
-      assert Calendrical.England.leap_year?(1100)
-      refute Calendrical.England.leap_year?(1900)
+      assert Calendrical.Reform.England.leap_year?(1100)
+      refute Calendrical.Reform.England.leap_year?(1900)
     end
 
     test "England dates convert to the underlying calendars" do
-      assert Date.convert(~D[1752-09-14 Calendrical.England], Calendrical.Gregorian) ==
+      assert Date.convert(~D[1752-09-14 Calendrical.Reform.England], Calendrical.Gregorian) ==
                {:ok, ~D[1752-09-14 Calendrical.Gregorian]}
 
-      assert Date.convert(~D[1752-09-02 Calendrical.England], Calendrical.Julian) ==
+      assert Date.convert(~D[1752-09-02 Calendrical.Reform.England], Calendrical.Julian) ==
                {:ok, ~D[1752-09-02 Calendrical.Julian]}
     end
 
     test "modern dates convert into a composite calendar unchanged" do
-      assert Date.convert(~D[2024-03-11], Calendrical.England) ==
-               {:ok, ~D[2024-03-11 Calendrical.England]}
+      assert Date.convert(~D[2024-03-11], Calendrical.Reform.England) ==
+               {:ok, ~D[2024-03-11 Calendrical.Reform.England]}
     end
 
     test "Russia's February 1918 has 15 valid days" do
@@ -355,13 +355,13 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
   describe "regression: composite transition-year arithmetic" do
     test "England 1751 ran from Lady Day to the year end" do
       # 25 March 1751 through 31 December 1751 (Julian).
-      assert Calendrical.England.days_in_year(1751) == 282
-      assert Calendrical.England.days_in_month(1751, 3) == 7
+      assert Calendrical.Reform.England.days_in_year(1751) == 282
+      assert Calendrical.Reform.England.days_in_month(1751, 3) == 7
     end
 
     test "England 1752 lost eleven days in September" do
-      assert Calendrical.England.days_in_year(1752) == 355
-      assert Calendrical.England.days_in_month(1752, 9) == 19
+      assert Calendrical.Reform.England.days_in_year(1752) == 355
+      assert Calendrical.Reform.England.days_in_month(1752, 9) == 19
     end
   end
 end
