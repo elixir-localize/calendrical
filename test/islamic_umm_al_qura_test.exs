@@ -264,4 +264,66 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
       assert Enum.sort(names) == ~w[Fri Mon Sat Sun Thu Tue Wed]
     end
   end
+
+  describe "date_at/2" do
+    # 1 March 2025 is 1 Ramadan 1446; sunset (Maghrib) at Mecca that day is
+    # 18:25 local (15:25 UTC), so the 18:00 proxy is ~25 minutes early.
+
+    test "defaults to midnight — the ordinary Mecca civil-day mapping" do
+      assert UmmAlQura.date_at(~U[2025-03-01 06:00:00Z]) ==
+               {:ok, ~D[1446-09-01 Calendrical.Islamic.UmmAlQura]}
+
+      # 16:00Z = 19:00 Mecca, but midnight ignores the evening.
+      assert UmmAlQura.date_at(~U[2025-03-01 16:00:00Z], day_start: :midnight) ==
+               {:ok, ~D[1446-09-01 Calendrical.Islamic.UmmAlQura]}
+    end
+
+    test ":evening rolls to the next Hijri day at 18:00 Mecca time" do
+      # 15:00Z = 18:00 Mecca exactly — rolls.
+      assert UmmAlQura.date_at(~U[2025-03-01 15:00:00Z], day_start: :evening) ==
+               {:ok, ~D[1446-09-02 Calendrical.Islamic.UmmAlQura]}
+
+      # 14:59Z = 17:59 Mecca — does not roll.
+      assert UmmAlQura.date_at(~U[2025-03-01 14:59:00Z], day_start: :evening) ==
+               {:ok, ~D[1446-09-01 Calendrical.Islamic.UmmAlQura]}
+    end
+
+    test ":mecca_sunset rolls at true Maghrib, diverging from the 18:00 proxy" do
+      # 18:10 Mecca: past the 18:00 proxy but before true sunset (18:25).
+      diverge = ~U[2025-03-01 15:10:00Z]
+
+      assert UmmAlQura.date_at(diverge, day_start: :evening) ==
+               {:ok, ~D[1446-09-02 Calendrical.Islamic.UmmAlQura]}
+
+      assert UmmAlQura.date_at(diverge, day_start: :mecca_sunset) ==
+               {:ok, ~D[1446-09-01 Calendrical.Islamic.UmmAlQura]}
+
+      # After true sunset, both agree.
+      assert UmmAlQura.date_at(~U[2025-03-01 16:00:00Z], day_start: :mecca_sunset) ==
+               {:ok, ~D[1446-09-02 Calendrical.Islamic.UmmAlQura]}
+    end
+
+    test "the day boundary is Mecca's, independent of the input time zone" do
+      utc = ~U[2025-03-01 16:00:00Z]
+      # Same absolute instant expressed as 19:00 in a +03:00 zone.
+      riyadh = %{
+        ~U[2025-03-01 19:00:00Z]
+        | time_zone: "Asia/Riyadh",
+          zone_abbr: "+03",
+          utc_offset: 10_800,
+          std_offset: 0
+      }
+
+      assert UmmAlQura.date_at(riyadh, day_start: :mecca_sunset) ==
+               UmmAlQura.date_at(utc, day_start: :mecca_sunset)
+    end
+
+    test "returns an error, never raises, on bad input" do
+      assert {:error, {:invalid_day_start, :bogus}} =
+               UmmAlQura.date_at(~U[2025-03-01 12:00:00Z], day_start: :bogus)
+
+      # Outside the embedded reference data.
+      assert {:error, _} = UmmAlQura.date_at(~U[1600-01-01 12:00:00Z])
+    end
+  end
 end

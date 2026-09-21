@@ -14,6 +14,8 @@ The format is based on
 
 * `dates_in_gregorian_year/3` on every calendar (and `Calendrical.dates_in_gregorian_year/4` for a runtime-chosen calendar) returns the zero, one or two dates of a calendar month and day that fall within a given Gregorian year, accounting for calendar-year drift and dates that exist only in leap years.
 
+* `Calendrical.Islamic.UmmAlQura.date_at/2` maps an instant to the Hijri date under a chosen `:day_start` — `:midnight` (the default), an `:evening` 18:00 proxy, or true `:mecca_sunset` (Maghrib, computed via `Astro`). Boundaries are evaluated at Mecca, so the calendar's midnight default is unchanged.
+
 ### Changed
 
 * `first_day_for_territory/1` and `min_days_for_territory/1` (and their locale variants) resolve from Localize's runtime week data instead of clauses compiled from it, so the values follow the loaded CLDR data without recompiling Calendrical. Results are unchanged for every territory.
