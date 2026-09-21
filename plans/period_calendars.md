@@ -1,6 +1,8 @@
 # Period calendars: bi-weekly pay and university/academic calendars
 
-Status: planned, deferred until after Calendrical 1.0 (targeted for the end of July 2026, released together with Localize 1.0). Motivated by Tempo (`~/Development/tempo/tempo`), which consumes Calendrical calendars directly (`Tempo.new!(..., calendar: Calendrical.Hebrew)`) — any calendar implementing the `Calendar` + `Calendrical` behaviours plugs into Tempo's interval, iteration and set machinery with no Tempo-side changes.
+**Status:** planning, 2026-07-15
+
+Deferred until after Calendrical 1.0 (targeted for the end of July 2026, released together with Localize 1.0). Motivated by Tempo (`~/Development/tempo/tempo`), which consumes Calendrical calendars directly (`Tempo.new!(..., calendar: Calendrical.Hebrew)`) — any calendar implementing the `Calendar` + `Calendrical` behaviours plugs into Tempo's interval, iteration and set machinery with no Tempo-side changes.
 
 ## Architectural verdict
 

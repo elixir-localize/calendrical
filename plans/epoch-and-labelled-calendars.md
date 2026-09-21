@@ -1,5 +1,7 @@
 # Possible enhancement — epoch-anchored and labelled calendars
 
+**Status:** draft, 2026-07-28
+
 A design spec (review-and-decide, nothing committed) for two families of "human calendar" that Calendrical cannot currently express, surfaced while building custom-calendar support in Tempo (downstream).
 
 ## The gap
