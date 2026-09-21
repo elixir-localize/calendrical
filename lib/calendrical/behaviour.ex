@@ -90,7 +90,7 @@ defmodule Calendrical.Behaviour do
 
   * Year/era: `year_of_era/1`, `year_of_era/3`, `calendar_year/3`,
     `extended_year/3`, `related_gregorian_year/3`, `cyclic_year/3`,
-    `day_of_era/3`.
+    `day_of_era/3`, `dates_in_gregorian_year/3`.
 
   * Periods: `quarter_of_year/3`, `month_of_year/3`, `week_of_year/3`,
     `iso_week_of_year/3`, `week_of_month/3`, `day_of_year/3`,
@@ -1005,6 +1005,7 @@ defmodule Calendrical.Behaviour do
       defoverridable extended_year: 3
       defoverridable related_gregorian_year: 3
       defoverridable cyclic_year: 3
+      defoverridable dates_in_gregorian_year: 3
     end
   end
 end
