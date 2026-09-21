@@ -613,6 +613,36 @@ defmodule Calendrical.Behaviour do
       end
 
       @doc """
+      Returns the dates in this calendar, of the given `month` and `day`,
+      that fall within the given Gregorian year.
+
+      A calendar date such as `1 Muharram` or `25 Kislev` recurs once in
+      this calendar's own year, but that year and the Gregorian year drift
+      against each other — so within one Gregorian year the date can occur
+      zero, one or two times. The result is expressed in **this** calendar,
+      not converted to Gregorian, so the caller keeps a value it can
+      compare and convert as it wishes.
+
+      ### Arguments
+
+      * `gregorian_year` is the Gregorian year to search within.
+
+      * `month` and `day` are a month and day in this calendar.
+
+      ### Returns
+
+      * A list of zero, one or two `t:Date.t/0` values in this calendar,
+        earliest first.
+
+      """
+      @spec dates_in_gregorian_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
+              [Date.t()]
+      @impl true
+      def dates_in_gregorian_year(gregorian_year, month, day) do
+        Calendrical.dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
+      end
+
+      @doc """
       Returns how many days there are in the given year
       and month.
 

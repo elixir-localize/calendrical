@@ -116,6 +116,10 @@ defmodule Calendrical.Julian.Compiler do
         last_iso_day_of_year(year) - first_iso_day_of_year(year) + 1
       end
 
+      def dates_in_gregorian_year(gregorian_year, month, day) do
+        Calendrical.dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
+      end
+
       # Here we use month to mean ordinal month. Therefore if the calendar
       # starts on March 25th, then days in month for March will be seen as
       # days if month for month 1.

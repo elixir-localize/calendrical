@@ -357,6 +357,23 @@ defmodule Calendrical do
               Calendar.day() | {:ambiguous, Range.t() | [pos_integer()]} | {:error, :undefined}
 
   @doc """
+  Returns the dates in this calendar, of a given `month` and `day`, that
+  fall within a given Gregorian year.
+
+  A calendar date recurs once per this calendar's own year, but that year
+  drifts against the Gregorian year, so within one Gregorian year it can
+  occur zero, one or two times. The dates are returned in this calendar,
+  not converted to Gregorian. The behaviour supplies a default
+  implementation.
+
+  """
+  @callback dates_in_gregorian_year(
+              gregorian_year :: Calendar.year(),
+              month :: Calendar.month(),
+              day :: Calendar.day()
+            ) :: [Date.t()]
+
+  @doc """
   Returns the number of months in a year (without a year).
 
   Returns an integer when every year has the same number of months,
@@ -2088,6 +2105,54 @@ defmodule Calendrical do
   def weeks_in_year(%{} = date) do
     {year, _month, _day, calendar} = extract_date(date)
     calendar.weeks_in_year(year)
+  end
+
+  @doc """
+  Returns the dates in `calendar`, of the given `month` and `day`, that fall
+  within the given Gregorian year.
+
+  This is the per-calendar `calendar.dates_in_gregorian_year/3` callback with
+  the calendar module supplied explicitly; use this arity when the calendar
+  is chosen at runtime.
+
+  ### Arguments
+
+  * `calendar` is a module implementing the `Calendrical` behaviour.
+
+  * `gregorian_year` is the Gregorian year to search within.
+
+  * `month` and `day` are a month and day in `calendar`.
+
+  ### Returns
+
+  * A list of zero, one or two `t:Date.t/0` values in `calendar`, earliest
+    first. A calendar date recurs once per that calendar's own year, but the
+    calendar and Gregorian years drift, so a Gregorian year can hold zero,
+    one or two occurrences of it.
+
+  ### Examples
+
+      iex> Calendrical.dates_in_gregorian_year(Calendrical.Islamic.Civil, 2025, 1, 1)
+      [~D[1447-01-01 Calendrical.Islamic.Civil]]
+
+      # Ramadan 29 falls twice in the Gregorian year 2000
+      iex> Calendrical.dates_in_gregorian_year(Calendrical.Islamic.Civil, 2000, 9, 29)
+      [~D[1420-09-29 Calendrical.Islamic.Civil], ~D[1421-09-29 Calendrical.Islamic.Civil]]
+
+  """
+  @spec dates_in_gregorian_year(module(), Calendar.year(), Calendar.month(), Calendar.day()) ::
+          [Date.t()]
+  def dates_in_gregorian_year(calendar, gregorian_year, month, day) do
+    g_start = Calendrical.Gregorian.date_to_iso_days(gregorian_year, 1, 1)
+    g_end = Calendrical.Gregorian.date_to_iso_days(gregorian_year + 1, 1, 1) - 1
+    {start_year, _month, _day} = calendar.date_from_iso_days(g_start)
+
+    for candidate_year <- [start_year, start_year + 1],
+        {:ok, date} <- [Date.new(candidate_year, month, day, calendar)],
+        iso_days = calendar.date_to_iso_days(candidate_year, month, day),
+        iso_days >= g_start and iso_days <= g_end do
+      date
+    end
   end
 
   @doc """

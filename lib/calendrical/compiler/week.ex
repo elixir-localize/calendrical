@@ -371,6 +371,20 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
+      Returns the dates in this calendar, of the given `month` and `day`,
+      that fall within the given Gregorian year — zero, one or two of them,
+      in this calendar.
+
+      """
+      @spec dates_in_gregorian_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
+              [Date.t()]
+
+      @impl true
+      def dates_in_gregorian_year(gregorian_year, month, day) do
+        Calendrical.dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
+      end
+
+      @doc """
       Returns how many days there are in the given year-month.
 
       """

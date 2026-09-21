@@ -236,6 +236,11 @@ defmodule Calendrical.Composite.Compiler do
         first_iso_day_of_year(year + 1) - first_iso_day_of_year(year)
       end
 
+      @impl true
+      def dates_in_gregorian_year(gregorian_year, month, day) do
+        Calendrical.dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
+      end
+
       # In the year a new-year-style transition takes effect, the
       # labels before the transition day belong to the prior year
       # (England's 1751 begins on Lady Day, 25 March), so {year, 1, 1}
