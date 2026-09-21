@@ -157,7 +157,7 @@ iex> {:ok, hijri} = Date.convert(gregorian, Calendrical.Islamic.UmmAlQura)
 iex> hijri
 ~D[1446-09-01 Calendrical.Islamic.UmmAlQura]
 
-iex> Calendrical.localize(hijri, :month, locale: "en")
+iex> Calendrical.localize(hijri, :month, locale: "en", style: :wide)
 "Ramadan"
 ```
 
@@ -198,18 +198,17 @@ A **composite** calendar uses one base calendar before a specified date and a di
 | Calendar | Module | Description |
 |---|---|---|
 | User-defined | `Calendrical.Composite` | The `defmacro __using__` template that builds a composite calendar from a list of transition dates. |
-| Pre-built | `Calendrical.England` | Demonstrates Britain's three transitions: 1155 (March 25 year-start), 1751 (January 1 year-start), 1752 (Julian → Gregorian, dropping 11 days). |
-| Pre-built | `Calendrical.Russia` | The Russian calendar: Julian (March 1 year-start) → Julian (September 1 year-start, 1492) → Julian (January 1 year-start, 1700) → Gregorian (1918, dropping 13 days). |
+| Pre-built | `Calendrical.Reform.Sweden` | Sweden's aborted 1700 reform, its unique 30 February 1712, and the final Julian → Gregorian switch in 1753. |
+| Pre-built | `Calendrical.Reform.Japan` | Japan's 1873 switch from the lunisolar calendar to the Gregorian calendar. |
 
-**Worked example (England, 1752 transition).**
+**Worked example (Sweden, 1753 transition).**
 
 ```elixir
-iex> day_before = ~D[1752-09-02 Calendrical.England]
-iex> Date.shift(day_before, day: 1)
-~D[1752-09-14 Calendrical.England]
+iex> Date.shift(~D[1753-02-17 Calendrical.Reform.Sweden], day: 1)
+~D[1753-03-01 Calendrical.Reform.Sweden]
 ```
 
-The 11 "missing" days (3 September 1752 through 13 September 1752) are not valid dates in the English composite calendar — `Calendrical.England.valid_date?(1752, 9, 5)` returns `false`.
+The 11 "missing" days (18 February 1753 through 28 February 1753) are not valid dates in the Swedish composite calendar — `Calendrical.Reform.Sweden.valid_date?(1753, 2, 20)` returns `false`.
 
 See [`calendar_behaviour.md`](calendar_behaviour.md) for the syntax of `use Calendrical.Composite`.
 

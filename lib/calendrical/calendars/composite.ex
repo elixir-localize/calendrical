@@ -68,16 +68,16 @@ defmodule Calendrical.Composite do
 
   ## Missing days
 
-  When a transition skips dates (for example the British transition
-  on 14 September 1752 dropped the eleven days 3 September 1752
-  through 13 September 1752), the composite calendar treats those
-  dates as **invalid**:
+  When a transition skips dates (for example the Swedish transition
+  in 1753 dropped the eleven days 18 February 1753 through
+  28 February 1753), the composite calendar treats those dates as
+  **invalid**:
 
-      iex> Calendrical.England.valid_date?(1752, 9, 5)
+      iex> Calendrical.Reform.Sweden.valid_date?(1753, 2, 20)
       false
 
-      iex> Date.shift(~D[1752-09-02 Calendrical.England], day: 1)
-      ~D[1752-09-14 Calendrical.England]
+      iex> Date.shift(~D[1753-02-17 Calendrical.Reform.Sweden], day: 1)
+      ~D[1753-03-01 Calendrical.Reform.Sweden]
 
   """
 
