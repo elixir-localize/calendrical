@@ -4178,6 +4178,36 @@ defmodule Calendrical do
     Localize.Calendar.known_calendars()
   end
 
+  # Calendars Calendrical implements for which CLDR/BCP 47 defines no
+  # calendar identifier. Localize stays strictly CLDR-compliant and never
+  # validates these, so Calendrical resolves them here, ahead of the CLDR
+  # lookup, keyed by the identifier used in the IXDTF `[u-ca=…]` suffix.
+  @additional_calendars %{
+    julian: Calendrical.Julian
+  }
+
+  @doc """
+  Returns the non-CLDR calendars Calendrical resolves as a `%{atom => module}`
+  map, keyed by the identifier used in the IXDTF `[u-ca=…]` suffix.
+
+  These are calendars Calendrical implements for which CLDR/BCP 47 defines no
+  calendar identifier (currently `:julian`). They are resolved by
+  `calendar_from_cldr_calendar_type/1` ahead of the CLDR lookup, so consumers
+  that keep to CLDR identifiers are unaffected.
+
+  ### Returns
+
+  * A `%{atom => module}` map of the additional calendar identifiers.
+
+  ### Examples
+
+      iex> Calendrical.additional_calendars()
+      %{julian: Calendrical.Julian}
+
+  """
+  @spec additional_calendars() :: %{atom() => module()}
+  def additional_calendars, do: @additional_calendars
+
   @doc """
   Returns the Calendrical calendar module associated
   with a CLDR calendar type.
@@ -4188,6 +4218,9 @@ defmodule Calendrical do
   function maps such a type to the corresponding
   Calendrical calendar module if it is loaded in the
   current build.
+
+  The non-CLDR calendars in `additional_calendars/0` (currently `:julian`,
+  which CLDR has no identifier for) resolve here too, ahead of the CLDR lookup.
 
   ### Arguments
 
@@ -4224,6 +4257,9 @@ defmodule Calendrical do
       iex> Calendrical.calendar_from_cldr_calendar_type(:dangi)
       {:ok, Calendrical.Korean}
 
+      iex> Calendrical.calendar_from_cldr_calendar_type(:julian)
+      {:ok, Calendrical.Julian}
+
       iex> {:error, %Localize.UnknownCalendarError{}} =
       ...>   Calendrical.calendar_from_cldr_calendar_type(:not_a_calendar)
 
@@ -4231,16 +4267,37 @@ defmodule Calendrical do
   @spec calendar_from_cldr_calendar_type(atom() | String.t()) ::
           {:ok, module()} | {:error, Exception.t()}
   def calendar_from_cldr_calendar_type(calendar_type) do
-    with {:ok, calendar_type} <- Localize.validate_calendar(calendar_type) do
-      calendar_module = Calendrical.Preference.calendar_module(calendar_type)
-
-      if is_atom(calendar_module) and Code.ensure_loaded?(calendar_module) do
+    case additional_calendar(calendar_type) do
+      {:ok, calendar_module} ->
         {:ok, calendar_module}
-      else
-        {:error, unknown_calendar_error(calendar_type)}
-      end
+
+      :error ->
+        with {:ok, calendar_type} <- Localize.validate_calendar(calendar_type) do
+          calendar_module = Calendrical.Preference.calendar_module(calendar_type)
+
+          if is_atom(calendar_module) and Code.ensure_loaded?(calendar_module) do
+            {:ok, calendar_module}
+          else
+            {:error, unknown_calendar_error(calendar_type)}
+          end
+        end
     end
   end
+
+  # Resolve a non-CLDR calendar identifier (atom or its string form) to its
+  # module, without `String.to_atom/1` — the string form is matched against the
+  # known identifiers, never converted blindly.
+  defp additional_calendar(calendar_type) when is_atom(calendar_type) do
+    Map.fetch(@additional_calendars, calendar_type)
+  end
+
+  defp additional_calendar(calendar_type) when is_binary(calendar_type) do
+    Enum.find_value(@additional_calendars, :error, fn {identifier, module} ->
+      if Atom.to_string(identifier) == calendar_type, do: {:ok, module}
+    end)
+  end
+
+  defp additional_calendar(_calendar_type), do: :error
 
   #
   # Helpers
