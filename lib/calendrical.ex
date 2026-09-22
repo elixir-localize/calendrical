@@ -4205,7 +4205,7 @@ defmodule Calendrical do
       %{julian: Calendrical.Julian}
 
   """
-  @spec additional_calendars() :: %{atom() => module()}
+  @spec additional_calendars() :: %{julian: Calendrical.Julian}
   def additional_calendars, do: @additional_calendars
 
   @doc """
