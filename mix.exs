@@ -175,8 +175,8 @@ defmodule Calendrical.MixProject do
   defp deps do
     [
       {:localize, "~> 1.3"},
-      {:astro, "~> 2.5"},
-      {:tz_world, "~> 1.0", optional: true},
+      {:astro, "~> 2.6"},
+      {:tz_world, "~> 2.3", optional: true},
       {:tz, "~> 0.26", optional: true},
       {:gettext, "~> 1.0"},
       {:calendar_interval, "~> 0.2", optional: true},
