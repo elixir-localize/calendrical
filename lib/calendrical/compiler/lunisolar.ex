@@ -704,6 +704,48 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
+  The proleptic-Gregorian date on which the sun reaches the `index`-th solar
+  term (jié-qì) during Gregorian `year`, observed at `location_fun`.
+
+  The 24 solar terms are numbered from `lichun` (立春, index 1) at 315° solar
+  ecliptic longitude, then every 15° (`qingming` = 5 at 15°, `dongzhi` = 22 at
+  270°, …). The day is taken in the observer's local standard time, so the
+  meridian — supplied by the calendar's `location/1` — decides the civil date.
+
+  ### Arguments
+
+  * `index` is the 1-based solar-term number, `1..24`.
+
+  * `year` is a proleptic-Gregorian year.
+
+  * `location_fun` is the observer's location function, taken from the lunisolar
+    calendar (e.g. `&Calendrical.Chinese.location/1`).
+
+  ### Returns
+
+  * `{:ok, t:Date.t/0}` in `Calendrical.Gregorian`.
+
+  * `{:error, {:invalid_solar_term, index}}` when `index` is not in `1..24`.
+
+  ### Examples
+
+      iex> Calendrical.Lunisolar.solar_term(5, 2025, &Calendrical.Chinese.location/1)
+      {:ok, ~D[2025-04-04 Calendrical.Gregorian]}
+
+  """
+  def solar_term(index, gregorian_year, location_fun) when index in 1..24 do
+    longitude = rem(300 + index * 15, 360)
+    start = Calendrical.Gregorian.date_to_iso_days(gregorian_year, 1, 1)
+    moment = solar_longitude_on_or_after(longitude, start, location_fun)
+    {year, month, day} = Calendrical.Gregorian.date_from_iso_days(trunc(moment))
+    Date.new(year, month, day, Calendrical.Gregorian)
+  end
+
+  def solar_term(index, _gregorian_year, _location_fun) do
+    {:error, {:invalid_solar_term, index}}
+  end
+
+  @doc """
   Return last Chinese major solar term (zhongqi) before
   `iso_days`.
 
