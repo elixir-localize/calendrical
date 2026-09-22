@@ -550,8 +550,10 @@ defmodule Calendrical.Julian do
 
   * `day` is a day-of-month.
 
-  * `starting_on` is `:default` for the calendar's natural week
-    boundary (Monday).
+  * `starting_on` is `:default` (equivalent to `:monday`) for the
+    calendar's natural week boundary, or any of `:monday`, `:tuesday`,
+    `:wednesday`, `:thursday`, `:friday`, `:saturday`, `:sunday` to number
+    the week from that day.
 
   ### Returns
 
@@ -562,8 +564,16 @@ defmodule Calendrical.Julian do
       iex> Calendrical.Julian.day_of_week(2025, 1, 1, :default)
       {2, 1, 7}
 
+      iex> Calendrical.Julian.day_of_week(2025, 1, 1, :sunday)
+      {3, 1, 7}
+
   """
-  @spec day_of_week(year, month, day, 1..7 | :default) ::
+  @spec day_of_week(
+          year,
+          month,
+          day,
+          :default | :monday | :tuesday | :wednesday | :thursday | :friday | :saturday | :sunday
+        ) ::
           {Calendar.day_of_week(), first_day_of_week :: non_neg_integer(),
            last_day_of_week :: non_neg_integer()}
 
@@ -577,6 +587,17 @@ defmodule Calendrical.Julian do
       Localize.Utils.Math.amod(days_after_saturday + @epoch_day_of_week, @days_in_week)
 
     {day_of_week, 1, 7}
+  end
+
+  # A weekday `starting_on` other than `:default` needs the full week-boundary
+  # arithmetic. The weekday of a day is calendar-independent, so delegate to
+  # `Calendrical.Gregorian` via the shared iso-day count rather than reimplement
+  # the offset table here.
+  def day_of_week(year, month, day, starting_on) do
+    {gregorian_year, gregorian_month, gregorian_day} =
+      year |> date_to_iso_days(month, day) |> Calendrical.Gregorian.date_from_iso_days()
+
+    Calendrical.Gregorian.day_of_week(gregorian_year, gregorian_month, gregorian_day, starting_on)
   end
 
   @doc """
