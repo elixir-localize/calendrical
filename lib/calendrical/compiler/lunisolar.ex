@@ -84,6 +84,12 @@ defmodule Calendrical.Lunisolar do
   # of new moons) for a normal year.
   @lunar_calendar_months_in_year 12
 
+  # A day in the middle of a lunar year. Lunar new year falls between
+  # 21 January and 20 February, so the mean new year is 5 February and
+  # the mean middle of the year six months later. Any whole number of
+  # mean tropical years from here is also the middle of a lunar year.
+  @mean_mid_lunar_year Calendar.ISO.date_to_iso_days(2000, 8, 6)
+
   @doc """
   Create a new date in the lunisolar calendar.
 
@@ -672,11 +678,23 @@ defmodule Calendrical.Lunisolar do
     round((from_iso_days - to_iso_days) / Time.mean_synodic_month())
   end
 
+  # A day in the middle of the lunar year `cycle`/`cyclic_year`, from which
+  # `new_year_on_or_before/2` finds that year's new year in a single pass.
+  #
+  # Half a year after the epoch's anniversary is mid-year only when the
+  # epoch is itself a new year. For an epoch mid-year (Calendrical.LunarJapanese
+  # counts from 645-07-20) it lands between the December solstice and the
+  # new year, so every lookup computed two sui instead of one, and for an
+  # epoch in late July or August it duplicated or skipped years.
+  # Snapping to the nearest mean mid-lunar-year keeps the year the
+  # estimate points into while staying months clear of either new year.
   defp mid_year(cycle, cyclic_year, epoch) do
-    floor(
+    estimate =
       epoch +
         ((cycle - 1) * @years_in_cycle + (cyclic_year - 1) + 1 / 2) * Time.mean_tropical_year()
-    )
+
+    years_from_reference = round((estimate - @mean_mid_lunar_year) / Time.mean_tropical_year())
+    floor(@mean_mid_lunar_year + years_from_reference * Time.mean_tropical_year())
   end
 
   @doc """

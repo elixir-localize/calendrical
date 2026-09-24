@@ -175,7 +175,7 @@ defmodule Calendrical.MixProject do
   defp deps do
     [
       {:localize, "~> 1.3"},
-      {:astro, "~> 2.6"},
+      {:astro, path: "../../astro"},
       {:tz_world, "~> 2.3", optional: true},
       {:tz, "~> 0.26", optional: true},
       {:gettext, "~> 1.0"},

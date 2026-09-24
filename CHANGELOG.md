@@ -26,6 +26,8 @@ The format is based on
 
 ### Fixed
 
+* `Calendrical.LunarJapanese` no longer computes each lunar year twice when converting to other calendars, halving that cost, because the lunisolar mid-year estimate no longer assumes the epoch is a new year. A `:lunar_japanese_epoch` configured in late July or August no longer duplicates or skips years.
+
 * The exported calendar arithmetic guards its integer arguments (`start_end_gregorian_years/2`, the Egyptian and lunisolar conversion entry points, and the lunisolar wrappers), so a non-integer argument raises `FunctionClauseError` instead of silently computing a float.
 
 * `.dialyzer_ignore.exs` is now empty — all twenty-six previously-suppressed dialyzer warnings are fixed at the source instead of ignored.
