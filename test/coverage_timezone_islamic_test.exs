@@ -268,8 +268,8 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
   # ── Islamic.UmmAlQura — reference-data paths ─────────────────────
 
   describe "UmmAlQura reference data" do
-    test "embedded data covers 1356..1500 AH" do
-      assert UmmAlQura.min_year() == 1356
+    test "embedded data covers 1..1500 AH" do
+      assert UmmAlQura.min_year() == 1
       assert UmmAlQura.max_year() == 1500
     end
 
@@ -279,10 +279,10 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
 
     test "first_day_of_month/2 rejects out-of-range years" do
       assert {:error, %Calendrical.IslamicYearOutOfRangeError{} = error} =
-               UmmAlQura.first_day_of_month(1300, 1)
+               UmmAlQura.first_day_of_month(1501, 1)
 
-      assert error.year == 1300
-      assert error.min_year == 1356
+      assert error.year == 1501
+      assert error.min_year == 1
       assert error.max_year == 1500
     end
 
@@ -295,7 +295,7 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
       # Ramadan 1446 has 29 days in the Umm al-Qura tables.
       assert UmmAlQura.valid_date?(1446, 9, 29)
       refute UmmAlQura.valid_date?(1446, 9, 30)
-      refute UmmAlQura.valid_date?(99, 1, 1)
+      refute UmmAlQura.valid_date?(0, 1, 1)
       refute UmmAlQura.valid_date?(1446, 13, 1)
     end
 
@@ -320,7 +320,7 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
 
     test "days_in_year/1 returns 354 or 355" do
       assert UmmAlQura.days_in_year(1446) == 354
-      assert UmmAlQura.days_in_year(UmmAlQura.max_year()) == 355
+      assert UmmAlQura.days_in_year(UmmAlQura.max_year()) == 354
     end
 
     test "days_in_year/1 raises outside the data range" do

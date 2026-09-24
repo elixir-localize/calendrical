@@ -1,41 +1,39 @@
 defmodule Mix.Tasks.Calendrical.UmmAlQura.Verify do
-  @shortdoc "Verifies the embedded Umm al-Qura reference data"
+  @shortdoc "Verifies the embedded Umm al-Qura tables against KACST"
 
   @moduledoc """
-  Verifies the Umm al-Qura reference tables embedded in Calendrical and,
-  optionally, compares them with an external reference.
+  Verifies the Umm al-Qura tables embedded in Calendrical and, optionally,
+  compares them with KACST's official data or another reference.
 
-  `Calendrical.Islamic.UmmAlQura` is a tabular calendar: it converts dates
-  using the month-start tables compiled into
-  `Calendrical.Islamic.UmmAlQura.ReferenceData`. This task audits those
-  tables. It never modifies them.
+  `Calendrical.Islamic.UmmAlQura` is a tabular calendar built at compile
+  time from the official month lengths published by KACST (King Abdulaziz
+  City for Science and Technology), stored in
+  `priv/umm_al_qura_month_lengths.csv`. This task audits the compiled
+  calendar. It never modifies the data.
 
-  For each embedded dataset (van Gent and Akmal) it checks that:
-
-  * every month is 29 or 30 days long.
+  It checks that:
 
   * every year is 354 or 355 days long.
 
-  * the months run contiguously, with no gaps or repeats.
+  * every month starts the day after the previous month ends.
 
-  It then compares the two datasets with each other, and checks that
-  `Calendrical.Islamic.UmmAlQura` agrees with the van Gent dataset it is
-  built from.
+  * the first and last day of every month convert to the Gregorian
+    calendar and back unchanged.
 
   ## Usage
 
       mix calendrical.umm_al_qura.verify
+      mix calendrical.umm_al_qura.verify --kacst
       mix calendrical.umm_al_qura.verify --against reference.txt
-      mix calendrical.umm_al_qura.verify --against reference.txt --dataset akmal
 
   ## Options
 
-  * `--against PATH` also checks the external reference in `PATH` and
-    compares it with an embedded dataset.
+  * `--kacst` downloads KACST's official month lengths and compares them
+    with the embedded tables, to find out whether KACST has revised any
+    month since this version of Calendrical was released.
 
-  * `--dataset NAME` selects the embedded dataset compared with
-    `--against`: `van_gent` (the default, which the calendar uses) or
-    `akmal`.
+  * `--against PATH` checks the external reference in `PATH` and compares
+    it with the embedded tables.
 
   ## Reference file format
 
@@ -47,41 +45,34 @@ defmodule Mix.Tasks.Calendrical.UmmAlQura.Verify do
       1446 9 2025-03-01
       1446 10 2025-03-30
 
-  Any source can be converted to this format, for example the official
-  KACST tables or the `MONTH_STARTS` data of the `hijridate` Python
-  package.
-
   ## Exit status
 
-  The task fails if any dataset breaks one of the checks above, if the
-  calendar disagrees with its data, or if the external reference gives a
-  different first day for any month that both it and the embedded dataset
-  cover. Differences between the two embedded datasets, and months covered
-  by only one side of a comparison, are reported but do not fail the task.
+  The task fails if the embedded tables break one of the checks above, or
+  if KACST's data or the reference is malformed or gives a different first
+  day for any month that both it and the embedded tables cover. Months
+  covered by only one side are reported but do not fail the task.
 
   """
 
   use Mix.Task
 
   alias Calendrical.Islamic.UmmAlQura
-  alias Calendrical.Islamic.UmmAlQura.ReferenceData
 
   @requirements ["app.config"]
 
-  @switches [against: :string, dataset: :string]
-  @datasets %{"van_gent" => :van_gent, "akmal" => :akmal}
+  @switches [against: :string, kacst: :boolean]
+  @kacst_url "https://umqserv.kacst.gov.sa/api/v1/DateConversion/GetHijriMonthLengths"
 
   @impl Mix.Task
   def run(args) do
     {options, _arguments} = OptionParser.parse!(args, strict: @switches)
-    dataset = dataset_option(Keyword.get(options, :dataset, "van_gent"))
-    embedded = %{van_gent: embedded_months(:van_gent), akmal: embedded_months(:akmal)}
+    embedded = embedded_months()
 
     failures =
-      report_embedded(embedded) +
-        report_datasets_compared(embedded) +
-        report_calendar(embedded.van_gent) +
-        report_against(Keyword.get(options, :against), Map.fetch!(embedded, dataset), dataset)
+      report_problems("Embedded tables", embedded) +
+        report_calendar(embedded) +
+        report_kacst(Keyword.get(options, :kacst, false), embedded) +
+        report_against(Keyword.get(options, :against), embedded)
 
     if failures > 0 do
       Mix.raise("Umm al-Qura verification failed with #{failures} problem(s)")
@@ -90,99 +81,82 @@ defmodule Mix.Tasks.Calendrical.UmmAlQura.Verify do
     Mix.shell().info("\nUmm al-Qura verification passed")
   end
 
-  defp dataset_option(name) do
-    case Map.fetch(@datasets, name) do
-      {:ok, dataset} -> dataset
-      :error -> Mix.raise("Unknown --dataset #{inspect(name)}, expected van_gent or akmal")
+  @doc false
+  # Converts a KACST `GetHijriMonthLengths` response into month records,
+  # anchored on the embedded calendar's first day of KACST's first year.
+  # Public so the conversion can be tested without the network.
+  def kacst_months(body) do
+    years = kacst_years(body)
+    [{first_year, _lengths} | _rest] = years
+    anchor = first_day(first_year)
+
+    {months, _next_first_day} =
+      years
+      |> Enum.flat_map(fn {year, lengths} ->
+        lengths |> Enum.with_index(1) |> Enum.map(fn {days, month} -> {year, month, days} end)
+      end)
+      |> Enum.map_reduce(anchor, fn {year, month, days}, first_day ->
+        {%{year: year, month: month, first_day: first_day, days: days}, Date.add(first_day, days)}
+      end)
+
+    months
+  end
+
+  defp embedded_months do
+    for year <- UmmAlQura.min_year()..UmmAlQura.max_year(), month <- 1..12 do
+      first_day = Date.from_gregorian_days(UmmAlQura.date_to_iso_days(year, month, 1))
+
+      %{
+        year: year,
+        month: month,
+        first_day: first_day,
+        days: UmmAlQura.days_in_month(year, month)
+      }
     end
   end
 
-  # The last value of each embedded table is a sentinel marking the start
-  # of the month after the final one, so it bounds that month's length and
-  # is then dropped.
-  defp embedded_months(dataset) do
-    dataset
-    |> dataset_data()
-    |> ReferenceData.umm_al_qura_dates()
-    |> Enum.map(&{&1.hijri_year, &1.hijri_month, &1.gregorian})
-    |> with_lengths()
-    |> Enum.drop(-1)
+  defp first_day(year) do
+    case UmmAlQura.first_day_of_month(year, 1) do
+      {:ok, first_day} ->
+        first_day
+
+      {:error, _reason} ->
+        Mix.raise("KACST data starts in #{year} AH, outside the embedded tables")
+    end
   end
-
-  defp dataset_data(:van_gent), do: ReferenceData.van_gent_data()
-  defp dataset_data(:akmal), do: ReferenceData.akmal_data()
-
-  # A month's length is only known when the next month in the list is the
-  # one that immediately follows it.
-  defp with_lengths(months) do
-    months
-    |> Enum.chunk_every(2, 1)
-    |> Enum.map(fn
-      [{year, month, first_day}, {next_year, next_month, next_first_day}] ->
-        days =
-          if following({year, month}) == {next_year, next_month},
-            do: Date.diff(next_first_day, first_day)
-
-        %{year: year, month: month, first_day: first_day, days: days}
-
-      [{year, month, first_day}] ->
-        %{year: year, month: month, first_day: first_day, days: nil}
-    end)
-  end
-
-  defp following({year, 12}), do: {year + 1, 1}
-  defp following({year, month}), do: {year, month + 1}
 
   # ── Reports ─────────────────────────────────────────────────────────────
   # Each report prints its findings and returns the number of failures.
 
-  defp report_embedded(embedded) do
-    Mix.shell().info("Embedded datasets")
-
-    embedded
-    |> Enum.sort()
-    |> Enum.map(fn {name, months} -> report_problems("  #{name}", months) end)
-    |> Enum.sum()
-  end
-
-  defp report_datasets_compared(%{van_gent: van_gent, akmal: akmal}) do
-    differences = differences(van_gent, akmal)
-
-    Mix.shell().info(
-      "\nvan_gent compared with akmal: #{count_months(length(differences))} differ " <>
-        "(expected, see Calendrical.Islamic.UmmAlQura.ReferenceData)"
-    )
-
-    Enum.each(differences, fn {key, van_gent_day, akmal_day} ->
-      Mix.shell().info("  #{label(key)}: van_gent #{van_gent_day}, akmal #{akmal_day}")
-    end)
-
-    0
-  end
-
   defp report_calendar(months) do
-    problems = Enum.flat_map(months, &calendar_problems/1)
-    Mix.shell().info("\n#{inspect(UmmAlQura)} compared with van_gent: #{verdict(problems)}")
+    problems = continuity_problems(months) ++ Enum.flat_map(months, &round_trip_problems/1)
+    Mix.shell().info("\n#{inspect(UmmAlQura)} lookups: #{verdict(problems)}")
     Enum.each(problems, &Mix.shell().error("  #{&1}"))
     length(problems)
   end
 
-  defp report_against(nil, _embedded, _dataset), do: 0
+  defp report_kacst(false, _embedded), do: 0
 
-  defp report_against(path, embedded, dataset) do
-    reference = read_reference(path)
-    failures = report_problems("\nReference #{path}", reference)
+  defp report_kacst(true, embedded) do
+    compare("KACST #{@kacst_url}", kacst_months(fetch_kacst()), embedded)
+  end
+
+  defp report_against(nil, _embedded), do: 0
+
+  defp report_against(path, embedded),
+    do: compare("Reference #{path}", read_reference(path), embedded)
+
+  defp compare(heading, reference, embedded) do
+    failures = report_problems("\n#{heading}", reference)
     differences = differences(embedded, reference)
 
-    Mix.shell().info(
-      "#{dataset} compared with the reference: #{count_months(length(differences))} differ"
-    )
+    Mix.shell().info("The embedded tables differ from it in #{count_months(length(differences))}")
 
     Enum.each(differences, fn {key, embedded_day, reference_day} ->
-      Mix.shell().error("  #{label(key)}: #{dataset} #{embedded_day}, reference #{reference_day}")
+      Mix.shell().error("  #{label(key)}: embedded #{embedded_day}, reference #{reference_day}")
     end)
 
-    report_coverage(embedded, reference, dataset)
+    report_coverage(embedded, reference)
     failures + length(differences)
   end
 
@@ -193,11 +167,11 @@ defmodule Mix.Tasks.Calendrical.UmmAlQura.Verify do
     length(problems)
   end
 
-  defp report_coverage(embedded, reference, dataset) do
+  defp report_coverage(embedded, reference) do
     embedded_keys = MapSet.new(embedded, &key/1)
     reference_keys = MapSet.new(reference, &key/1)
     report_only("only in the reference", MapSet.difference(reference_keys, embedded_keys))
-    report_only("only in #{dataset}", MapSet.difference(embedded_keys, reference_keys))
+    report_only("only in the embedded tables", MapSet.difference(embedded_keys, reference_keys))
   end
 
   defp report_only(description, keys) do
@@ -243,14 +217,26 @@ defmodule Mix.Tasks.Calendrical.UmmAlQura.Verify do
     end)
   end
 
-  defp calendar_problems(%{year: year, month: month, first_day: first_day, days: days} = record) do
-    with {:ok, date} <- Date.new(year, month, 1, UmmAlQura),
-         {:ok, ^first_day} <- Date.convert(date, Calendar.ISO),
-         ^days <- UmmAlQura.days_in_month(year, month) do
-      []
-    else
-      _other -> ["#{label(key(record))} disagrees with the calendar"]
-    end
+  defp continuity_problems(months) do
+    months
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.flat_map(fn [previous, current] ->
+      if Date.add(previous.first_day, previous.days) == current.first_day,
+        do: [],
+        else: ["#{label(key(current))} does not start the day after #{label(key(previous))} ends"]
+    end)
+  end
+
+  defp round_trip_problems(%{year: year, month: month, days: days} = record) do
+    Enum.flat_map([1, days], fn day ->
+      with {:ok, date} <- Date.new(year, month, day, UmmAlQura),
+           {:ok, gregorian} <- Date.convert(date, Calendar.ISO),
+           {:ok, ^date} <- Date.convert(gregorian, UmmAlQura) do
+        []
+      else
+        _other -> ["#{label(key(record))} day #{day} does not round-trip"]
+      end
+    end)
   end
 
   defp differences(left, right) do
@@ -263,6 +249,58 @@ defmodule Mix.Tasks.Calendrical.UmmAlQura.Verify do
         :error -> []
       end
     end)
+  end
+
+  # ── KACST ───────────────────────────────────────────────────────────────
+
+  defp fetch_kacst do
+    Enum.each([:inets, :ssl], fn application ->
+      case Application.ensure_all_started(application) do
+        {:ok, _started} -> :ok
+        {:error, reason} -> Mix.raise("Could not start #{application}: #{inspect(reason)}")
+      end
+    end)
+
+    ssl_options = [
+      verify: :verify_peer,
+      cacerts: :public_key.cacerts_get(),
+      customize_hostname_check: [match_fun: :public_key.pkix_verify_hostname_match_fun(:https)]
+    ]
+
+    request = {String.to_charlist(@kacst_url), []}
+
+    case :httpc.request(:get, request, [timeout: 60_000, ssl: ssl_options], body_format: :binary) do
+      {:ok, {{_version, 200, _reason}, _headers, body}} ->
+        body
+
+      {:ok, {{_version, status, _reason}, _headers, _body}} ->
+        Mix.raise("KACST returned HTTP #{status}")
+
+      {:error, reason} ->
+        Mix.raise("Could not reach KACST: #{inspect(reason)}")
+    end
+  end
+
+  defp kacst_years(body) do
+    case decode_json(body) do
+      [_first | _rest] = entries -> entries |> Enum.map(&kacst_year/1) |> Enum.sort()
+      _other -> Mix.raise("KACST returned an unexpected response")
+    end
+  end
+
+  defp kacst_year(%{"year" => year, "months" => lengths} = entry)
+       when is_integer(year) and is_list(lengths) do
+    if Enum.all?(lengths, &is_integer/1),
+      do: {year, lengths},
+      else: Mix.raise("KACST returned an unexpected entry: #{inspect(entry)}")
+  end
+
+  defp kacst_year(entry), do: Mix.raise("KACST returned an unexpected entry: #{inspect(entry)}")
+
+  defp decode_json(body) do
+    :json.decode(body)
+  rescue
+    _error -> Mix.raise("KACST returned a response that is not JSON")
   end
 
   # ── Reference file ──────────────────────────────────────────────────────
@@ -306,7 +344,28 @@ defmodule Mix.Tasks.Calendrical.UmmAlQura.Verify do
     end
   end
 
+  # A month's length is only known when the next line is the month that
+  # immediately follows it.
+  defp with_lengths(months) do
+    months
+    |> Enum.chunk_every(2, 1)
+    |> Enum.map(fn
+      [{year, month, first_day}, {next_year, next_month, next_first_day}] ->
+        days =
+          if following({year, month}) == {next_year, next_month},
+            do: Date.diff(next_first_day, first_day)
+
+        %{year: year, month: month, first_day: first_day, days: days}
+
+      [{year, month, first_day}] ->
+        %{year: year, month: month, first_day: first_day, days: nil}
+    end)
+  end
+
   # ── Formatting ──────────────────────────────────────────────────────────
+
+  defp following({year, 12}), do: {year + 1, 1}
+  defp following({year, month}), do: {year, month + 1}
 
   defp key(%{year: year, month: month}), do: {year, month}
 

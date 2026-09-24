@@ -2,15 +2,13 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
   @moduledoc """
   Tests for `Calendrical.Islamic.UmmAlQura`.
 
-  All expected dates are taken directly from
-  `Calendrical.Islamic.UmmAlQura.ReferenceData.umm_al_qura_dates/0`,
-  which encodes the official Umm al-Qura tables published by KACST and
-  cross-referenced against the dataset maintained by R.H. van Gent
-  (Utrecht University).
+  The calendar is built from the official month lengths published by KACST
+  in `priv/umm_al_qura_month_lengths.csv`. The full-table tests derive every
+  expected month start from that file by summing month lengths from the
+  epoch, independently of the calendar's compiled lookup structures. The
+  spot checks pin dates from the KACST calendar, including months where
+  R.H. van Gent's astronomical reconstruction differs from it.
 
-  Because the implementation embeds the official data at compile time,
-  the test suite asserts 100 % accuracy with no tolerance for off-by-one
-  errors.
   """
 
   use ExUnit.Case, async: true
@@ -18,67 +16,72 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
   doctest Calendrical.Islamic.UmmAlQura
 
   alias Calendrical.Islamic.UmmAlQura
-  alias Calendrical.Islamic.UmmAlQura.ReferenceData
 
-  # ─── Full-dataset validation ───────────────────────────────────────────────
+  # Every month in the data file as `{year, month, first_day, days}`, with
+  # first days found by summing month lengths from 1 Muharram 1 AH.
+  defp official_months do
+    [_header | rows] =
+      "priv/umm_al_qura_month_lengths.csv"
+      |> File.read!()
+      |> String.split(~r/\r?\n/, trim: true)
 
-  test "first_day_of_month/2 is correct for every entry in the official dataset" do
-    reference_data = ReferenceData.umm_al_qura_dates()
-
-    assert reference_data != [],
-           "Reference data must not be empty"
-
-    failures =
-      Enum.reduce(reference_data, [], fn %{
-                                           hijri_year: year,
-                                           hijri_month: month,
-                                           gregorian: expected
-                                         },
-                                         acc ->
-        case UmmAlQura.first_day_of_month(year, month) do
-          {:ok, ^expected} ->
-            acc
-
-          {:ok, actual} ->
-            [
-              "#{year}/#{month}: expected #{Date.to_iso8601(expected)}, got #{Date.to_iso8601(actual)}"
-              | acc
-            ]
-
-          {:error, reason} ->
-            [
-              "#{year}/#{month}: expected #{Date.to_iso8601(expected)}, got error #{inspect(reason)}"
-              | acc
-            ]
-        end
+    {months, _next_first_day} =
+      rows
+      |> Enum.flat_map(fn row ->
+        [year | lengths] = row |> String.split(",") |> Enum.map(&String.to_integer/1)
+        lengths |> Enum.with_index(1) |> Enum.map(fn {days, month} -> {year, month, days} end)
+      end)
+      |> Enum.map_reduce(~D[0622-07-19], fn {year, month, days}, first_day ->
+        {{year, month, first_day, days}, Date.add(first_day, days)}
       end)
 
-    if failures != [] do
-      flunk("""
-      #{length(failures)} of #{length(reference_data)} reference entries failed:
+    months
+  end
 
-        #{failures |> Enum.reverse() |> Enum.join("\n  ")}
-      """)
+  # ─── Full-table validation ─────────────────────────────────────────────────
+
+  test "every month's first day and length matches the KACST data file" do
+    failures =
+      for {year, month, first_day, days} <- official_months(),
+          UmmAlQura.first_day_of_month(year, month) != {:ok, first_day} or
+            UmmAlQura.days_in_month(year, month) != days do
+        "#{year}/#{month}: expected #{first_day}, #{days} days"
+      end
+
+    assert failures == [],
+           "#{length(failures)} months differ, first: #{Enum.join(Enum.take(failures, 10), "; ")}"
+  end
+
+  test "round-trips the first and last day of every month through the Gregorian calendar" do
+    for {year, month, _first_day, days} <- official_months(), day <- [1, days] do
+      {:ok, hijri} = Date.new(year, month, day, UmmAlQura)
+      {:ok, gregorian} = Date.convert(hijri, Calendrical.Gregorian)
+      assert Date.convert(gregorian, UmmAlQura) == {:ok, hijri}
     end
   end
 
-  test "round-trips every Hijri date through Gregorian and back" do
-    reference_data =
-      ReferenceData.umm_al_qura_dates()
-      |> Enum.filter(fn %{hijri_year: y} -> y <= UmmAlQura.max_year() end)
+  describe "range" do
+    test "covers 1 AH through 1500 AH" do
+      assert UmmAlQura.min_year() == 1
+      assert UmmAlQura.max_year() == 1500
+    end
 
-    for %{hijri_year: y, hijri_month: m} <- reference_data do
-      {:ok, hijri} = Date.new(y, m, 1, UmmAlQura)
-      {:ok, gregorian} = Date.convert(hijri, Calendrical.Gregorian)
-      {:ok, back} = Date.convert(gregorian, UmmAlQura)
-      assert back == hijri
+    test "1 Muharram 1 AH is the epoch, 19 July 622" do
+      assert {:ok, ~D[0622-07-19]} = UmmAlQura.first_day_of_month(1, 1)
+    end
+
+    test "30 Dhu al-Hijja 1500 AH, 16 November 2077, is the last day covered" do
+      {:ok, last} = Date.new(1500, 12, 30, UmmAlQura)
+
+      assert {:ok, ~D[2077-11-16 Calendrical.Gregorian]} =
+               Date.convert(last, Calendrical.Gregorian)
     end
   end
 
   # ─── Spot checks ───────────────────────────────────────────────────────────
 
   describe "Era 1 (1356–1419 AH) spot checks" do
-    test "1 Muharram 1356 AH = 14 March 1937 (dataset start)" do
+    test "1 Muharram 1356 AH = 14 March 1937" do
       assert {:ok, ~D[1937-03-14]} = UmmAlQura.first_day_of_month(1356, 1)
     end
 
@@ -86,8 +89,30 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
       assert {:ok, ~D[1972-02-16]} = UmmAlQura.first_day_of_month(1392, 1)
     end
 
-    test "1 Ramadan 1400 AH = 13 July 1980" do
-      assert {:ok, ~D[1980-07-13]} = UmmAlQura.first_day_of_month(1400, 9)
+    test "1 Ramadan 1400 AH = 14 July 1980" do
+      assert {:ok, ~D[1980-07-14]} = UmmAlQura.first_day_of_month(1400, 9)
+    end
+  end
+
+  # R.H. van Gent's tables, which this calendar used before 1.4.0, are an
+  # astronomical reconstruction that differs from KACST in 695 of the
+  # months from 1356 to 1500 AH. These pin representative ones to KACST.
+  describe "months where KACST differs from van Gent's reconstruction" do
+    test "Sha'ban 1364 AH has 29 days (van Gent: 28)" do
+      assert UmmAlQura.days_in_month(1364, 8) == 29
+    end
+
+    test "1356 AH has 355 days and 1401 AH 354 (van Gent: 353 each)" do
+      assert UmmAlQura.days_in_year(1356) == 355
+      assert UmmAlQura.days_in_year(1401) == 354
+    end
+
+    test "1 Rabi' al-Thani 1451 AH = 12 August 2029 (van Gent: 11 August)" do
+      assert {:ok, ~D[2029-08-12]} = UmmAlQura.first_day_of_month(1451, 4)
+    end
+
+    test "1 Shawwal 1485 AH = 31 January 2063 (van Gent: 30 January)" do
+      assert {:ok, ~D[2063-01-31]} = UmmAlQura.first_day_of_month(1485, 10)
     end
   end
 
@@ -174,6 +199,13 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
     test "first_day_of_month/2 returns an error for years beyond the dataset" do
       assert {:error, %Calendrical.IslamicYearOutOfRangeError{year: 9999}} =
                UmmAlQura.first_day_of_month(9999, 1)
+    end
+
+    test "first_day_of_month/2 returns an error for years before 1 AH" do
+      assert {:error, %Calendrical.IslamicYearOutOfRangeError{year: 0}} =
+               UmmAlQura.first_day_of_month(0, 1)
+
+      assert {:error, :invalid_date} = Date.new(0, 1, 1, UmmAlQura)
     end
 
     test "first_day_of_month/2 returns an error for invalid months" do
@@ -323,7 +355,8 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
                UmmAlQura.date_at(~U[2025-03-01 12:00:00Z], day_start: :bogus)
 
       # Outside the embedded reference data.
-      assert {:error, _} = UmmAlQura.date_at(~U[1600-01-01 12:00:00Z])
+      # After 30 Dhu al-Hijja 1500 AH (16 November 2077), the end of the tables.
+      assert {:error, _} = UmmAlQura.date_at(~U[2100-01-01 12:00:00Z])
     end
   end
 end

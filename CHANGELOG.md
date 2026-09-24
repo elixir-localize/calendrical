@@ -18,6 +18,8 @@ The format is based on
 
 * `date_at/2` maps an instant to the calendar date under a chosen `:day_start` on the sunset-day-start calendars: `Calendrical.Islamic.UmmAlQura`, `.Rgsa` and `.Observational` (`:midnight`, an `:evening` 18:00 proxy, or true `:sunset`/Maghrib at Mecca or Cairo), and `Calendrical.Hebrew` (`:midnight`, `:sunset`, or `:nightfall`/tzeit at the observer's `:location` — default Jerusalem — with a configurable `:nightfall_angle`). Midnight stays the default, so the calendars are otherwise unchanged.
 
+* `mix calendrical.umm_al_qura.verify` audits the embedded Umm al-Qura tables, and with `--kacst` compares them with KACST's official data to detect later revisions.
+
 ### Changed
 
 * `first_day_for_territory/1` and `min_days_for_territory/1` (and their locale variants) resolve from Localize's runtime week data instead of clauses compiled from it, so the values follow the loaded CLDR data without recompiling Calendrical. Results are unchanged for every territory.
@@ -25,6 +27,8 @@ The format is based on
 * `Calendrical.Islamic.Visibility` types its crescent-visibility criterion as `t:Calendrical.Islamic.Visibility.method/0` (`:odeh`, `:schaefer` or `:yallop`) instead of `atom()`, and several constant functions narrow their specs to what they actually return.
 
 ### Fixed
+
+* `Calendrical.Islamic.UmmAlQura` is built from KACST's official month lengths instead of R.H. van Gent's astronomical reconstruction, which differed from them in 695 months between 1356 and 1500 AH, including 211 from 2029 on. It now covers 1–1500 AH rather than 1356–1500 AH.
 
 * `Calendrical.LunarJapanese` no longer computes each lunar year twice when converting to other calendars, halving that cost, because the lunisolar mid-year estimate no longer assumes the epoch is a new year. A `:lunar_japanese_epoch` configured in late July or August no longer duplicates or skips years.
 

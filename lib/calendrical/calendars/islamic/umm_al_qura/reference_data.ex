@@ -1,22 +1,24 @@
 defmodule Calendrical.Islamic.UmmAlQura.ReferenceData do
   @moduledoc """
-  Official Umm al-Qura first-day dates sourced from the dataset maintained by
-  R.H. van Gent (Utrecht University) and cross-referenced against the KACST
-  published tables.
+  Umm al-Qura month starts computed by R.H. van Gent (Utrecht University)
+  from the published Umm al-Qura rules, used as the reference data for
+  `Calendrical.Islamic.UmmAlQura.Astronomical`.
+
+  These tables are an astronomical reconstruction, not KACST's official
+  published calendar. They differ from it in 695 of the months between
+  1356 and 1500 AH, and include a 28-day month (Sha'ban 1364) and
+  353-day years (1356 and 1401 AH) that the official table does not. The
+  tabular `Calendrical.Islamic.UmmAlQura` is built from KACST's official
+  month lengths instead.
+
+  Two datasets are available, `van_gent_data/0` (the default) and
+  `akmal_data/0`. Each is a list of cumulative day counts for the start of
+  each Hijri month, from which successive first-day Gregorian dates are
+  derived by taking consecutive differences. The series begins at
+  1 Muharram 1356 AH (14 March 1937 CE) and covers 145 years.
 
   Source: https://webspace.science.uu.nl/~gent0113/islam/ummalqura.htm
           https://gist.github.com/akmalxxx/6492017
-
-  The `official_data/0` function contains cumulative day-count indices for each
-  Hijri month start, from which successive first-day Gregorian dates are derived
-  by taking consecutive differences.  The series begins at 1 Muharram 1356 AH
-  (14 March 1937 CE) and covers approximately 145 years.
-
-  Note that they reference data here could be encoded in a much more efficient
-  way. For example, it could be encoded as a bitstring where each bit indicates
-  if the month is 29 or 30 days. Each year could be extracted as the 12 bits
-  offset by ((year - 1) * 12) from the start of the bitstring. This way calculating
-  firt_day_of_month would be O(1) for any date in the range of the data.
 
   """
 

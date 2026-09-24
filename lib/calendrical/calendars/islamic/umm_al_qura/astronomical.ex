@@ -7,8 +7,8 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
 
   * **Era 2** (1392–1419 AH / 1972–1999 CE) — Conjunction rule (best
     effort).  The first day of the month is the Gregorian day following the
-    geocentric conjunction.  This reproduces 96.7 % of the published KACST
-    dates; the remaining ≈ 3 % differ by one day due to undocumented
+    geocentric conjunction.  This reproduces 96.7 % of van Gent's dates
+    for the era; the remaining ≈ 3 % differ by one day due to undocumented
     details in the historical Saudi determination process.
 
   * **Era 3** (1420–1422 AH / 1999–2002 CE) — Moonset-only rule.  On the
@@ -45,16 +45,20 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
 
   All three involve moonset-sunset gaps of less than 10 seconds — below
   the precision floor of any rise/set calculation given atmospheric
-  refraction uncertainty (±2 arcmin ≈ ±10 s).  The van Gent reference
-  data — independently corroborated by the hijridate package (dralshehri,
-  sourced from KACST archival publications) — is used as the canonical
-  calendar via `Calendrical.Islamic.UmmAlQura.ReferenceData`.
+  refraction uncertainty (±2 arcmin ≈ ±10 s).
+
+  This module is tested against van Gent's tables
+  (`Calendrical.Islamic.UmmAlQura.ReferenceData`), which apply the same
+  rules. They are not KACST's official calendar: from 1451 AH KACST's
+  published table starts 209 months one day later than the rule computed
+  here. For the official Saudi calendar use `Calendrical.Islamic.UmmAlQura`,
+  which is built from KACST's month lengths.
 
   ## Reference
 
   - R.H. van Gent, "The Umm al-Qura Calendar of Saudi Arabia",
     https://webspace.science.uu.nl/~gent0113/islam/ummalqura_rules.htm
-  - hijridate (dralshehri), independent KACST-verified dataset,
+  - hijridate (dralshehri), which ships van Gent's tables,
     https://github.com/dralshehri/hijri-converter
   - Dershowitz & Reingold, *Calendrical Calculations* (4th ed.), Chapter 6
 
@@ -144,7 +148,7 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
   #
   # Van Gent describes a rule based on whether the conjunction falls within
   # 3 hours of 0 h UTC ("Saudi midnight").  Empirically, the best match to
-  # the published KACST data (96.7 % — 325 of 336 months) is obtained by
+  # van Gent's data (96.7 % — 325 of 336 months) is obtained by
   # taking the Gregorian date of the geocentric conjunction in UTC and
   # adding one day.  The remaining ≈ 3 % of months (11 of 336) differ by
   # one day, likely due to undocumented details in the historical KACST
@@ -314,7 +318,7 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
   # Returns the UTC DateTime of sunset in Mecca on `date`.
   #
   # We use the JPL DE440s-based `Astro.Solar.SunRiseSet.sunset` here rather
-  # than the Chapront-series `Astro.sunset`.  Experiments against the KACST
+  # than the Chapront-series `Astro.sunset`.  Experiments against van Gent's
   # reference dataset (1423–1500 AH) showed that the Chapront algorithm gives
   # sunset times that are systematically 2.5–4 minutes *later* than the true
   # astronomical sunset for Mecca's geometry.  That bias caused 68 boundary
