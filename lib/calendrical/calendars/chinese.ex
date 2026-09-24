@@ -698,6 +698,86 @@ defmodule Calendrical.Chinese do
     Lunisolar.date_from_iso_days(iso_days, epoch(), &location/1)
   end
 
+  @doc """
+  Returns whether a year, ordinal month and day form a valid date in the
+  `#{inspect(__MODULE__)}` calendar.
+
+  ### Arguments
+
+  * `year` is any year in the `#{inspect(__MODULE__)}` calendar.
+
+  * `month` is an ordinal month number, 1..12 or 1..13 in a leap year.
+
+  * `day` is a day of the month.
+
+  ### Returns
+
+  * `true` or `false`.
+
+  ### Examples
+
+      iex> Calendrical.Chinese.valid_date?(4662, 13, 1)
+      true
+
+      iex> Calendrical.Chinese.valid_date?(4661, 13, 1)
+      false
+
+  """
+  @impl true
+  def valid_date?(year, month, day) do
+    Lunisolar.valid_date?(year, month, day, epoch(), &location/1)
+  end
+
+  @doc """
+  Returns the number of days in an ordinal month of a year.
+
+  ### Arguments
+
+  * `year` is any year in the `#{inspect(__MODULE__)}` calendar.
+
+  * `month` is an ordinal month number, 1..12 or 1..13 in a leap year.
+
+  ### Returns
+
+  * The number of days in the month, 29 or 30.
+
+  ### Examples
+
+      # The intercalary 6th month (閏六月) of Y4662 (= AD 2025)
+      iex> Calendrical.Chinese.days_in_month(4662, 7)
+      29
+
+  """
+  @impl true
+  def days_in_month(year, month) do
+    Lunisolar.days_in_month(year, month, epoch(), &location/1)
+  end
+
+  @doc """
+  Returns the number of days in a year.
+
+  ### Arguments
+
+  * `year` is any year in the `#{inspect(__MODULE__)}` calendar.
+
+  ### Returns
+
+  * The number of days from the year's new year to the next.
+
+  ### Examples
+
+      iex> Calendrical.Chinese.days_in_year(4662)
+      384
+
+      iex> Calendrical.Chinese.days_in_year(4661)
+      354
+
+  """
+  @impl true
+  def days_in_year(year) do
+    Lunisolar.days_in_year(year, epoch(), &location/1)
+  end
+
   # Since the Chinese calendar is a lunisolar
   # calendar, a reference longitude is required
   # in order to calculate sunset and sunrise.
@@ -708,13 +788,12 @@ defmodule Calendrical.Chinese do
 
   @beijing_local_offset Astro.Time.hours_to_days(1397 / 180)
   @china_standard_offset Astro.Time.hours_to_days(8)
+  @china_1929 Calendrical.Gregorian.date_to_iso_days(1929, 1, 1)
 
   @doc false
   @spec location(Time.time()) :: {Astro.angle(), Astro.angle(), Astro.meters(), Time.hours()}
   def location(iso_days) do
-    {year, _month, _day} = Calendrical.Gregorian.date_from_iso_days(trunc(iso_days))
-
-    if year < 1929 do
+    if iso_days < @china_1929 do
       {angle(39, 55, 0), angle(116, 25, 0), mt(43.5), @beijing_local_offset}
     else
       {angle(39, 55, 0), angle(116, 25, 0), mt(43.5), @china_standard_offset}

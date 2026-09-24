@@ -255,12 +255,17 @@ defmodule Calendrical.Lunisolar do
   """
 
   def leap_year?(year, epoch, location_fun) do
-    start_of_this_year = date_to_iso_days(year, 1, 1, epoch, location_fun)
-    start_of_next_year = date_to_iso_days(year + 1, 1, 1, epoch, location_fun)
-    # A 13-month year spans 383..385 days and an ordinary year 353..355.
-    # `round/1` maps both ranges correctly; `floor/1` would truncate a
-    # 383-day leap year to 12 months (383 / 29.53 ≈ 12.97).
-    round((start_of_next_year - start_of_this_year) / Time.mean_synodic_month()) == 13
+    {{new_year, _leap_sui?}, _next_solstice, {next_new_year, _next_leap_sui?}} =
+      year_suis(year, epoch, location_fun)
+
+    thirteen_months?(new_year, next_new_year)
+  end
+
+  # A 13-month year spans 383..385 days and an ordinary year 353..355.
+  # `round/1` maps both ranges correctly; `floor/1` would truncate a
+  # 383-day leap year to 12 months (383 / 29.53 ≈ 12.97).
+  defp thirteen_months?(new_year, next_new_year) do
+    round((next_new_year - new_year) / Time.mean_synodic_month()) == 13
   end
 
   @doc """
@@ -314,13 +319,37 @@ defmodule Calendrical.Lunisolar do
 
   """
   def leap_month(year, epoch, location_fun) do
-    if leap_year?(year, epoch, location_fun) do
-      Enum.find(
-        1..months_in_year(year, epoch, location_fun),
-        &leap_month?(year, &1, epoch, location_fun)
-      )
+    {{new_year, leap_sui?}, next_solstice, {next_new_year, next_leap_sui?}} =
+      year_suis(year, epoch, location_fun)
+
+    if thirteen_months?(new_year, next_new_year) do
+      # Month 1 is never the leap month, so the search starts at month 2.
+      second_month = new_moon_on_or_after(new_year + 1, location_fun)
+      term = current_major_solar_term(second_month, location_fun)
+      suis = {next_solstice, leap_sui?, next_leap_sui?}
+      first_leap_month(2, second_month, term, suis, location_fun)
+    end
+  end
+
+  # The first month, from ordinal `month` starting on `start` (whose major
+  # solar term is `term`), that lies in a leap sui and has no major solar
+  # term of its own. A month belongs to the sui of the December solstice on
+  # or before its first day.
+  defp first_leap_month(month, _start, _term, _suis, _location_fun)
+       when month > @lunar_calendar_months_in_year + 1 do
+    nil
+  end
+
+  defp first_leap_month(month, start, term, suis, location_fun) do
+    {next_solstice, leap_sui?, next_leap_sui?} = suis
+    next_start = new_moon_on_or_after(start + 1, location_fun)
+    next_term = current_major_solar_term(next_start, location_fun)
+    in_leap_sui? = if start < next_solstice, do: leap_sui?, else: next_leap_sui?
+
+    if in_leap_sui? and term == next_term do
+      month
     else
-      nil
+      first_leap_month(month + 1, next_start, next_term, suis, location_fun)
     end
   end
 
@@ -365,9 +394,44 @@ defmodule Calendrical.Lunisolar do
       |> mid_year(cyclical_year, epoch)
       |> new_year_on_or_before(location_fun)
 
-    prior_new_moon = new_moon_on_or_after(new_year + (month - 1) * 29, location_fun)
+    month_start(new_year, month, location_fun) + day - 1
+  end
 
-    prior_new_moon + day - 1
+  # The first day of ordinal month `month` in the year that begins on
+  # `new_year`: the new year itself for month 1, otherwise the first new moon
+  # on or after 29 days a month later, which is always inside that month.
+  defp month_start(new_year, 1, _location_fun), do: new_year
+
+  defp month_start(new_year, month, location_fun) do
+    new_moon_on_or_after(new_year + (month - 1) * 29, location_fun)
+  end
+
+  # The new year that begins `year`.
+  defp new_year(year, epoch, location_fun) do
+    {cycle, cyclical_year} = cycle_and_year(year)
+
+    cycle
+    |> mid_year(cyclical_year, epoch)
+    |> new_year_on_or_before(location_fun)
+  end
+
+  # The two suis that `year` spans: the one its new year falls in and the one
+  # the next year's new year falls in, as `{new_year, leap_sui?}` each, with
+  # the December solstice between them. The three solstices are found once
+  # and shared by both suis.
+  defp year_suis(year, epoch, location_fun) do
+    {cycle, cyclical_year} = cycle_and_year(year)
+
+    solstice =
+      cycle
+      |> mid_year(cyclical_year, epoch)
+      |> december_solstice_on_or_before(location_fun)
+
+    next_solstice = next_december_solstice(solstice, location_fun)
+    following_solstice = next_december_solstice(next_solstice, location_fun)
+
+    {sui(solstice, next_solstice, location_fun), next_solstice,
+     sui(next_solstice, following_solstice, location_fun)}
   end
 
   # defp cyclical_date_to_iso_days({cycle, cyclical_year, month, day}, epoch, location_fun) do
@@ -439,12 +503,6 @@ defmodule Calendrical.Lunisolar do
     {cycle, cyclic_year}
   end
 
-  defp months_in_year(year, epoch, location_fun) do
-    if leap_year?(year, epoch, location_fun),
-      do: @lunar_calendar_months_in_year + 1,
-      else: @lunar_calendar_months_in_year
-  end
-
   defp days_in_lunar_month(year, lunar_month, epoch, location_fun) do
     case lunar_month_to_calendar_month(year, lunar_month, epoch, location_fun) do
       {:ok, month} ->
@@ -455,39 +513,62 @@ defmodule Calendrical.Lunisolar do
     end
   end
 
-  defp days_in_month(year, month, epoch, location_fun) do
-    first =
-      date_to_iso_days(year, month, 1, epoch, location_fun)
-
-    last =
-      if month == months_in_year(year, epoch, location_fun) do
-        date_to_iso_days(year + 1, 1, 1, epoch, location_fun)
-      else
-        date_to_iso_days(year, month + 1, 1, epoch, location_fun)
-      end
-
-    # `last` is the first day of the following month, so the month
-    # length is the difference without adding one.
-    last - first
+  @doc false
+  # The length of ordinal month `month`: from its first day to the first day
+  # of the month after it. The month after the year's last month is the next
+  # year's first, so one new year answers every month.
+  def days_in_month(year, month, epoch, location_fun) do
+    new_year = new_year(year, epoch, location_fun)
+    month_start(new_year, month + 1, location_fun) - month_start(new_year, month, location_fun)
   end
 
+  @doc false
+  # The number of days from the new year of `year` to the next.
+  def days_in_year(year, epoch, location_fun) do
+    {{new_year, _leap_sui?}, _next_solstice, {next_new_year, _next_leap_sui?}} =
+      year_suis(year, epoch, location_fun)
+
+    next_new_year - new_year
+  end
+
+  @doc false
+  # The `Calendar.valid_date?/3` answer for an ordinal date: the month is in
+  # the year and the day in the month. Months 1..12 are in every year, so only
+  # month 13 needs the next new year.
+  def valid_date?(_year, month, _day, _epoch, _location_fun)
+      when month > @lunar_calendar_months_in_year + 1 do
+    false
+  end
+
+  def valid_date?(year, 13, day, epoch, location_fun) do
+    {{new_year, _leap_sui?}, _next_solstice, {next_new_year, _next_leap_sui?}} =
+      year_suis(year, epoch, location_fun)
+
+    thirteen_months?(new_year, next_new_year) and
+      day <= next_new_year - month_start(new_year, 13, location_fun)
+  end
+
+  def valid_date?(year, month, day, epoch, location_fun) do
+    day <= days_in_month(year, month, epoch, location_fun)
+  end
+
+  # `leap_month/3` is `nil` unless the year is a leap year.
   defp lunar_month_to_calendar_month(year, lunar_month, epoch, location_fun)
        when is_integer(lunar_month) and lunar_month in 1..@lunar_calendar_months_in_year do
-    if leap_year?(year, epoch, location_fun) &&
-         leap_month(year, epoch, location_fun) < lunar_month do
-      {:ok, lunar_month + 1}
-    else
-      {:ok, lunar_month}
+    case leap_month(year, epoch, location_fun) do
+      leap_month when is_integer(leap_month) and leap_month < lunar_month ->
+        {:ok, lunar_month + 1}
+
+      _other ->
+        {:ok, lunar_month}
     end
   end
 
   defp lunar_month_to_calendar_month(year, {lunar_month, :leap}, epoch, location_fun)
        when is_integer(lunar_month) and lunar_month in 1..@lunar_calendar_months_in_year do
-    if leap_year?(year, epoch, location_fun) &&
-         leap_month(year, epoch, location_fun) == lunar_month do
-      {:ok, lunar_month}
-    else
-      {:error, :invalid_leap_month}
+    case leap_month(year, epoch, location_fun) do
+      ^lunar_month -> {:ok, lunar_month}
+      _other -> {:error, :invalid_leap_month}
     end
   end
 
@@ -585,7 +666,7 @@ defmodule Calendrical.Lunisolar do
     mid_year = mid_year(cycle, cyclical_year, epoch)
     new_year = new_year_on_or_before(mid_year, location_fun)
 
-    p = new_moon_on_or_after(new_year + (lunar_month - 1) * 29, location_fun)
+    p = month_start(new_year, lunar_month, location_fun)
     d = alt_cyclical_date_from_iso_days(p, epoch, location_fun)
 
     prior_new_moon =
@@ -613,22 +694,49 @@ defmodule Calendrical.Lunisolar do
     start_of_month_in_iso_days =
       new_moon_before(iso_days + 1, location_fun)
 
+    {prior_leap_month?, leap_month?} =
+      leap_months_to(leap_sui_year?, prior_month_12, start_of_month_in_iso_days, location_fun)
+
+    months = lunar_months_between(start_of_month_in_iso_days, prior_month_12)
+
     lunar_month =
-      start_of_month_in_iso_days
-      |> lunar_months_between(prior_month_12)
-      |> offset_if_prior_leap_month(
-        leap_sui_year?,
-        prior_month_12,
-        start_of_month_in_iso_days,
-        location_fun
-      )
+      if(prior_leap_month?, do: months - 1, else: months)
       |> amod(@lunar_calendar_months_in_year)
       |> trunc()
 
-    leap_month? =
-      intercalary_month?(leap_sui_year?, start_of_month_in_iso_days, prior_month_12, location_fun)
-
     {lunar_month, start_of_month_in_iso_days, leap_month?}
+  end
+
+  # For the month starting on `start_of_month` in a sui whose month 12 starts
+  # on `month_12`: whether a month from month 12 up to and including it has
+  # no major solar term (a leap month has already occurred), and whether it
+  # is itself the leap month — the sui's first month without one. Only a leap
+  # sui has a leap month. The months are walked forward from month 12 once,
+  # each month's term found once.
+  defp leap_months_to(false = _leap_sui?, _month_12, _start_of_month, _location_fun),
+    do: {false, false}
+
+  defp leap_months_to(true = _leap_sui?, month_12, start_of_month, location_fun)
+       when start_of_month < month_12 do
+    {false, no_major_solar_term?(start_of_month, location_fun)}
+  end
+
+  defp leap_months_to(true = _leap_sui?, month_12, start_of_month, location_fun) do
+    term = current_major_solar_term(month_12, location_fun)
+    walk_leap_months(month_12, term, start_of_month, false, location_fun)
+  end
+
+  defp walk_leap_months(month_start, term, start_of_month, earlier_leap?, location_fun) do
+    next_start = new_moon_on_or_after(month_start + 1, location_fun)
+    next_term = current_major_solar_term(next_start, location_fun)
+    no_major_term? = term == next_term
+
+    if month_start >= start_of_month do
+      {earlier_leap? or no_major_term?, no_major_term? and not earlier_leap?}
+    else
+      earlier_leap? = earlier_leap? or no_major_term?
+      walk_leap_months(next_start, next_term, start_of_month, earlier_leap?, location_fun)
+    end
   end
 
   defp lunisolar_year(iso_days, location_fun) do
@@ -641,37 +749,6 @@ defmodule Calendrical.Lunisolar do
     next_month_11 = new_moon_before(1 + next_solstice, location_fun)
 
     {prior_month_12, next_month_11}
-  end
-
-  defp intercalary_month?(leap_sui_year?, iso_days, start_of_sui_year, location_fun) do
-    leap_sui_year? && no_major_solar_term?(iso_days, location_fun) &&
-      !prior_leap_month?(
-        start_of_sui_year,
-        new_moon_before(iso_days, location_fun),
-        location_fun
-      )
-  end
-
-  defp offset_if_prior_leap_month(
-         months,
-         true = _leap_sui_year?,
-         last_month_12,
-         start_of_month,
-         location_fun
-       ) do
-    if prior_leap_month?(last_month_12, start_of_month, location_fun),
-      do: months - 1,
-      else: months
-  end
-
-  defp offset_if_prior_leap_month(
-         months,
-         _leap_sui_year?,
-         _last_month_12,
-         _start_of_month,
-         _location_fun
-       ) do
-    months
   end
 
   defp lunar_months_between(from_iso_days, to_iso_days) do
@@ -963,21 +1040,12 @@ defmodule Calendrical.Lunisolar do
 
   """
   def new_year_in_sui(iso_days, location_fun) do
-    {prior_month_12, next_month_11} = lunisolar_year(iso_days, location_fun)
-    prior_month_13 = new_moon_on_or_after(1 + prior_month_12, location_fun)
+    solstice = december_solstice_on_or_before(iso_days, location_fun)
 
-    leap_year? =
-      leap_lunisolar_year?(prior_month_12, next_month_11)
+    {new_year, _leap_sui?} =
+      sui(solstice, next_december_solstice(solstice, location_fun), location_fun)
 
-    no_prior_major_solar_term? =
-      no_major_solar_term?(prior_month_12, location_fun) ||
-        no_major_solar_term?(prior_month_13, location_fun)
-
-    if leap_year? && no_prior_major_solar_term? do
-      new_moon_on_or_after(1 + prior_month_13, location_fun)
-    else
-      prior_month_13
-    end
+    new_year
   end
 
   @doc """
@@ -986,12 +1054,55 @@ defmodule Calendrical.Lunisolar do
 
   """
   def new_year_on_or_before(iso_days, location_fun) do
-    new_year = new_year_in_sui(iso_days, location_fun)
+    solstice = december_solstice_on_or_before(iso_days, location_fun)
+
+    {new_year, _leap_sui?} =
+      sui(solstice, next_december_solstice(solstice, location_fun), location_fun)
 
     if iso_days >= new_year do
       new_year
     else
-      new_year_in_sui(iso_days - 180, location_fun)
+      # `iso_days` lies between the solstice and the new year after it, so its
+      # new year is that of the previous sui, which ends at this solstice.
+      previous_solstice = december_solstice_on_or_before(iso_days - 180, location_fun)
+      {previous_new_year, _leap_sui?} = sui(previous_solstice, solstice, location_fun)
+      previous_new_year
+    end
+  end
+
+  # The December solstice a year after `solstice`.
+  defp next_december_solstice(solstice, location_fun) do
+    december_solstice_on_or_before(solstice + @one_solar_year_later, location_fun)
+  end
+
+  # The sui from the December solstice `solstice` to `next_solstice`, as
+  # `{new_year, leap_sui?}`. Month 12 begins with the first new moon after the
+  # solstice and the new year usually with the next (month 13 of the old
+  # count). In a leap sui — 13 new moons from month 12 to the next month 11 —
+  # the new year moves one month later when month 12 or the month after it
+  # has no major solar term, since that month is the sui's leap month.
+  defp sui(solstice, next_solstice, location_fun) do
+    month_12 = new_moon_on_or_after(1 + solstice, location_fun)
+    next_month_11 = new_moon_before(1 + next_solstice, location_fun)
+    month_13 = new_moon_on_or_after(1 + month_12, location_fun)
+    leap_sui? = leap_lunisolar_year?(month_12, next_month_11)
+
+    if leap_sui? do
+      {leap_sui_new_year(month_12, month_13, location_fun), leap_sui?}
+    else
+      {month_13, leap_sui?}
+    end
+  end
+
+  defp leap_sui_new_year(month_12, month_13, location_fun) do
+    month_14 = new_moon_on_or_after(1 + month_13, location_fun)
+    term_12 = current_major_solar_term(month_12, location_fun)
+    term_13 = current_major_solar_term(month_13, location_fun)
+
+    if term_12 == term_13 or term_13 == current_major_solar_term(month_14, location_fun) do
+      month_14
+    else
+      month_13
     end
   end
 

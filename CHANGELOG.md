@@ -26,6 +26,8 @@ The format is based on
 
 * `Calendrical.Islamic.Visibility` types its crescent-visibility criterion as `t:Calendrical.Islamic.Visibility.method/0` (`:odeh`, `:schaefer` or `:yallop`) instead of `atom()`, and several constant functions narrow their specs to what they actually return.
 
+* The Chinese, Korean, Vietnamese and Lunar Japanese calendars find a year's new year once per question and each new moon once, so `valid_date?/3`, `days_in_month/2`, `days_in_year/1`, `leap_year?/1`, `leap_month/1`, `new/3` and `lunar_month_of_year/2` ask for far fewer new moons — a quarter as many across a lunisolar holiday corpus. Results are unchanged.
+
 ### Fixed
 
 * `Calendrical.Islamic.UmmAlQura` is built from KACST's official month lengths instead of R.H. van Gent's astronomical reconstruction, which differed from them in 695 months between 1356 and 1500 AH, including 211 from 2029 on. It now covers 1–1500 AH rather than 1356–1500 AH.

@@ -672,6 +672,86 @@ defmodule Calendrical.LunarJapanese do
     Lunisolar.date_from_iso_days(iso_days, epoch(), &location/1)
   end
 
+  @doc """
+  Returns whether a year, ordinal month and day form a valid date in the
+  `#{inspect(__MODULE__)}` calendar.
+
+  ### Arguments
+
+  * `year` is any year in the `#{inspect(__MODULE__)}` calendar.
+
+  * `month` is an ordinal month number, 1..12 or 1..13 in a leap year.
+
+  * `day` is a day of the month.
+
+  ### Returns
+
+  * `true` or `false`.
+
+  ### Examples
+
+      iex> Calendrical.LunarJapanese.valid_date?(1381, 13, 1)
+      true
+
+      iex> Calendrical.LunarJapanese.valid_date?(1380, 13, 1)
+      false
+
+  """
+  @impl true
+  def valid_date?(year, month, day) do
+    Lunisolar.valid_date?(year, month, day, epoch(), &location/1)
+  end
+
+  @doc """
+  Returns the number of days in an ordinal month of a year.
+
+  ### Arguments
+
+  * `year` is any year in the `#{inspect(__MODULE__)}` calendar.
+
+  * `month` is an ordinal month number, 1..12 or 1..13 in a leap year.
+
+  ### Returns
+
+  * The number of days in the month, 29 or 30.
+
+  ### Examples
+
+      # The intercalary 6th month of Y1381 (= AD 2025)
+      iex> Calendrical.LunarJapanese.days_in_month(1381, 7)
+      29
+
+  """
+  @impl true
+  def days_in_month(year, month) do
+    Lunisolar.days_in_month(year, month, epoch(), &location/1)
+  end
+
+  @doc """
+  Returns the number of days in a year.
+
+  ### Arguments
+
+  * `year` is any year in the `#{inspect(__MODULE__)}` calendar.
+
+  ### Returns
+
+  * The number of days from the year's new year to the next.
+
+  ### Examples
+
+      iex> Calendrical.LunarJapanese.days_in_year(1381)
+      384
+
+      iex> Calendrical.LunarJapanese.days_in_year(1380)
+      354
+
+  """
+  @impl true
+  def days_in_year(year) do
+    Lunisolar.days_in_year(year, epoch(), &location/1)
+  end
+
   @doc false
   def new_moon_on_or_after(iso_days) do
     Lunisolar.new_moon_on_or_after(iso_days, &location/1)
@@ -822,13 +902,12 @@ defmodule Calendrical.LunarJapanese do
 
   @tokyo_local_offset Astro.Time.hours_to_days(9 + 143 / 450)
   @japan_standard_offset Astro.Time.hours_to_days(9)
+  @japan_1888 Calendrical.Gregorian.date_to_iso_days(1888, 1, 1)
 
   @doc false
   @spec location(Time.time()) :: {Astro.angle(), Astro.angle(), Astro.meters(), Time.hours()}
   def location(iso_days) do
-    {year, _month, _day} = Calendrical.Gregorian.date_from_iso_days(trunc(iso_days))
-
-    if year < 1888 do
+    if iso_days < @japan_1888 do
       {deg(35.7), angle(139, 46, 0), mt(24), @tokyo_local_offset}
     else
       {deg(35), deg(135), mt(0), @japan_standard_offset}
