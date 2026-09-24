@@ -35,8 +35,9 @@ defmodule Calendrical.Reform.Sweden.Transitional do
 
   ### Arguments
 
-  * `year`, `month` and `day` are the parts of a Swedish calendar date in the
-    1700–1712 window (30 February 1712 is accepted).
+  * `year`, `month` and `day` are the parts of a Swedish calendar date. From
+    1 March 1700 to 30 February 1712 the date runs one day ahead of Julian;
+    before and after that window it is the Julian date.
 
   ### Returns
 
@@ -55,12 +56,20 @@ defmodule Calendrical.Reform.Sweden.Transitional do
     Calendrical.Julian.date_to_iso_days(year, month, day) + offset(year, month, day)
   end
 
-  # 1700-03-01 through 1712-02-30 run one day behind Julian; from 1712-03-01 the
-  # calendar is realigned with Julian. Julian's date_to_iso_days is a
-  # non-validating arithmetic formula, so 30 February 1712 rolls to 1 March and
-  # the -1 offset brings it back to the physical 29 February 1712.
-  defp offset(year, month, day) when {year, month, day} < {1712, 3, 1}, do: -1
+  # 1700-03-01 through 1712-02-30 run one day behind Julian (29 February 1700
+  # was omitted); before and after that the calendar is Julian. Julian's
+  # date_to_iso_days is a non-validating arithmetic formula, so 30 February
+  # 1712 rolls to 1 March and the -1 offset brings it back to the physical
+  # 29 February 1712.
+  defp offset(year, month, day)
+       when {year, month, day} >= {1700, 3, 1} and {year, month, day} < {1712, 3, 1},
+       do: -1
+
   defp offset(_year, _month, _day), do: 0
+
+  # The ISO day of 1 March 1700, the window's first day; its last is
+  # `@february_30_1712`.
+  @first_ahead_day Calendrical.Julian.date_to_iso_days(1700, 3, 1) - 1
 
   @doc """
   Converts an ISO day number to a `{year, month, day}` in the transitional
@@ -68,7 +77,8 @@ defmodule Calendrical.Reform.Sweden.Transitional do
 
   ### Arguments
 
-  * `iso_days` is an integer ISO day number within the 1700–1712 window.
+  * `iso_days` is an integer ISO day number. Outside the 1700–1712 window
+    the result is the Julian date.
 
   ### Returns
 
@@ -85,15 +95,20 @@ defmodule Calendrical.Reform.Sweden.Transitional do
           {Calendar.year(), Calendar.month(), Calendar.day()}
   def date_from_iso_days(@february_30_1712), do: {1712, 2, 30}
 
-  def date_from_iso_days(iso_days) do
+  def date_from_iso_days(iso_days)
+      when iso_days >= @first_ahead_day and iso_days < @february_30_1712 do
     Calendrical.Julian.date_from_iso_days(iso_days + 1)
+  end
+
+  def date_from_iso_days(iso_days) do
+    Calendrical.Julian.date_from_iso_days(iso_days)
   end
 
   @doc """
   Returns whether `year` is a leap year in the transitional Swedish calendar.
 
-  Leap years follow the Julian rule; 1712 additionally carried the extra
-  30 February day.
+  Leap years follow the Julian rule, except 1700, whose 29 February was
+  omitted; 1712 additionally carried the extra 30 February day.
 
   ### Arguments
 
@@ -108,9 +123,14 @@ defmodule Calendrical.Reform.Sweden.Transitional do
       iex> Calendrical.Reform.Sweden.Transitional.leap_year?(1704)
       true
 
+      iex> Calendrical.Reform.Sweden.Transitional.leap_year?(1700)
+      false
+
   """
   @impl true
   @spec leap_year?(Calendar.year()) :: boolean()
+  def leap_year?(1700), do: false
+
   def leap_year?(year) do
     Calendrical.Julian.leap_year?(year)
   end

@@ -17,15 +17,16 @@ defmodule Calendrical.Base.Egyptian do
 
   @months_with_30_days 1..12
 
-  def valid_date?(_year, month, day) when month in @months_with_30_days and day in 1..30 do
+  def valid_date?(year, month, day)
+      when is_integer(year) and month in @months_with_30_days and day in 1..30 do
     true
   end
 
-  def valid_date?(year, 13, 6) do
+  def valid_date?(year, 13, 6) when is_integer(year) do
     leap_year?(year)
   end
 
-  def valid_date?(_year, 13, day) when day in 1..5 do
+  def valid_date?(year, 13, day) when is_integer(year) and day in 1..5 do
     true
   end
 

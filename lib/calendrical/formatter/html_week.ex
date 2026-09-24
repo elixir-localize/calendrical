@@ -25,12 +25,14 @@ defmodule Calendrical.Formatter.HTML.Week do
   end
 
   @impl true
-  def format_week(formatted_days, _year, _month, {_, week_number}, options) do
-    week_indicator = week_indicator(week_number, options)
+  def format_week(formatted_days, _year, _month, week_of_year, options) do
+    week_indicator = week_indicator(week_of_year, options)
     Basic.week_html([week_indicator | formatted_days])
   end
 
-  defp week_indicator(week_number, options) do
+  # A calendar that does not number its weeks gets an empty week cell,
+  # which keeps the columns aligned.
+  defp week_indicator({_year, week_number}, options) when is_integer(week_number) do
     %Options{locale: locale, number_system: number_system} = options
 
     week_number =
@@ -39,6 +41,10 @@ defmodule Calendrical.Formatter.HTML.Week do
       |> lpad
 
     Basic.day_html(@week_prefix <> week_number, @week_class)
+  end
+
+  defp week_indicator(_not_numbered, _options) do
+    Basic.day_html(" ", @week_class)
   end
 
   defp lpad(<<x::bytes-1>>), do: "0" <> x

@@ -224,9 +224,16 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
       end
     end
 
-    test "define_transition_functions/2 passes each head with its tail" do
-      assert Config.define_transition_functions([1, 2, 3], fn head, tail -> {head, tail} end) ==
-               [{1, [2, 3]}, {2, [3]}, {3, []}]
+    test "segments/1 and transition_months/1 describe each calendar's span" do
+      config = Config.extract_options(calendars: [~D[1752-09-14]])
+
+      assert [
+               %{last: 640_161, calendar: Calendrical.Julian, last_month: {1752, 9}},
+               %{first: 640_162, last: nil}
+             ] =
+               Config.segments(config)
+
+      assert Config.transition_months(config) == [{1752, 9}]
     end
   end
 

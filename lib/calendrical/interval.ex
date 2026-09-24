@@ -43,8 +43,9 @@ defmodule Calendrical.Interval do
       Date.range(~D[2019-W01-1 Calendrical.NRF], ~D[2019-W52-7 Calendrical.NRF])
 
   """
-  @spec year(Calendar.year(), Calendrical.calendar()) :: Date.Range.t()
-  @spec year(Date.t()) :: Date.Range.t()
+  @spec year(Calendar.year(), Calendrical.calendar()) ::
+          Date.Range.t() | {:error, :not_defined | :invalid_date}
+  @spec year(Date.t()) :: Date.Range.t() | {:error, :not_defined | :invalid_date}
 
   def year(%{calendar: Calendar.ISO} = date) do
     %{date | calendar: Calendrical.Gregorian}
@@ -88,8 +89,9 @@ defmodule Calendrical.Interval do
 
   """
   @spec quarter(Calendar.year(), Calendrical.quarter(), Calendrical.calendar()) ::
-          Date.Range.t()
-  @spec quarter(Date.t()) :: Date.Range.t()
+          Date.Range.t() | {:error, :not_defined | :invalid_date}
+  @spec quarter(Date.t()) ::
+          Date.Range.t() | {:error, :not_defined | :invalid_date} | {:error, Exception.t()}
 
   def quarter(%{calendar: Calendar.ISO} = date) do
     %{date | calendar: Calendrical.Gregorian}
@@ -98,8 +100,10 @@ defmodule Calendrical.Interval do
   end
 
   def quarter(date) do
-    quarter = Calendrical.quarter_of_year(date)
-    quarter(date.year, quarter, date.calendar)
+    case Calendrical.quarter_of_year(date) do
+      quarter when is_integer(quarter) -> quarter(date.year, quarter, date.calendar)
+      {:error, _reason} = error -> error
+    end
   end
 
   def quarter(year, quarter, calendar \\ Calendrical.Gregorian) do
@@ -133,8 +137,9 @@ defmodule Calendrical.Interval do
       Date.range(~D[2019-03-01 Calendrical.Fiscal.US], ~D[2019-03-31 Calendrical.Fiscal.US])
 
   """
-  @spec month(Calendar.year(), Calendar.month(), Calendrical.calendar()) :: Date.Range.t()
-  @spec month(Date.t()) :: Date.Range.t()
+  @spec month(Calendar.year(), Calendar.month(), Calendrical.calendar()) ::
+          Date.Range.t() | {:error, :not_defined | :invalid_date}
+  @spec month(Date.t()) :: Date.Range.t() | {:error, :invalid_date}
 
   def month(%{calendar: Calendar.ISO} = date) do
     %{date | calendar: Calendrical.Gregorian}
@@ -142,14 +147,40 @@ defmodule Calendrical.Interval do
     |> coerce_iso_calendar
   end
 
+  # `month/2` counts a calendar's months as `month_of_year/1` numbers them
+  # (a fiscal month in a week-based calendar), as the date does (the
+  # ordinal month of a lunisolar calendar, whose `month_of_year/1` is the
+  # traditional month) or from the start of the year (a Julian new-year
+  # variant). The month is the one that holds the date.
   def month(date) do
-    month = Calendrical.month_of_year(date)
-    month(date.year, month, date.calendar)
+    iso_days = Date.to_gregorian_days(date)
+    candidates = Enum.uniq([Calendrical.month_of_year(date), date.month])
+
+    Enum.find_value(candidates, &holding_month(date, &1, iso_days)) ||
+      Enum.find_value(1..months_in_year(date)//1, &holding_month(date, &1, iso_days)) ||
+      {:error, :invalid_date}
+  end
+
+  defp holding_month(date, month, iso_days) do
+    range = month(date.year, month, date.calendar)
+    if holds?(range, iso_days), do: range
+  end
+
+  defp months_in_year(%{year: year, calendar: calendar}) do
+    case calendar.months_in_year(year) do
+      months when is_integer(months) -> months
+      _undefined -> 0
+    end
   end
 
   def month(year, month, calendar \\ Calendrical.Gregorian) do
     calendar.month(year, month)
   end
+
+  defp holds?(%Date.Range{first_in_iso_days: first, last_in_iso_days: last}, iso_days),
+    do: first <= iso_days and iso_days <= last
+
+  defp holds?(_not_a_range, _iso_days), do: false
 
   @doc """
   Returns a `t:Date.Range.t/0` that represents the `week`.
@@ -188,8 +219,8 @@ defmodule Calendrical.Interval do
 
   """
   @spec week(Calendar.year(), Calendrical.week(), Calendrical.calendar()) ::
-          Date.Range.t() | {:error, :not_defined}
-  @spec week(Date.t()) :: Date.Range.t() | {:error, :not_defined}
+          Date.Range.t() | {:error, :not_defined | :invalid_date}
+  @spec week(Date.t()) :: Date.Range.t() | {:error, :not_defined | :invalid_date}
 
   def week(%{calendar: Calendar.ISO} = date) do
     %{date | calendar: Calendrical.Gregorian}
@@ -198,8 +229,10 @@ defmodule Calendrical.Interval do
   end
 
   def week(date) do
-    {year, week} = Calendrical.week_of_year(date)
-    week(year, week, date.calendar)
+    case Calendrical.week_of_year(date) do
+      {year, week} when is_integer(year) and is_integer(week) -> week(year, week, date.calendar)
+      {:error, _reason} = error -> error
+    end
   end
 
   def week(year, week, calendar \\ Calendrical.Gregorian) do

@@ -309,7 +309,10 @@ defmodule Calendrical.Islamic.Observational do
   def valid_date?(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) and
              year >= 1 and month in 1..12 and day in 1..30 do
-    day <= days_in_month(year, month)
+    case month_length(year, month) do
+      {:ok, days} -> day <= days
+      {:error, _date} -> false
+    end
   end
 
   def valid_date?(_year, _month, _day), do: false
@@ -374,8 +377,8 @@ defmodule Calendrical.Islamic.Observational do
   def date_from_iso_days(iso_days) do
     crescent = Visibility.phasis_on_or_before(iso_days, @cairo)
     elapsed_months = round((crescent - epoch()) / @mean_synodic_month)
-    year = div(elapsed_months, 12) + 1
-    month = rem(elapsed_months, 12) + 1
+    year = Integer.floor_div(elapsed_months, 12) + 1
+    month = Integer.mod(elapsed_months, 12) + 1
     day = iso_days - crescent + 1
     {year, month, day}
   end
@@ -388,8 +391,27 @@ defmodule Calendrical.Islamic.Observational do
   defp first_day_of_month(year, 13), do: first_day_of_month(year + 1, 1)
 
   defp first_day_of_month(year, month) when month in 1..12 do
+    Visibility.phasis_on_or_before(midmonth(year, month), @cairo)
+  end
+
+  # The month's length as `{:ok, days}`, or `{:error, date}` when the
+  # installed ephemeris does not cover the month — which is then no date
+  # at all, so `valid_date?/3` answers false rather than raising.
+  defp month_length(year, month) do
+    with {:ok, first} <- find_first_day_of_month(year, month),
+         {:ok, next} <- find_first_day_of_month(year, month + 1) do
+      {:ok, next - first}
+    end
+  end
+
+  defp find_first_day_of_month(year, 13), do: find_first_day_of_month(year + 1, 1)
+
+  defp find_first_day_of_month(year, month) do
+    Visibility.find_phasis_on_or_before(midmonth(year, month), @cairo)
+  end
+
+  defp midmonth(year, month) do
     months_elapsed = (year - 1) * 12 + (month - 1)
-    midmonth = epoch() + floor((months_elapsed + 0.5) * @mean_synodic_month)
-    Visibility.phasis_on_or_before(midmonth, @cairo)
+    epoch() + floor((months_elapsed + 0.5) * @mean_synodic_month)
   end
 end

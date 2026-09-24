@@ -20,6 +20,10 @@ The format is based on
 
 * `mix calendrical.umm_al_qura.verify` audits the embedded Umm al-Qura tables, and with `--kacst` compares them with KACST's official data to detect later revisions.
 
+* `Calendrical.iso_days/4` validates a year, month and day in a calendar and returns its ISO day number in one step; the lunisolar calendars answer it through their own `iso_days/3` from a single computation of the lunar year.
+
+* `ordinal_month/2` on the Chinese, Korean, Vietnamese and Lunar Japanese calendars returns the ordinal month of a traditional month (`{month, :leap}` included), and their `days_in_month/1` returns `{:ambiguous, 29..30}`.
+
 ### Changed
 
 * `first_day_for_territory/1` and `min_days_for_territory/1` (and their locale variants) resolve from Localize's runtime week data instead of clauses compiled from it, so the values follow the loaded CLDR data without recompiling Calendrical. Results are unchanged for every territory.
@@ -37,6 +41,30 @@ The format is based on
 * The exported calendar arithmetic guards its integer arguments (`start_end_gregorian_years/2`, the Egyptian and lunisolar conversion entry points, and the lunisolar wrappers), so a non-integer argument raises `FunctionClauseError` instead of silently computing a float.
 
 * `.dialyzer_ignore.exs` is now empty — all twenty-six previously-suppressed dialyzer warnings are fixed at the source instead of ignored.
+
+* `valid_date?/3`, and so `Date.new/4`, rejects a month or day below 1 in the lunisolar calendars and in every calendar using the `Calendrical.Behaviour` default (Persian, Japanese, the civil and tabular Islamic, and the Japan and Sweden reform calendars), which accepted it or raised.
+
+* The lunisolar `new/3` checks a leap month's day, and the day of a month after the leap month, against that month's own length, and `leap_month?/2` no longer marks a term-less month that follows a leap month falling before the new year.
+
+* `valid_date?/3` is `false`, rather than raising, for parts that are not integers in every calendar, for fiscal month 0, and for a date outside the supported range of `Calendrical.Persian`, `Calendrical.Islamic.Observational` and `Calendrical.Islamic.Rgsa`. Those two sighting-based calendars raise `Calendrical.UnsupportedDateRangeError` instead of a `MatchError` far outside the ephemeris.
+
+* Month and year arithmetic in the lunisolar and Hebrew calendars walks each year's own months, so `Date.shift/2` no longer produces a thirteenth month in a twelve-month year or a day 0 in Adar I. Adding years keeps the traditional month (the Mid-Autumn Festival stays in the eighth month; Adar I becomes Adar in an ordinary year), and `Calendrical.Hebrew.year/1` ends with Elul.
+
+* The week-based calendars number the first day of the year 1 in `day_of_year/3`, which counted from 2.
+
+* The tabular Islamic calendars convert dates before the Hijra with floored division, which produced negative months and days.
+
+* The Julian year-start variants (`Calendrical.Julian.March25` and the rest) agree with the Julian calendar on month lengths, weeks and leap days, shift dates and date-times through it, keep the time of day, and skip year 0 as it does. `month_of_year/3` is the date's Julian month, so `Calendrical.localize/3` names 10 August 1600 August rather than June.
+
+* The composite calendars add years, quarters, months, weeks and days across a transition (one month after 20 August 1752 in England is 20 September; after 5 August, 14 September) and shift date-times through their own arithmetic. Years, quarters and months span the days that carry them, so England's 1751 starts on 25 March and Sweden's February 1753 has 17 days; a year beginning on Lady Day has no quarters.
+
+* `Calendrical.localize/3` names the month of a composite-calendar date, and `Calendrical.Format` lays out calendars without week ranges (Hebrew, lunisolar, Coptic and others) and leaves out months a year lacks instead of raising.
+
+* `Calendrical.Interval.month/1` finds a lunisolar or Hebrew leap month and the months after it, and `week/1` and `quarter/1` return an error for a calendar without weeks or quarters instead of raising.
+
+* `Calendrical.localize/3` lists the days of the week for every calendar, `plus/6` adds quarters in every `Calendrical.Behaviour` calendar, and `month/2` returns `{:error, :invalid_date}` for a month the year lacks.
+
+* The Swedish transitional calendar round-trips every day from 1700 to 1712 and has no 29 February 1700.
 
 ## [1.3.0] — 2026-08-26
 

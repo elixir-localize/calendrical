@@ -360,11 +360,12 @@ defmodule Calendrical.Compiler.Month do
       @doc """
       Returns the number weeks in a given year.
 
-      Note that for Gregorian month-based calendars the
-      number of weeks returned will be 53 (not the sometimes
-      expected 52) since there is always a week 53 with
-      1 or 2 (in a leap year) additional days in the
-      last week.
+      A year's weeks run from its week 1 to the week before the next
+      year's week 1, where week 1 is the first week, starting on the
+      calendar's first day of the week, with at least the calendar's
+      minimum number of days in the new year. A calendar whose weeks
+      start on the first day of its year instead has a short last week
+      of 1 or 2 (in a leap year) days.
 
       ### Arguments
 
@@ -377,10 +378,12 @@ defmodule Calendrical.Compiler.Month do
       ### Example
 
           iex> Calendrical.Gregorian.weeks_in_year(2019)
-          {53, 1}
+          {52, 7}
 
-          iex> Calendrical.Gregorian.weeks_in_year(2020)
-          {53, 2}
+          # Weeks start on Monday and week 1 holds 1 January, so the week
+          # ending on Sunday 31 December 2023 is week 53
+          iex> Calendrical.Gregorian.weeks_in_year(2023)
+          {53, 7}
 
       """
       @spec weeks_in_year(year :: Calendrical.year()) ::

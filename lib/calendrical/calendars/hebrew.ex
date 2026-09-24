@@ -442,6 +442,150 @@ defmodule Calendrical.Hebrew do
   def valid_date?(_year, _month, _day), do: false
 
   @doc """
+  Returns the `t:Date.Range.t/0` of a Hebrew year, from 1 Tishri to
+  the last day of Elul.
+
+  ### Arguments
+
+  * `year` is any positive Hebrew year as an integer.
+
+  ### Returns
+
+  * A `t:Date.Range.t/0`, or `{:error, :invalid_date}` when `year` is
+    not a Hebrew year.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.year(5785)
+      Date.range(~D[5785-01-01 Calendrical.Hebrew], ~D[5785-13-29 Calendrical.Hebrew])
+
+  """
+  @impl true
+  @spec year(year) :: Date.Range.t() | {:error, :invalid_date}
+  def year(year) do
+    with {:ok, first} <- Date.new(year, @tishri, 1, __MODULE__),
+         {:ok, last} <- Date.new(year, @elul, days_in_month(year, @elul), __MODULE__) do
+      Date.range(first, last)
+    end
+  end
+
+  @doc """
+  Adds an `increment` number of `date_part`s to a Hebrew date.
+
+  Months are counted in the order of the year, so *Adar I* is counted
+  in a leap year and passed over in an ordinary one. Adding years keeps
+  the month, except that *Adar I* becomes *Adar* in an ordinary year.
+
+  ### Arguments
+
+  * `year`, `month` and `day` are the parts of a Hebrew date.
+
+  * `date_part` is one of `:years`, `:quarters`, `:months`, `:weeks`
+    or `:days`. A quarter is three months.
+
+  * `increment` is the integer number of `date_part`s to add. It may be
+    negative.
+
+  * `options` is a keyword list of options.
+
+  ### Options
+
+  * `:coerce` — when `true`, a day beyond the end of the resulting
+    month becomes that month's last day. The default is `false`.
+
+  ### Returns
+
+  * A `{year, month, day}` tuple.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.plus(5785, 5, 10, :months, 1)
+      {5785, 7, 10}
+
+      iex> Calendrical.Hebrew.plus(5784, 13, 1, :years, 1)
+      {5785, 13, 1}
+
+      iex> Calendrical.Hebrew.plus(5784, 6, 30, :years, 1, coerce: true)
+      {5785, 7, 29}
+
+  """
+  @impl true
+  @spec plus(year, month, day, atom(), integer(), Keyword.t()) :: {year, month, day}
+  def plus(year, month, day, date_part, increment, options \\ [])
+
+  def plus(year, month, day, :years, years, options) do
+    new_year = year + years
+    new_month = if month == @adar_i and not leap_year?(new_year), do: @adar, else: month
+    {new_year, new_month, coerce_day(new_year, new_month, day, options)}
+  end
+
+  def plus(year, month, day, :quarters, quarters, options) do
+    plus(year, month, day, :months, quarters * 3, options)
+  end
+
+  def plus(year, month, day, :months, months, options) do
+    {new_year, position} = advance_position(year, month_position(year, month), months)
+    new_month = month_at_position(new_year, position)
+    {new_year, new_month, coerce_day(new_year, new_month, day, options)}
+  end
+
+  def plus(year, month, day, date_part, increment, options) do
+    super(year, month, day, date_part, increment, options)
+  end
+
+  # Nineteen years hold 235 months (the Metonic cycle), so a long shift
+  # moves whole cycles before walking the remaining years.
+  @months_in_cycle 235
+  @years_in_cycle 19
+
+  defp advance_position(year, position, months)
+       when months >= @months_in_cycle or months <= -@months_in_cycle do
+    cycles = div(months, @months_in_cycle)
+
+    advance_position(
+      year + cycles * @years_in_cycle,
+      position,
+      months - cycles * @months_in_cycle
+    )
+  end
+
+  defp advance_position(year, position, months) when months >= 0 do
+    months_in_year = months_in_year(year)
+
+    if position + months <= months_in_year do
+      {year, position + months}
+    else
+      advance_position(year + 1, 1, months - (months_in_year - position + 1))
+    end
+  end
+
+  defp advance_position(year, position, months) do
+    if position + months >= 1 do
+      {year, position + months}
+    else
+      advance_position(year - 1, months_in_year(year - 1), months + position)
+    end
+  end
+
+  # A month's place in the order of its year: an ordinary year has no
+  # Adar I, so the months after it come one place earlier.
+  defp month_position(year, month) do
+    if month > @adar_i and not leap_year?(year), do: month - 1, else: month
+  end
+
+  defp month_at_position(year, position) do
+    if position >= @adar_i and not leap_year?(year), do: position + 1, else: position
+  end
+
+  defp coerce_day(year, month, day, options) do
+    if Keyword.get(options, :coerce, false) do
+      min(day, days_in_month(year, month))
+    else
+      day
+    end
+  end
+
+  @doc """
   Returns the month-of-year for the given Hebrew date.
 
   In a leap year, month 7 is *Adar II* and is returned as

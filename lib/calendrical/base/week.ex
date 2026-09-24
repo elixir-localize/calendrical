@@ -31,10 +31,13 @@ defmodule Calendrical.Base.Week do
     end
   end
 
-  def valid_date?(year, week, day, config) do
+  def valid_date?(year, week, day, config)
+      when is_integer(year) and is_integer(week) and is_integer(day) do
     {weeks_in_year, _days_in_last_week} = weeks_in_year(year, config)
     week in 1..weeks_in_year and day in 1..days_in_week()
   end
+
+  def valid_date?(_year, _week, _day, _config), do: false
 
   # Year of era assumes that the era transitions are always aligned
   # to the calendar year. But for 445 type calendar and country fiscal
@@ -115,10 +118,8 @@ defmodule Calendrical.Base.Week do
     {:error, missing_date_error("day_of_era", year, week, day)}
   end
 
-  def day_of_year(year, week, day, config) when is_date(year, week, day) do
-    start_of_year = first_gregorian_day_of_year(year, config)
-    this_day = first_gregorian_day_of_year(year, config) + week_to_days(week) + day
-    trunc(this_day - start_of_year + 1)
+  def day_of_year(year, week, day, _config) when is_date(year, week, day) do
+    trunc(week_to_days(week) + day)
   end
 
   def day_of_year(year, week, day, _config) do

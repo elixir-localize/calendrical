@@ -130,13 +130,9 @@ defmodule Calendrical.Chinese do
           {:ok, Date.t()} | {:error, atom()}
 
   def new(year, month, day) do
-    case Lunisolar.new(year, month, day, epoch(), &location/1) do
-      {:error, reason} ->
-        {:error, reason}
-
-      iso_days ->
-        {year, month, day} = date_from_iso_days(iso_days)
-        Date.new(year, month, day, __MODULE__)
+    with {:ok, {year, month, day}} <-
+           Lunisolar.ordinal_date(year, month, day, epoch(), &location/1) do
+      {:ok, %Date{year: year, month: month, day: day, calendar: __MODULE__}}
     end
   end
 
@@ -776,6 +772,159 @@ defmodule Calendrical.Chinese do
   @impl true
   def days_in_year(year) do
     Lunisolar.days_in_year(year, epoch(), &location/1)
+  end
+
+  @doc """
+  Returns the number of days a month can have, without a year.
+
+  A lunar month runs from one new moon to the next, so it has 29 or 30 days
+  depending on the year.
+
+  ### Arguments
+
+  * `month` is an ordinal month number, 1..13.
+
+  ### Returns
+
+  * `{:ambiguous, 29..30}` for months 1..13.
+
+  * `{:error, :undefined}` for any other value.
+
+  ### Examples
+
+      iex> Calendrical.Chinese.days_in_month(1)
+      {:ambiguous, 29..30}
+
+  """
+  @impl true
+  def days_in_month(month) when month in 1..13, do: {:ambiguous, 29..30}
+  def days_in_month(_month), do: {:error, :undefined}
+
+  @doc """
+  Returns the number of days since the start of the epoch for an ordinal
+  date, validating it in the same pass.
+
+  This is `valid_date?/3` and `date_to_iso_days/3` answered from one
+  computation of the lunar year; `Calendrical.iso_days/4` uses it.
+
+  ### Arguments
+
+  * `year` is any year in the `#{inspect(__MODULE__)}` calendar.
+
+  * `month` is an ordinal month number, 1..12 or 1..13 in a leap year.
+
+  * `day` is a day of the month.
+
+  ### Returns
+
+  * `{:ok, iso_days}` or
+
+  * `{:error, :invalid_date}`.
+
+  ### Examples
+
+      # The lunar new year of Y4662 (= AD 2025) is 2025-01-29
+      iex> Calendrical.Chinese.iso_days(4662, 1, 1)
+      {:ok, 739645}
+
+      iex> Calendrical.Chinese.iso_days(4661, 13, 1)
+      {:error, :invalid_date}
+
+  """
+  @spec iso_days(Calendar.year(), Calendar.month(), Calendar.day()) ::
+          {:ok, integer()} | {:error, :invalid_date}
+  def iso_days(year, month, day) do
+    Lunisolar.iso_days(year, month, day, epoch(), &location/1)
+  end
+
+  @doc """
+  Returns the ordinal month of a traditional month in a year.
+
+  A leap month repeats the number of the month before it, so from the leap
+  month on a traditional month's ordinal is one more than its number.
+
+  ### Arguments
+
+  * `year` is any year in the `#{inspect(__MODULE__)}` calendar.
+
+  * `lunar_month` is a traditional month number, 1..12, or `{month, :leap}`
+    for the leap month that repeats traditional `month`.
+
+  ### Returns
+
+  * `{:ok, month}` where `month` is the ordinal month, 1..13, or
+
+  * `{:error, :invalid_leap_month}` when the year has no such leap month, or
+
+  * `{:error, :invalid_month}` for any other value.
+
+  ### Examples
+
+      # Y4662 (= AD 2025) has an intercalary 6th month (閏六月)
+      iex> Calendrical.Chinese.ordinal_month(4662, {6, :leap})
+      {:ok, 7}
+
+      iex> Calendrical.Chinese.ordinal_month(4662, 7)
+      {:ok, 8}
+
+      iex> Calendrical.Chinese.ordinal_month(4661, {6, :leap})
+      {:error, :invalid_leap_month}
+
+  """
+  @spec ordinal_month(Calendar.year(), Lunisolar.lunar_month()) ::
+          {:ok, Calendar.month()} | {:error, :invalid_month | :invalid_leap_month}
+  def ordinal_month(year, lunar_month) do
+    Lunisolar.ordinal_month(year, lunar_month, epoch(), &location/1)
+  end
+
+  @doc """
+  Adds an `increment` number of `date_part`s to a date.
+
+  Adding years keeps the traditional month, so a festival on the 15th day
+  of the 8th month moves to the 8th month of the new year, whatever its
+  ordinal. A leap month that the new year does not have becomes the
+  ordinary month of the same number. Months, quarters (three months),
+  weeks and days count forward through the calendar's own months.
+
+  ### Arguments
+
+  * `year`, `month` and `day` are the parts of an ordinal date.
+
+  * `date_part` is one of `:years`, `:quarters`, `:months`, `:weeks` or
+    `:days`.
+
+  * `increment` is the integer number of `date_part`s to add. It may be
+    negative.
+
+  * `options` is a keyword list of options.
+
+  ### Options
+
+  * `:coerce` — when `true`, a day beyond the end of the resulting month
+    becomes that month's last day. The default is `false`.
+
+  ### Returns
+
+  * A `{year, month, day}` tuple of the ordinal date.
+
+  ### Examples
+
+      # Y4660 (= AD 2023) has an intercalary 2nd month, so the Mid-Autumn
+      # Festival (8th month, 15th day) falls in ordinal month 9
+      iex> Calendrical.Chinese.plus(4660, 9, 15, :years, 1)
+      {4661, 8, 15}
+  """
+  @impl true
+  @spec plus(Calendar.year(), Calendar.month(), Calendar.day(), atom(), integer(), Keyword.t()) ::
+          {Calendar.year(), Calendar.month(), Calendar.day()}
+  def plus(year, month, day, date_part, increment, options \\ [])
+
+  def plus(year, month, day, :years, years, options) do
+    Lunisolar.plus_years(year, month, day, years, options, epoch(), &location/1)
+  end
+
+  def plus(year, month, day, date_part, increment, options) do
+    super(year, month, day, date_part, increment, options)
   end
 
   # Since the Chinese calendar is a lunisolar

@@ -439,7 +439,7 @@ defmodule Calendrical do
 
   """
   @callback year(year :: year()) ::
-              Date.Range.t() | {:error, :not_defined}
+              Date.Range.t() | {:error, :not_defined | :invalid_date}
 
   @doc """
   Returns a date range representing the days in a
@@ -447,7 +447,7 @@ defmodule Calendrical do
 
   """
   @callback quarter(year :: year(), quarter :: Calendrical.quarter()) ::
-              Date.Range.t() | {:error, :not_defined}
+              Date.Range.t() | {:error, :not_defined | :invalid_date}
 
   @doc """
   Returns a date range representing the days in a
@@ -455,7 +455,7 @@ defmodule Calendrical do
 
   """
   @callback month(year :: year(), month :: month()) ::
-              Date.Range.t() | {:error, :not_defined}
+              Date.Range.t() | {:error, :not_defined | :invalid_date}
 
   @doc """
   Returns a date range representing the days in a
@@ -463,7 +463,7 @@ defmodule Calendrical do
 
   """
   @callback week(year :: year(), week :: week()) ::
-              Date.Range.t() | {:error, :not_defined}
+              Date.Range.t() | {:error, :not_defined | :invalid_date}
 
   @doc """
   Increments a `t:Calendar.date/0` or `t:Date.Range.t/0` by a specified positive
@@ -1841,7 +1841,8 @@ defmodule Calendrical do
       4
 
   """
-  @spec quarter_of_year(date()) :: Calendrical.quarter() | {:error, Exception.t()}
+  @spec quarter_of_year(date()) ::
+          Calendrical.quarter() | {:error, :not_defined} | {:error, Exception.t()}
 
   def quarter_of_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -2035,10 +2036,10 @@ defmodule Calendrical do
       365
 
       iex> Calendrical.day_of_year(~D[2019-52-07 Calendrical.NRF])
-      365
+      364
 
       iex> Calendrical.day_of_year(~D[2012-53-07 Calendrical.NRF])
-      372
+      371
 
   """
   @spec day_of_year(date()) :: Calendar.day() | {:error, Exception.t()}
@@ -3261,7 +3262,7 @@ defmodule Calendrical do
 
   @doc false
   def localize(datetime, :days_of_week, type, style, locale, _options) do
-    for date <- Interval.week(datetime) do
+    for date <- days_of_the_week(datetime) do
       day_of_week = day_of_week(date)
       cardinal_day_of_week = iso_day_of_week(date)
 
@@ -3301,6 +3302,20 @@ defmodule Calendrical do
   # from the Chinese calendar but era names (元号) from the Japanese
   # one. Calendars declare this with the optional `era_calendar_type/0`
   # callback.
+  # The seven days of the week that holds `date`, in its calendar's week
+  # order. A calendar without numbered weeks (the lunisolar calendars) still
+  # has a seven-day week, so its days count from the date's day of the week.
+  defp days_of_the_week(date) do
+    case Interval.week(date) do
+      {:error, _reason} ->
+        first = Date.add(date, 1 - day_of_week(date))
+        Date.range(first, Date.add(first, 6))
+
+      week ->
+        week
+    end
+  end
+
   defp era_calendar_type(calendar) do
     if Code.ensure_loaded?(calendar) && function_exported?(calendar, :era_calendar_type, 0) do
       calendar.era_calendar_type()
@@ -3336,6 +3351,12 @@ defmodule Calendrical do
     Localize.Utils.Math.amod(month + month_of_year - 1, months_in_year)
   end
 
+  # A composite calendar's configuration is its list of transitions; its
+  # months are numbered as its member calendars number them.
+  defp do_cardinal_month(month, _config, _months_in_year) do
+    month
+  end
+
   # Get the calendar-specific day of the week as the day
   # of the week in Calendar.ISO which starts with 1 == Monday.
   @doc false
@@ -3354,6 +3375,10 @@ defmodule Calendrical do
 
   def do_cardinal_day_of_week(day, %{day_of_week: day_of_week}) do
     Localize.Utils.Math.amod(day + day_of_week - 1, @days_in_a_week)
+  end
+
+  def do_cardinal_day_of_week(day, _config) do
+    day
   end
 
   @doc """
@@ -3886,6 +3911,68 @@ defmodule Calendrical do
   def date_to_iso_days(date) do
     %{year: year, month: month, day: day, calendar: calendar} = date
     calendar.date_to_iso_days(year, month, day)
+  end
+
+  @doc """
+  Returns the number of days since the start of the epoch for a year, month
+  and day in a calendar, or an error when they are not a valid date in it.
+
+  This is `Date.new/4` and `date_to_iso_days/1` in one step. A calendar that
+  defines `iso_days/3` answers both in a single pass — the lunisolar
+  calendars do, since validating a date and locating it both need the same
+  lunar year — and any other calendar validates, then converts.
+
+  ### Arguments
+
+  * `year`, `month` and `day` are the integer parts of a date in `calendar`.
+
+  * `calendar` is any module implementing the `Calendar` behaviour.
+
+  ### Returns
+
+  * `{:ok, iso_days}` where `iso_days` is the integer number of days since
+    `0000-01-01`, or
+
+  * `{:error, :invalid_date}` when the parts are not a date in `calendar`, or
+
+  * `{:error, exception}` when `calendar` is not a calendar module.
+
+  ### Examples
+
+      iex> Calendrical.iso_days(2019, 1, 1, Calendrical.Gregorian)
+      {:ok, 737425}
+
+      iex> Calendrical.iso_days(2019, 2, 29, Calendrical.Gregorian)
+      {:error, :invalid_date}
+
+      # The Chinese New Year of Y4662 (= AD 2025)
+      iex> {:ok, iso_days} = Calendrical.iso_days(4662, 1, 1, Calendrical.Chinese)
+      iex> Date.from_gregorian_days(iso_days)
+      ~D[2025-01-29]
+
+  """
+  @doc since: "1.4.0"
+  @spec iso_days(Calendar.year(), Calendar.month(), Calendar.day(), Calendar.calendar()) ::
+          {:ok, iso_day_number()} | {:error, :invalid_date | Exception.t()}
+
+  def iso_days(year, month, day, calendar)
+      when is_integer(year) and is_integer(month) and is_integer(day) and is_atom(calendar) do
+    cond do
+      not (Code.ensure_loaded?(calendar) and function_exported?(calendar, :valid_date?, 3)) ->
+        {:error, invalid_calendar_error(calendar)}
+
+      function_exported?(calendar, :iso_days, 3) ->
+        calendar.iso_days(year, month, day)
+
+      true ->
+        with {:ok, date} <- Date.new(year, month, day, calendar) do
+          {:ok, Date.to_gregorian_days(date)}
+        end
+    end
+  end
+
+  def iso_days(_year, _month, _day, _calendar) do
+    {:error, :invalid_date}
   end
 
   @doc """

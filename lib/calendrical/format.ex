@@ -142,17 +142,29 @@ defmodule Calendrical.Format do
 
   def year(year, %Options{} = options) do
     %Options{calendar: calendar, formatter: formatter} = options
-    range = 1..calendar.months_in_year(year)
+    range = 1..month_numbers(calendar, year)
 
     year
     |> months(range, options)
     |> formatter.format_year(year, options)
   end
 
+  # A month the year does not have — Adar I outside a Hebrew leap year,
+  # or a month a calendar reform removed — is left out.
   defp months(year, range, options) do
-    for month <- range do
-      month(year, month, options)
-    end
+    for month <- range,
+        formatted = month(year, month, options),
+        not match?({:error, _reason}, formatted),
+        do: formatted
+  end
+
+  # The highest month number the year may use: a calendar that numbers
+  # its leap month in place (the Hebrew Adar I is month 6 of 13) keeps
+  # the leap year's numbers in a common year.
+  defp month_numbers(calendar, year) do
+    if function_exported?(calendar, :months_in_leap_year, 0),
+      do: max(calendar.months_in_year(year), calendar.months_in_leap_year()),
+      else: calendar.months_in_year(year)
   end
 
   @doc """
@@ -242,10 +254,29 @@ defmodule Calendrical.Format do
 
   defp weeks(date, range, year, month, options) do
     for i <- range do
-      shifted_date = Date.shift(date, week: i)
-      week_range = Calendrical.Interval.week(shifted_date)
-      week(week_range, year, month, options)
+      date
+      |> Date.shift(week: i)
+      |> week_holding()
+      |> week(year, month, options)
     end
+  end
+
+  # The week holding `date`: the calendar's own week where it defines
+  # week ranges, and otherwise the seven days from its first day of the
+  # week, so a calendar without numbered weeks still lays out by week.
+  defp week_holding(date) do
+    case Calendrical.Interval.week(date) do
+      %Date.Range{} = week ->
+        week
+
+      {:error, _not_defined} ->
+        first = Date.shift(date, day: 1 - Date.day_of_week(date, :default))
+        Date.range(first, Date.shift(first, day: days_in_week(date.calendar) - 1))
+    end
+  end
+
+  defp days_in_week(calendar) do
+    if function_exported?(calendar, :days_in_week, 0), do: calendar.days_in_week(), else: 7
   end
 
   defp week(week, year, month, options) do

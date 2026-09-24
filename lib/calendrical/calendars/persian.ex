@@ -67,6 +67,49 @@ defmodule Calendrical.Persian do
     next_year - new_year == 366
   end
 
+  # The Persian years whose every day falls in the supported Gregorian
+  # years: year `y` begins in Gregorian year `y + 621`, and finding its
+  # length needs the next year's start as well.
+  @first_supported_year @supported_gregorian_years.first + 1 - 621
+  @last_supported_year @supported_gregorian_years.last - 622
+
+  @doc """
+  Returns whether the given `year`, `month` and `day` form a valid
+  Persian date.
+
+  A date outside the supported range (Persian years 380 to 2378) is not
+  valid, since its place on the time line cannot be computed.
+
+  ### Arguments
+
+  * `year` is any Persian year as an integer.
+
+  * `month` is a Persian month in the range `1..12`.
+
+  * `day` is a Persian day-of-month in the range `1..31`.
+
+  ### Returns
+
+  * `true` if the date is valid; otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Persian.valid_date?(1404, 12, 29)
+      true
+
+      iex> Calendrical.Persian.valid_date?(3000, 1, 1)
+      false
+
+  """
+  @impl true
+  @spec valid_date?(Calendar.year(), Calendar.month(), Calendar.day()) :: boolean()
+  def valid_date?(year, month, day)
+      when year in @first_supported_year..@last_supported_year do
+    super(year, month, day)
+  end
+
+  def valid_date?(_year, _month, _day), do: false
+
   @doc """
   Returns `{year, week_in_year}` for the given Persian date.
 

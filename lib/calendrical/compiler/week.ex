@@ -278,7 +278,7 @@ defmodule Calendrical.Compiler.Week do
 
       @doc """
       Calculates the day of the year from the given `year`, `month`, and `day`.
-      It is an integer from 1 to 366.
+      It is an integer from 1 to 364, or to 371 in a long year.
 
       """
       @spec day_of_year(Calendrical.year(), Calendrical.month(), Calendrical.day()) ::
@@ -346,7 +346,7 @@ defmodule Calendrical.Compiler.Week do
           {53, 7}
 
           iex> Calendrical.ISOWeek.weeks_in_year 2021
-          {52, 7
+          {52, 7}
 
       """
       @spec weeks_in_year(year :: Calendrical.year()) ::

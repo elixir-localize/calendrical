@@ -155,12 +155,13 @@ defmodule Calendrical.Formatter.Options do
     locale = Keyword.get(options, :locale)
 
     # :calendar is validated before :day_names (see @valid_options
-    # order), so by now it is always a calendar module — but the
-    # probe date may still be invalid in an unusual calendar, so
-    # surface that as an option error rather than a MatchError.
+    # order), so by now it is always a calendar module. The probe is a
+    # day every calendar covers — year 2000 of the calendar itself may
+    # not be (it is past the end of the Umm al-Qura tables) — and a
+    # calendar that still cannot take it is an option error.
     calendar = Keyword.get(options, :calendar)
 
-    case Date.new(2000, 1, 1, calendar) do
+    case Date.convert(~D[2000-01-01], calendar) do
       {:ok, date} ->
         {:ok, Calendrical.localize(date, :days_of_week, locale: locale)}
 

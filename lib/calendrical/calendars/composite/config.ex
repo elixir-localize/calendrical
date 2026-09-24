@@ -69,19 +69,76 @@ defmodule Calendrical.Composite.Config do
   end
 
   @doc false
-  # A small `reduce` variant that passes both the head element *and*
-  # the rest of the list to the reducer. Used by the composite
-  # compiler so it can generate `def days_in_month/2` clauses that
-  # know about the *next* transition as well as the current one.
-  def define_transition_functions(list, fun) do
-    do_reduce_peeking(list, [], fn head, tail, acc ->
-      acc ++ List.wrap(fun.(head, tail))
+  # The segments of the time line, one per member calendar in order: the
+  # ISO days each governs (the last is open-ended), the label years they
+  # carry, and their first and last months in the calendar's civil
+  # numbering. A Julian year-start variant counts its months as the
+  # Julian calendar does, from January, whatever its labels say; any
+  # other calendar counts its own. The first segment is open-ended before.
+  def segments(config) do
+    ends =
+      config
+      |> Enum.drop(1)
+      |> Enum.map(fn {iso_days, _year, _month, _day, _calendar} -> iso_days - 1 end)
+
+    config
+    |> Enum.zip(ends ++ [nil])
+    |> Enum.with_index()
+    |> Enum.map(fn {{{first, _year, _month, _day, calendar}, last}, index} ->
+      civil = civil_calendar(calendar)
+      first? = index > 0
+
+      %{
+        first: first,
+        last: last,
+        calendar: calendar,
+        civil: civil,
+        first_year: if(first?, do: label_year(calendar, first)),
+        last_year: if(last, do: label_year(calendar, last)),
+        first_month: if(first?, do: civil_month(civil, first)),
+        last_month: if(last, do: civil_month(civil, last)),
+        january_year?: january_year?(calendar, civil)
+      }
     end)
   end
 
-  defp do_reduce_peeking([], acc, _fun), do: acc
+  # Whether the calendar's years begin on 1 January, so its quarters are
+  # the months in label order. A Julian year-start variant beginning on
+  # another day labels January with the year before.
+  defp january_year?(calendar, calendar), do: true
 
-  defp do_reduce_peeking([head | tail], acc, fun) do
-    do_reduce_peeking(tail, fun.(head, tail, acc), fun)
+  defp january_year?(calendar, _civil) do
+    calendar.date_from_julian_date(2000, 1, 1) == {2000, 1, 1}
+  end
+
+  defp civil_calendar(calendar) do
+    if Code.ensure_loaded?(calendar) and function_exported?(calendar, :date_from_julian_date, 3),
+      do: Calendrical.Julian,
+      else: calendar
+  end
+
+  defp label_year(calendar, iso_days) do
+    {year, _month, _day} = calendar.date_from_iso_days(iso_days)
+    year
+  end
+
+  defp civil_month(civil, iso_days) do
+    {year, month, _day} = civil.date_from_iso_days(iso_days)
+    {year, month}
+  end
+
+  @doc false
+  # The `{year, month}` labels of the months a transition cuts short or
+  # splits: the month holding the last day of the old calendar and the
+  # month holding the first day of the new one. Only these months need
+  # their days counted one by one.
+  def transition_months(config) do
+    config
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.flat_map(fn [{_, _, _, _, old_calendar}, {iso_days, year, month, _day, _new}] ->
+      {old_year, old_month, _old_day} = old_calendar.date_from_iso_days(iso_days - 1)
+      [{old_year, old_month}, {year, month}]
+    end)
+    |> Enum.uniq()
   end
 end

@@ -292,7 +292,7 @@ defmodule CoverageBasesTest do
     end
 
     test "day_of_year" do
-      assert NRF.day_of_year(2019, 5, 3) == 32
+      assert NRF.day_of_year(2019, 5, 3) == 31
     end
 
     test "day_of_week with the default and explicit weekday starts" do

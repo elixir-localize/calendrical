@@ -254,9 +254,13 @@ defmodule Calendrical.Behaviour do
 
       """
       @impl true
-      def valid_date?(year, month, day) do
+      def valid_date?(year, month, day)
+          when is_integer(year) and is_integer(month) and is_integer(day) and month >= 1 and
+                 day >= 1 do
         month <= months_in_year(year) && day <= days_in_month(year, month)
       end
+
+      def valid_date?(_year, _month, _day), do: false
 
       @doc """
       Returns the number of months in a normal year.
@@ -726,12 +730,11 @@ defmodule Calendrical.Behaviour do
       """
       @impl true
 
+      # The month's first day is validated before its length is asked for,
+      # so a month the year does not have is an error, not a crash.
       def month(year, month) do
-        starting_day = 1
-        ending_day = days_in_month(year, month)
-
-        with {:ok, start_date} <- Date.new(year, month, starting_day, __MODULE__),
-             {:ok, end_date} <- Date.new(year, month, ending_day, __MODULE__) do
+        with {:ok, start_date} <- Date.new(year, month, 1, __MODULE__),
+             {:ok, end_date} <- Date.new(year, month, days_in_month(year, month), __MODULE__) do
           Date.range(start_date, end_date)
         end
       end
@@ -776,27 +779,18 @@ defmodule Calendrical.Behaviour do
         {new_year, new_month, new_day}
       end
 
+      # A quarter is three months, as in the month- and week-based
+      # calendars, including in a 13-month year.
+      def plus(year, month, day, :quarters, quarters, options) do
+        plus(year, month, day, :months, quarters * 3, options)
+      end
+
       def plus(year, month, day, :months, months, options) do
-        months_in_year = months_in_year(year)
-
-        # Normalize a non-positive month from div_amod into the
-        # prior year, as Calendrical.Base.Month does — otherwise
-        # subtracting months can produce results like {2018, -1, 1}.
-        {year_increment, new_month} =
-          case Localize.Utils.Math.div_amod(month + months, months_in_year) do
-            {year_increment, new_month} when new_month > 0 ->
-              {year_increment, new_month}
-
-            {year_increment, new_month} ->
-              {year_increment - 1, months_in_year + new_month}
-          end
-
-        new_year = year + year_increment
+        {new_year, new_month} = add_months(year, month, months)
 
         new_day =
           if Keyword.get(options, :coerce, false) do
-            max_new_day = days_in_month(new_year, new_month)
-            min(day, max_new_day)
+            min(day, days_in_month(new_year, new_month))
           else
             day
           end
@@ -811,6 +805,43 @@ defmodule Calendrical.Behaviour do
       def plus(year, month, day, :days, days, _options) do
         iso_days = date_to_iso_days(year, month, day) + days
         date_from_iso_days(iso_days)
+      end
+
+      if @months_in_ordinary_year == @months_in_leap_year do
+        # Every year has the same months, so the shift is a division. A
+        # non-positive month from div_amod belongs to the prior year —
+        # otherwise subtracting months can produce {2018, -1, 1}.
+        defp add_months(year, month, months) do
+          months_in_year = months_in_year(year)
+
+          case Localize.Utils.Math.div_amod(month + months, months_in_year) do
+            {year_increment, new_month} when new_month > 0 ->
+              {year + year_increment, new_month}
+
+            {year_increment, new_month} ->
+              {year + year_increment - 1, months_in_year + new_month}
+          end
+        end
+      else
+        # A leap year has an extra month, so the shift walks year by year,
+        # each year contributing its own number of months.
+        defp add_months(year, month, months) when months >= 0 do
+          months_in_year = months_in_year(year)
+
+          if month + months <= months_in_year do
+            {year, month + months}
+          else
+            add_months(year + 1, 1, months - (months_in_year - month + 1))
+          end
+        end
+
+        defp add_months(year, month, months) do
+          if month + months >= 1 do
+            {year, month + months}
+          else
+            add_months(year - 1, months_in_year(year - 1), months + month)
+          end
+        end
       end
     end
   end

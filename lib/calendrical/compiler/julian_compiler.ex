@@ -21,7 +21,6 @@ defmodule Calendrical.Julian.Compiler do
       @quarters_in_year 4
       @months_in_quarter 3
       @months_in_year Calendrical.Julian.months_in_year(0)
-      @last_month_of_year rem(start_month + (@months_in_year - 1), @months_in_year)
 
       @doc """
       These dates belong to the prior Julian year
@@ -35,7 +34,7 @@ defmodule Calendrical.Julian.Compiler do
       # on
 
       def date_to_iso_days(year, month, day) when year_rollover(month, day) do
-        Calendrical.Julian.date_to_iso_days(year + 1, month, day)
+        Calendrical.Julian.date_to_iso_days(next_year(year), month, day)
       end
 
       def date_to_iso_days(year, month, day) do
@@ -49,20 +48,22 @@ defmodule Calendrical.Julian.Compiler do
       end
 
       def date_from_julian_date(year, month, day) when year_rollover(month, day) do
-        {year - 1, month, day}
+        {previous_year(year), month, day}
       end
 
       def date_from_julian_date(year, month, day) do
         {year, month, day}
       end
 
-      def naive_datetime_to_iso_days(year, month, day, 0, 0, 0, {0, 0}) do
-        {date_to_iso_days(year, month, day), {0, 6}}
+      def naive_datetime_to_iso_days(year, month, day, hour, minute, second, microsecond) do
+        {date_to_iso_days(year, month, day),
+         time_to_day_fraction(hour, minute, second, microsecond)}
       end
 
-      def naive_datetime_from_iso_days({iso_days, _}) do
+      def naive_datetime_from_iso_days({iso_days, day_fraction}) do
         {year, month, day} = date_from_iso_days(iso_days)
-        {year, month, day, 0, 0, 0, {0, 6}}
+        {hour, minute, second, microsecond} = time_from_day_fraction(day_fraction)
+        {year, month, day, hour, minute, second, microsecond}
       end
 
       def shift_date(year, month, day, duration) do
@@ -71,40 +72,27 @@ defmodule Calendrical.Julian.Compiler do
 
       def plus(year, month, day, date_part, increment, options \\ [])
 
-      def plus(year, month, day, :years, years, options) do
-        new_year =
-          year + years
+      # Year and month arithmetic is the plain Julian calendar's on the Julian
+      # date, relabelled: the label year of the result depends on where the
+      # shifted date falls against the new-year day, not on the label year the
+      # date started in.
+      def plus(year, month, day, date_part, increment, options)
+          when date_part in [:years, :quarters, :months] do
+        {julian_year, month, day} =
+          Calendrical.Julian.plus(
+            julian_year(year, month, day),
+            month,
+            day,
+            date_part,
+            increment,
+            options
+          )
 
-        new_day =
-          if Keyword.get(options, :coerce, false) do
-            max_new_day = days_in_month(new_year, month)
-            min(day, max_new_day)
-          else
-            day
-          end
-
-        {year + years, month, new_day}
+        date_from_julian_date(julian_year, month, day)
       end
 
-      def plus(year, month, day, :quarters, quarters, options) do
-        months = quarters * @months_in_quarter
-        plus(year, month, day, :months, months, options)
-      end
-
-      def plus(year, month, day, :months, months, options) do
-        months_in_year = months_in_year(year)
-        {year_increment, new_month} = Localize.Utils.Math.div_amod(month + months, months_in_year)
-        new_year = year + year_increment
-
-        new_day =
-          if Keyword.get(options, :coerce, false) do
-            max_new_day = days_in_month(new_year, new_month)
-            min(day, max_new_day)
-          else
-            day
-          end
-
-        {new_year, new_month, new_day}
+      def plus(year, month, day, :weeks, weeks, options) do
+        plus(year, month, day, :days, weeks * Calendrical.Julian.days_in_week(), options)
       end
 
       def plus(year, month, day, :days, days, _options) do
@@ -120,86 +108,82 @@ defmodule Calendrical.Julian.Compiler do
         Calendrical.dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
       end
 
-      # Here we use month to mean ordinal month. Therefore if the calendar
-      # starts on March 25th, then days in month for March will be seen as
-      # days if month for month 1.
+      # A date's month is its Julian month, so the days of `month` in label
+      # `year` are those of that Julian month in the Julian year the label
+      # year's `month` falls in. The new-year month holds days 1..(start - 1)
+      # of the next Julian year and the rest of this one: its days run to this
+      # Julian year's month end.
+      defdelegate days_in_month(month), to: Calendrical.Julian
 
-      def days_in_month(month) do
-        {:error, :undefined}
+      def days_in_month(year, month) do
+        Calendrical.Julian.days_in_month(julian_year(year, month, @new_year_starting_day), month)
       end
 
-      def days_in_month(year, ordinal_month) do
-        adjusted_month =
-          Localize.Utils.Math.amod(ordinal_month + @new_year_starting_month - 1, @months_in_year)
-
-        cond do
-          # The first month of the year will be short since the year starts
-          # part way through the month
-          adjusted_month == @new_year_starting_month ->
-            days_in_julian_month = Calendrical.Julian.days_in_month(year, ordinal_month)
-            days_in_julian_month - @new_year_starting_day + 1
-
-          # The last month of the year will be "long" since the first part of the
-          # first month that is before the start of year will be included
-          adjusted_month == @last_month_of_year ->
-            start_of_month =
-              date_to_iso_days(year, adjusted_month, 1)
-
-            start_of_next_month =
-              date_to_iso_days(year + 1, @new_year_starting_month, @new_year_starting_day)
-
-            start_of_next_month - start_of_month
-
-          true ->
-            Calendrical.Julian.days_in_month(year, adjusted_month)
-        end
-      end
+      defdelegate days_in_week(), to: Calendrical.Julian
 
       def year(year) do
         {year, month, day} = first_day_of_year(year)
-        {:ok, first_date} = Date.new(year, month, day, __MODULE__)
 
-        {year, month, day} = last_day_of_year(year)
-        {:ok, last_date} = Date.new(year, month, day, __MODULE__)
-
-        Date.range(first_date, last_date)
+        with {:ok, first_date} <- Date.new(year, month, day, __MODULE__) do
+          Date.range(first_date, date_at(last_iso_day_of_year(year)))
+        end
       end
 
       def quarter(year, quarter) do
         {:error, :not_defined}
       end
 
+      # `month/2` counts months from the start of the year: month 1 runs from
+      # the new-year day to the end of its Julian month, and month 12 is long,
+      # running on to the day before the next new year.
+      def month(_year, ordinal_month) when ordinal_month not in 1..@months_in_year do
+        {:error, :invalid_date}
+      end
+
       def month(year, ordinal_month) do
-        adjusted_month =
+        first_iso_days = ordinal_month_start(year, ordinal_month)
+
+        last_iso_days =
+          if ordinal_month == @months_in_year,
+            do: first_iso_day_of_year(next_year(year)) - 1,
+            else: ordinal_month_start(year, ordinal_month + 1) - 1
+
+        Date.range(date_at(first_iso_days), date_at(last_iso_days))
+      end
+
+      defp date_at(iso_days) do
+        {year, month, day} = date_from_iso_days(iso_days)
+        %Date{year: year, month: month, day: day, calendar: __MODULE__}
+      end
+
+      defp ordinal_month_start(year, 1), do: first_iso_day_of_year(year)
+
+      defp ordinal_month_start(year, ordinal_month) do
+        month =
           Localize.Utils.Math.amod(ordinal_month + @new_year_starting_month - 1, @months_in_year)
 
-        first_day =
-          if adjusted_month == @new_year_starting_month, do: @new_year_starting_day, else: 1
-
-        {:ok, first} = Date.new(year, adjusted_month, first_day, __MODULE__)
-
-        first_iso_days = date_to_iso_days(year, adjusted_month, first_day)
-        days_in_month = days_in_month(year, ordinal_month)
-        last_iso_days = first_iso_days + days_in_month - 1
-        {year, month, day} = date_from_iso_days(last_iso_days)
-        {:ok, last} = Date.new(year, month, day, __MODULE__)
-
-        Date.range(first, last)
+        date_to_iso_days(year, month, 1)
       end
 
-      def quarter_of_year(year, month, day) do
-        month_of_year = month_of_year(year, month, day)
-
-        ceil(month_of_year / (@months_in_year / @quarters_in_year))
+      # Quarters count from the start of the year, as `month/2` counts months.
+      def quarter_of_year(_year, month, day) do
+        ceil(position_in_year(month, day) / (@months_in_year / @quarters_in_year))
       end
 
-      # Returns the ordinal month accounting for a long month 12
-      def month_of_year(_year, month, day)
-          when month == @new_year_starting_month and day < @new_year_starting_day do
+      # A date's month is its Julian month, which names it; `month/2` counts
+      # the months from the start of the year instead.
+      def month_of_year(_year, month, _day) do
+        month
+      end
+
+      # The month's place in the year, the new-year month's days before the
+      # new-year day ending the year as a long month 12.
+      defp position_in_year(month, day)
+           when month == @new_year_starting_month and day < @new_year_starting_day do
         @months_in_year
       end
 
-      def month_of_year(_year, month, _day) do
+      defp position_in_year(month, _day) do
         Localize.Utils.Math.amod(month - @new_year_starting_month + 1, @months_in_year)
       end
 
@@ -213,7 +197,7 @@ defmodule Calendrical.Julian.Compiler do
         year
       end
 
-      def extended_year(year, month, day) when year_rollover(month, day) do
+      def extended_year(year, month, day) do
         calendar_year(year, month, day)
       end
 
@@ -221,9 +205,13 @@ defmodule Calendrical.Julian.Compiler do
         calendar_year(year, month, day)
       end
 
-      def related_gregorian_year(year, month, day) do
-        iso_days = date_to_iso_days(year, month, day)
-        {year, _month, _day} = Calendrical.Gregorian.date_from_iso_days(iso_days)
+      # Per TR35 the related year is the Gregorian year in which the calendar
+      # year begins, the same for every date of the year (as for
+      # `Calendrical.Julian`).
+      def related_gregorian_year(year, _month, _day) do
+        {year, _month, _day} =
+          Calendrical.Gregorian.date_from_iso_days(first_iso_day_of_year(year))
+
         year
       end
 
@@ -234,7 +222,7 @@ defmodule Calendrical.Julian.Compiler do
       end
 
       def last_day_of_year(year) do
-        last_day = first_iso_day_of_year(year + 1) - 1
+        last_day = first_iso_day_of_year(next_year(year)) - 1
         date_from_iso_days(last_day)
       end
 
@@ -258,12 +246,23 @@ defmodule Calendrical.Julian.Compiler do
       # normalize the label year first, otherwise a rollover date such
       # as {2023, 2, 29} in the March1 variant reaches plain Julian as
       # the (invalid) date 2023-02-29 instead of 2024-02-29.
-      defp julian_year(year, month, day) when year_rollover(month, day), do: year + 1
+      defp julian_year(year, month, day) when year_rollover(month, day), do: next_year(year)
       defp julian_year(year, _month, _day), do: year
 
-      def valid_date?(year, month, day) do
+      # A label year is the Julian year its new-year day falls in, and the
+      # Julian calendar has no year 0: 1 BC (-1) is followed by AD 1.
+      defp next_year(-1), do: 1
+      defp next_year(year), do: year + 1
+
+      defp previous_year(1), do: -1
+      defp previous_year(year), do: year - 1
+
+      def valid_date?(year, month, day)
+          when is_integer(year) and is_integer(month) and is_integer(day) do
         Calendrical.Julian.valid_date?(julian_year(year, month, day), month, day)
       end
+
+      def valid_date?(_year, _month, _day), do: false
 
       def day_of_week(year, month, day, starts_on) do
         Calendrical.Julian.day_of_week(julian_year(year, month, day), month, day, starts_on)
@@ -315,17 +314,19 @@ defmodule Calendrical.Julian.Compiler do
       defdelegate shift_time(hour, minute, second, millisecond, duration),
         to: Calendrical.Julian
 
-      defdelegate shift_naive_datetime(
-                    year,
-                    month,
-                    day,
-                    hour,
-                    minute,
-                    second,
-                    millisecond,
-                    duration
-                  ),
-                  to: Calendrical.Julian
+      def shift_naive_datetime(year, month, day, hour, minute, second, microsecond, duration) do
+        Calendrical.shift_naive_datetime(
+          year,
+          month,
+          day,
+          hour,
+          minute,
+          second,
+          microsecond,
+          __MODULE__,
+          duration
+        )
+      end
 
       defdelegate iso_days_to_end_of_day(iso_days), to: Calendrical.Julian
       defdelegate iso_days_to_beginning_of_day(iso_days), to: Calendrical.Julian

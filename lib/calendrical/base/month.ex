@@ -42,6 +42,14 @@ defmodule Calendrical.Base.Month do
     end
   end
 
+  # A fiscal month maps onto an ISO month, so a month outside 1..12 (or a
+  # day below 1) could otherwise land on a real ISO date.
+  def valid_date?(year, month, day, _config)
+      when not (is_integer(year) and is_integer(month) and is_integer(day)) or
+             month not in 1..12 or day < 1 do
+    false
+  end
+
   def valid_date?(year, month, day, %Config{month_of_year: 1}) do
     Calendar.ISO.valid_date?(year, month, day)
   end
@@ -194,7 +202,9 @@ defmodule Calendrical.Base.Month do
   # The one exception is if `starting_on` is set to `:monday` in
   # which case we can interpret `1` to mean "Monday".
 
-  def day_of_week(year, month, day, _starting_on, %{day_of_week: :first} = config)
+  # Weeks that start on the first day of the year number a day from there;
+  # a named first day of the week counts from the day number, below.
+  def day_of_week(year, month, day, :default, %{day_of_week: :first} = config)
       when is_date(year, month, day) do
     iso_days = date_to_iso_days(year, month, day, config)
     Integer.mod(iso_days - first_gregorian_day_of_year(year, config), 7) + 1

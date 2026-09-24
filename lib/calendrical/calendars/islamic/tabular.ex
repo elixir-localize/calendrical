@@ -8,7 +8,9 @@ defmodule Calendrical.Islamic.Tabular do
   # 622 Julian, Tbla = Thursday 15 July 622 Julian).
   #
   # Algorithms are taken from Dershowitz & Reingold, *Calendrical
-  # Calculations* (4th ed.), Chapter 7, "The Islamic Calendar".
+  # Calculations* (4th ed.), Chapter 7, "The Islamic Calendar". Its
+  # divisions are floored, which `div/2` is not for the negative
+  # numerators of the years before the epoch.
 
   @doc """
   Returns whether the given Hijri `year` is a leap year under the standard
@@ -49,7 +51,7 @@ defmodule Calendrical.Islamic.Tabular do
       when is_integer(year) and is_integer(month) and is_integer(day) and is_integer(epoch) do
     epoch - 1 +
       354 * (year - 1) +
-      div(3 + 11 * year, 30) +
+      Integer.floor_div(3 + 11 * year, 30) +
       29 * (month - 1) +
       div(month, 2) +
       day
@@ -61,7 +63,7 @@ defmodule Calendrical.Islamic.Tabular do
   """
   @spec date_from_iso_days(integer(), integer()) :: {integer(), 1..12, 1..30}
   def date_from_iso_days(iso_days, epoch) do
-    year = div(30 * (iso_days - epoch) + 10_646, 10_631)
+    year = Integer.floor_div(30 * (iso_days - epoch) + 10_646, 10_631)
     prior_days = iso_days - date_to_iso_days(year, 1, 1, epoch)
     month = div(11 * prior_days + 330, 325)
     day = iso_days - date_to_iso_days(year, month, 1, epoch) + 1

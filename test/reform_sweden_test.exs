@@ -76,4 +76,28 @@ defmodule Calendrical.Reform.SwedenTest do
       end
     end
   end
+
+  describe "the transitional calendar on its own" do
+    alias Calendrical.Reform.Sweden.Transitional
+
+    test "every day from 1690 to 1730 round-trips, and outside the window is Julian" do
+      first = Date.to_gregorian_days(~D[1690-01-01])
+      last = Date.to_gregorian_days(~D[1730-12-31])
+
+      for iso_days <- first..last do
+        {year, month, day} = Transitional.date_from_iso_days(iso_days)
+        assert Transitional.date_to_iso_days(year, month, day) == iso_days
+      end
+
+      assert Transitional.date_from_iso_days(Date.to_gregorian_days(~D[2025-06-15])) ==
+               Calendrical.Julian.date_from_iso_days(Date.to_gregorian_days(~D[2025-06-15]))
+    end
+
+    test "February 1700 lost its leap day and February 1712 has thirty days" do
+      assert Transitional.days_in_month(1700, 2) == 28
+      refute Transitional.leap_year?(1700)
+      assert Transitional.days_in_month(1712, 2) == 30
+      assert Transitional.days_in_month(1699, 2) == 28
+    end
+  end
 end

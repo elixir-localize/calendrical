@@ -79,6 +79,37 @@ defmodule Calendrical.Composite do
       iex> Date.shift(~D[1753-02-17 Calendrical.Reform.Sweden], day: 1)
       ~D[1753-03-01 Calendrical.Reform.Sweden]
 
+  A month a transition cuts short counts only the days that remain, and
+  a year runs from whichever day it begins on, so a year that changes
+  its first day is shorter or longer than usual:
+
+      iex> Calendrical.Reform.Sweden.days_in_month(1753, 2)
+      17
+
+      iex> Calendrical.Reform.England.days_in_year(1751)
+      282
+
+  ## Arithmetic across a transition
+
+  Years, quarters and months are added in the calendar in effect on the
+  date. When the result falls under another calendar the months are
+  counted on through each calendar's own months, from January however a
+  year-start style numbers its years, and a day the resulting month does
+  not have becomes the month's next day that exists, or its last day:
+
+      iex> Date.shift(~D[1752-08-20 Calendrical.Reform.England], month: 1)
+      ~D[1752-09-20 Calendrical.Reform.England]
+
+      iex> Date.shift(~D[1752-08-05 Calendrical.Reform.England], month: 1)
+      ~D[1752-09-14 Calendrical.Reform.England]
+
+  A change to a year that begins later — England's move to Lady Day,
+  25 March, in 1155 — numbers the days from 1 January to 24 March of the
+  following year with the year that already named the same days a year
+  earlier. Those labels name the earlier days, and the later ones have
+  no label of their own; historians write them with both years
+  ("10 March 1155/6").
+
   """
 
   alias Calendrical.Composite.Config

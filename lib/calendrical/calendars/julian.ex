@@ -17,6 +17,15 @@ defmodule Calendrical.Julian do
   `Calendrical.Julian.Dec25` correspond to historical "year-style"
   conventions used in different periods and regions.
 
+  A variant date keeps its Julian month and day; only the year label
+  changes on the new-year day. A variant whose year starts part-way
+  through a month (`March25`, `Dec25`) therefore labels that month's
+  days before the new-year day with the prior year: in `March25`,
+  label 2024 holds 25–31 March 2024 and 1–24 March 2025. Functions
+  that keep the label year and change only the day, such as
+  `Date.beginning_of_month/1` and `Date.end_of_month/1`, step between
+  those two parts.
+
   The module itself is also a fully-functional calendar that can be
   used directly (`~D[1500-03-15 Calendrical.Julian]`), in which case
   the year begins on January 1.
@@ -126,20 +135,22 @@ defmodule Calendrical.Julian do
   end
 
   @months_with_30_days [4, 6, 9, 11]
-  def valid_date?(_year, month, day) when month in @months_with_30_days and day in 1..30 do
+  def valid_date?(year, month, day)
+      when is_integer(year) and month in @months_with_30_days and day in 1..30 do
     true
   end
 
   @months_with_31_days [1, 3, 5, 7, 8, 10, 12]
-  def valid_date?(_year, month, day) when month in @months_with_31_days and day in 1..31 do
+  def valid_date?(year, month, day)
+      when is_integer(year) and month in @months_with_31_days and day in 1..31 do
     true
   end
 
-  def valid_date?(year, 2, 29) do
+  def valid_date?(year, 2, 29) when is_integer(year) do
     if leap_year?(year), do: true, else: false
   end
 
-  def valid_date?(_year, 2, day) when day in 1..28 do
+  def valid_date?(year, 2, day) when is_integer(year) and day in 1..28 do
     true
   end
 
@@ -930,19 +941,19 @@ defmodule Calendrical.Julian do
   """
   @spec quarter(year, Calendrical.quarter()) :: Date.Range.t() | {:error, :invalid_date}
   @impl Calendrical
-  def quarter(year, quarter) do
+  def quarter(year, quarter) when quarter in 1..@quarters_in_year do
     months_in_quarter = div(months_in_year(year), @quarters_in_year)
     starting_month = months_in_quarter * (quarter - 1) + 1
-    starting_day = 1
-
     ending_month = starting_month + months_in_quarter - 1
-    ending_day = days_in_month(year, ending_month)
 
-    with {:ok, start_date} <- Date.new(year, starting_month, starting_day, __MODULE__),
-         {:ok, end_date} <- Date.new(year, ending_month, ending_day, __MODULE__) do
+    with {:ok, start_date} <- Date.new(year, starting_month, 1, __MODULE__),
+         {:ok, end_date} <-
+           Date.new(year, ending_month, days_in_month(year, ending_month), __MODULE__) do
       Date.range(start_date, end_date)
     end
   end
+
+  def quarter(_year, _quarter), do: {:error, :invalid_date}
 
   @doc """
   Returns a `t:Date.Range.t/0` representing a given Julian
@@ -967,11 +978,8 @@ defmodule Calendrical.Julian do
   @spec month(year, month) :: Date.Range.t() | {:error, :invalid_date}
   @impl Calendrical
   def month(year, month) do
-    starting_day = 1
-    ending_day = days_in_month(year, month)
-
-    with {:ok, start_date} <- Date.new(year, month, starting_day, __MODULE__),
-         {:ok, end_date} <- Date.new(year, month, ending_day, __MODULE__) do
+    with {:ok, start_date} <- Date.new(year, month, 1, __MODULE__),
+         {:ok, end_date} <- Date.new(year, month, days_in_month(year, month), __MODULE__) do
       Date.range(start_date, end_date)
     end
   end
@@ -1009,8 +1017,8 @@ defmodule Calendrical.Julian do
 
   * `year`, `month`, `day` form the Julian date to shift.
 
-  * `date_part` is one of `:years`, `:quarters`, `:months`, or
-    `:days`.
+  * `date_part` is one of `:years`, `:quarters`, `:months`,
+    `:weeks`, or `:days`.
 
   * `increment` is the integer number of `date_part`s to add (may
     be negative).
@@ -1035,11 +1043,21 @@ defmodule Calendrical.Julian do
       iex> Calendrical.Julian.plus(2025, 1, 1, :months, 1)
       {2025, 2, 1}
 
+      iex> Calendrical.Julian.plus(2025, 1, 1, :weeks, 1)
+      {2025, 1, 8}
+
       iex> Calendrical.Julian.plus(2025, 1, 1, :days, 1)
       {2025, 1, 2}
 
   """
-  @spec plus(year, month, day, :years | :quarters | :months | :days, integer(), Keyword.t()) ::
+  @spec plus(
+          year,
+          month,
+          day,
+          :years | :quarters | :months | :weeks | :days,
+          integer(),
+          Keyword.t()
+        ) ::
           {Calendar.year(), Calendar.month(), Calendar.day()}
   @impl Calendrical
   def plus(year, month, day, date_part, increment, options \\ [])
@@ -1088,6 +1106,10 @@ defmodule Calendrical.Julian do
       end
 
     {new_year, new_month, new_day}
+  end
+
+  def plus(year, month, day, :weeks, weeks, options) do
+    plus(year, month, day, :days, weeks * @days_in_week, options)
   end
 
   def plus(year, month, day, :days, days, _options) do
