@@ -745,6 +745,77 @@ defmodule Calendrical.Lunisolar do
     {:error, {:invalid_solar_term, index}}
   end
 
+  # The 24 solar terms in index order, from `lichun` (index 1, 315°) every 15°
+  # of solar ecliptic longitude — the order `solar_term/3` numbers them in.
+  @solar_term_names {
+    "lichun",
+    "yushui",
+    "jingzhe",
+    "chunfen",
+    "qingming",
+    "guyu",
+    "lixia",
+    "xiaoman",
+    "mangzhong",
+    "xiazhi",
+    "xiaoshu",
+    "dashu",
+    "liqiu",
+    "chushu",
+    "bailu",
+    "qiufen",
+    "hanlu",
+    "shuangjiang",
+    "lidong",
+    "xiaoxue",
+    "daxue",
+    "dongzhi",
+    "xiaohan",
+    "dahan"
+  }
+
+  @doc """
+  The name of the solar term (jié-qì) at a 1-based index.
+
+  The 24 solar terms are numbered from `lichun` (立春, index 1) at 315° solar
+  ecliptic longitude, then every 15° — the same order `solar_term/3` computes a
+  term's date for, so an index that dates a term also names it.
+
+  ### Arguments
+
+  * `index` is the 1-based solar-term number, `1..24`.
+
+  ### Returns
+
+  * `{:ok, name}` with the term's romanised (pinyin) name, such as `"qingming"`.
+
+  * `{:error, {:invalid_solar_term, index}}` when `index` is not in `1..24`.
+
+  ### Examples
+
+      iex> Calendrical.Lunisolar.solar_term_name(1)
+      {:ok, "lichun"}
+
+      iex> Calendrical.Lunisolar.solar_term_name(5)
+      {:ok, "qingming"}
+
+      iex> Calendrical.Lunisolar.solar_term_name(22)
+      {:ok, "dongzhi"}
+
+      iex> Calendrical.Lunisolar.solar_term_name(0)
+      {:error, {:invalid_solar_term, 0}}
+
+  """
+  @spec solar_term_name(integer()) ::
+          {:ok, String.t()} | {:error, {:invalid_solar_term, integer()}}
+  def solar_term_name(index) when is_integer(index) and index in 1..24 do
+    {:ok, elem(@solar_term_names, index - 1)}
+  end
+
+  def solar_term_name(index) do
+    {:error, {:invalid_solar_term, index}}
+  end
+
   @doc """
   Return last Chinese major solar term (zhongqi) before
   `iso_days`.
