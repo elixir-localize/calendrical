@@ -55,8 +55,9 @@ defmodule Calendrical.Islamic.Visibility do
   @spec find_phasis_on_or_before(integer(), Geo.PointZ.t(), method()) ::
           {:ok, integer()} | {:error, Date.t()}
   def find_phasis_on_or_before(iso_days, location, method \\ @default_method) do
-    with {:ok, moon_iso} <- prior_new_moon_iso_days(iso_days),
-         {:ok, tau} <- phasis_search_start(iso_days, moon_iso, location, method) do
+    moon_iso = prior_new_moon_iso_days(iso_days)
+
+    with {:ok, tau} <- phasis_search_start(iso_days, moon_iso, location, method) do
       next_visible_crescent(tau, location, method)
     end
   end
@@ -94,8 +95,9 @@ defmodule Calendrical.Islamic.Visibility do
   end
 
   defp find_phasis_on_or_after(iso_days, location, method) do
-    with {:ok, moon_iso} <- prior_new_moon_iso_days(iso_days),
-         {:ok, tau} <- next_phasis_search_start(iso_days, moon_iso, location, method) do
+    moon_iso = prior_new_moon_iso_days(iso_days)
+
+    with {:ok, tau} <- next_phasis_search_start(iso_days, moon_iso, location, method) do
       next_visible_crescent(tau, location, method)
     end
   end
@@ -163,15 +165,11 @@ defmodule Calendrical.Islamic.Visibility do
   end
 
   # The ISO day on which the most recent geocentric new moon falls (in
-  # UTC). The Astro library returns a UTC `DateTime`; we take the
-  # calendar date of that instant.
+  # UTC). Astro finds that new moon, as a UTC `DateTime`, for any date,
+  # before AD 1 included; we take the calendar date of that instant.
   defp prior_new_moon_iso_days(iso_days) do
-    date = Date.from_gregorian_days(iso_days)
-
-    case Astro.date_time_new_moon_before(date) do
-      {:ok, datetime} -> {:ok, datetime |> DateTime.to_date() |> Date.to_gregorian_days()}
-      {:error, _reason} -> {:error, date}
-    end
+    {:ok, datetime} = Astro.date_time_new_moon_before(Date.from_gregorian_days(iso_days))
+    datetime |> DateTime.to_date() |> Date.to_gregorian_days()
   end
 
   @spec unsupported!(Date.t()) :: no_return()
