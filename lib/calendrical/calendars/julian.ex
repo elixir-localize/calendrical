@@ -576,6 +576,7 @@ defmodule Calendrical.Julian do
         ) ::
           {Calendar.day_of_week(), first_day_of_week :: non_neg_integer(),
            last_day_of_week :: non_neg_integer()}
+          | {:error, Exception.t()}
 
   @impl Calendar
   @epoch_day_of_week 6
