@@ -14,6 +14,8 @@ The format is based on
 
 * The parse functions' `:calendar` option is a calendar module, and the date is returned in it: a CLDR calendar name such as `:hebrew` returns `Localize.UnknownCalendarError`, and a calendar that shares its CLDR type with another, such as `Calendrical.Gregorian` or a fiscal or composite calendar, no longer comes back as `Calendar.ISO`. `:return_calendar` is removed; convert the result with `Date.convert/2`.
 
+* `Calendrical.DateTime.parse/2` keeps an ISO 8601 offset's wall time, so "2026-05-23T14:30:00+05:00" is 14:30 at +05:00 rather than 09:30 UTC — the struct a locale-formatted offset already gave.
+
 ### Added
 
 * `Calendrical.Hebrew.ordinal_month/2`, `lunar_month_of_year/1,2`, `leap_month/1` and `traditional_leap_month/1` convert between a Hebrew month's position and its RFC 7529 traditional month (Adar I is `{5, :leap}`), as the lunisolar calendars do.
@@ -43,6 +45,14 @@ The format is based on
 * The Chinese, Korean, Vietnamese and Lunar Japanese calendars find a year's new year once per question and each new moon once, so `valid_date?/3`, `days_in_month/2`, `days_in_year/1`, `leap_year?/1`, `leap_month/1`, `new/3` and `lunar_month_of_year/2` ask for far fewer new moons — a quarter as many across a lunisolar holiday corpus. Results are unchanged.
 
 ### Fixed
+
+* The parse functions try the input as given before stripping a leading weekday, so a month name that is also a weekday name (es "mar") keeps its month, and they accept format and stand-alone month names alike (ru "июль").
+
+* Dates with an era parse: CLDR's alternative era names made the regex of every pattern with an era fail to compile. Era and weekday names of another width are accepted where they name a single era or day.
+
+* `Calendrical.Time.parse/2` resolves a flexible day period's hour by CLDR's day period rules, so ja "夜中0:30" is 00:30 where it was 12:30.
+
+* The parse functions return `Localize.InvalidValueError` for a non-string input or malformed options instead of raising, and a range given as two strings reports an unknown calendar or invalid locale instead of raising `CaseClauseError`.
 
 * `Calendrical.Date.parse/2` resolves a month name to that month in the parsed year, so Hebrew month names parse in ordinary and leap years alike, and "Adar II" parses.
 

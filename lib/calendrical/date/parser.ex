@@ -109,27 +109,32 @@ defmodule Calendrical.Date.Parser do
     reference_year = (Keyword.get(options, :reference_date) || Date.utc_today()).year
     as = Keyword.get(options, :as, :struct)
 
-    input =
-      input
-      |> normalise_input()
-      |> preprocess_safe(locale, calendar_module)
+    normalised = normalise_input(input)
+    candidates = Enum.uniq([normalised, preprocess_safe(normalised, locale, calendar_module)])
 
-    attempt = fn current ->
-      case try_iso(current, calendar_module) do
+    attempt = fn inputs ->
+      case Enum.find_value(inputs, &iso_date(&1, calendar_module)) do
         {:ok, date} ->
           {:ok, finalise_date(date, as)}
 
-        :error ->
-          try_locale_patterns(current, locale, calendar_module, reference_year, as)
+        nil ->
+          try_locale_patterns(inputs, locale, calendar_module, reference_year, as)
       end
     end
 
-    case attempt.(input) do
+    case attempt.(candidates) do
       {:ok, _} = ok ->
         ok
 
       {:error, _} = err ->
-        retry_without_ordinal_affixes(attempt, input, locale, err)
+        retry_without_ordinal_affixes(attempt, candidates, locale, err)
+    end
+  end
+
+  defp iso_date(input, calendar_module) do
+    case try_iso(input, calendar_module) do
+      {:ok, _date} = ok -> ok
+      :error -> nil
     end
   end
 
@@ -137,13 +142,13 @@ defmodule Calendrical.Date.Parser do
   # original input couldn't be parsed, so CLDR-baked
   # ordinal text (e.g. `"2nd quarter"` quarter-wide name)
   # is preserved on the first attempt.
-  defp retry_without_ordinal_affixes(attempt, input, locale, original_error) do
-    stripped = strip_ordinal_affixes(input, locale)
+  defp retry_without_ordinal_affixes(attempt, inputs, locale, original_error) do
+    stripped = Enum.map(inputs, &strip_ordinal_affixes(&1, locale))
 
-    if stripped == input do
+    if stripped == inputs do
       original_error
     else
-      case attempt.(stripped) do
+      case attempt.(Enum.uniq(stripped)) do
         {:ok, _} = ok -> ok
         {:error, _} -> original_error
       end
@@ -368,15 +373,14 @@ defmodule Calendrical.Date.Parser do
 
     # Range inputs are pre-split internally by interval-pattern
     # matching, and each endpoint goes through `parse/2` for the
-    # split-and-parse fallback — so endpoint-level ordinal
-    # stripping is handled by `parse/2`. Range-level interval
+    # split-and-parse fallback — so endpoint-level ordinal and
+    # weekday stripping is handled by `parse/2`. Range-level interval
     # patterns don't bake ordinals into their literals (CLDR's
     # interval patterns share the field set with regular date
-    # patterns), so safe-pass preprocessing is sufficient here.
-    input =
-      input
-      |> normalise_input()
-      |> preprocess_safe(locale, calendar_module)
+    # patterns). As in `parse/2`, the interval patterns see the input
+    # as given before the input with a leading weekday stripped.
+    normalised = normalise_input(input)
+    candidates = Enum.uniq([normalised, preprocess_safe(normalised, locale, calendar_module)])
 
     # Strategy:
     # 1. Try the locale's CLDR interval patterns first — these
@@ -386,24 +390,33 @@ defmodule Calendrical.Date.Parser do
     # 2. Fall back to a naive split-then-parse-each-side. Catches
     #    inputs the interval patterns don't cover (e.g. mixed
     #    formats, ISO endpoints).
-    case match_any_interval_pattern(input, locale, calendar_module, reference_year, as) do
+    case match_interval_candidates(candidates, locale, calendar_module, reference_year, as) do
       {:ok, from, to} ->
         finalise_range(from, to, allow_inverted, as)
 
       :error ->
-        case split_on_interval_separator(input, locale, calendar_module) do
+        case split_on_interval_separator(normalised, locale, calendar_module) do
           {:ok, from_string, to_string} ->
             parse_range_pair(from_string, to_string, options)
 
           :error ->
             {:error,
              DateRangeParseError.exception(
-               input: input,
+               input: normalised,
                reason: :no_separator,
                locale: locale
              )}
         end
     end
+  end
+
+  defp match_interval_candidates(inputs, locale, calendar_module, reference_year, as) do
+    Enum.find_value(inputs, :error, fn input ->
+      case match_any_interval_pattern(input, locale, calendar_module, reference_year, as) do
+        {:ok, _from, _to} = ok -> ok
+        :error -> nil
+      end
+    end)
   end
 
   # In `:map` mode there's no `Date.Range` to build and no
@@ -1167,7 +1180,11 @@ defmodule Calendrical.Date.Parser do
 
   # ── Locale patterns ──────────────────────────────────────────
 
-  defp try_locale_patterns(input, locale, calendar_module, reference_year, as) do
+  # `inputs` are the spellings of one input to try, in order: as given,
+  # then with a leading weekday stripped. A pass tries every spelling
+  # before the next pass starts, so a strict match on either is
+  # preferred to a lax one.
+  defp try_locale_patterns(inputs, locale, calendar_module, reference_year, as) do
     cldr_calendar = cldr_calendar_type(calendar_module)
 
     with {:ok, available} <- Format.available_formats(locale, cldr_calendar),
@@ -1176,7 +1193,7 @@ defmodule Calendrical.Date.Parser do
       quarters_data = maybe_load_quarters(locale, cldr_calendar)
       days_data = maybe_load_days(locale, cldr_calendar)
       lenient = load_lenient_date(locale)
-      transliterated = transliterate_digits(input, locale)
+      transliterated = inputs |> Enum.map(&transliterate_digits(&1, locale)) |> Enum.uniq()
       patterns = collect_patterns(available)
 
       ctx = %{
@@ -1200,7 +1217,7 @@ defmodule Calendrical.Date.Parser do
       result =
         case as do
           :struct ->
-            run_locale_pass(patterns, transliterated, ctx, :struct)
+            run_candidate_pass(patterns, transliterated, ctx, :struct)
 
           :map ->
             # Pass 1 — strict: only accept a pattern whose fields
@@ -1214,12 +1231,16 @@ defmodule Calendrical.Date.Parser do
             # Pass 2 — lax: needed for legitimately partial inputs
             # that can't construct a date even with the reference
             # year (e.g. `"2026"` alone, or `"May"` alone).
-            run_locale_pass(patterns, transliterated, ctx, {:map, :strict}) ||
-              run_locale_pass(patterns, transliterated, ctx, {:map, :lax})
+            run_candidate_pass(patterns, transliterated, ctx, {:map, :strict}) ||
+              run_candidate_pass(patterns, transliterated, ctx, {:map, :lax})
         end
 
-      result || {:error, no_match_error(input, locale, calendar_module)}
+      result || {:error, no_match_error(hd(inputs), locale, calendar_module)}
     end
+  end
+
+  defp run_candidate_pass(patterns, inputs, ctx, pass_as) do
+    Enum.find_value(inputs, &run_locale_pass(patterns, &1, ctx, pass_as))
   end
 
   defp run_locale_pass(patterns, input, ctx, pass_as) do
@@ -1811,6 +1832,10 @@ defmodule Calendrical.Date.Parser do
     # single-letter display forms (en's `:narrow` is "J" for both
     # January and June), useless for parsing.
     #
+    # Format (`M`) and stand-alone (`L`) names are both accepted
+    # for either symbol: ru's format July is "июля" and its
+    # stand-alone July "июль", and ru's `yMMMM` is "LLLL y 'г'.".
+    #
     # Each index gets exactly ONE named capture group, with
     # internal alternation across the widths' name forms.
     # Duplicate names across widths (en's "May" is the same in
@@ -1818,15 +1843,11 @@ defmodule Calendrical.Date.Parser do
     # so the regex prefers `"June"` over `"Jun"` when both could
     # match a prefix of input.
     by_index =
-      [:wide, :abbreviated]
-      |> Enum.flat_map(fn width ->
-        names =
-          get_in(months_data, [:format, width]) ||
-            get_in(months_data, [:stand_alone, width]) ||
-            %{}
-
-        Enum.map(names, fn {index, name} -> {index, name, width} end)
-      end)
+      for context <- [:format, :stand_alone],
+          width <- [:wide, :abbreviated],
+          {index, name} <- get_in(months_data, [context, width]) || %{} do
+        {index, name, width}
+      end
       |> Enum.group_by(fn {index, _name, _w} -> index end, fn {_index, name, w} -> {name, w} end)
 
     branches =
@@ -1858,34 +1879,70 @@ defmodule Calendrical.Date.Parser do
 
   defp name_form({name, _width}), do: Regex.escape(name)
 
+  # `Localize.Calendar.eras/2` returns `%{width => %{index => name}}`
+  # and keeps CLDR's alternative era names at negative indices: `-1`
+  # for era 0 ("BCE") and `-2` for era 1 ("CE"). They fold onto their
+  # era here, because a regex group name cannot carry a minus sign and
+  # a pattern whose regex does not compile never matches. The wide
+  # and abbreviated names are accepted whatever the pattern's width.
   defp era_name_regex(eras_data, width) when is_map(eras_data) do
-    names =
-      eras_data
-      |> get_era_names_for_width(width)
+    declared = era_names(Map.get(eras_data, width) || Map.get(eras_data, :abbreviated))
 
-    if Enum.empty?(names) do
-      :none
-    else
-      branches =
-        names
-        |> Enum.sort_by(fn {_index, name} -> -byte_size(name) end)
-        |> Enum.map(fn {index, name} -> "(?P<__e#{index}__>#{Regex.escape(name)})" end)
+    lenient =
+      Enum.flat_map([:wide, :abbreviated], fn era_width ->
+        era_names(Map.get(eras_data, era_width))
+      end)
 
-      {:branches, "(?i:" <> Enum.join(branches, "|") <> ")"}
-    end
+    grouped_name_regex(declared, lenient, "__e")
   end
 
-  # `Localize.Calendar.eras/2` returns `%{width => %{index =>
-  # name}}` — top-level keys are width atoms (`:wide`,
-  # `:abbreviated`, `:narrow`), inner maps are
-  # `era_index => era_name`.
-  defp get_era_names_for_width(eras_data, width) do
-    inner = Map.get(eras_data, width) || Map.get(eras_data, :abbreviated) || %{}
+  defp era_names(names) when is_map(names) do
+    Enum.flat_map(names, fn
+      {index, name} when is_integer(index) and index < 0 and is_binary(name) ->
+        [{-1 - index, name}]
 
-    Enum.flat_map(inner, fn
-      {index, name} when is_integer(index) and is_binary(name) -> [{index, name}]
-      _ -> []
+      {index, name} when is_integer(index) and is_binary(name) ->
+        [{index, name}]
+
+      _other ->
+        []
     end)
+  end
+
+  defp era_names(_names), do: []
+
+  # A named capture group per index, alternating over that index's
+  # names longest first, with the groups ordered by their longest
+  # name. The names of the pattern's own width are always included.
+  # TR35 §Parsing Dates and Times also accepts a field's other forms
+  # "if they are unique", so a lenient name is added only when it
+  # belongs to a single index.
+  defp grouped_name_regex(declared, lenient, marker) do
+    indices_by_name =
+      Enum.group_by(declared ++ lenient, &String.downcase(elem(&1, 1)), &elem(&1, 0))
+
+    unique =
+      Enum.filter(lenient, fn {_index, name} ->
+        match?([_index], Enum.uniq(Map.fetch!(indices_by_name, String.downcase(name))))
+      end)
+
+    case Enum.group_by(declared ++ unique, &elem(&1, 0), &elem(&1, 1)) do
+      groups when map_size(groups) == 0 ->
+        :none
+
+      groups ->
+        branches =
+          groups
+          |> Enum.map(fn {index, names} ->
+            {index, names |> Enum.uniq() |> Enum.sort_by(&(-byte_size(&1)))}
+          end)
+          |> Enum.sort_by(fn {_index, [longest | _shorter]} -> -byte_size(longest) end)
+          |> Enum.map(fn {index, names} ->
+            "(?P<#{marker}#{index}__>#{Enum.map_join(names, "|", &Regex.escape/1)})"
+          end)
+
+        {:branches, "(?i:" <> Enum.join(branches, "|") <> ")"}
+    end
   end
 
   # CLDR width map for `E`/`e`/`c` letters.
@@ -1905,32 +1962,35 @@ defmodule Calendrical.Date.Parser do
 
   # Build a regex branch for day-of-week names. Capture the
   # ISO weekday index (1 = Monday … 7 = Sunday) so the
-  # builder can validate or derive a date from it.
+  # builder can validate or derive a date from it. The wide,
+  # abbreviated and short names of both contexts are accepted
+  # alongside the pattern's own width, as TR35 §Parsing Dates
+  # and Times asks: input rarely knows which width a pattern
+  # declares.
   defp day_name_field(days_data, width, context) when is_map(days_data) do
-    inner =
-      get_in(days_data, [context, width]) ||
-        get_in(days_data, [:format, width]) ||
-        %{}
+    declared =
+      day_names(get_in(days_data, [context, width]) || get_in(days_data, [:format, width]))
 
-    branches =
-      inner
-      |> Enum.filter(fn
-        {index, name} when is_integer(index) and is_binary(name) -> true
-        _ -> false
-      end)
-      |> Enum.sort_by(fn {_index, name} -> -byte_size(name) end)
-      |> Enum.map(fn {index, name} ->
-        "(?P<__d#{index}__>#{Regex.escape(name)})"
-      end)
+    lenient =
+      for name_context <- [:format, :stand_alone],
+          name_width <- [:wide, :abbreviated, :short],
+          name <- day_names(get_in(days_data, [name_context, name_width])),
+          do: name
 
-    case branches do
-      [] -> {:plain, "[\\p{L}\\.]+"}
-      _ -> {:capture, :day_of_week, "(?i:" <> Enum.join(branches, "|") <> ")"}
+    case grouped_name_regex(declared, lenient, "__d") do
+      :none -> {:plain, "[\\p{L}\\.]+"}
+      {:branches, regex} -> {:capture, :day_of_week, regex}
     end
   end
 
   defp day_name_field(_data, _width, _context),
     do: {:plain, "[\\p{L}\\.]+"}
+
+  defp day_names(names) when is_map(names) do
+    for {index, name} when is_integer(index) and is_binary(name) <- names, do: {index, name}
+  end
+
+  defp day_names(_names), do: []
 
   # Build a regex branch for quarter names. Capture the
   # quarter index 1..4 so the builder can derive the

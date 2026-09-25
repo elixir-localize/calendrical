@@ -57,6 +57,8 @@ defmodule Calendrical.DateTime do
     failure. Sub-parse errors from `Calendrical.Date.parse/2`
     or `Calendrical.Time.parse/2` pass through.
 
+  * `{:error, Localize.InvalidValueError.t()}` when `input` is not a string or an option is malformed.
+
   ### Examples
 
       iex> Calendrical.DateTime.parse("2026-05-16T14:30:00", locale: :en)
@@ -74,7 +76,9 @@ defmodule Calendrical.DateTime do
   """
   @spec parse(String.t(), Keyword.t()) ::
           {:ok, NaiveDateTime.t() | DateTime.t() | map()} | {:error, Exception.t()}
-  def parse(input, options \\ []) when is_binary(input) do
-    Calendrical.DateTime.Parser.parse(input, options)
+  def parse(input, options \\ []) do
+    with :ok <- Calendrical.ParseOptions.validate(input, options) do
+      Calendrical.DateTime.Parser.parse(input, options)
+    end
   end
 end

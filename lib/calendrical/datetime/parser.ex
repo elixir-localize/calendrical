@@ -56,25 +56,46 @@ defmodule Calendrical.DateTime.Parser do
     locale = Keyword.get(options, :locale) || Localize.get_locale()
     as = Keyword.get(options, :as, :struct)
 
-    # Strip weekday prefix here too — the glue-splitting step
-    # doesn't know which half is the date, so a leading
-    # `"Sun, "` would otherwise survive into the date half
-    # regardless of where the date/time boundary lands. Ordinal
-    # stripping doesn't need to be applied here because each
-    # half is forwarded through `Calendrical.Date.parse/2` /
-    # `Calendrical.Time.parse/2`, and `Date.parse/2` already
-    # runs the ordinal-fallback retry per endpoint.
-    input =
-      input
-      |> Calendrical.Date.Parser.normalise_input()
-      |> Calendrical.Date.Parser.preprocess_safe(locale, calendar_module)
+    # The input as given is tried before the input with a leading
+    # weekday stripped: a CLDR pattern can carry the weekday anywhere,
+    # and a weekday name can also be a month name (es "mar" is both
+    # martes and marzo). Ordinal stripping doesn't need to be applied
+    # here because each half is forwarded through
+    # `Calendrical.Date.parse/2` / `Calendrical.Time.parse/2`, and
+    # `Date.parse/2` already runs the ordinal-fallback retry per
+    # endpoint.
+    normalised = Calendrical.Date.Parser.normalise_input(input)
+    stripped = Calendrical.Date.Parser.preprocess_safe(normalised, locale, calendar_module)
+    candidates = Enum.uniq([normalised, stripped])
 
-    case try_iso(input) do
+    case Enum.find_value(candidates, :error, &iso_candidate/1) do
       {:ok, value} ->
         {:ok, finalise_datetime(value, as)}
 
       :error ->
-        try_locale_glue(input, locale, options, as)
+        try_locale_glue_candidates(candidates, locale, options, as)
+    end
+  end
+
+  defp iso_candidate(input) do
+    case try_iso(input) do
+      {:ok, _value} = ok -> ok
+      :error -> nil
+    end
+  end
+
+  # The first candidate's error is the one reported.
+  defp try_locale_glue_candidates([input | rest], locale, options, as) do
+    case try_locale_glue(input, locale, options, as) do
+      {:ok, _value} = ok -> ok
+      error -> Enum.find_value(rest, error, &glue_candidate(&1, locale, options, as))
+    end
+  end
+
+  defp glue_candidate(input, locale, options, as) do
+    case try_locale_glue(input, locale, options, as) do
+      {:ok, _value} = ok -> ok
+      _error -> nil
     end
   end
 
@@ -230,13 +251,58 @@ defmodule Calendrical.DateTime.Parser do
     # accepts; widely used by Postgres, SQLite, logs, etc.).
     if iso_datetime_shape?(input) do
       case DateTime.from_iso8601(input) do
-        {:ok, dt, _offset} -> {:ok, dt}
+        {:ok, datetime, offset} -> {:ok, restore_offset(datetime, offset)}
         _ -> try_iso_naive(input)
       end
     else
       :error
     end
   end
+
+  # `DateTime.from_iso8601/1` normalises the instant to UTC and hands back
+  # the offset it removed. Shifting by that offset restores the wall time
+  # the input actually carried, which is then attached to the offset
+  # rather than discarded — the representation `Calendrical.TimeZone`
+  # gives a locale-formatted offset, so one function no longer returns two
+  # different structs for the same instant written two ways.
+  defp restore_offset(datetime, 0), do: datetime
+
+  defp restore_offset(datetime, offset) do
+    datetime
+    |> DateTime.add(offset, :second)
+    |> datetime_at_offset(offset)
+  end
+
+  # `DateTime` stores local wall fields plus the offset, so the instant
+  # the user typed is kept as they wrote it and rendered back as
+  # `<local +offset>`.
+  defp datetime_at_offset(datetime, offset) do
+    %DateTime{
+      calendar: datetime.calendar,
+      year: datetime.year,
+      month: datetime.month,
+      day: datetime.day,
+      hour: datetime.hour,
+      minute: datetime.minute,
+      second: datetime.second,
+      microsecond: datetime.microsecond,
+      std_offset: 0,
+      utc_offset: offset,
+      zone_abbr: offset_abbreviation(offset),
+      time_zone: "Etc/UTC"
+    }
+  end
+
+  defp offset_abbreviation(offset) do
+    sign = if offset < 0, do: "-", else: "+"
+    absolute = abs(offset)
+    hours = absolute |> div(3600) |> pad_offset()
+    minutes = absolute |> rem(3600) |> div(60) |> pad_offset()
+    "#{sign}#{hours}:#{minutes}"
+  end
+
+  defp pad_offset(value) when value < 10, do: "0#{value}"
+  defp pad_offset(value), do: "#{value}"
 
   # `Date.from_iso8601/1` and `NaiveDateTime.from_iso8601/1`
   # only accept the *extended* format with hyphens and colons.

@@ -64,6 +64,8 @@ defmodule Calendrical.Date do
   * `{:error, Calendrical.DateParseError.t()}` when no
     pattern matched.
 
+  * `{:error, Localize.InvalidValueError.t()}` when `input` is not a string or an option is malformed.
+
   ### Examples
 
       iex> Calendrical.Date.parse("2026-05-16", locale: :en)
@@ -103,8 +105,10 @@ defmodule Calendrical.Date do
   """
   @spec parse(String.t(), Keyword.t()) ::
           {:ok, Date.t() | map()} | {:error, Exception.t()}
-  def parse(input, options \\ []) when is_binary(input) do
-    Calendrical.Date.Parser.parse(input, options)
+  def parse(input, options \\ []) do
+    with :ok <- Calendrical.ParseOptions.validate(input, options) do
+      Calendrical.Date.Parser.parse(input, options)
+    end
   end
 
   @doc """
@@ -160,6 +164,8 @@ defmodule Calendrical.Date do
   * `{:error, Calendrical.DateParseError.t() |
     Calendrical.DateRangeParseError.t()}` on failure.
 
+  * `{:error, Localize.InvalidValueError.t()}` when `input` is not a string or an option is malformed.
+
   ### Examples
 
       iex> {:ok, range} = Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"})
@@ -184,12 +190,16 @@ defmodule Calendrical.Date do
           {:ok, Date.Range.t() | {map(), map()}} | {:error, Exception.t()}
   def parse_range(input, options \\ [])
 
-  def parse_range({from_string, to_string}, options)
-      when is_binary(from_string) and is_binary(to_string) do
-    Calendrical.Date.Parser.parse_range_pair(from_string, to_string, options)
+  def parse_range({from_string, to_string}, options) do
+    with :ok <- Calendrical.ParseOptions.validate(from_string, options),
+         :ok <- Calendrical.ParseOptions.validate(to_string, options) do
+      Calendrical.Date.Parser.parse_range_pair(from_string, to_string, options)
+    end
   end
 
-  def parse_range(input, options) when is_binary(input) do
-    Calendrical.Date.Parser.parse_range(input, options)
+  def parse_range(input, options) do
+    with :ok <- Calendrical.ParseOptions.validate(input, options) do
+      Calendrical.Date.Parser.parse_range(input, options)
+    end
   end
 end

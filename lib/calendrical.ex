@@ -947,6 +947,8 @@ defmodule Calendrical do
     failed. The exception's `:attempts` field carries the
     `{kind, exception}` pairs from each attempt, in order.
 
+  * `{:error, Localize.InvalidValueError.t()}` when `input` is not a string or an option is malformed.
+
   ### Examples
 
       iex> Calendrical.parse("2026-05-16", locale: :en)
@@ -979,8 +981,10 @@ defmodule Calendrical do
            | map()
            | {map(), map()}}
           | {:error, Exception.t()}
-  def parse(input, options \\ []) when is_binary(input) do
-    Calendrical.Parser.parse(input, options)
+  def parse(input, options \\ []) do
+    with :ok <- Calendrical.ParseOptions.validate(input, options) do
+      Calendrical.Parser.parse(input, options)
+    end
   end
 
   @doc """
