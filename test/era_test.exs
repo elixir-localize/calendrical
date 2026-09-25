@@ -97,6 +97,25 @@ defmodule Calendrical.EraTest do
                {7, 226}
     end
 
+    test "a mid-year era's second year begins at the next lunar new year" do
+      # 安政 was proclaimed in the twelfth lunar month of 嘉永7年, so 安政2年
+      # begins at the lunar new year of 1855-02-17, not on a Gregorian date.
+      last_of_first = Date.convert!(~D[1855-02-16], Calendrical.LunarJapanese)
+      first_of_second = Date.convert!(~D[1855-02-17], Calendrical.LunarJapanese)
+
+      assert Calendrical.LunarJapanese.year_of_era(
+               last_of_first.year,
+               last_of_first.month,
+               last_of_first.day
+             ) == {1, 227}
+
+      assert Calendrical.LunarJapanese.year_of_era(
+               first_of_second.year,
+               first_of_second.month,
+               first_of_second.day
+             ) == {2, 227}
+    end
+
     test "the Reiwa transition is exact" do
       reiwa = Date.convert!(~D[2019-05-01], Calendrical.LunarJapanese)
       heisei = Date.convert!(~D[2019-04-30], Calendrical.LunarJapanese)
@@ -165,12 +184,12 @@ defmodule Calendrical.EraTest do
       assert length(records) == 237
     end
 
-    test "pre-Meiji Japanese era boundaries are resolved from their lunisolar dates" do
+    test "pre-Meiji Japanese era boundaries are the curated proleptic Gregorian dates" do
       %{records: records} = Era.era_data(:japanese)
 
-      # Anchors from the japanese_eras validation research: CLDR raw
-      # `[Y, M, D]` is a lunisolar passthrough; the boundary must be
-      # its proleptic Gregorian equivalent.
+      # Anchors from Localize's curated era set, the researched proleptic
+      # Gregorian dates of the proclamations CLDR 48 recorded as lunisolar
+      # `[Y, M, D]` passthroughs.
       taika = Enum.find(records, &(&1.era == 0))
       assert taika.from == Date.to_gregorian_days(~D[0645-07-20])
 
@@ -180,28 +199,11 @@ defmodule Calendrical.EraTest do
       kaei = Enum.find(records, &(&1.era == 226))
       assert kaei.from == Date.to_gregorian_days(~D[1848-04-01])
 
-      # CLDR's [1504, 2, 30] records a historical 30th day where the
-      # astronomical reconstruction gives the month 29 days; the
-      # boundary is the day after the reconstructed month ends.
-      eisho = Enum.find(records, &(&1.gregorian_year == 1504))
+      eisho = Enum.find(records, &(&1.era == 187))
       assert eisho.from == Date.to_gregorian_days(~D[1504-03-26])
 
-      # Era 115 (建保, CLDR [1213, 12, 6]) starts in lunar year 569,
-      # a 383-day leap year that the old floor-based leap-year
-      # detection misclassified, forcing a raw-Gregorian fallback.
-      # It now resolves astronomically to 1214-01-25.
       kenpo = Enum.find(records, &(&1.era == 115))
       assert kenpo.from == Date.to_gregorian_days(~D[1214-01-25])
-    end
-
-    test "Japanese era data builds without any lunisolar fallback warning" do
-      log =
-        ExUnit.CaptureLog.capture_log(fn ->
-          :persistent_term.erase({Calendrical.Era, :japanese})
-          Era.era_data(:japanese)
-        end)
-
-      refute log =~ "could not be resolved as a lunisolar date"
     end
 
     test "Meiji and later Japanese era boundaries are proleptic Gregorian" do

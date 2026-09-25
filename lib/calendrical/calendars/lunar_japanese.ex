@@ -912,15 +912,16 @@ defmodule Calendrical.LunarJapanese do
   # Gregorian labels, so the offset normalizes between the two.
   @gregorian_year_offset 644
 
+  # Japan counted era years in lunisolar years until it adopted the
+  # Gregorian calendar on 1873-01-01 (`Calendrical.Reform.Japan`), and
+  # in Gregorian years since.
+  @gregorian_reform_iso_days Date.to_gregorian_days(~D[1873-01-01])
+
   @doc """
   Returns the year of era and era number for a lunisolar Japanese
   date.
 
-  Japanese lunisolar dates are labelled by era (元号) year: the
-  proclamation date of an era begins year one of that era within
-  the current lunar year, exactly as recorded in the historical
-  chronicles. Era boundaries come from the Japanese era table, not
-  the Chinese one used for month names.
+  Japanese lunisolar dates are labelled by era (元号) year: the proclamation date of an era begins year one of that era within the current lunar year, exactly as recorded in the historical chronicles. An era proclaimed after Japan adopted the Gregorian calendar on 1873-01-01 numbers its years in Gregorian years instead, so the lunar year that begins in its first Gregorian year is still its year one. Era boundaries come from the Japanese era table, not the Chinese one used for month names.
 
   ### Arguments
 
@@ -953,7 +954,17 @@ defmodule Calendrical.LunarJapanese do
   @impl Calendar
   def year_of_era(year, month, day) do
     iso_days = date_to_iso_days(year, month, day)
-    Calendrical.Era.year_of_era(:japanese, iso_days, year + @gregorian_year_offset)
+    {day_of_era, era} = Calendrical.Era.day_of_era(:japanese, iso_days)
+    era_start = iso_days - day_of_era + 1
+
+    if era_start < @gregorian_reform_iso_days do
+      # Year one is the lunar year the proclamation day falls in, and
+      # each lunar new year after it begins the next year of the era.
+      {era_start_year, _month, _day} = date_from_iso_days(era_start)
+      {year - era_start_year + 1, era}
+    else
+      Calendrical.Era.year_of_era(:japanese, iso_days, year + @gregorian_year_offset)
+    end
   end
 
   @doc """

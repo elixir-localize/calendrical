@@ -6,7 +6,7 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.0] — 2026-09-23
+## [1.4.0] — Unreleased
 
 ### Breaking changes
 
@@ -41,6 +41,8 @@ The format is based on
 * `Calendrical.Islamic.Visibility` types its crescent-visibility criterion as `t:Calendrical.Islamic.Visibility.method/0` (`:odeh`, `:schaefer` or `:yallop`) instead of `atom()`, and several constant functions narrow their specs to what they actually return.
 
 * The Chinese, Korean, Vietnamese and Lunar Japanese calendars find a year's new year once per question and each new moon once, so `valid_date?/3`, `days_in_month/2`, `days_in_year/1`, `leap_year?/1`, `leap_month/1`, `new/3` and `lunar_month_of_year/2` ask for far fewer new moons — a quarter as many across a lunisolar holiday corpus. Results are unchanged.
+
+* Japanese era boundaries before Meiji are the proleptic Gregorian dates Localize now publishes, read as they are instead of converted from CLDR's lunisolar values, and `Calendrical.LunarJapanese` counts an era's years from the lunar year of its proclamation.
 
 ### Fixed
 

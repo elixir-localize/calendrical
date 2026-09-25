@@ -524,7 +524,8 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc false
-  def elapsed_years(cycle, cyclic_year) do
+  @spec elapsed_years(integer(), integer()) :: integer()
+  def elapsed_years(cycle, cyclic_year) when is_integer(cycle) and is_integer(cyclic_year) do
     (cycle - 1) * @years_in_cycle + cyclic_year
   end
 
