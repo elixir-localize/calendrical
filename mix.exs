@@ -1,7 +1,7 @@
 defmodule Calendrical.MixProject do
   use Mix.Project
 
-  @version "1.4.0-dev"
+  @version "1.5.0-dev"
 
   def project do
     [
