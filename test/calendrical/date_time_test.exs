@@ -71,7 +71,7 @@ defmodule Calendrical.DateTimeTest do
 
   describe "parse/2 — error path" do
     test "garbage rejected" do
-      assert {:error, %Calendrical.DateTimeParseError{}} =
+      assert {:error, %Localize.DateTimeParseError{}} =
                Calendrical.DateTime.parse("not a datetime", locale: :en)
     end
 

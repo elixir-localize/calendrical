@@ -1,16 +1,17 @@
 defmodule Calendrical.Time do
   @moduledoc """
-  Time parsing helpers built on Localize's CLDR data.
+  Locale-aware time parsing.
 
+  Parsing is implemented by Localize: `parse/2` delegates to
+  `Localize.Time.parse/2`.
 
   When the caller doesn't know in advance whether the input is a
-  date, time, datetime, or range, use `Calendrical.parse/2` — it
-  dispatches to the appropriate sub-parser.
+  date, time, datetime, or range, use `Calendrical.parse/2`.
 
   """
 
   @doc """
-  Parses a locale-formatted time string.
+  Parses a locale-formatted time string. Delegates to `Localize.Time.parse/2`.
 
   Tries, in order: bare ISO-8601 (`HH:MM[:SS[.frac]]`), then
   the locale's CLDR short/medium/long/full time patterns.
@@ -52,7 +53,7 @@ defmodule Calendrical.Time do
     and `:time_zone` appear only when the input supplied
     them.
 
-  * `{:error, Calendrical.TimeParseError.t()}` when no pattern
+  * `{:error, Localize.TimeParseError.t()}` when no pattern
     matched.
 
   ### Examples
@@ -75,7 +76,5 @@ defmodule Calendrical.Time do
   """
   @spec parse(String.t(), Keyword.t()) ::
           {:ok, Time.t() | map()} | {:error, Exception.t()}
-  def parse(input, options \\ []) when is_binary(input) do
-    Calendrical.Time.Parser.parse(input, options)
-  end
+  defdelegate parse(input, options \\ []), to: Localize.Time
 end

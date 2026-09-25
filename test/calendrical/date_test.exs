@@ -86,7 +86,7 @@ defmodule Calendrical.DateTest do
     end
 
     test "garbage rejected with structured error" do
-      assert {:error, %Calendrical.DateParseError{input: "garbage"}} =
+      assert {:error, %Localize.DateParseError{input: "garbage"}} =
                Calendrical.Date.parse("garbage", locale: :en)
     end
 
@@ -170,7 +170,7 @@ defmodule Calendrical.DateTest do
     end
 
     test "inverted range rejected by default" do
-      assert {:error, %Calendrical.DateRangeParseError{reason: :inverted}} =
+      assert {:error, %Localize.DateRangeParseError{reason: :inverted}} =
                Calendrical.Date.parse_range({"2026-05-10", "2026-05-05"}, locale: :en)
     end
 
@@ -188,10 +188,10 @@ defmodule Calendrical.DateTest do
     end
 
     test "unparseable endpoint surfaces the underlying error" do
-      assert {:error, %Calendrical.DateRangeParseError{reason: :from_parse_failed, cause: cause}} =
+      assert {:error, %Localize.DateRangeParseError{reason: :from_parse_failed, cause: cause}} =
                Calendrical.Date.parse_range({"garbage", "2026-05-10"}, locale: :en)
 
-      assert %Calendrical.DateParseError{input: "garbage"} = cause
+      assert %Localize.DateParseError{input: "garbage"} = cause
     end
   end
 
@@ -221,7 +221,7 @@ defmodule Calendrical.DateTest do
     end
 
     test "missing separator yields :no_separator error" do
-      assert {:error, %Calendrical.DateRangeParseError{reason: :no_separator}} =
+      assert {:error, %Localize.DateRangeParseError{reason: :no_separator}} =
                Calendrical.Date.parse_range("just one date", locale: :en)
     end
   end
@@ -404,10 +404,10 @@ defmodule Calendrical.DateTest do
       assert Calendrical.Date.parse("14 Adar II 5784", locale: :en, calendar: :hebrew) ==
                {:ok, ~D[5784-07-14 Calendrical.Hebrew]}
 
-      assert {:error, %Calendrical.DateParseError{}} =
+      assert {:error, %Localize.DateParseError{}} =
                Calendrical.Date.parse("14 Adar I 5785", locale: :en, calendar: :hebrew)
 
-      assert {:error, %Calendrical.DateParseError{}} =
+      assert {:error, %Localize.DateParseError{}} =
                Calendrical.Date.parse("14 Adar II 5785", locale: :en, calendar: :hebrew)
     end
 
@@ -696,7 +696,7 @@ defmodule Calendrical.DateTest do
     end
 
     test "garbage still errors" do
-      assert {:error, %Calendrical.DateParseError{}} =
+      assert {:error, %Localize.DateParseError{}} =
                Calendrical.Date.parse("garbage", locale: :en, as: :map)
     end
 

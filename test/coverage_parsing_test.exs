@@ -115,7 +115,8 @@ defmodule Calendrical.CoverageParsingTest do
     test "quarter and week skeletons in :en" do
       assert Calendrical.Date.parse("Q2 2026", locale: :en) == {:ok, ~D[2026-04-01]}
       assert Calendrical.Date.parse("2nd quarter 2026", locale: :en) == {:ok, ~D[2026-04-01]}
-      assert Calendrical.Date.parse("week 20 of 2026", locale: :en) == {:ok, ~D[2026-05-11]}
+      # en weeks start on Sunday, so week 20 of 2026 begins on 10 May.
+      assert Calendrical.Date.parse("week 20 of 2026", locale: :en) == {:ok, ~D[2026-05-10]}
     end
 
     test "trailing weekday name is validated against the date in :ja" do
@@ -124,7 +125,7 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "mismatched trailing weekday name rejects the parse in :ja" do
-      assert {:error, %Calendrical.DateParseError{}} =
+      assert {:error, %Localize.DateParseError{}} =
                Calendrical.Date.parse("2026年5月16日月曜日", locale: :ja)
     end
   end
@@ -157,9 +158,9 @@ defmodule Calendrical.CoverageParsingTest do
              ) == {:ok, ~D[1405-02-26 Calendrical.Persian]}
     end
 
-    test "unknown CLDR calendar key falls back to Calendar.ISO for the ISO path" do
+    test "an unknown CLDR calendar key is an error" do
       assert Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :bogus) ==
-               {:ok, ~D[2026-05-16]}
+               {:error, %Localize.UnknownCalendarError{calendar: :bogus}}
     end
 
     test "Japanese imperial era year resolves to the calendar year" do
@@ -173,7 +174,7 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "chinese calendar rejects a numeric pattern that builds no valid date" do
-      assert {:error, %Calendrical.DateParseError{calendar: :chinese}} =
+      assert {:error, %Localize.DateParseError{calendar: :chinese}} =
                Calendrical.Date.parse("4/10/4663", locale: :en, calendar: :chinese)
     end
   end
@@ -206,7 +207,7 @@ defmodule Calendrical.CoverageParsingTest do
 
   describe "Date.parse/2 error paths" do
     test "unparseable input returns a DateParseError with a rendered message" do
-      assert {:error, %Calendrical.DateParseError{} = error} =
+      assert {:error, %Localize.DateParseError{} = error} =
                Calendrical.Date.parse("not a date", locale: :en)
 
       assert error.input == "not a date"
@@ -219,37 +220,37 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "unparseable input in :de (locale without ordinal suffixes)" do
-      assert {:error, %Calendrical.DateParseError{locale: :de}} =
+      assert {:error, %Localize.DateParseError{locale: :de}} =
                Calendrical.Date.parse("kauderwelsch", locale: :de)
     end
 
     test "unparseable input in :ru (bare-digit ordinal RBNF)" do
-      assert {:error, %Calendrical.DateParseError{locale: :ru}} =
+      assert {:error, %Localize.DateParseError{locale: :ru}} =
                Calendrical.Date.parse("абракадабра", locale: :ru)
     end
 
     test "week number out of range" do
-      assert {:error, %Calendrical.DateParseError{}} =
+      assert {:error, %Localize.DateParseError{}} =
                Calendrical.Date.parse("week 99 of 2026", locale: :en)
     end
 
     test "day that does not exist in the month" do
-      assert {:error, %Calendrical.DateParseError{}} =
+      assert {:error, %Localize.DateParseError{}} =
                Calendrical.Date.parse("February 31, 2026", locale: :en)
     end
 
     test "day of month out of range" do
-      assert {:error, %Calendrical.DateParseError{}} =
+      assert {:error, %Localize.DateParseError{}} =
                Calendrical.Date.parse("May 45, 2026", locale: :en)
     end
 
     test "numeric month out of range" do
-      assert {:error, %Calendrical.DateParseError{}} =
+      assert {:error, %Localize.DateParseError{}} =
                Calendrical.Date.parse("25/45/6789", locale: :en)
     end
 
     test "invalid day for a coptic month" do
-      assert {:error, %Calendrical.DateParseError{calendar: :coptic}} =
+      assert {:error, %Localize.DateParseError{calendar: :coptic}} =
                Calendrical.Date.parse("13/8/1742", locale: :en, calendar: :coptic)
     end
   end
@@ -379,7 +380,7 @@ defmodule Calendrical.CoverageParsingTest do
 
   describe "Date.parse_range/2 inverted ranges" do
     test "inverted single-string range is rejected by default" do
-      assert {:error, %Calendrical.DateRangeParseError{} = error} =
+      assert {:error, %Localize.DateRangeParseError{} = error} =
                Calendrical.Date.parse_range("2026-05-10 – 2026-05-05", locale: :en)
 
       assert error.reason == :inverted
@@ -399,7 +400,7 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "inverted pair form is rejected by default" do
-      assert {:error, %Calendrical.DateRangeParseError{reason: :inverted}} =
+      assert {:error, %Localize.DateRangeParseError{reason: :inverted}} =
                Calendrical.Date.parse_range({"2026-05-10", "2026-05-05"}, locale: :en)
     end
 
@@ -413,7 +414,7 @@ defmodule Calendrical.CoverageParsingTest do
 
   describe "Date.parse_range/2 error paths" do
     test ":no_separator reason and message" do
-      assert {:error, %Calendrical.DateRangeParseError{} = error} =
+      assert {:error, %Localize.DateRangeParseError{} = error} =
                Calendrical.Date.parse_range("gibberish", locale: :en)
 
       assert error.reason == :no_separator
@@ -422,36 +423,36 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test ":from_parse_failed carries the endpoint cause" do
-      assert {:error, %Calendrical.DateRangeParseError{} = error} =
+      assert {:error, %Localize.DateRangeParseError{} = error} =
                Calendrical.Date.parse_range({"nonsense", "2026-05-10"}, locale: :en)
 
       assert error.reason == :from_parse_failed
-      assert %Calendrical.DateParseError{input: "nonsense"} = error.cause
+      assert %Localize.DateParseError{input: "nonsense"} = error.cause
 
       assert Exception.message(error) =~
                "range from-endpoint \"nonsense\" could not be parsed: could not parse"
     end
 
     test ":to_parse_failed carries the endpoint cause" do
-      assert {:error, %Calendrical.DateRangeParseError{} = error} =
+      assert {:error, %Localize.DateRangeParseError{} = error} =
                Calendrical.Date.parse_range({"2026-05-10", "nonsense"}, locale: :en)
 
       assert error.reason == :to_parse_failed
-      assert %Calendrical.DateParseError{input: "nonsense"} = error.cause
+      assert %Localize.DateParseError{input: "nonsense"} = error.cause
     end
 
     test "endpoint failure after separator split" do
-      assert {:error, %Calendrical.DateRangeParseError{reason: :from_parse_failed}} =
+      assert {:error, %Localize.DateRangeParseError{reason: :from_parse_failed}} =
                Calendrical.Date.parse_range("25/45/2026 – 27/46/2026", locale: :en)
     end
 
     test "reason_atoms/0 enumerates the closed reason set" do
-      assert Calendrical.DateRangeParseError.reason_atoms() ==
+      assert Localize.DateRangeParseError.reason_atoms() ==
                [:no_separator, :inverted, :from_parse_failed, :to_parse_failed]
     end
 
     test "catch-all message for an exception without a reason" do
-      error = Calendrical.DateRangeParseError.exception(input: "x")
+      error = Localize.DateRangeParseError.exception(input: "x")
       assert Exception.message(error) == "could not parse \"x\" as a date range"
     end
   end
@@ -507,7 +508,7 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "unparseable input returns a TimeParseError with a rendered message" do
-      assert {:error, %Calendrical.TimeParseError{} = error} =
+      assert {:error, %Localize.TimeParseError{} = error} =
                Calendrical.Time.parse("not a time", locale: :en)
 
       assert error.input == "not a time"
@@ -534,8 +535,10 @@ defmodule Calendrical.CoverageParsingTest do
       assert Calendrical.DateTime.parse("2026-05-23T14:30:00Z", locale: :en) ==
                {:ok, ~U[2026-05-23 14:30:00Z]}
 
-      assert Calendrical.DateTime.parse("2026-05-23T14:30:00+05:00", locale: :en) ==
-               {:ok, ~U[2026-05-23 09:30:00Z]}
+      # The offset the input carried is kept; the instant is unchanged.
+      {:ok, datetime} = Calendrical.DateTime.parse("2026-05-23T14:30:00+05:00", locale: :en)
+      assert DateTime.to_iso8601(datetime) == "2026-05-23T14:30:00+05:00"
+      assert DateTime.compare(datetime, ~U[2026-05-23 09:30:00Z]) == :eq
     end
 
     test "universal fallback glue separators" do
@@ -635,12 +638,12 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "ISO-shaped input with an invalid time falls through to an error" do
-      assert {:error, %Calendrical.DateTimeParseError{}} =
+      assert {:error, %Localize.DateTimeParseError{}} =
                Calendrical.DateTime.parse("2026-05-16 14:30:99", locale: :en)
     end
 
     test "unparseable input returns a DateTimeParseError with a rendered message" do
-      assert {:error, %Calendrical.DateTimeParseError{} = error} =
+      assert {:error, %Localize.DateTimeParseError{} = error} =
                Calendrical.DateTime.parse("utterly wrong", locale: :en)
 
       assert error.input == "utterly wrong"
@@ -684,12 +687,13 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "failure returns a ParseError recording every attempt" do
-      assert {:error, %Calendrical.ParseError{} = error} = Calendrical.parse("xyzzy", locale: :en)
+      assert {:error, %Localize.DateTimeParseError{} = error} =
+               Calendrical.parse("xyzzy", locale: :en)
 
       assert [
-               {:date, %Calendrical.DateParseError{}},
-               {:time, %Calendrical.TimeParseError{}},
-               {:datetime, %Calendrical.DateTimeParseError{}}
+               {:date, %Localize.DateParseError{}},
+               {:time, %Localize.TimeParseError{}},
+               {:datetime, %Localize.DateTimeParseError{}}
              ] = error.attempts
 
       assert Exception.message(error) ==
@@ -698,14 +702,14 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "interval-shaped failure records the interval attempt first" do
-      assert {:error, %Calendrical.ParseError{} = error} =
+      assert {:error, %Localize.DateTimeParseError{} = error} =
                Calendrical.parse("foo – bar", locale: :en)
 
       assert [
-               {:interval, %Calendrical.DateRangeParseError{}},
-               {:date, %Calendrical.DateParseError{}},
-               {:time, %Calendrical.TimeParseError{}},
-               {:datetime, %Calendrical.DateTimeParseError{}}
+               {:interval, %Localize.DateRangeParseError{}},
+               {:date, %Localize.DateParseError{}},
+               {:time, %Localize.TimeParseError{}},
+               {:datetime, %Localize.DateTimeParseError{}}
              ] = error.attempts
     end
   end
@@ -798,10 +802,10 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "patterns with unbalanced quotes in :nnh do not crash the parsers" do
-      assert {:error, %Calendrical.DateParseError{}} =
+      assert {:error, %Localize.DateParseError{}} =
                Calendrical.Date.parse("blah blah", locale: :nnh)
 
-      assert {:error, %Calendrical.TimeParseError{}} =
+      assert {:error, %Localize.TimeParseError{}} =
                Calendrical.Time.parse("blah", locale: :nnh)
 
       assert Calendrical.Time.parse("14:30", locale: :nnh) == {:ok, ~T[14:30:00]}
@@ -811,7 +815,7 @@ defmodule Calendrical.CoverageParsingTest do
       assert Calendrical.DateTime.parse("5/16/2026 14:30", locale: :ee) ==
                {:ok, ~N[2026-05-16 14:30:00]}
 
-      assert {:error, %Calendrical.DateTimeParseError{}} =
+      assert {:error, %Localize.DateTimeParseError{}} =
                Calendrical.DateTime.parse("no such thing", locale: :ee)
     end
 
@@ -827,19 +831,19 @@ defmodule Calendrical.CoverageParsingTest do
       assert Calendrical.Date.parse("Ch2 2026", locale: :cy) == {:ok, ~D[2026-04-01]}
       assert Calendrical.Date.parse("2 2026", locale: :cy) == {:ok, ~D[2026-04-01]}
 
-      assert {:error, %Calendrical.DateParseError{}} =
+      assert {:error, %Localize.DateParseError{}} =
                Calendrical.Date.parse("0 2026", locale: :cy)
     end
 
     test "day-period name without flex-period data in :aa" do
       assert Calendrical.Time.parse("11:30 saaku", locale: :aa) == {:ok, ~T[11:30:00]}
 
-      assert {:error, %Calendrical.TimeParseError{}} =
+      assert {:error, %Localize.TimeParseError{}} =
                Calendrical.Time.parse("qqq", locale: :aa)
     end
 
     test "buddhist-calendar patterns (with cccc weekday names) compile" do
-      assert {:error, %Calendrical.DateParseError{calendar: :buddhist}} =
+      assert {:error, %Localize.DateParseError{calendar: :buddhist}} =
                Calendrical.Date.parse("blah", locale: :en, calendar: :buddhist)
     end
 
@@ -849,7 +853,7 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "split fallback in :bal when interval patterns do not match" do
-      assert {:error, %Calendrical.DateRangeParseError{reason: :from_parse_failed}} =
+      assert {:error, %Localize.DateRangeParseError{reason: :from_parse_failed}} =
                Calendrical.Date.parse_range("gibberish – 2026-05-10", locale: :bal)
     end
 
@@ -862,7 +866,7 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "hebrew day out of range for the month is rejected" do
-      assert {:error, %Calendrical.DateParseError{calendar: :hebrew}} =
+      assert {:error, %Localize.DateParseError{calendar: :hebrew}} =
                Calendrical.Date.parse("2/30/5787", locale: :en, calendar: :hebrew)
     end
 
@@ -870,7 +874,7 @@ defmodule Calendrical.CoverageParsingTest do
       assert Calendrical.Date.parse("16/5/2569", locale: :th, calendar: :buddhist) ==
                {:ok, ~D[2569-05-16 Calendrical.Buddhist]}
 
-      assert {:error, %Calendrical.DateParseError{calendar: :buddhist}} =
+      assert {:error, %Localize.DateParseError{calendar: :buddhist}} =
                Calendrical.Date.parse("30/2/2570", locale: :th, calendar: :buddhist)
     end
 
@@ -911,18 +915,17 @@ defmodule Calendrical.CoverageParsingTest do
 
   describe "single-argument entry points" do
     test "each parser accepts input without options" do
-      assert Calendrical.Date.Parser.parse("2026-05-16") == {:ok, ~D[2026-05-16]}
+      assert Calendrical.Date.parse("2026-05-16") == {:ok, ~D[2026-05-16]}
 
-      assert Calendrical.Date.Parser.parse_range("2026-05-05 – 2026-05-10") ==
+      assert Calendrical.Date.parse_range("2026-05-05 – 2026-05-10") ==
                {:ok, Date.range(~D[2026-05-05], ~D[2026-05-10])}
 
-      assert Calendrical.Time.Parser.parse("14:30:15") == {:ok, ~T[14:30:15]}
-      assert Calendrical.Time.Parser.parse_with_zone("14:30:15") == {:ok, ~T[14:30:15], nil}
+      assert Calendrical.Time.parse("14:30:15") == {:ok, ~T[14:30:15]}
 
-      assert Calendrical.DateTime.Parser.parse("2026-05-23T14:30:00") ==
+      assert Calendrical.DateTime.parse("2026-05-23T14:30:00") ==
                {:ok, ~N[2026-05-23 14:30:00]}
 
-      assert Calendrical.Parser.parse("2026-05-16") == {:ok, ~D[2026-05-16]}
+      assert Calendrical.parse("2026-05-16") == {:ok, ~D[2026-05-16]}
     end
   end
 

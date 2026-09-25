@@ -815,12 +815,12 @@ defmodule Calendrical.CoverageMainTest do
     end
 
     test "returns a combined error when nothing matches" do
-      assert {:error, %Calendrical.ParseError{attempts: attempts}} =
+      assert {:error, %Localize.DateTimeParseError{attempts: attempts}} =
                Calendrical.parse("zzz9!!", locale: :en)
 
-      assert {:date, %Calendrical.DateParseError{}} = List.keyfind(attempts, :date, 0)
-      assert {:time, %Calendrical.TimeParseError{}} = List.keyfind(attempts, :time, 0)
-      assert {:datetime, %Calendrical.DateTimeParseError{}} = List.keyfind(attempts, :datetime, 0)
+      assert {:date, %Localize.DateParseError{}} = List.keyfind(attempts, :date, 0)
+      assert {:time, %Localize.TimeParseError{}} = List.keyfind(attempts, :time, 0)
+      assert {:datetime, %Localize.DateTimeParseError{}} = List.keyfind(attempts, :datetime, 0)
     end
   end
 

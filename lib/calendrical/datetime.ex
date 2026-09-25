@@ -1,17 +1,18 @@
 defmodule Calendrical.DateTime do
   @moduledoc """
-  DateTime parsing helpers built on Localize CLDR data and the
-  existing `Calendrical.Date` / `Calendrical.Time` parsers.
+  Locale-aware datetime parsing for Calendrical's calendars.
 
+  Parsing is implemented by Localize: `parse/2` delegates to
+  `Localize.DateTime.parse/2`. Named time zones are resolved through
+  `Calendrical.TimeZone`.
 
   When the caller doesn't know in advance whether the input is a
-  date, time, datetime, or range, use `Calendrical.parse/2` — it
-  dispatches to the appropriate sub-parser.
+  date, time, datetime, or range, use `Calendrical.parse/2`.
 
   """
 
   @doc """
-  Parses a locale-formatted datetime string.
+  Parses a locale-formatted datetime string. Delegates to `Localize.DateTime.parse/2`.
 
   Tries, in order: bare ISO-8601 (`YYYY-MM-DDTHH:MM:SS[Z|±HH:MM]`),
   then the locale's CLDR date-time glue pattern (`{1}, {0}` in
@@ -54,7 +55,7 @@ defmodule Calendrical.DateTime do
 
   * `{:ok, map()}` when `as: :map`.
 
-  * `{:error, Calendrical.DateTimeParseError.t() | …}` on
+  * `{:error, Localize.DateTimeParseError.t() | …}` on
     failure. Sub-parse errors from `Calendrical.Date.parse/2`
     or `Calendrical.Time.parse/2` pass through.
 
@@ -75,7 +76,5 @@ defmodule Calendrical.DateTime do
   """
   @spec parse(String.t(), Keyword.t()) ::
           {:ok, NaiveDateTime.t() | DateTime.t() | map()} | {:error, Exception.t()}
-  def parse(input, options \\ []) when is_binary(input) do
-    Calendrical.DateTime.Parser.parse(input, options)
-  end
+  defdelegate parse(input, options \\ []), to: Localize.DateTime
 end

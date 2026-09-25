@@ -22,7 +22,7 @@ defmodule Calendrical.CoverageWrappersTest do
     end
 
     test "returns an error for unparseable input" do
-      assert {:error, %Calendrical.DateParseError{input: "not a date", locale: :en}} =
+      assert {:error, %Localize.DateParseError{input: "not a date", locale: :en}} =
                Calendrical.Date.parse("not a date", locale: :en)
     end
   end
@@ -42,12 +42,12 @@ defmodule Calendrical.CoverageWrappersTest do
     end
 
     test "returns an error when no separator is found" do
-      assert {:error, %Calendrical.DateRangeParseError{reason: :no_separator}} =
+      assert {:error, %Localize.DateRangeParseError{reason: :no_separator}} =
                Calendrical.Date.parse_range("gibberish input", locale: :en)
     end
 
     test "rejects an inverted range by default" do
-      assert {:error, %Calendrical.DateRangeParseError{reason: :inverted}} =
+      assert {:error, %Localize.DateRangeParseError{reason: :inverted}} =
                Calendrical.Date.parse_range({"2026-05-10", "2026-05-05"}, locale: :en)
     end
 
@@ -82,7 +82,7 @@ defmodule Calendrical.CoverageWrappersTest do
     end
 
     test "returns an error for unparseable input" do
-      assert {:error, %Calendrical.TimeParseError{input: "zzz", locale: :en}} =
+      assert {:error, %Localize.TimeParseError{input: "zzz", locale: :en}} =
                Calendrical.Time.parse("zzz", locale: :en)
     end
   end
@@ -113,7 +113,7 @@ defmodule Calendrical.CoverageWrappersTest do
     end
 
     test "returns an error for unparseable input" do
-      assert {:error, %Calendrical.DateTimeParseError{input: "zzz", locale: :en}} =
+      assert {:error, %Localize.DateTimeParseError{input: "zzz", locale: :en}} =
                Calendrical.DateTime.parse("zzz", locale: :en)
     end
   end

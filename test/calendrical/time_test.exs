@@ -66,7 +66,7 @@ defmodule Calendrical.TimeTest do
 
   describe "parse/2 — error path" do
     test "garbage rejected" do
-      assert {:error, %Calendrical.TimeParseError{input: "not a time"}} =
+      assert {:error, %Localize.TimeParseError{input: "not a time"}} =
                Calendrical.Time.parse("not a time", locale: :en)
     end
 
@@ -114,7 +114,7 @@ defmodule Calendrical.TimeTest do
     end
 
     test "garbage still errors in map mode" do
-      assert {:error, %Calendrical.TimeParseError{}} =
+      assert {:error, %Localize.TimeParseError{}} =
                Calendrical.Time.parse("not a time", locale: :en, as: :map)
     end
   end

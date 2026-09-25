@@ -106,14 +106,14 @@ defmodule Calendrical.ParseTest do
       # this — it's not a valid date or time on its own — but we
       # still verify the dispatch order doesn't surface a stale
       # time interpretation.
-      assert {:error, %Calendrical.ParseError{}} =
+      assert {:error, %Localize.DateTimeParseError{}} =
                Calendrical.parse("2026", locale: :en)
     end
   end
 
   describe "Calendrical.parse/2 — errors" do
     test "garbage input returns ParseError with attempts" do
-      assert {:error, %Calendrical.ParseError{} = err} =
+      assert {:error, %Localize.DateTimeParseError{} = err} =
                Calendrical.parse("garbage", locale: :en)
 
       assert err.input == "garbage"
@@ -134,7 +134,7 @@ defmodule Calendrical.ParseTest do
       # through. None of the other sub-parsers can match a
       # bidi-separated garbage string either, so we get a
       # ParseError.
-      assert {:error, %Calendrical.ParseError{attempts: attempts}} =
+      assert {:error, %Localize.DateTimeParseError{attempts: attempts}} =
                Calendrical.parse("foo – bar", locale: :en)
 
       kinds = Enum.map(attempts, &elem(&1, 0))
@@ -142,13 +142,13 @@ defmodule Calendrical.ParseTest do
     end
 
     test "empty input returns a ParseError" do
-      assert {:error, %Calendrical.ParseError{}} = Calendrical.parse("", locale: :en)
+      assert {:error, %Localize.DateTimeParseError{}} = Calendrical.parse("", locale: :en)
     end
   end
 
   describe "Calendrical.parse/2 — exceptions are structured" do
     test "ParseError carries no :message struct field; message/1 materializes it" do
-      assert {:error, %Calendrical.ParseError{} = err} =
+      assert {:error, %Localize.DateTimeParseError{} = err} =
                Calendrical.parse("garbage", locale: :en)
 
       refute Map.has_key?(err, :message)
@@ -158,7 +158,7 @@ defmodule Calendrical.ParseTest do
     end
 
     test "DateParseError carries no :message field" do
-      assert {:error, %Calendrical.DateParseError{} = err} =
+      assert {:error, %Localize.DateParseError{} = err} =
                Calendrical.Date.parse("garbage", locale: :en)
 
       refute Map.has_key?(err, :message)
@@ -166,7 +166,7 @@ defmodule Calendrical.ParseTest do
     end
 
     test "DateRangeParseError :inverted carries :from and :to, not prose" do
-      assert {:error, %Calendrical.DateRangeParseError{} = err} =
+      assert {:error, %Localize.DateRangeParseError{} = err} =
                Calendrical.Date.parse_range({"2026-05-10", "2026-05-05"}, locale: :en)
 
       assert err.reason == :inverted
@@ -176,7 +176,7 @@ defmodule Calendrical.ParseTest do
     end
 
     test "DateRangeParseError reason_atoms/0 is exhaustive" do
-      assert Calendrical.DateRangeParseError.reason_atoms() == [
+      assert Localize.DateRangeParseError.reason_atoms() == [
                :no_separator,
                :inverted,
                :from_parse_failed,

@@ -11,11 +11,6 @@ defmodule Calendrical.ExceptionMessageTest do
   use ExUnit.Case, async: true
 
   @exceptions [
-    {Calendrical.DateParseError,
-     [input: "May 35 2026", locale: :en, calendar: Calendrical.Gregorian]},
-    {Calendrical.DateTimeParseError, [input: "not a datetime", locale: :en]},
-    {Calendrical.TimeParseError, [input: "25:99", locale: :en]},
-    {Calendrical.ParseError, [input: "gibberish", locale: :en, attempts: []]},
     {Calendrical.IncompatibleCalendarError, [from: Calendar.ISO, to: Calendrical.Hebrew]},
     {Calendrical.IncompatibleTimeZoneError,
      [from: ~U[2026-01-01 00:00:00Z], to: "Australia/Sydney"]},
@@ -41,39 +36,6 @@ defmodule Calendrical.ExceptionMessageTest do
       assert is_binary(message)
       assert message != ""
       refute message =~ "got the exception"
-    end
-  end
-
-  describe "Calendrical.DateRangeParseError" do
-    test "renders a message for every declared reason" do
-      for reason <- Calendrical.DateRangeParseError.reason_atoms() do
-        exception =
-          Calendrical.DateRangeParseError.exception(
-            input: "May 5 – May 1, 2026",
-            reason: reason,
-            locale: :en,
-            from: ~D[2026-05-05],
-            to: ~D[2026-05-01],
-            cause: nil
-          )
-
-        message = Exception.message(exception)
-        assert is_binary(message)
-        assert message != "", "empty message for reason #{inspect(reason)}"
-      end
-    end
-
-    test "the inverted reason names both endpoints" do
-      exception =
-        Calendrical.DateRangeParseError.exception(
-          reason: :inverted,
-          from: ~D[2026-05-05],
-          to: ~D[2026-05-01]
-        )
-
-      message = Exception.message(exception)
-      assert message =~ "2026-05-05"
-      assert message =~ "2026-05-01"
     end
   end
 

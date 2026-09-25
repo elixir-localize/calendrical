@@ -1,17 +1,19 @@
 defmodule Calendrical.Date do
   @moduledoc """
-  Date parsing and helpers built on Calendrical's calendar
-  implementations and Localize's CLDR data.
+  Locale-aware date parsing for Calendrical's calendars.
 
+  Parsing is implemented by Localize: `parse/2` delegates to
+  `Localize.Date.parse/2` and `parse_range/2` to
+  `Localize.Interval.parse/2`. Dates are returned in the Calendrical
+  calendar named by the `:calendar` option.
 
   When the caller doesn't know in advance whether the input is a
-  date, time, datetime, or range, use `Calendrical.parse/2` — it
-  dispatches to the appropriate sub-parser.
+  date, time, datetime, or range, use `Calendrical.parse/2`.
 
   """
 
   @doc """
-  Parses a locale-formatted date string.
+  Parses a locale-formatted date string. Delegates to `Localize.Date.parse/2`.
 
   Tries, in order: bare ISO-8601 (`YYYY-MM-DD`), then the
   locale's CLDR short/medium/long/full patterns for the
@@ -82,7 +84,7 @@ defmodule Calendrical.Date do
     `:day_of_week`, `:day_of_week_in_month`) are present
     only when the input supplied them.
 
-  * `{:error, Calendrical.DateParseError.t()}` when no
+  * `{:error, Localize.DateParseError.t()}` when no
     pattern matched.
 
   ### Examples
@@ -118,7 +120,7 @@ defmodule Calendrical.Date do
       {:ok, ~D[2026-04-01]}
 
       iex> Calendrical.Date.parse("week 20 of 2026", locale: :en)
-      {:ok, ~D[2026-05-11]}
+      {:ok, ~D[2026-05-10]}
 
       iex> Calendrical.Date.parse("Saturday, May 16, 2026", locale: :en)
       {:ok, ~D[2026-05-16]}
@@ -126,12 +128,10 @@ defmodule Calendrical.Date do
   """
   @spec parse(String.t(), Keyword.t()) ::
           {:ok, Date.t() | map()} | {:error, Exception.t()}
-  def parse(input, options \\ []) when is_binary(input) do
-    Calendrical.Date.Parser.parse(input, options)
-  end
+  defdelegate parse(input, options \\ []), to: Localize.Date
 
   @doc """
-  Parses a locale-formatted date range.
+  Parses a locale-formatted date range. Delegates to `Localize.Interval.parse/2`.
 
   Accepts either a single string (e.g. `"May 5 – May 10, 2026"`)
   in which case the parser splits on the locale's CLDR
@@ -164,7 +164,7 @@ defmodule Calendrical.Date do
     range is returned as-is (Elixir's
     `Date.range/3` builds a descending range). When `false`
     (the default), an inverted range is rejected with a
-    `Calendrical.DateRangeParseError`. Only applies when
+    `Localize.DateRangeParseError`. Only applies when
     `as: :struct` (the default); `as: :map` skips the
     comparison because partial maps may not have enough
     fields to compare.
@@ -180,8 +180,8 @@ defmodule Calendrical.Date do
     convention (so `"May 5 – May 10, 2026"` yields two maps
     both carrying `:year`).
 
-  * `{:error, Calendrical.DateParseError.t() |
-    Calendrical.DateRangeParseError.t()}` on failure.
+  * `{:error, Localize.DateParseError.t() |
+    Localize.DateRangeParseError.t()}` on failure.
 
   ### Examples
 
@@ -209,14 +209,5 @@ defmodule Calendrical.Date do
   """
   @spec parse_range(String.t() | {String.t(), String.t()}, Keyword.t()) ::
           {:ok, Date.Range.t() | {map(), map()}} | {:error, Exception.t()}
-  def parse_range(input, options \\ [])
-
-  def parse_range({from_string, to_string}, options)
-      when is_binary(from_string) and is_binary(to_string) do
-    Calendrical.Date.Parser.parse_range_pair(from_string, to_string, options)
-  end
-
-  def parse_range(input, options) when is_binary(input) do
-    Calendrical.Date.Parser.parse_range(input, options)
-  end
+  defdelegate parse_range(input, options \\ []), to: Localize.Interval, as: :parse
 end

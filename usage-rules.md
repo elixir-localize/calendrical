@@ -43,11 +43,13 @@ Partial input is supported where it makes sense; `Calendrical.Time.parse/2` acce
 
 ## The relationship with Localize
 
-* **Localize formats, Calendrical parses.** `Localize.Date.to_string/2` renders a date; `Calendrical.Date.parse/2` reads one back.
+* **Localize formats and parses.** `Localize.Date.to_string/2` renders a date and `Localize.Date.parse/2` reads one back. Calendrical's parse functions delegate to Localize's: `Calendrical.parse/2` to `Localize.DateTime.Parser.parse/2`, `Calendrical.Date.parse/2` to `Localize.Date.parse/2`, `Calendrical.Date.parse_range/2` to `Localize.Interval.parse/2`, and `Calendrical.Time.parse/2` and `Calendrical.DateTime.parse/2` to `Localize.Time.parse/2` and `Localize.DateTime.parse/2`.
 
-* Localize 1.2+ exposes `Localize.Date.parse/2`, `Localize.Time.parse/2` and `Localize.DateTime.parse/2` which delegate here. They resolve Calendrical **at runtime** and return `%Localize.DependencyRequiredError{}` when it is absent, because Calendrical depends on Localize and cannot be depended on in return.
+* Results and errors are Localize's, so match on `Localize.DateParseError`, `Localize.TimeParseError`, `Localize.DateTimeParseError` and `Localize.DateRangeParseError`.
 
-* Either entry point is fine. Prefer the `Localize.*` one when the surrounding code is already Localize-flavoured, and the `Calendrical.*` one when you need options this package documents and Localize does not.
+* Calendrical supplies the calendar modules parsed dates are returned in and `Calendrical.TimeZone` for named time zones. Localize reaches both at runtime, because Calendrical depends on Localize and cannot be depended on in return.
+
+* Either entry point is fine; they give identical results.
 
 ## Things not to do
 

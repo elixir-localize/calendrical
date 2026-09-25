@@ -884,7 +884,7 @@ defmodule Calendrical do
 
   @doc """
   Parses a locale-formatted string as a date, time, datetime, or date range —
-  whichever matches.
+  whichever matches. Delegates to `Localize.DateTime.Parser.parse/2`.
 
   Useful when the input shape is not known up-front (e.g. a single
   text field that may carry any of `"2026-05-16"`,
@@ -945,7 +945,7 @@ defmodule Calendrical do
     `t:Date.Range.t/0` (struct mode), or a field map / a
     `{from_map, to_map}` tuple (map mode).
 
-  * `{:error, Calendrical.ParseError.t()}` when every sub-parser
+  * `{:error, Localize.DateTimeParseError.t()}` when every sub-parser
     failed. The exception's `:attempts` field carries the
     `{kind, exception}` pairs from each attempt, in order.
 
@@ -981,9 +981,7 @@ defmodule Calendrical do
            | map()
            | {map(), map()}}
           | {:error, Exception.t()}
-  def parse(input, options \\ []) when is_binary(input) do
-    Calendrical.Parser.parse(input, options)
-  end
+  defdelegate parse(input, options \\ []), to: Localize.DateTime.Parser
 
   @doc """
   Formats the given date, time, or datetime into a string.

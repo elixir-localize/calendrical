@@ -7,6 +7,8 @@ Calendrical provides locale-aware parsers for user-typed date and time strings. 
 * `Calendrical.DateTime.parse/2`
 * `Calendrical.Date.parse_range/2`
 
+Parsing is implemented by Localize, and each of these functions delegates to its Localize counterpart — `Localize.DateTime.Parser.parse/2`, `Localize.Date.parse/2`, `Localize.Time.parse/2`, `Localize.DateTime.parse/2` and `Localize.Interval.parse/2` — so the two give identical results and errors. Calendrical supplies the calendar modules the results are returned in, and `Calendrical.TimeZone` for named time zones.
+
 This guide describes what each parser accepts, how Calendrical compares to Elixir's stdlib parsers, and what to expect for common wire formats.
 
 ## What Calendrical is and isn't
@@ -64,9 +66,12 @@ iex> Calendrical.parse("2026-05-23T14:30:00")
 iex> Calendrical.parse("2026-05-23T14:30:00Z")
 {:ok, ~U[2026-05-23 14:30:00Z]}
 
-iex> Calendrical.parse("2026-05-23T14:30:00+10:00")
-{:ok, ~U[2026-05-23 04:30:00Z]}
+iex> {:ok, datetime} = Calendrical.parse("2026-05-23T14:30:00+10:00")
+iex> DateTime.to_iso8601(datetime)
+"2026-05-23T14:30:00+10:00"
 ```
+
+The offset the input carried is kept, so the result reads back the way it was written; `DateTime.compare/2` and `DateTime.shift_zone/2` work on the instant as usual.
 
 For ISO 8601 forms the Elixir stdlib does not handle, Calendrical provides its own implementations:
 
@@ -290,7 +295,7 @@ case Calendrical.parse(input, locale: :en) do
   {:ok, %Time{} = t}       -> handle_time(t)
   {:ok, %NaiveDateTime{} = ndt} -> handle_naive_datetime(ndt)
   {:ok, %DateTime{} = dt}  -> handle_datetime(dt)
-  {:error, %Calendrical.ParseError{attempts: attempts}} -> handle_failure(attempts)
+  {:error, %Localize.DateTimeParseError{attempts: attempts}} -> handle_failure(attempts)
 end
 ```
 
@@ -300,11 +305,12 @@ All parsers return `{:ok, value} | {:error, exception}` and never raise on bad i
 
 | Exception | Fields |
 |---|---|
-| `Calendrical.DateParseError` | `:input`, `:locale`, `:calendar` |
-| `Calendrical.TimeParseError` | `:input`, `:locale` |
-| `Calendrical.DateTimeParseError` | `:input`, `:locale` |
-| `Calendrical.DateRangeParseError` | `:input`, `:reason`, `:locale`, `:from`, `:to`, `:cause` |
-| `Calendrical.ParseError` (unified) | `:input`, `:locale`, `:attempts` |
+| `Localize.DateParseError` | `:input`, `:locale`, `:calendar` |
+| `Localize.TimeParseError` | `:input`, `:locale` |
+| `Localize.DateTimeParseError` | `:input`, `:locale`, `:attempts` |
+| `Localize.DateRangeParseError` | `:input`, `:reason`, `:locale`, `:from`, `:to`, `:cause` |
+
+`Calendrical.parse/2` returns a `Localize.DateTimeParseError` whose `:attempts` records what each parser reported; `Calendrical.DateTime.parse/2` leaves it `nil`.
 
 `DateRangeParseError`'s `:reason` is one of `:no_separator`, `:inverted`, `:from_parse_failed`, `:to_parse_failed` (declared via `reason_atoms/0`).
 
