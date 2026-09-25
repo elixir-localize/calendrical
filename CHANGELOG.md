@@ -10,11 +10,23 @@ The format is based on
 
 ### Breaking changes
 
-* `Calendrical.Hebrew` numbers a date's month by its position in the year, as `Date.new/4` and `months_in_year/1` expect, instead of by CLDR's fixed numbers: in an ordinary year Adar is month 6, Nisan 7 and Elul 12. Leap-year dates are unchanged, and `days_in_month/2` returns 0 for a month the year does not have.
-
 * `Calendrical.parse/2`, `Calendrical.Date.parse/2` and `parse_range/2`, `Calendrical.Time.parse/2` and `Calendrical.DateTime.parse/2` delegate to Localize's parsers and return its errors, so `Calendrical.DateParseError`, `DateRangeParseError`, `DateTimeParseError`, `TimeParseError` and `ParseError` are removed. Results change where Localize is more correct: `week N of YYYY` follows the locale's week rules, an ISO 8601 offset is kept rather than normalised to UTC, and an unknown `:calendar` is an error.
 
+### Changed
+
+* Requires Localize 1.5 (CLDR 49), which now implements the date, time, datetime and interval parsers.
+
+* Japanese era boundaries before Meiji are the proleptic Gregorian dates Localize now publishes, read as they are instead of converted from CLDR's lunisolar values, and `Calendrical.LunarJapanese` counts an era's years from the lunar year of its proclamation.
+
+## [1.4.0] — 2026-09-25
+
+### Breaking changes
+
+* `Calendrical.Hebrew` numbers a date's month by its position in the year, as `Date.new/4` and `months_in_year/1` expect, instead of by CLDR's fixed numbers: in an ordinary year Adar is month 6, Nisan 7 and Elul 12. Leap-year dates are unchanged, and `days_in_month/2` returns 0 for a month the year does not have.
+
 * The parse functions' `:calendar` option is a calendar module, and the date is returned in it: a CLDR calendar name such as `:hebrew` returns `Localize.UnknownCalendarError`, and a calendar that shares its CLDR type with another, such as `Calendrical.Gregorian` or a fiscal or composite calendar, no longer comes back as `Calendar.ISO`. `:return_calendar` is removed; convert the result with `Date.convert/2`.
+
+* `Calendrical.DateTime.parse/2` keeps an ISO 8601 offset's wall time, so "2026-05-23T14:30:00+05:00" is 14:30 at +05:00 rather than 09:30 UTC — the struct a locale-formatted offset already gave.
 
 ### Added
 
@@ -36,7 +48,7 @@ The format is based on
 
 ### Changed
 
-* Requires Localize 1.4 (CLDR 49), which now implements the date, time, datetime and interval parsers.
+* Requires Localize 1.4, which names months through the calendar's `month_of_year/3` as the Hebrew month positions need.
 
 * `first_day_for_territory/1` and `min_days_for_territory/1` (and their locale variants) resolve from Localize's runtime week data instead of clauses compiled from it, so the values follow the loaded CLDR data without recompiling Calendrical. Results are unchanged for every territory.
 
@@ -44,9 +56,15 @@ The format is based on
 
 * The Chinese, Korean, Vietnamese and Lunar Japanese calendars find a year's new year once per question and each new moon once, so `valid_date?/3`, `days_in_month/2`, `days_in_year/1`, `leap_year?/1`, `leap_month/1`, `new/3` and `lunar_month_of_year/2` ask for far fewer new moons — a quarter as many across a lunisolar holiday corpus. Results are unchanged.
 
-* Japanese era boundaries before Meiji are the proleptic Gregorian dates Localize now publishes, read as they are instead of converted from CLDR's lunisolar values, and `Calendrical.LunarJapanese` counts an era's years from the lunar year of its proclamation.
-
 ### Fixed
+
+* The parse functions try the input as given before stripping a leading weekday, so a month name that is also a weekday name (es "mar") keeps its month, and they accept format and stand-alone month names alike (ru "июль").
+
+* Dates with an era parse: CLDR's alternative era names made the regex of every pattern with an era fail to compile. Era and weekday names of another width are accepted where they name a single era or day.
+
+* `Calendrical.Time.parse/2` resolves a flexible day period's hour by CLDR's day period rules, so ja "夜中0:30" is 00:30 where it was 12:30.
+
+* The parse functions return `Localize.InvalidValueError` for a non-string input or malformed options instead of raising, and a range given as two strings reports an unknown calendar or invalid locale instead of raising `CaseClauseError`.
 
 * `Calendrical.Date.parse/2` resolves a month name to that month in the parsed year, so Hebrew month names parse in ordinary and leap years alike, and "Adar II" parses.
 

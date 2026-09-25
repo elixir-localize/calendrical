@@ -521,7 +521,10 @@ defmodule Calendrical.CoverageParsingTest do
                {:ok, ~N[2026-05-23 14:30:00]}
     end
 
-    test "ISO 8601 with zone information returns a DateTime" do
+    # The offset the input carried is kept rather than normalised away, so
+    # the wall time is the one the user wrote, as the locale-formatted path
+    # already did.
+    test "ISO 8601 with zone information keeps the offset it carried" do
       assert Calendrical.DateTime.parse("2026-05-23T14:30:00Z", locale: :en) ==
                {:ok, ~U[2026-05-23 14:30:00Z]}
 
@@ -529,6 +532,13 @@ defmodule Calendrical.CoverageParsingTest do
       {:ok, datetime} = Calendrical.DateTime.parse("2026-05-23T14:30:00+05:00", locale: :en)
       assert DateTime.to_iso8601(datetime) == "2026-05-23T14:30:00+05:00"
       assert DateTime.compare(datetime, ~U[2026-05-23 09:30:00Z]) == :eq
+    end
+
+    test "the two spellings of one offset produce the same struct" do
+      {:ok, iso} = Calendrical.DateTime.parse("2026-05-16T14:30:00+10:30", locale: :en)
+      {:ok, localized} = Calendrical.DateTime.parse("May 16, 2026 2:30 PM GMT+10:30", locale: :en)
+
+      assert iso == localized
     end
 
     test "universal fallback glue separators" do
@@ -950,6 +960,114 @@ defmodule Calendrical.CoverageParsingTest do
                {:ok,
                 {%{calendar: Calendar.ISO, month: 5, day: 5},
                  %{calendar: Calendar.ISO, month: 5, day: 10}}}
+    end
+  end
+
+  # ── Names, weekdays and day periods ──
+
+  describe "names, weekdays and day periods" do
+    # A weekday name can also be a month name: es "mar" is both martes and
+    # marzo. The input is tried as given before a leading weekday is
+    # stripped.
+    test "a leading month name that is also a weekday name keeps its month" do
+      assert Calendrical.Date.parse("mar 2026", locale: :es, as: :map) ==
+               {:ok, %{calendar: Calendar.ISO, month: 3, year: 2026}}
+    end
+
+    # ru's `yMMMM` is "LLLL y 'г'.", with the stand-alone month name
+    # "июль"; its format name is "июля". Either is accepted for either
+    # symbol.
+    test "format and stand-alone month names are both accepted" do
+      july = {:ok, %{calendar: Calendar.ISO, month: 7, year: 2024}}
+
+      assert Calendrical.Date.parse("июль 2024 г.", locale: :ru, as: :map) == july
+      assert Calendrical.Date.parse("июля 2024 г.", locale: :ru, as: :map) == july
+    end
+
+    # CLDR's alternative era names sit at negative indices, which made the
+    # regex of every pattern with an era fail to compile.
+    test "a date with an era parses" do
+      assert Calendrical.Date.parse("5/16/2026 AD", locale: :en) == {:ok, ~D[2026-05-16]}
+
+      assert Calendrical.Date.parse("May 16, 2026 Anno Domini", locale: :en) ==
+               {:ok, ~D[2026-05-16]}
+    end
+
+    test "a weekday name of another width is accepted" do
+      assert Calendrical.Date.parse("2026年5月16日(土曜日)", locale: :ja) == {:ok, ~D[2026-05-16]}
+      assert Calendrical.Date.parse("2026年5月16日(土)", locale: :ja) == {:ok, ~D[2026-05-16]}
+    end
+
+    # ja "夜中" is night2, 23:00–04:00, so its 0:30 is 00:30, not 12:30.
+    test "a flexible day period resolves by the locale's day period rules" do
+      assert Calendrical.Time.parse("夜中0:30", locale: :ja) == {:ok, ~T[00:30:00]}
+    end
+  end
+
+  # ── Invalid input and options return errors, never raise ──
+
+  describe "invalid input and options" do
+    @entry_points [
+      {&Calendrical.Date.parse/2, "May 23, 2026"},
+      {&Calendrical.Date.parse/2, "2026-05-23"},
+      {&Calendrical.Time.parse/2, "10:30 PM"},
+      {&Calendrical.Time.parse/2, "10:30:00"},
+      {&Calendrical.DateTime.parse/2, "May 23, 2026, 10:30 PM"},
+      {&Calendrical.DateTime.parse/2, "2026-05-23T10:30:00"},
+      {&Calendrical.parse/2, "May 23, 2026"},
+      {&Calendrical.Date.parse_range/2, "May 5 – 10, 2026"}
+    ]
+
+    test "a non-string input is an invalid value error" do
+      for {parse, _input} <- @entry_points, bad_input <- [nil, 123, :"", ~D[2026-05-23]] do
+        assert {:error, %Localize.InvalidValueError{value: ^bad_input}} = parse.(bad_input, [])
+      end
+    end
+
+    test "options that are not a keyword list are an invalid value error" do
+      for {parse, input} <- @entry_points, bad_options <- [:bogus, [:not_keyword], %{as: :map}] do
+        assert {:error, %Localize.InvalidValueError{value: ^bad_options}} =
+                 parse.(input, bad_options)
+      end
+    end
+
+    test "an :as other than :struct or :map is an invalid value error" do
+      for {parse, input} <- @entry_points, as <- [:bogus, nil, "map"] do
+        assert {:error, %Localize.InvalidValueError{value: ^as, allowed_values: [:struct, :map]}} =
+                 parse.(input, as: as)
+      end
+    end
+
+    test "a :reference_date that is not a date is an invalid value error" do
+      for {parse, input} <- @entry_points, reference_date <- ["2026-01-01", 5] do
+        assert {:error, %Localize.InvalidValueError{value: ^reference_date}} =
+                 parse.(input, reference_date: reference_date)
+      end
+    end
+
+    test "an invalid locale or calendar returns a result rather than raising" do
+      for {parse, input} <- @entry_points,
+          option <- [
+            locale: 123,
+            locale: "",
+            locale: :"",
+            locale: "xx-invalid-!!",
+            calendar: "gregorian",
+            calendar: 123
+          ] do
+        case parse.(input, [option]) do
+          {:ok, _value} -> :ok
+          {:error, exception} -> assert is_exception(exception)
+        end
+      end
+    end
+
+    test "a range tuple with a non-string endpoint is an invalid value error" do
+      assert {:error, %Localize.InvalidValueError{value: nil}} =
+               Calendrical.Date.parse_range({nil, "2026-05-10"})
+
+      assert {:error, %Localize.InvalidValueError{value: 5}} =
+               Calendrical.Date.parse_range({"2026-05-05", 5})
     end
   end
 end

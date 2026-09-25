@@ -947,6 +947,8 @@ defmodule Calendrical do
     failed. The exception's `:attempts` field carries the
     `{kind, exception}` pairs from each attempt, in order.
 
+  * `{:error, Localize.InvalidValueError.t()}` when `input` is not a string or an option is malformed.
+
   ### Examples
 
       iex> Calendrical.parse("2026-05-16", locale: :en)

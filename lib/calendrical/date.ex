@@ -66,6 +66,8 @@ defmodule Calendrical.Date do
   * `{:error, Localize.DateParseError.t()}` when no
     pattern matched.
 
+  * `{:error, Localize.InvalidValueError.t()}` when `input` is not a string or an option is malformed.
+
   ### Examples
 
       iex> Calendrical.Date.parse("2026-05-16", locale: :en)
@@ -159,6 +161,8 @@ defmodule Calendrical.Date do
 
   * `{:error, Localize.DateParseError.t() |
     Localize.DateRangeParseError.t()}` on failure.
+
+  * `{:error, Localize.InvalidValueError.t()}` when `input` is not a string or an option is malformed.
 
   ### Examples
 

@@ -56,6 +56,8 @@ defmodule Calendrical.Time do
   * `{:error, Localize.TimeParseError.t()}` when no pattern
     matched.
 
+  * `{:error, Localize.InvalidValueError.t()}` when `input` is not a string or an option is malformed.
+
   ### Examples
 
       iex> Calendrical.Time.parse("14:30:00", locale: :en)

@@ -58,6 +58,8 @@ defmodule Calendrical.DateTime do
     failure. Sub-parse errors from `Calendrical.Date.parse/2`
     or `Calendrical.Time.parse/2` pass through.
 
+  * `{:error, Localize.InvalidValueError.t()}` when `input` is not a string or an option is malformed.
+
   ### Examples
 
       iex> Calendrical.DateTime.parse("2026-05-16T14:30:00", locale: :en)
