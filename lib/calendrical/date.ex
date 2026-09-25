@@ -104,13 +104,13 @@ defmodule Calendrical.Date do
       iex> Calendrical.Date.parse("16.05.2026", locale: :de)
       {:ok, ~D[2026-05-16]}
 
-      iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :hebrew)
+      iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew)
       {:ok, ~D[5786-08-29 Calendrical.Hebrew]}
 
       iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew)
       {:ok, ~D[5786-08-29 Calendrical.Hebrew]}
 
-      iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :hebrew, return_calendar: :iso)
+      iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew, return_calendar: :iso)
       {:ok, ~D[2026-05-16]}
 
       iex> Calendrical.Date.parse("Q2 2026", locale: :en)
@@ -198,7 +198,7 @@ defmodule Calendrical.Date do
       iex> {range.first, range.last}
       {~D[2026-05-05], ~D[2026-05-10]}
 
-      iex> {:ok, range} = Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"}, calendar: :buddhist)
+      iex> {:ok, range} = Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"}, calendar: Calendrical.Buddhist)
       iex> {range.first, range.last}
       {~D[2569-05-05 Calendrical.Buddhist], ~D[2569-05-10 Calendrical.Buddhist]}
 
