@@ -251,8 +251,8 @@ defmodule Calendrical.DateTest do
                )
 
       assert %Date.Range{} = range
-      assert range.first == ~D[5786-09-18 Calendrical.Hebrew]
-      assert range.last == ~D[5786-09-23 Calendrical.Hebrew]
+      assert range.first == ~D[5786-08-18 Calendrical.Hebrew]
+      assert range.last == ~D[5786-08-23 Calendrical.Hebrew]
       assert range.first.calendar == Calendrical.Hebrew
       assert range.last.calendar == Calendrical.Hebrew
     end
@@ -380,6 +380,53 @@ defmodule Calendrical.DateTest do
     test "English lowercase weekday matches" do
       assert {:ok, ~D[2026-05-16]} =
                Calendrical.Date.parse("saturday, may 16, 2026", locale: :en)
+    end
+  end
+
+  describe "parse/2 — Hebrew month names" do
+    test "a month name is the month of the parsed year" do
+      # Nisan is the 7th month of the ordinary year 5785 and the 8th of
+      # the leap year 5784
+      assert Calendrical.Date.parse("15 Nisan 5785", locale: :en, calendar: :hebrew) ==
+               {:ok, ~D[5785-07-15 Calendrical.Hebrew]}
+
+      assert Calendrical.Date.parse("15 Nisan 5784", locale: :en, calendar: :hebrew) ==
+               {:ok, ~D[5784-08-15 Calendrical.Hebrew]}
+
+      assert Calendrical.Date.parse("1 Elul 5785", locale: :en, calendar: :hebrew) ==
+               {:ok, ~D[5785-12-01 Calendrical.Hebrew]}
+    end
+
+    test "Adar I and Adar II are months of a leap year only" do
+      assert Calendrical.Date.parse("14 Adar I 5784", locale: :en, calendar: :hebrew) ==
+               {:ok, ~D[5784-06-14 Calendrical.Hebrew]}
+
+      assert Calendrical.Date.parse("14 Adar II 5784", locale: :en, calendar: :hebrew) ==
+               {:ok, ~D[5784-07-14 Calendrical.Hebrew]}
+
+      assert {:error, %Calendrical.DateParseError{}} =
+               Calendrical.Date.parse("14 Adar I 5785", locale: :en, calendar: :hebrew)
+
+      assert {:error, %Calendrical.DateParseError{}} =
+               Calendrical.Date.parse("14 Adar II 5785", locale: :en, calendar: :hebrew)
+    end
+
+    test "a plain Adar is Adar II in a leap year" do
+      assert Calendrical.Date.parse("14 Adar 5784", locale: :en, calendar: :hebrew) ==
+               {:ok, ~D[5784-07-14 Calendrical.Hebrew]}
+
+      assert Calendrical.Date.parse("14 Adar 5785", locale: :en, calendar: :hebrew) ==
+               {:ok, ~D[5785-06-14 Calendrical.Hebrew]}
+    end
+
+    test "every month name of a leap and an ordinary year parses to its month" do
+      for year <- [5784, 5785], month <- 1..Calendrical.Hebrew.months_in_year(year) do
+        {:ok, date} = Date.new(year, month, 14, Calendrical.Hebrew)
+        name = Calendrical.localize(date, :month, locale: :en, style: :wide)
+
+        assert Calendrical.Date.parse("14 #{name} #{year}", locale: :en, calendar: :hebrew) ==
+                 {:ok, date}
+      end
     end
   end
 
@@ -638,9 +685,9 @@ defmodule Calendrical.DateTest do
     end
 
     test ":calendar key reflects the parsing calendar — Hebrew" do
-      # 2026-05-16 ISO → 5786-09-29 Hebrew. The Hebrew y/m/d
+      # 2026-05-16 ISO → 5786-08-29 Hebrew (29 Iyar). The Hebrew y/m/d
       # values appear in the map under the Hebrew calendar.
-      assert {:ok, %{calendar: Calendrical.Hebrew, year: 5786, month: 9, day: 29}} =
+      assert {:ok, %{calendar: Calendrical.Hebrew, year: 5786, month: 8, day: 29}} =
                Calendrical.Date.parse("2026-05-16",
                  locale: :en,
                  calendar: :hebrew,

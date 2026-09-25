@@ -18,38 +18,54 @@ defmodule Calendrical.Hebrew do
 
   ## Month numbering
 
-  Months are numbered to match the [CLDR Hebrew calendar
-  convention](https://cldr.unicode.org/), with **Tishri = 1** and the
-  Hebrew year starting on 1 Tishri. The leap month, *Adar I*, occupies
-  position 6 and is **only valid in leap years**. In an ordinary year,
-  month 6 does not exist; the calendar goes directly from 5 (Shevat)
-  to 7 (Adar).
+  A Hebrew date's `month` is the month's **position in its year**, as it
+  is in every calendar: 1 (*Tishri*) to 12 (*Elul*) in an ordinary year,
+  and 1 to 13 in a leap year, whose leap month *Adar I* is month 6. So
+  `Date.new/4`, `months_in_year/1` and `days_in_month/2` agree, and the
+  months of any year are `1..months_in_year(year)`.
 
-  | # | Name        | Length | Notes |
-  |---|-------------|--------|-------|
-  | 1 | Tishri      | 30     | Year start |
-  | 2 | Heshvan     | 29 / 30 | (long in 355- and 385-day years) |
-  | 3 | Kislev      | 30 / 29 | (short in 353- and 383-day years) |
-  | 4 | Tevet       | 29     | |
-  | 5 | Shevat      | 30     | |
-  | 6 | Adar I      | 30     | **leap years only** |
-  | 7 | Adar / Adar II | 29  | "Adar" in ordinary years; "Adar II" in leap years |
-  | 8 | Nisan       | 30     | |
-  | 9 | Iyar        | 29     | |
-  | 10| Sivan       | 30     | |
-  | 11| Tamuz       | 29     | |
-  | 12| Av          | 30     | |
-  | 13| Elul        | 29     | |
+  The months from *Adar I* on therefore sit one place later in a leap
+  year. The **traditional** numbering names the same month in every
+  year. It follows [RFC 7529](https://www.rfc-editor.org/rfc/rfc7529)
+  (and the `monthCode` of JavaScript's Temporal): *Tishri* is 1 and
+  *Elul* 12, 6 is *Adar* in an ordinary year and *Adar II* in a leap
+  year, and *Adar I* is `{5, :leap}`, the leap month that follows month
+  5. `ordinal_month/2` finds a traditional month's position in a year
+  and `lunar_month_of_year/2` goes the other way.
+
+  | Month | Ordinary year | Leap year | Traditional | Days |
+  |---|---|---|---|---|
+  | Tishri | 1 | 1 | 1 | 30 |
+  | Heshvan | 2 | 2 | 2 | 29 or 30 |
+  | Kislev | 3 | 3 | 3 | 30 or 29 |
+  | Tevet | 4 | 4 | 4 | 29 |
+  | Shevat | 5 | 5 | 5 | 30 |
+  | Adar I | — | 6 | `{5, :leap}` | 30 |
+  | Adar / Adar II | 6 | 7 | 6 | 29 |
+  | Nisan | 7 | 8 | 7 | 30 |
+  | Iyar | 8 | 9 | 8 | 29 |
+  | Sivan | 9 | 10 | 9 | 30 |
+  | Tamuz | 10 | 11 | 10 | 29 |
+  | Av | 11 | 12 | 11 | 30 |
+  | Elul | 12 | 13 | 12 | 29 |
+
+  *Heshvan* is long in 355- and 385-day years, and *Kislev* is short
+  in 353- and 383-day years.
+
+  Month names come from CLDR, whose Hebrew data numbers the months 1
+  (*Tishri*) to 13 (*Elul*) with 6 for *Adar I*, whether or not the
+  year has it. `month_of_year/3` returns that CLDR number, which is
+  how `Calendrical.localize/3` names a date's month, and
+  `Calendrical.month_names/2` lists the names by it.
 
   Days are assumed to begin at midnight rather than at sunset.
 
   ## Reference
 
   Algorithms are taken from Dershowitz & Reingold, *Calendrical
-  Calculations* (4th ed.), Chapter 8, "The Hebrew Calendar". Note
-  that Reingold uses Nisan = 1 month numbering internally, while this
-  module uses CLDR's Tishri = 1 numbering at the public API; the
-  conversion is handled transparently.
+  Calculations* (4th ed.), Chapter 8, "The Hebrew Calendar", which
+  numbers the months from *Nisan*; this module numbers them by their
+  position in the year, from *Tishri*.
 
   """
 
@@ -69,8 +85,21 @@ defmodule Calendrical.Hebrew do
   @type month :: 1..13
   @type day :: 1..30
 
-  # CLDR Hebrew month constants (1 = Tishri ... 13 = Elul; 6 = Adar I,
-  # leap years only).
+  @typedoc """
+  A traditional Hebrew month (RFC 7529): `1..12`, or `{5, :leap}` for
+  *Adar I*.
+  """
+  @type traditional_month :: 1..12 | {5, :leap}
+
+  # The leap month, Adar I, is the 6th month of a leap year and follows
+  # traditional month 5 (Shevat).
+  @leap_month 6
+  @traditional_leap_month 5
+
+  # CLDR's numbers for the months (1 = Tishri ... 13 = Elul; 6 = Adar I,
+  # leap years only). A CLDR number names a month whatever its position in
+  # the year, so month lengths are found by it; `cldr_month/2` converts a
+  # position to it and `cldr_month_position/2` back.
   @tishri 1
   @heshvan 2
   @kislev 3
@@ -264,44 +293,47 @@ defmodule Calendrical.Hebrew do
   @doc """
   Returns the number of days in the given Hebrew `year` and `month`.
 
-  Month 6 (*Adar I*) only exists in leap years; the function returns
-  `0` for month 6 in an ordinary year.
-
   ### Arguments
 
   * `year` is any positive Hebrew year as an integer.
 
-  * `month` is a Hebrew month in the range `1..13`.
+  * `month` is the month's position in the year,
+    `1..months_in_year(year)`.
 
   ### Returns
 
-  * The number of days in the month, between 29 and 30 (or `0` for
-    month 6 in an ordinary year).
+  * The number of days in the month, 29 or 30, or `0` for a month the
+    year does not have.
 
   ### Examples
 
       iex> Calendrical.Hebrew.days_in_month(5785, 1)
       30
 
+      # Adar I, the 6th month of the leap year 5784
       iex> Calendrical.Hebrew.days_in_month(5784, 6)
       30
 
+      # Adar, the 6th month of the ordinary year 5785
       iex> Calendrical.Hebrew.days_in_month(5785, 6)
+      29
+
+      # An ordinary year has no 13th month
+      iex> Calendrical.Hebrew.days_in_month(5785, 13)
       0
 
   """
   @impl true
-  @spec days_in_month(year, month) :: 0..30
-  def days_in_month(year, month) when month in 1..13 do
+  @spec days_in_month(year, month) :: 0 | 29 | 30
+  def days_in_month(year, month) when is_integer(year) and is_integer(month) do
     cond do
-      month in @fixed_30_day_months -> 30
-      month in @fixed_29_day_months -> 29
-      month == @heshvan -> if long_heshvan?(year), do: 30, else: 29
-      month == @kislev -> if short_kislev?(year), do: 29, else: 30
-      month == @adar_i -> if leap_year?(year), do: 30, else: 0
-      month == @adar -> 29
+      month not in 1..months_in_year(year) -> 0
+      month in [@heshvan, @kislev] -> cldr_month_days(month, days_in_year(year))
+      true -> cldr_month_days(cldr_month(year, month), nil)
     end
   end
+
+  def days_in_month(_year, _month), do: 0
 
   @doc """
   Returns the total number of days in the given Hebrew `year`.
@@ -358,7 +390,8 @@ defmodule Calendrical.Hebrew do
       iex> Calendrical.Hebrew.week_of_year(5786, 1, 1)
       {5786, 1}
 
-      iex> Calendrical.Hebrew.week_of_year(5786, 8, 15)
+      # 15 Nisan, the 7th month of the ordinary year 5786
+      iex> Calendrical.Hebrew.week_of_year(5786, 7, 15)
       {5786, 28}
 
   """
@@ -401,13 +434,13 @@ defmodule Calendrical.Hebrew do
   Returns whether the given `year`, `month`, and `day` form a valid
   Hebrew date.
 
-  Month 6 (*Adar I*) is only valid in leap years.
+  An ordinary year has 12 months and a leap year 13.
 
   ### Arguments
 
   * `year` is any Hebrew year as an integer.
 
-  * `month` is a Hebrew month in the range `1..13`.
+  * `month` is the month's position in the year.
 
   * `day` is a Hebrew day-of-month.
 
@@ -420,10 +453,12 @@ defmodule Calendrical.Hebrew do
       iex> Calendrical.Hebrew.valid_date?(5785, 1, 30)
       true
 
-      iex> Calendrical.Hebrew.valid_date?(5784, 6, 1)
+      # Elul, the 13th month of the leap year 5784
+      iex> Calendrical.Hebrew.valid_date?(5784, 13, 1)
       true
 
-      iex> Calendrical.Hebrew.valid_date?(5785, 6, 1)
+      # An ordinary year has no 13th month
+      iex> Calendrical.Hebrew.valid_date?(5785, 13, 1)
       false
 
   """
@@ -432,11 +467,7 @@ defmodule Calendrical.Hebrew do
   def valid_date?(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) and
              year >= 1 and month in 1..13 and day in 1..30 do
-    if month == @adar_i and not leap_year?(year) do
-      false
-    else
-      day <= days_in_month(year, month)
-    end
+    day <= days_in_month(year, month)
   end
 
   def valid_date?(_year, _month, _day), do: false
@@ -457,14 +488,18 @@ defmodule Calendrical.Hebrew do
   ### Examples
 
       iex> Calendrical.Hebrew.year(5785)
-      Date.range(~D[5785-01-01 Calendrical.Hebrew], ~D[5785-13-29 Calendrical.Hebrew])
+      Date.range(~D[5785-01-01 Calendrical.Hebrew], ~D[5785-12-29 Calendrical.Hebrew])
+
+      iex> Calendrical.Hebrew.year(5784)
+      Date.range(~D[5784-01-01 Calendrical.Hebrew], ~D[5784-13-29 Calendrical.Hebrew])
 
   """
   @impl true
   @spec year(year) :: Date.Range.t() | {:error, :invalid_date}
   def year(year) do
-    with {:ok, first} <- Date.new(year, @tishri, 1, __MODULE__),
-         {:ok, last} <- Date.new(year, @elul, days_in_month(year, @elul), __MODULE__) do
+    with {:ok, first} <- Date.new(year, 1, 1, __MODULE__),
+         elul = months_in_year(year),
+         {:ok, last} <- Date.new(year, elul, days_in_month(year, elul), __MODULE__) do
       Date.range(first, last)
     end
   end
@@ -473,8 +508,9 @@ defmodule Calendrical.Hebrew do
   Adds an `increment` number of `date_part`s to a Hebrew date.
 
   Months are counted in the order of the year, so *Adar I* is counted
-  in a leap year and passed over in an ordinary one. Adding years keeps
-  the month, except that *Adar I* becomes *Adar* in an ordinary year.
+  in a leap year. Adding years keeps the traditional month, so *Nisan*
+  stays *Nisan* whatever its position, and *Adar I* becomes *Adar* in
+  an ordinary year.
 
   ### Arguments
 
@@ -500,13 +536,15 @@ defmodule Calendrical.Hebrew do
   ### Examples
 
       iex> Calendrical.Hebrew.plus(5785, 5, 10, :months, 1)
-      {5785, 7, 10}
+      {5785, 6, 10}
 
-      iex> Calendrical.Hebrew.plus(5784, 13, 1, :years, 1)
-      {5785, 13, 1}
+      # 15 Nisan, the 8th month of the leap year 5784 and the 7th of 5785
+      iex> Calendrical.Hebrew.plus(5784, 8, 15, :years, 1)
+      {5785, 7, 15}
 
+      # Adar I has 30 days, and Adar, which it becomes, has 29
       iex> Calendrical.Hebrew.plus(5784, 6, 30, :years, 1, coerce: true)
-      {5785, 7, 29}
+      {5785, 6, 29}
 
   """
   @impl true
@@ -515,7 +553,7 @@ defmodule Calendrical.Hebrew do
 
   def plus(year, month, day, :years, years, options) do
     new_year = year + years
-    new_month = if month == @adar_i and not leap_year?(new_year), do: @adar, else: month
+    new_month = cldr_month_position(new_year, cldr_month(year, month))
     {new_year, new_month, coerce_day(new_year, new_month, day, options)}
   end
 
@@ -524,8 +562,7 @@ defmodule Calendrical.Hebrew do
   end
 
   def plus(year, month, day, :months, months, options) do
-    {new_year, position} = advance_position(year, month_position(year, month), months)
-    new_month = month_at_position(new_year, position)
+    {new_year, new_month} = advance_position(year, month, months)
     {new_year, new_month, coerce_day(new_year, new_month, day, options)}
   end
 
@@ -567,15 +604,29 @@ defmodule Calendrical.Hebrew do
     end
   end
 
-  # A month's place in the order of its year: an ordinary year has no
-  # Adar I, so the months after it come one place earlier.
-  defp month_position(year, month) do
+  # The CLDR number of the month at `position` in `year`: an ordinary year
+  # has no Adar I, so from Adar on its months are numbered one more than
+  # their position.
+  defp cldr_month(year, position) do
+    if position >= @adar_i and not leap_year?(year), do: position + 1, else: position
+  end
+
+  # The position in `year` of the month CLDR numbers `month`. An ordinary
+  # year has no Adar I, so it gives Adar's position.
+  defp cldr_month_position(year, month) do
     if month > @adar_i and not leap_year?(year), do: month - 1, else: month
   end
 
-  defp month_at_position(year, position) do
-    if position >= @adar_i and not leap_year?(year), do: position + 1, else: position
-  end
+  # The length of the month CLDR numbers `month`, in a year of
+  # `year_length` days (needed only for Heshvan and Kislev).
+  defp cldr_month_days(month, _year_length) when month in @fixed_30_day_months, do: 30
+  defp cldr_month_days(month, _year_length) when month in @fixed_29_day_months, do: 29
+  defp cldr_month_days(@heshvan, year_length) when year_length in [355, 385], do: 30
+  defp cldr_month_days(@heshvan, _year_length), do: 29
+  defp cldr_month_days(@kislev, year_length) when year_length in [353, 383], do: 29
+  defp cldr_month_days(@kislev, _year_length), do: 30
+  defp cldr_month_days(@adar_i, _year_length), do: 30
+  defp cldr_month_days(@adar, _year_length), do: 29
 
   defp coerce_day(year, month, day, options) do
     if Keyword.get(options, :coerce, false) do
@@ -586,42 +637,247 @@ defmodule Calendrical.Hebrew do
   end
 
   @doc """
-  Returns the month-of-year for the given Hebrew date.
+  Returns the CLDR number of the month of a Hebrew date, by which
+  `Calendrical.localize/3` finds the month's name.
 
-  In a leap year, month 7 is *Adar II* and is returned as
-  `{7, :leap}` so that `Calendrical.localize/3` picks up the
-  CLDR `7_yeartype_leap` variant ("Adar II"). All other months
-  are returned as plain integers.
+  CLDR numbers the Hebrew months 1 (*Tishri*) to 13 (*Elul*) with 6
+  for *Adar I*, whether or not the year has it, so from *Adar* on a
+  month of an ordinary year is numbered one more than its position.
+  *Adar II* is returned as `{7, :leap}`, so that
+  `Calendrical.localize/3` picks CLDR's `7_yeartype_leap` name for
+  it. For the traditional month, see `lunar_month_of_year/2`.
 
   ### Arguments
 
   * `year` is any positive Hebrew year as an integer.
 
-  * `month` is a Hebrew month in the range `1..13`.
+  * `month` is the month's position in the year.
 
   * `day` is a Hebrew day-of-month.
 
   ### Returns
 
-  * The plain `month` integer, or `{7, :leap}` for *Adar II*.
+  * The CLDR month number, or `{7, :leap}` for *Adar II*.
 
   ### Examples
 
+      # Nisan, the 7th month of the ordinary year 5785
       iex> Calendrical.Hebrew.month_of_year(5785, 7, 1)
-      7
+      8
 
+      # Adar II, the 7th month of the leap year 5784
       iex> Calendrical.Hebrew.month_of_year(5784, 7, 1)
       {7, :leap}
 
   """
   @impl true
-  def month_of_year(year, month, _day) do
-    if month == @adar and leap_year?(year) do
-      {@adar, :leap}
-    else
-      month
+  def month_of_year(year, month, _day) when is_integer(year) and is_integer(month) do
+    cldr_month = cldr_month(year, month)
+    if cldr_month == @adar and leap_year?(year), do: {@adar, :leap}, else: cldr_month
+  end
+
+  def month_of_year(_year, month, _day), do: month
+
+  @doc """
+  Returns the position in a year of a traditional Hebrew month.
+
+  The traditional numbering, from RFC 7529, names the same month every
+  year: 1 (*Tishri*) to 12 (*Elul*), with 6 for *Adar*, which is
+  *Adar II* in a leap year, and `{5, :leap}` for *Adar I*, the leap
+  month that follows month 5. From *Adar I* on, the months of a leap
+  year sit one place later.
+
+  ### Arguments
+
+  * `year` is any Hebrew year as an integer.
+
+  * `month` is a traditional month, `1..12` or `{5, :leap}`.
+
+  ### Returns
+
+  * `{:ok, month}` where `month` is the month's position in the year.
+
+  * `{:error, :invalid_leap_month}` for a leap month the year does not
+    have: `{5, :leap}` in an ordinary year, or any other leap month.
+
+  * `{:error, :invalid_month}` for any other value.
+
+  ### Examples
+
+      # Nisan is the 7th month of an ordinary year and the 8th of a leap year
+      iex> Calendrical.Hebrew.ordinal_month(5785, 7)
+      {:ok, 7}
+
+      iex> Calendrical.Hebrew.ordinal_month(5784, 7)
+      {:ok, 8}
+
+      iex> Calendrical.Hebrew.ordinal_month(5784, {5, :leap})
+      {:ok, 6}
+
+      iex> Calendrical.Hebrew.ordinal_month(5785, {5, :leap})
+      {:error, :invalid_leap_month}
+
+  """
+  @spec ordinal_month(Calendar.year(), traditional_month()) ::
+          {:ok, Calendar.month()} | {:error, :invalid_month | :invalid_leap_month}
+  def ordinal_month(year, month) when is_integer(year) and is_integer(month) and month in 1..12 do
+    if month > @traditional_leap_month and leap_year?(year),
+      do: {:ok, month + 1},
+      else: {:ok, month}
+  end
+
+  def ordinal_month(year, {@traditional_leap_month, :leap}) when is_integer(year) do
+    if leap_year?(year), do: {:ok, @leap_month}, else: {:error, :invalid_leap_month}
+  end
+
+  def ordinal_month(year, {_month, :leap}) when is_integer(year),
+    do: {:error, :invalid_leap_month}
+
+  def ordinal_month(_year, _month), do: {:error, :invalid_month}
+
+  @doc """
+  Returns the traditional month of a Hebrew date.
+
+  The traditional numbering is described in `ordinal_month/2`.
+
+  ### Arguments
+
+  * `date` is a `t:Date.t/0` in the Hebrew calendar.
+
+  ### Returns
+
+  * The traditional month, `1..12`, or `{5, :leap}` for *Adar I*.
+
+  * `{:error, :invalid_month}` for a value that is not a Hebrew date.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.lunar_month_of_year(~D[5784-06-01 Calendrical.Hebrew])
+      {5, :leap}
+
+      # 15 Nisan 5784, the 8th month of a leap year
+      iex> Calendrical.Hebrew.lunar_month_of_year(~D[5784-08-15 Calendrical.Hebrew])
+      7
+
+  """
+  @spec lunar_month_of_year(Date.t()) ::
+          Calendar.month() | {5, :leap} | {:error, :invalid_month}
+  def lunar_month_of_year(%Date{year: year, month: month, calendar: __MODULE__}) do
+    lunar_month_of_year(year, month)
+  end
+
+  def lunar_month_of_year(_date), do: {:error, :invalid_month}
+
+  @doc """
+  Returns the traditional month at a position in a Hebrew year.
+
+  This is the inverse of `ordinal_month/2`, which describes the
+  traditional numbering.
+
+  ### Arguments
+
+  * `year` is any Hebrew year as an integer.
+
+  * `month` is the month's position in the year.
+
+  ### Returns
+
+  * The traditional month, `1..12`, or `{5, :leap}` for *Adar I*.
+
+  * `{:error, :invalid_month}` when the year has no month at that
+    position.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.lunar_month_of_year(5784, 6)
+      {5, :leap}
+
+      # Nisan: the 8th month of a leap year and the 7th of an ordinary one
+      iex> Calendrical.Hebrew.lunar_month_of_year(5784, 8)
+      7
+
+      iex> Calendrical.Hebrew.lunar_month_of_year(5785, 7)
+      7
+
+      iex> Calendrical.Hebrew.lunar_month_of_year(5785, 13)
+      {:error, :invalid_month}
+
+  """
+  @spec lunar_month_of_year(Calendar.year(), Calendar.month()) ::
+          Calendar.month() | {5, :leap} | {:error, :invalid_month}
+  def lunar_month_of_year(year, month) when is_integer(year) and is_integer(month) do
+    cond do
+      month not in 1..months_in_year(year) -> {:error, :invalid_month}
+      month < @leap_month or not leap_year?(year) -> month
+      month == @leap_month -> {@traditional_leap_month, :leap}
+      true -> month - 1
     end
   end
+
+  def lunar_month_of_year(_year, _month), do: {:error, :invalid_month}
+
+  @doc """
+  Returns the position of the leap month, *Adar I*, in a Hebrew year.
+
+  ### Arguments
+
+  * `date_or_year` is a Hebrew year as an integer, or a `t:Date.t/0`
+    in the Hebrew calendar.
+
+  ### Returns
+
+  * `6`, the position of *Adar I*, in a leap year.
+
+  * `nil` in an ordinary year.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.leap_month(5784)
+      6
+
+      iex> Calendrical.Hebrew.leap_month(5785)
+      nil
+
+  """
+  @spec leap_month(Date.t() | Calendar.year()) :: 6 | nil
+  def leap_month(%Date{year: year, calendar: __MODULE__}), do: leap_month(year)
+  def leap_month(year) when is_integer(year), do: if(leap_year?(year), do: @leap_month)
+  def leap_month(_date_or_year), do: nil
+
+  @doc """
+  Returns the traditional month that the leap month, *Adar I*, follows.
+
+  *Adar I* follows *Shevat*, traditional month 5, so its traditional
+  month is `{5, :leap}`.
+
+  ### Arguments
+
+  * `date_or_year` is a Hebrew year as an integer, or a `t:Date.t/0`
+    in the Hebrew calendar.
+
+  ### Returns
+
+  * `5` in a leap year.
+
+  * `nil` in an ordinary year.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.traditional_leap_month(5784)
+      5
+
+      iex> Calendrical.Hebrew.traditional_leap_month(5785)
+      nil
+
+  """
+  @spec traditional_leap_month(Date.t() | Calendar.year()) :: 5 | nil
+  def traditional_leap_month(%Date{year: year, calendar: __MODULE__}),
+    do: traditional_leap_month(year)
+
+  def traditional_leap_month(year) when is_integer(year),
+    do: if(leap_year?(year), do: @traditional_leap_month)
+
+  def traditional_leap_month(_date_or_year), do: nil
 
   # ── Calendar conversion ──────────────────────────────────────────────────
 
@@ -633,7 +889,7 @@ defmodule Calendrical.Hebrew do
 
   * `year` is any positive Hebrew year as an integer.
 
-  * `month` is a Hebrew month in the range `1..13`.
+  * `month` is the month's position in the year.
 
   * `day` is a Hebrew day-of-month.
 
@@ -650,7 +906,8 @@ defmodule Calendrical.Hebrew do
   @spec date_to_iso_days(year, month, day) :: integer()
   def date_to_iso_days(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
-    hebrew_new_year(year) + day - 1 + month_offset(year, month)
+    new_year = hebrew_new_year(year)
+    new_year + month_offset(year, month, new_year) + day - 1
   end
 
   @doc """
@@ -679,10 +936,10 @@ defmodule Calendrical.Hebrew do
     # than the true year, so we search forward from `approx - 1`.
     approx = div((iso_days - epoch()) * 98_496, 35_975_351) + 1
     year = find_year(iso_days, approx - 1)
+    new_year = hebrew_new_year(year)
+    year_length = hebrew_new_year(year + 1) - new_year
 
-    month = find_month(iso_days, year, valid_months(year))
-    day = iso_days - date_to_iso_days(year, month, 1) + 1
-
+    {month, day} = find_month(year, iso_days - new_year, 1, year_length)
     {year, month, day}
   end
 
@@ -744,71 +1001,26 @@ defmodule Calendrical.Hebrew do
     end
   end
 
-  # True when Heshvan (month 2) has 30 days in this year.
-  defp long_heshvan?(year) do
-    days_in_year(year) in [355, 385]
+  # The number of days from 1 Tishri of `year`, which is `new_year`, to
+  # the first day of the month at position `month`. Only Heshvan and
+  # Kislev vary in length, with the length of the year, so that is found
+  # once, and only when a month after Heshvan is asked for.
+  defp month_offset(_year, month, _new_year) when month <= 1, do: 0
+  defp month_offset(_year, 2, _new_year), do: 30
+
+  defp month_offset(year, month, new_year) do
+    year_length = hebrew_new_year(year + 1) - new_year
+    sum_month_days(year, min(month - 1, months_in_year(year)), year_length, 0)
   end
 
-  # True when Kislev (month 3) has 29 days in this year.
-  defp short_kislev?(year) do
-    days_in_year(year) in [353, 383]
-  end
+  # The days in the months at positions 1..`month` of `year`. Explicit
+  # recursion rather than Enum.reduce keeps the sum integer-typed under
+  # dialyzer; a higher-order fold types its accumulator as any().
+  defp sum_month_days(_year, 0, _year_length, sum), do: sum
 
-  # The list of valid CLDR Hebrew month numbers for the given year,
-  # in calendar order. In an ordinary year month 6 (Adar I) is
-  # omitted; in a leap year all 13 months are present.
-  defp valid_months(year) do
-    if leap_year?(year) do
-      [
-        @tishri,
-        @heshvan,
-        @kislev,
-        @tevet,
-        @shevat,
-        @adar_i,
-        @adar,
-        @nisan,
-        @iyar,
-        @sivan,
-        @tamuz,
-        @av,
-        @elul
-      ]
-    else
-      [
-        @tishri,
-        @heshvan,
-        @kislev,
-        @tevet,
-        @shevat,
-        @adar,
-        @nisan,
-        @iyar,
-        @sivan,
-        @tamuz,
-        @av,
-        @elul
-      ]
-    end
-  end
-
-  # Number of days from 1 Tishri of the given year to 1-of-the-given-month
-  # of the same year (i.e. the days in all months that come before the
-  # target month in the calendar order).
-  # Explicit recursion rather than Enum.reduce keeps the summed
-  # offset integer-typed under dialyzer; a higher-order fold types
-  # its accumulator as any().
-  defp month_offset(year, month) do
-    year
-    |> valid_months()
-    |> Enum.take_while(&(&1 != month))
-    |> sum_month_days(year, 0)
-  end
-
-  defp sum_month_days([], _year, sum), do: sum
-
-  defp sum_month_days([month | months], year, sum) do
-    sum_month_days(months, year, sum + days_in_month(year, month))
+  defp sum_month_days(year, month, year_length, sum) do
+    days = cldr_month_days(cldr_month(year, month), year_length)
+    sum_month_days(year, month - 1, year_length, sum + days)
   end
 
   # Search forward from a candidate year for the first year whose
@@ -821,15 +1033,16 @@ defmodule Calendrical.Hebrew do
     end
   end
 
-  # Find the first month in the given list whose last day is on or
-  # after iso_days.
-  defp find_month(iso_days, year, [month | rest]) do
-    last_iso_of_month = date_to_iso_days(year, month, days_in_month(year, month))
+  # The month of `year`, walking from position `month`, that holds the
+  # day `offset` days after the month's first day, and the day of that
+  # month.
+  defp find_month(year, offset, month, year_length) do
+    days = cldr_month_days(cldr_month(year, month), year_length)
 
-    if iso_days <= last_iso_of_month or rest == [] do
-      month
+    if offset < days or month >= months_in_year(year) do
+      {month, offset + 1}
     else
-      find_month(iso_days, year, rest)
+      find_month(year, offset - days, month + 1, year_length)
     end
   end
 end

@@ -88,11 +88,12 @@ defmodule Calendrical.CalendarWeekStartTest do
     end
 
     test "the last day of the year is in the last week" do
-      # Hebrew month 13 (Elul) is the final month even in ordinary
-      # years, where month 6 (Adar I) does not exist.
-      last_day = Calendrical.Hebrew.days_in_month(5786, 13)
+      # Elul, the final Hebrew month, is the 12th month of an ordinary
+      # year such as 5786 and the 13th of a leap year.
+      elul = Calendrical.Hebrew.months_in_year(5786)
+      last_day = Calendrical.Hebrew.days_in_month(5786, elul)
       {weeks, _days_in_last_week} = Calendrical.Hebrew.weeks_in_year(5786)
-      assert Calendrical.Hebrew.week_of_year(5786, 13, last_day) == {5786, weeks}
+      assert Calendrical.Hebrew.week_of_year(5786, elul, last_day) == {5786, weeks}
 
       last_day = Calendrical.Islamic.Civil.days_in_month(1447, 12)
       {weeks, _days_in_last_week} = Calendrical.Islamic.Civil.weeks_in_year(1447)

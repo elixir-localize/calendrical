@@ -134,12 +134,12 @@ defmodule Calendrical.CoverageParsingTest do
   describe "Date.parse/2 calendar handling" do
     test ":calendar as CLDR key returns a date in that calendar" do
       assert Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :hebrew) ==
-               {:ok, ~D[5786-09-29 Calendrical.Hebrew]}
+               {:ok, ~D[5786-08-29 Calendrical.Hebrew]}
     end
 
     test ":calendar as module is coerced via cldr_calendar_type/0" do
       assert Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew) ==
-               {:ok, ~D[5786-09-29 Calendrical.Hebrew]}
+               {:ok, ~D[5786-08-29 Calendrical.Hebrew]}
     end
 
     test "return_calendar: :iso forces Calendar.ISO" do
@@ -347,7 +347,7 @@ defmodule Calendrical.CoverageParsingTest do
                calendar: Calendrical.Hebrew
              ) ==
                {:ok,
-                Date.range(~D[5786-09-18 Calendrical.Hebrew], ~D[5786-09-23 Calendrical.Hebrew])}
+                Date.range(~D[5786-08-18 Calendrical.Hebrew], ~D[5786-08-23 Calendrical.Hebrew])}
     end
   end
 

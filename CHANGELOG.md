@@ -8,7 +8,13 @@ The format is based on
 
 ## [1.4.0] — 2026-09-23
 
+### Breaking changes
+
+* `Calendrical.Hebrew` numbers a date's month by its position in the year, as `Date.new/4` and `months_in_year/1` expect, instead of by CLDR's fixed numbers: in an ordinary year Adar is month 6, Nisan 7 and Elul 12. Leap-year dates are unchanged, and `days_in_month/2` returns 0 for a month the year does not have.
+
 ### Added
+
+* `Calendrical.Hebrew.ordinal_month/2`, `lunar_month_of_year/1,2`, `leap_month/1` and `traditional_leap_month/1` convert between a Hebrew month's position and its RFC 7529 traditional month (Adar I is `{5, :leap}`), as the lunisolar calendars do.
 
 * `Calendrical.Vietnamese` — the Chinese lunisolar calendar observed from the 105° East (Hanoi) meridian, so Tết diverges from the Chinese New Year in 1985 (by a month), 2007, 2030 and 2053. It borrows the `:chinese` CLDR type, and `vi-u-ca-chinese` (or `Preference.calendar_from_territory(:VN, :chinese)`) resolves to it rather than `Calendrical.Chinese`.
 
@@ -34,6 +40,8 @@ The format is based on
 
 ### Fixed
 
+* `Calendrical.Date.parse/2` resolves a month name to that month in the parsed year, so Hebrew month names parse in ordinary and leap years alike, and "Adar II" parses.
+
 * `Calendrical.Islamic.UmmAlQura` is built from KACST's official month lengths instead of R.H. van Gent's astronomical reconstruction, which differed from them in 695 months between 1356 and 1500 AH, including 211 from 2029 on. It now covers 1–1500 AH rather than 1356–1500 AH.
 
 * `Calendrical.LunarJapanese` no longer computes each lunar year twice when converting to other calendars, halving that cost, because the lunisolar mid-year estimate no longer assumes the epoch is a new year. A `:lunar_japanese_epoch` configured in late July or August no longer duplicates or skips years.
@@ -43,6 +51,8 @@ The format is based on
 * `.dialyzer_ignore.exs` is now empty — all twenty-six previously-suppressed dialyzer warnings are fixed at the source instead of ignored.
 
 * `valid_date?/3`, and so `Date.new/4`, rejects a month or day below 1 in the lunisolar calendars and in every calendar using the `Calendrical.Behaviour` default (Persian, Japanese, the civil and tabular Islamic, and the Japan and Sweden reform calendars), which accepted it or raised.
+
+* `Calendrical.Islamic.Observational` and `Calendrical.Islamic.Rgsa` begin a month on the day after the evening its crescent is first seen, the eve of the month's first day, where they judged the evening of that day and so began months a day early. With Astro 2.6.2's corrected crescent visibility, each month begins with Umm al-Qura's or a day after.
 
 * The lunisolar `new/3` checks a leap month's day, and the day of a month after the leap month, against that month's own length, and `leap_month?/2` no longer marks a term-less month that follows a leap month falling before the new year.
 

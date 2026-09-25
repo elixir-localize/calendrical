@@ -133,7 +133,7 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 
 | Callback | Default behaviour |
 |---|---|
-| `valid_date?(year, month, day)` | Returns `month <= months_in_year(year) and day <= days_in_month(year, month)`. **Override** for calendars with discontinuous month numbering (e.g. Hebrew month 6 only valid in leap years) or with stricter day rules. |
+| `valid_date?(year, month, day)` | Returns `month <= months_in_year(year) and day <= days_in_month(year, month)`. **Override** for stricter rules, such as no year before 1 (Hebrew). |
 | `valid_time?(hour, minute, second, microsecond)` | Delegates to `Calendar.ISO`. |
 
 ### Year and era
@@ -152,7 +152,7 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 | Callback | Default behaviour |
 |---|---|
 | `quarter_of_year/3` | Returns `ceil(month / (months_in_year(year) / 4))`. **Override** with `{:error, :not_defined}` for calendars that don't define quarters (Coptic, Ethiopic, Hebrew). |
-| `month_of_year/3` | Returns the month unchanged. **Override** to return `{month, :leap}` when the date is in a leap month so that `Calendrical.localize/3` picks up the CLDR `_yeartype_leap` variant (e.g. Hebrew Adar II). |
+| `month_of_year/3` | Returns the month unchanged. **Override** when CLDR names a month by a number other than its position: return that number, or `{month, :leap}` for a leap month, so that `Calendrical.localize/3` finds its name (Hebrew returns CLDR's number and `{7, :leap}` for Adar II; the lunisolar calendars return the traditional month). |
 | `week_of_year/3` | Returns `{:error, :not_defined}`. **Override** for calendars that define weeks of the year. |
 | `iso_week_of_year/3` | Returns `{:error, :not_defined}`. |
 | `week_of_month/3` | Returns `{:error, :not_defined}`. |
@@ -316,10 +316,11 @@ end
 
 The Hebrew calendar adds two complications:
 
-1. **A discontinuous month numbering**: month 6 (Adar I) only exists in leap years.
-2. **A `_yeartype_leap` localization variant**: month 7 is "Adar" in ordinary years and "Adar II" in leap years.
+* **A leap month** — a leap year inserts *Adar I* as its 6th month, so from *Adar* on the months of a leap year sit one place later than in an ordinary year. A date's `month` is still the month's position in its year, so `months_in_year/1` bounds the months and the defaults for `valid_date?/3` and `year/1` hold.
 
-The first is handled by overriding `valid_date?/3` to reject month 6 in non-leap years. The second is handled by overriding `month_of_year/3` to return `{7, :leap}` in leap years; `Calendrical.localize/3` then automatically looks up the `_yeartype_leap` variant from the CLDR data.
+* **CLDR's month numbers** — CLDR names the Hebrew months by fixed numbers (6 for *Adar I*, 7 for *Adar*, 8 for *Nisan*, …) and gives month 7 the `_yeartype_leap` name "Adar II" in a leap year.
+
+The second is handled by overriding `month_of_year/3` to return CLDR's number for the month at a position, and `{7, :leap}` for *Adar II*; `Calendrical.localize/3` then looks up the name, and the `_yeartype_leap` variant, in the CLDR data.
 
 ```elixir
 defmodule MyApp.MyHebrew do
@@ -332,18 +333,16 @@ defmodule MyApp.MyHebrew do
   @impl true
   def leap_year?(year), do: Integer.mod(7 * year + 1, 19) < 7
 
+  # CLDR numbers the months of an ordinary year from Adar on one more
+  # than their position, and names month 7 "Adar II" in a leap year.
   @impl true
-  def valid_date?(year, 6, _day), do: leap_year?(year)
-  def valid_date?(year, month, day) when month in 1..13 and day in 1..30 do
-    day <= days_in_month(year, month)
+  def month_of_year(year, month, _day) do
+    cond do
+      leap_year?(year) and month == 7 -> {7, :leap}
+      leap_year?(year) or month < 6 -> month
+      true -> month + 1
+    end
   end
-  def valid_date?(_year, _month, _day), do: false
-
-  @impl true
-  def month_of_year(year, 7, _day) do
-    if leap_year?(year), do: {7, :leap}, else: 7
-  end
-  def month_of_year(_year, month, _day), do: month
 
   # ... days_in_month/2, date_to_iso_days/3, date_from_iso_days/1
 end

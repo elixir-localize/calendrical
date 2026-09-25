@@ -362,7 +362,7 @@ import Calendrical.Sigils
 ~D[1446-06-15 Calendrical.Julian]                   # Julian calendar
 ~D[-1446-06-15 Calendrical.Julian]                  # B.C.E. Julian (negative year)
 ~D[1446-09-01 Calendrical.Islamic.UmmAlQura]        # Umm al-Qura
-~D[5784-08-15 Calendrical.Hebrew]                   # Hebrew (Tishri = 1)
+~D[5784-08-15 Calendrical.Hebrew]                   # Hebrew (15 Nisan, month 8 of a leap year)
 ```
 
 The native `~D` sigil has supported the trailing calendar form since Elixir 1.10. It works for any module implementing the `Calendar` behaviour, so all 17 Calendrical calendars (and any user-defined calendar built with `Calendrical.Behaviour`) are valid.

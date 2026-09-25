@@ -109,7 +109,7 @@ Pass `:calendar` to interpret input in any of CLDR's calendars:
 
 ```elixir
 iex> Calendrical.parse("2026-05-16", calendar: :hebrew)
-{:ok, ~D[5786-09-29 Calendrical.Hebrew]}
+{:ok, ~D[5786-08-29 Calendrical.Hebrew]}
 
 iex> Calendrical.parse("民國115年5月16日", locale: :"zh-Hant-TW", calendar: :roc)
 {:ok, ~D[0115-05-16 Calendrical.Roc]}

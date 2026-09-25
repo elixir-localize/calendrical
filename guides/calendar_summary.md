@@ -167,7 +167,7 @@ A **lunisolar** calendar tracks the synodic month *and* keeps the year aligned w
 
 | Calendar | CLDR | Algorithm | Leap rule |
 |---|---|---|---|
-| `Calendrical.Hebrew` | `:hebrew` | **Arithmetic** (Reingold) | 19-year Metonic cycle: years 3, 6, 8, 11, 14, 17, 19 are leap. Public API uses the CLDR Tishri = 1 numbering with month 6 (Adar I) only valid in leap years. |
+| `Calendrical.Hebrew` | `:hebrew` | **Arithmetic** (Reingold) | 19-year Metonic cycle: years 3, 6, 8, 11, 14, 17, 19 are leap. Months are numbered by their position in the year from Tishri, so Adar I is month 6 of a leap year; `ordinal_month/2` takes the RFC 7529 traditional month. |
 | `Calendrical.Chinese` | `:chinese` | **Astronomical** (lunar phase + winter solstice at Beijing/China longitude) | Inserts a 13th leap month between the new moons that contain no major solar term. Uses the `Astro` library. |
 | `Calendrical.Korean` | `:dangi` | **Astronomical** (lunar phase + winter solstice at Seoul longitude) | Same algorithm as `Calendrical.Chinese` but observed from Seoul. The CLDR identifier `:dangi` refers to the *Dangi* era starting 2333 BCE. |
 | `Calendrical.LunarJapanese` | `:chinese` (shared) | **Astronomical** (lunar phase + winter solstice at Japan-standard-time longitude) | The historical Japanese lunisolar calendar used until 1873, when Japan switched to the proleptic Gregorian. |
@@ -183,7 +183,7 @@ iex> {:ok, gregorian} = Date.convert(hebrew, Calendrical.Gregorian)
 iex> gregorian
 ~D[2023-09-16 Calendrical.Gregorian]
 
-iex> {:ok, passover} = Date.new(5784, 8, 15, Calendrical.Hebrew)  # 15 Nisan
+iex> {:ok, passover} = Date.new(5784, 8, 15, Calendrical.Hebrew)  # 15 Nisan, month 8 of a leap year
 iex> {:ok, gregorian} = Date.convert(passover, Calendrical.Gregorian)
 iex> gregorian
 ~D[2024-04-23 Calendrical.Gregorian]

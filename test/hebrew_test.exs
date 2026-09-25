@@ -25,7 +25,7 @@ defmodule Calendrical.HebrewTest do
     end
 
     test "15 Nisan 5784 AM (Passover) = 23 April 2024 (Gregorian)" do
-      # Nisan is month 8 in CLDR Hebrew numbering
+      # Nisan is the 8th month of the leap year 5784
       {:ok, hebrew} = Date.new(5784, 8, 15, Hebrew)
       {:ok, gregorian} = Date.convert(hebrew, Calendrical.Gregorian)
       assert gregorian == ~D[2024-04-23 Calendrical.Gregorian]
@@ -112,30 +112,38 @@ defmodule Calendrical.HebrewTest do
 
   describe "days_in_month/2" do
     test "fixed 30-day months" do
-      # Tishri (1), Shevat (5), Nisan (8), Sivan (10), Av (12) are always 30
-      assert Hebrew.days_in_month(5785, 1) == 30
-      assert Hebrew.days_in_month(5785, 5) == 30
-      assert Hebrew.days_in_month(5785, 8) == 30
-      assert Hebrew.days_in_month(5785, 10) == 30
-      assert Hebrew.days_in_month(5785, 12) == 30
+      # Tishri, Shevat, Nisan, Sivan and Av are always 30 days: months 1, 5,
+      # 7, 9 and 11 of the ordinary year 5785, and 1, 5, 8, 10 and 12 of the
+      # leap year 5784
+      for month <- [1, 5, 7, 9, 11], do: assert(Hebrew.days_in_month(5785, month) == 30)
+      for month <- [1, 5, 8, 10, 12], do: assert(Hebrew.days_in_month(5784, month) == 30)
     end
 
     test "fixed 29-day months" do
-      # Tevet (4), Iyar (9), Tamuz (11), Elul (13) are always 29
-      assert Hebrew.days_in_month(5785, 4) == 29
-      assert Hebrew.days_in_month(5785, 9) == 29
-      assert Hebrew.days_in_month(5785, 11) == 29
-      assert Hebrew.days_in_month(5785, 13) == 29
+      # Tevet, Iyar, Tamuz and Elul are always 29 days: months 4, 8, 10 and
+      # 12 of the ordinary year 5785, and 4, 9, 11 and 13 of the leap year 5784
+      for month <- [4, 8, 10, 12], do: assert(Hebrew.days_in_month(5785, month) == 29)
+      for month <- [4, 9, 11, 13], do: assert(Hebrew.days_in_month(5784, month) == 29)
     end
 
-    test "Adar (7) is 29 days in both ordinary and leap years" do
-      assert Hebrew.days_in_month(5785, 7) == 29
+    test "Adar is 29 days: month 6 of an ordinary year, and month 7 (Adar II) of a leap year" do
+      assert Hebrew.days_in_month(5785, 6) == 29
       assert Hebrew.days_in_month(5784, 7) == 29
     end
 
-    test "Adar I (6) is 30 days in a leap year and 0 (invalid) in an ordinary year" do
+    test "Adar I, month 6 of a leap year, is 30 days" do
       assert Hebrew.days_in_month(5784, 6) == 30
-      assert Hebrew.days_in_month(5785, 6) == 0
+    end
+
+    test "a month the year does not have has no days" do
+      assert Hebrew.days_in_month(5785, 13) == 0
+      assert Hebrew.days_in_month(5784, 14) == 0
+      assert Hebrew.days_in_month(5785, 0) == 0
+
+      for bad <- [nil, "", :"", 1.0, %{}] do
+        assert Hebrew.days_in_month(5785, bad) == 0
+        assert Hebrew.days_in_month(bad, 1) == 0
+      end
     end
 
     test "Heshvan (2) and Kislev (3) vary by year length" do
@@ -154,17 +162,22 @@ defmodule Calendrical.HebrewTest do
   describe "valid_date?/3" do
     test "accepts valid dates" do
       assert Hebrew.valid_date?(5785, 1, 1)
-      assert Hebrew.valid_date?(5785, 7, 29)
-      assert Hebrew.valid_date?(5785, 13, 29)
+      assert Hebrew.valid_date?(5785, 6, 29)
+      assert Hebrew.valid_date?(5785, 12, 29)
     end
 
-    test "rejects month 6 (Adar I) in an ordinary year" do
-      refute Hebrew.valid_date?(5785, 6, 1)
+    test "rejects a 13th month in an ordinary year" do
+      refute Hebrew.valid_date?(5785, 13, 1)
     end
 
-    test "accepts month 6 (Adar I) in a leap year" do
+    test "accepts Adar I (month 6) and a 13th month in a leap year" do
       assert Hebrew.valid_date?(5784, 6, 1)
       assert Hebrew.valid_date?(5784, 6, 30)
+      assert Hebrew.valid_date?(5784, 13, 29)
+    end
+
+    test "rejects day 30 of Adar in an ordinary year" do
+      refute Hebrew.valid_date?(5785, 6, 30)
     end
 
     test "rejects day 30 in a 29-day month" do
@@ -193,30 +206,26 @@ defmodule Calendrical.HebrewTest do
       end
     end
 
-    test "every valid month is 29 or 30 days" do
-      for year <- 5780..5800 do
-        valid =
-          if Hebrew.leap_year?(year), do: 1..13, else: Enum.to_list(1..5) ++ Enum.to_list(7..13)
-
-        for month <- valid do
-          assert Hebrew.days_in_month(year, month) in [29, 30]
-        end
+    test "every month of the year is 29 or 30 days" do
+      for year <- 5780..5800, month <- 1..Hebrew.months_in_year(year) do
+        assert Hebrew.days_in_month(year, month) in [29, 30]
       end
     end
 
-    test "sum of valid month lengths equals year length" do
+    test "sum of the month lengths equals year length" do
       for year <- 5780..5800 do
-        valid =
-          if Hebrew.leap_year?(year), do: 1..13, else: Enum.to_list(1..5) ++ Enum.to_list(7..13)
+        total =
+          Enum.reduce(1..Hebrew.months_in_year(year), 0, fn month, acc ->
+            acc + Hebrew.days_in_month(year, month)
+          end)
 
-        total = Enum.reduce(valid, 0, fn m, acc -> acc + Hebrew.days_in_month(year, m) end)
         assert total == Hebrew.days_in_year(year)
       end
     end
 
     test "the day after 29 Elul is 1 Tishri of the next year" do
       for year <- 5780..5790 do
-        {:ok, last_day} = Date.new(year, 13, 29, Hebrew)
+        {:ok, last_day} = Date.new(year, Hebrew.months_in_year(year), 29, Hebrew)
         {:ok, next_day} = Date.new(year + 1, 1, 1, Hebrew)
         assert Date.diff(next_day, last_day) == 1
       end
@@ -229,28 +238,86 @@ defmodule Calendrical.HebrewTest do
     end
   end
 
+  describe "traditional months" do
+    test "a traditional month names the same month in every year" do
+      # Nisan is traditional month 7: the 7th month of an ordinary year and
+      # the 8th of a leap year
+      assert Hebrew.ordinal_month(5785, 7) == {:ok, 7}
+      assert Hebrew.ordinal_month(5784, 7) == {:ok, 8}
+
+      # Adar is traditional month 6, which is Adar II in a leap year
+      assert Hebrew.ordinal_month(5785, 6) == {:ok, 6}
+      assert Hebrew.ordinal_month(5784, 6) == {:ok, 7}
+
+      # Adar I is the leap month that follows traditional month 5
+      assert Hebrew.ordinal_month(5784, {5, :leap}) == {:ok, 6}
+      assert Hebrew.ordinal_month(5785, {5, :leap}) == {:error, :invalid_leap_month}
+    end
+
+    test "ordinal_month/2 and lunar_month_of_year/2 are inverses over every month" do
+      for year <- 5780..5800, month <- 1..Hebrew.months_in_year(year) do
+        traditional = Hebrew.lunar_month_of_year(year, month)
+        assert Hebrew.ordinal_month(year, traditional) == {:ok, month}
+      end
+    end
+
+    test "the traditional months of a leap year" do
+      assert Enum.map(1..13, &Hebrew.lunar_month_of_year(5784, &1)) ==
+               [1, 2, 3, 4, 5, {5, :leap}, 6, 7, 8, 9, 10, 11, 12]
+    end
+
+    test "the traditional months of an ordinary year are its positions" do
+      assert Enum.map(1..12, &Hebrew.lunar_month_of_year(5785, &1)) == Enum.to_list(1..12)
+    end
+
+    test "the leap month" do
+      assert Hebrew.leap_month(5784) == 6
+      assert Hebrew.traditional_leap_month(5784) == 5
+      assert Hebrew.leap_month(5785) == nil
+      assert Hebrew.traditional_leap_month(5785) == nil
+      assert Hebrew.leap_month(~D[5784-01-01 Calendrical.Hebrew]) == 6
+      assert Hebrew.traditional_leap_month(~D[5785-01-01 Calendrical.Hebrew]) == nil
+    end
+
+    test "invalid input is an error, never an exception" do
+      for bad <- [nil, "", :"", 0, 13, {6, :leap}, {5, :other}, 1.0, %{}] do
+        assert {:error, _reason} = Hebrew.ordinal_month(5784, bad)
+      end
+
+      for bad_year <- [nil, "", :"", 1.0] do
+        assert Hebrew.ordinal_month(bad_year, 1) == {:error, :invalid_month}
+        assert Hebrew.lunar_month_of_year(bad_year, 1) == {:error, :invalid_month}
+        assert Hebrew.leap_month(bad_year) == nil
+        assert Hebrew.traditional_leap_month(bad_year) == nil
+      end
+
+      assert Hebrew.lunar_month_of_year(5785, 13) == {:error, :invalid_month}
+      assert Hebrew.lunar_month_of_year(5785, 0) == {:error, :invalid_month}
+      assert Hebrew.lunar_month_of_year(~D[2024-01-01]) == {:error, :invalid_month}
+    end
+  end
+
   # ── Localization ─────────────────────────────────────────────────────────
 
   describe "month name localization" do
-    test "English month names follow CLDR Hebrew numbering" do
-      # An ordinary year (5785). Adar at position 7 (no Adar I).
-      cases = [
-        {5785, 1, "Tishri"},
-        {5785, 2, "Heshvan"},
-        {5785, 3, "Kislev"},
-        {5785, 4, "Tevet"},
-        {5785, 5, "Shevat"},
-        {5785, 7, "Adar"},
-        {5785, 8, "Nisan"},
-        {5785, 9, "Iyar"},
-        {5785, 10, "Sivan"},
-        {5785, 11, "Tamuz"},
-        {5785, 12, "Av"},
-        {5785, 13, "Elul"}
-      ]
+    test "English month names follow the months of an ordinary year" do
+      # 5785 is an ordinary year, with no Adar I: Adar is its 6th month
+      names = ~w[Tishri Heshvan Kislev Tevet Shevat Adar Nisan Iyar Sivan Tamuz Av Elul]
 
-      for {year, month, expected_name} <- cases do
-        {:ok, date} = Date.new(year, month, 1, Hebrew)
+      for {expected_name, month} <- Enum.with_index(names, 1) do
+        {:ok, date} = Date.new(5785, month, 1, Hebrew)
+        assert Calendrical.localize(date, :month, locale: "en", style: :wide) == expected_name
+      end
+    end
+
+    test "English month names follow the months of a leap year" do
+      # 5784 is a leap year: Adar I is its 6th month and Adar II its 7th
+      names =
+        ["Tishri", "Heshvan", "Kislev", "Tevet", "Shevat", "Adar I", "Adar II"] ++
+          ~w[Nisan Iyar Sivan Tamuz Av Elul]
+
+      for {expected_name, month} <- Enum.with_index(names, 1) do
+        {:ok, date} = Date.new(5784, month, 1, Hebrew)
         assert Calendrical.localize(date, :month, locale: "en", style: :wide) == expected_name
       end
     end
@@ -267,7 +334,7 @@ defmodule Calendrical.HebrewTest do
       {:ok, tishri} = Date.new(5785, 1, 1, Hebrew)
       assert Calendrical.localize(tishri, :month, locale: "en", style: :abbreviated) == "Tishri"
 
-      {:ok, nisan} = Date.new(5785, 8, 1, Hebrew)
+      {:ok, nisan} = Date.new(5785, 7, 1, Hebrew)
       assert Calendrical.localize(nisan, :month, locale: "en", style: :abbreviated) == "Nisan"
     end
 
@@ -314,7 +381,7 @@ defmodule Calendrical.HebrewTest do
   describe "date_at/2" do
     test "defaults to midnight (the ordinary civil-day mapping)" do
       assert Hebrew.date_at(~U[2025-03-01 06:00:00Z]) ==
-               {:ok, ~D[5785-07-01 Calendrical.Hebrew]}
+               {:ok, ~D[5785-06-01 Calendrical.Hebrew]}
     end
 
     test ":sunset and :nightfall diverge across bein hashemashot" do
@@ -323,23 +390,23 @@ defmodule Calendrical.HebrewTest do
       dusk = ~U[2025-03-01 16:00:00Z]
 
       assert Hebrew.date_at(dusk, day_start: :sunset) ==
-               {:ok, ~D[5785-07-02 Calendrical.Hebrew]}
+               {:ok, ~D[5785-06-02 Calendrical.Hebrew]}
 
       assert Hebrew.date_at(dusk, day_start: :nightfall) ==
-               {:ok, ~D[5785-07-01 Calendrical.Hebrew]}
+               {:ok, ~D[5785-06-01 Calendrical.Hebrew]}
     end
 
     test ":nightfall_angle moves the boundary — a smaller depression rolls earlier" do
       # A 4° dusk (15:52Z) has passed by 16:00Z, unlike the 8.5° default.
       assert Hebrew.date_at(~U[2025-03-01 16:00:00Z], day_start: :nightfall, nightfall_angle: 4.0) ==
-               {:ok, ~D[5785-07-02 Calendrical.Hebrew]}
+               {:ok, ~D[5785-06-02 Calendrical.Hebrew]}
     end
 
     test "accepts a custom :location (the observer's, not Jerusalem)" do
       new_york = %Geo.Point{coordinates: {-74.0060, 40.7128}}
 
       assert Hebrew.date_at(~U[2025-03-01 12:00:00Z], location: new_york, day_start: :sunset) ==
-               {:ok, ~D[5785-07-01 Calendrical.Hebrew]}
+               {:ok, ~D[5785-06-01 Calendrical.Hebrew]}
     end
 
     test "returns an error, never raises, on bad input" do

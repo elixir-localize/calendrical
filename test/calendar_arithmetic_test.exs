@@ -45,11 +45,13 @@ defmodule Calendrical.CalendarArithmetic.Test do
   end
 
   describe "Hebrew months and years" do
-    test "a month shift passes over Adar I in an ordinary year" do
-      assert Hebrew.plus(5785, 5, 1, :months, 1) == {5785, 7, 1}
-      assert Hebrew.plus(5785, 7, 1, :months, -1) == {5785, 5, 1}
+    test "a month shift steps through the months of the year, Adar I only in a leap year" do
+      # Shevat to Adar in the ordinary year 5785, and to Adar I in the leap year 5784
+      assert Hebrew.plus(5785, 5, 1, :months, 1) == {5785, 6, 1}
+      assert Hebrew.plus(5785, 6, 1, :months, -1) == {5785, 5, 1}
       assert Hebrew.plus(5784, 5, 1, :months, 1) == {5784, 6, 1}
-      assert Hebrew.plus(5784, 6, 1, :months, 13) == {5785, 7, 1}
+      assert Hebrew.plus(5784, 6, 1, :months, 13) == {5785, 6, 1}
+      assert Hebrew.plus(5785, 12, 1, :months, 1) == {5786, 1, 1}
     end
 
     test "a long month shift is exact over whole Metonic cycles" do
@@ -57,10 +59,15 @@ defmodule Calendrical.CalendarArithmetic.Test do
       assert Hebrew.plus(5803, 6, 1, :months, -235) == {5784, 6, 1}
     end
 
-    test "a year shift keeps the month, Adar I becoming Adar in an ordinary year" do
-      assert Hebrew.plus(5784, 13, 1, :years, 1) == {5785, 13, 1}
-      assert Hebrew.plus(5784, 6, 10, :years, 1) == {5785, 7, 10}
-      assert Hebrew.plus(5784, 7, 10, :years, 1) == {5785, 7, 10}
+    test "a year shift keeps the traditional month, Adar I becoming Adar in an ordinary year" do
+      # Elul, Adar I and Adar II of the leap year 5784 in the ordinary year 5785
+      assert Hebrew.plus(5784, 13, 1, :years, 1) == {5785, 12, 1}
+      assert Hebrew.plus(5784, 6, 10, :years, 1) == {5785, 6, 10}
+      assert Hebrew.plus(5784, 7, 10, :years, 1) == {5785, 6, 10}
+
+      # Adar and Nisan of 5785 in the leap year 5787
+      assert Hebrew.plus(5785, 6, 10, :years, 2) == {5787, 7, 10}
+      assert Hebrew.plus(5785, 7, 15, :years, 2) == {5787, 8, 15}
     end
 
     test "every shifted date is a Hebrew date" do
@@ -73,7 +80,10 @@ defmodule Calendrical.CalendarArithmetic.Test do
 
     test "a year runs from 1 Tishri to the end of Elul" do
       assert Hebrew.year(5785) ==
-               Date.range(~D[5785-01-01 Calendrical.Hebrew], ~D[5785-13-29 Calendrical.Hebrew])
+               Date.range(~D[5785-01-01 Calendrical.Hebrew], ~D[5785-12-29 Calendrical.Hebrew])
+
+      assert Hebrew.year(5784) ==
+               Date.range(~D[5784-01-01 Calendrical.Hebrew], ~D[5784-13-29 Calendrical.Hebrew])
 
       assert Enum.count(Hebrew.year(5785)) == Hebrew.days_in_year(5785)
     end

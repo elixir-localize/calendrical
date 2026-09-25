@@ -103,10 +103,10 @@ defmodule Calendrical.Date do
       {:ok, ~D[2026-05-16]}
 
       iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :hebrew)
-      {:ok, ~D[5786-09-29 Calendrical.Hebrew]}
+      {:ok, ~D[5786-08-29 Calendrical.Hebrew]}
 
       iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew)
-      {:ok, ~D[5786-09-29 Calendrical.Hebrew]}
+      {:ok, ~D[5786-08-29 Calendrical.Hebrew]}
 
       iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :hebrew, return_calendar: :iso)
       {:ok, ~D[2026-05-16]}

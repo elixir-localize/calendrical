@@ -29,12 +29,12 @@ defmodule Calendrical.DatesInGregorianYearTest do
   end
 
   test "a date only valid in leap years occurs zero times in other Gregorian years" do
-    # Hebrew month 6 (Adar I) exists only in leap years; 5787 is leap
-    # and its Adar I falls in Gregorian 2027.
-    assert Calendrical.Hebrew.dates_in_gregorian_year(2026, 6, 10) == []
+    # A 13th Hebrew month exists only in leap years; 5787 is leap and
+    # its 13th month, Elul, falls in Gregorian 2027.
+    assert Calendrical.Hebrew.dates_in_gregorian_year(2026, 13, 10) == []
 
-    assert Calendrical.Hebrew.dates_in_gregorian_year(2027, 6, 10) ==
-             [Date.new!(5787, 6, 10, Calendrical.Hebrew)]
+    assert Calendrical.Hebrew.dates_in_gregorian_year(2027, 13, 10) ==
+             [Date.new!(5787, 13, 10, Calendrical.Hebrew)]
 
     # The Coptic epagomenal leap day (13, 6) exists only in leap years.
     assert Calendrical.Coptic.dates_in_gregorian_year(2026, 13, 6) == []
