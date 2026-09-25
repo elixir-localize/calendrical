@@ -12,6 +12,8 @@ The format is based on
 
 * `Calendrical.Hebrew` numbers a date's month by its position in the year, as `Date.new/4` and `months_in_year/1` expect, instead of by CLDR's fixed numbers: in an ordinary year Adar is month 6, Nisan 7 and Elul 12. Leap-year dates are unchanged, and `days_in_month/2` returns 0 for a month the year does not have.
 
+* The parse functions' `:calendar` option is a calendar module, and the date is returned in it: a CLDR calendar name such as `:hebrew` returns `Localize.UnknownCalendarError`, and a calendar that shares its CLDR type with another, such as `Calendrical.Gregorian` or a fiscal or composite calendar, no longer comes back as `Calendar.ISO`. `:return_calendar` is removed; convert the result with `Date.convert/2`.
+
 ### Added
 
 * `Calendrical.Hebrew.ordinal_month/2`, `lunar_month_of_year/1,2`, `leap_month/1` and `traditional_leap_month/1` convert between a Hebrew month's position and its RFC 7529 traditional month (Adar I is `{5, :leap}`), as the lunisolar calendars do.
@@ -31,6 +33,8 @@ The format is based on
 * `ordinal_month/2` on the Chinese, Korean, Vietnamese and Lunar Japanese calendars returns the ordinal month of a traditional month (`{month, :leap}` included), and their `days_in_month/1` returns `{:ambiguous, 29..30}`.
 
 ### Changed
+
+* Requires Localize 1.4, which names months through the calendar's `month_of_year/3` as the Hebrew month positions need.
 
 * `first_day_for_territory/1` and `min_days_for_territory/1` (and their locale variants) resolve from Localize's runtime week data instead of clauses compiled from it, so the values follow the loaded CLDR data without recompiling Calendrical. Results are unchanged for every territory.
 

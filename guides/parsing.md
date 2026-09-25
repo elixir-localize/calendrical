@@ -105,20 +105,20 @@ The parser reads CLDR's full `availableFormats` skeleton set for each locale —
 
 ### Calendar option
 
-Pass `:calendar` to interpret input in any of CLDR's calendars:
+Pass a calendar module as `:calendar` to read the input in that calendar and return the date in it:
 
 ```elixir
-iex> Calendrical.parse("2026-05-16", calendar: :hebrew)
+iex> Calendrical.parse("2026-05-16", calendar: Calendrical.Hebrew)
 {:ok, ~D[5786-08-29 Calendrical.Hebrew]}
 
-iex> Calendrical.parse("民國115年5月16日", locale: :"zh-Hant-TW", calendar: :roc)
+iex> Calendrical.parse("民國115年5月16日", locale: :"zh-Hant-TW", calendar: Calendrical.Roc)
 {:ok, ~D[0115-05-16 Calendrical.Roc]}
 
-iex> Calendrical.parse("١٧ رمضان ١٤٣٥ هـ", locale: :"ar-SA", calendar: :islamic_civil)
+iex> Calendrical.parse("١٧ رمضان ١٤٣٥ هـ", locale: :"ar-SA", calendar: Calendrical.Islamic.Civil)
 {:ok, ~D[1435-09-17 Calendrical.Islamic.Civil]}
 ```
 
-`:calendar` accepts either a CLDR calendar atom (`:gregorian`, `:hebrew`, …) or a calendar module (`Calendar.ISO`, `Calendrical.Hebrew`, …).
+`:calendar` is a calendar module, `Calendar.ISO` by default. A CLDR calendar name such as `:hebrew` is not a calendar and returns `Localize.UnknownCalendarError`. Convert the result with `Date.convert/2` when you need it in another calendar.
 
 ### Lenience (TR35 §6.5)
 

@@ -47,11 +47,13 @@ defmodule Calendrical.DateTime.Parser do
   @spec parse(String.t(), Keyword.t()) ::
           {:ok, NaiveDateTime.t() | DateTime.t() | map()} | {:error, Exception.t()}
   def parse(input, options \\ []) when is_binary(input) do
+    with {:ok, calendar_module} <- Calendrical.Date.Parser.calendar_option(options) do
+      do_parse(input, options, calendar_module)
+    end
+  end
+
+  defp do_parse(input, options, calendar_module) do
     locale = Keyword.get(options, :locale) || Localize.get_locale()
-
-    cldr_calendar =
-      Calendrical.Date.Parser.normalise_calendar(Keyword.get(options, :calendar, :gregorian))
-
     as = Keyword.get(options, :as, :struct)
 
     # Strip weekday prefix here too — the glue-splitting step
@@ -65,7 +67,7 @@ defmodule Calendrical.DateTime.Parser do
     input =
       input
       |> Calendrical.Date.Parser.normalise_input()
-      |> Calendrical.Date.Parser.preprocess_safe(locale, cldr_calendar)
+      |> Calendrical.Date.Parser.preprocess_safe(locale, calendar_module)
 
     case try_iso(input) do
       {:ok, value} ->

@@ -53,15 +53,21 @@ defmodule Calendrical.Parser do
            | {map(), map()}}
           | {:error, Exception.t()}
   def parse(input, options \\ []) when is_binary(input) do
-    options = Calendrical.Date.Parser.normalise_calendar_option(options)
+    with {:ok, calendar_module} <- Calendrical.Date.Parser.calendar_option(options) do
+      parse_with_calendar(input, options, calendar_module)
+    end
+  end
+
+  # The `:calendar` option is the caller's calendar module, and the date
+  # and datetime parsers build their results in it.
+  defp parse_with_calendar(input, options, calendar_module) do
     locale = Keyword.get(options, :locale) || Localize.get_locale()
-    cldr_calendar = Keyword.get(options, :calendar, :gregorian)
     trimmed = String.trim(input)
 
     attempts = []
 
     with {:next, attempts} <-
-           try_interval(trimmed, locale, cldr_calendar, options, attempts),
+           try_interval(trimmed, locale, calendar_module, options, attempts),
          {:next, attempts} <- try_date(trimmed, options, attempts),
          {:next, attempts} <- try_time(trimmed, options, attempts),
          {:next, attempts} <- try_datetime(trimmed, options, attempts) do
@@ -74,8 +80,8 @@ defmodule Calendrical.Parser do
     end
   end
 
-  defp try_interval(input, locale, cldr_calendar, options, attempts) do
-    if has_interval_separator?(input, locale, cldr_calendar) do
+  defp try_interval(input, locale, calendar_module, options, attempts) do
+    if has_interval_separator?(input, locale, calendar_module) do
       case Calendrical.Date.parse_range(input, options) do
         {:ok, _} = ok -> ok
         {:error, err} -> {:next, [{:interval, err} | attempts]}
@@ -111,8 +117,8 @@ defmodule Calendrical.Parser do
   # `Calendrical.Date.Parser.split_on_interval_separator/3` so
   # that anything `parse_range/2` could match is also detected
   # here.
-  defp has_interval_separator?(input, locale, cldr_calendar) do
-    cldr_sep = lookup_interval_separator(locale, cldr_calendar)
+  defp has_interval_separator?(input, locale, calendar_module) do
+    cldr_sep = lookup_interval_separator(locale, calendar_module)
 
     candidates =
       [cldr_sep | ["–", "—", "−", "〜", "~", " - ", " / ", " to "]]
@@ -127,7 +133,9 @@ defmodule Calendrical.Parser do
     end)
   end
 
-  defp lookup_interval_separator(locale, cldr_calendar) do
+  defp lookup_interval_separator(locale, calendar_module) do
+    cldr_calendar = Calendrical.Date.Parser.cldr_calendar_type(calendar_module)
+
     case Format.interval_formats(locale, cldr_calendar) do
       {:ok, intervals} ->
         case Map.get(intervals, :interval_format_fallback) do

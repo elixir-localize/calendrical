@@ -63,14 +63,14 @@ defmodule Calendrical.ParseTest do
   describe "Calendrical.parse/2 — calendar option" do
     test "Hebrew date" do
       assert {:ok, %Date{calendar: Calendrical.Hebrew}} =
-               Calendrical.parse("2026-05-16", locale: :en, calendar: :hebrew)
+               Calendrical.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew)
     end
 
     test "Buddhist interval preserves calendar in Date.Range endpoints" do
       assert {:ok, %Date.Range{} = range} =
                Calendrical.parse("2026-05-05 – 2026-05-10",
                  locale: :en,
-                 calendar: :buddhist
+                 calendar: Calendrical.Buddhist
                )
 
       assert range.first.calendar == Calendrical.Buddhist

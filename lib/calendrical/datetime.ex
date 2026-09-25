@@ -30,8 +30,7 @@ defmodule Calendrical.DateTime do
   * `:locale` — the locale to interpret the string under.
     Defaults to `Localize.get_locale/0`.
 
-  * `:calendar` — the CLDR calendar key for the date portion.
-    Defaults to `:gregorian`.
+  * `:calendar` — the calendar module the date portion is read in and returned in, such as `Calendar.ISO` (the default) or `Calendrical.Hebrew`. A CLDR calendar name such as `:hebrew` returns `Localize.UnknownCalendarError`.
 
   * `:as` — `:struct` (default) returns a `t:NaiveDateTime.t/0`
     or `t:DateTime.t/0`. `:map` returns a bare field map

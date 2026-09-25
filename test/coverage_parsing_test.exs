@@ -133,48 +133,33 @@ defmodule Calendrical.CoverageParsingTest do
 
   describe "Date.parse/2 calendar handling" do
     test ":calendar as CLDR key returns a date in that calendar" do
-      assert Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :hebrew) ==
-               {:ok, ~D[5786-08-29 Calendrical.Hebrew]}
-    end
-
-    test ":calendar as module is coerced via cldr_calendar_type/0" do
       assert Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew) ==
                {:ok, ~D[5786-08-29 Calendrical.Hebrew]}
     end
 
-    test "return_calendar: :iso forces Calendar.ISO" do
-      assert Calendrical.Date.parse("2026-05-16",
-               locale: :en,
-               calendar: :hebrew,
-               return_calendar: :iso
-             ) == {:ok, ~D[2026-05-16]}
+    test "the date is returned in the :calendar module" do
+      assert Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew) ==
+               {:ok, ~D[5786-08-29 Calendrical.Hebrew]}
     end
 
-    test "return_calendar as a module converts the result" do
-      assert Calendrical.Date.parse("2026-05-16",
-               locale: :en,
-               return_calendar: Calendrical.Persian
-             ) == {:ok, ~D[1405-02-26 Calendrical.Persian]}
-    end
-
-    test "unknown CLDR calendar key falls back to Calendar.ISO for the ISO path" do
+    test "an unknown calendar is an error on the ISO 8601 path too" do
       assert Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :bogus) ==
-               {:ok, ~D[2026-05-16]}
+               {:error, %Localize.UnknownCalendarError{calendar: :bogus}}
     end
 
     test "Japanese imperial era year resolves to the calendar year" do
-      assert Calendrical.Date.parse("令和8年5月16日", locale: :ja, calendar: :japanese) ==
+      assert Calendrical.Date.parse("令和8年5月16日", locale: :ja, calendar: Calendrical.Japanese) ==
                {:ok, ~D[2026-05-16 Calendrical.Japanese]}
     end
 
     test "chinese calendar parses ISO input (no CLDR eras exist for it)" do
-      assert Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :chinese) ==
+      assert Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Chinese) ==
                {:ok, ~D[4663-03-30 Calendrical.Chinese]}
     end
 
     test "chinese calendar rejects a numeric pattern that builds no valid date" do
-      assert {:error, %Calendrical.DateParseError{calendar: :chinese}} =
-               Calendrical.Date.parse("4/10/4663", locale: :en, calendar: :chinese)
+      assert {:error, %Calendrical.DateParseError{calendar: Calendrical.Chinese}} =
+               Calendrical.Date.parse("4/10/4663", locale: :en, calendar: Calendrical.Chinese)
     end
   end
 
@@ -211,11 +196,11 @@ defmodule Calendrical.CoverageParsingTest do
 
       assert error.input == "not a date"
       assert error.locale == :en
-      assert error.calendar == :gregorian
+      assert error.calendar == Calendar.ISO
 
       assert Exception.message(error) ==
                "could not parse \"not a date\" as a date in locale :en " <>
-                 "(calendar :gregorian); ISO-8601 (YYYY-MM-DD) is always accepted as a fallback"
+                 "(calendar Calendar.ISO); ISO-8601 (YYYY-MM-DD) is always accepted as a fallback"
     end
 
     test "unparseable input in :de (locale without ordinal suffixes)" do
@@ -249,8 +234,8 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "invalid day for a coptic month" do
-      assert {:error, %Calendrical.DateParseError{calendar: :coptic}} =
-               Calendrical.Date.parse("13/8/1742", locale: :en, calendar: :coptic)
+      assert {:error, %Calendrical.DateParseError{calendar: Calendrical.Coptic}} =
+               Calendrical.Date.parse("13/8/1742", locale: :en, calendar: Calendrical.Coptic)
     end
   end
 
@@ -327,7 +312,10 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "japanese-era range endpoints inherit the era year" do
-      assert Calendrical.Date.parse_range("令和8年5月5日～5月10日", locale: :ja, calendar: :japanese) ==
+      assert Calendrical.Date.parse_range("令和8年5月5日～5月10日",
+               locale: :ja,
+               calendar: Calendrical.Japanese
+             ) ==
                {:ok,
                 Date.range(
                   ~D[2026-05-05 Calendrical.Japanese],
@@ -336,7 +324,9 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "endpoints are returned in the requested calendar" do
-      assert Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"}, calendar: :buddhist) ==
+      assert Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"},
+               calendar: Calendrical.Buddhist
+             ) ==
                {:ok,
                 Date.range(
                   ~D[2569-05-05 Calendrical.Buddhist],
@@ -839,12 +829,32 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "buddhist-calendar patterns (with cccc weekday names) compile" do
-      assert {:error, %Calendrical.DateParseError{calendar: :buddhist}} =
-               Calendrical.Date.parse("blah", locale: :en, calendar: :buddhist)
+      assert {:error, %Calendrical.DateParseError{calendar: Calendrical.Buddhist}} =
+               Calendrical.Date.parse("blah", locale: :en, calendar: Calendrical.Buddhist)
     end
 
-    test ":calendar accepts a string CLDR key" do
-      assert Calendrical.Date.parse("2026-05-16", locale: :en, calendar: "gregorian") ==
+    test "a range given as two strings reports an unknown calendar or locale" do
+      assert {:error, %Localize.UnknownCalendarError{calendar: :hebrew}} =
+               Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"}, calendar: :hebrew)
+
+      assert {:error, %Localize.InvalidLocaleError{}} =
+               Calendrical.Date.parse_range({"May 5, 2026", "May 10, 2026"},
+                 locale: "no-such-locale!"
+               )
+    end
+
+    test ":calendar is a calendar module, not a string" do
+      assert {:error, %Localize.UnknownCalendarError{calendar: "gregorian"}} =
+               Calendrical.Date.parse("2026-05-16", locale: :en, calendar: "gregorian")
+    end
+
+    test ":calendar accepts Calendar.ISO" do
+      assert Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendar.ISO) ==
+               {:ok, ~D[2026-05-16]}
+    end
+
+    test ":calendar accepts Calendrical.Gregorian" do
+      assert Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Gregorian) ==
                {:ok, ~D[2026-05-16 Calendrical.Gregorian]}
     end
 
@@ -862,16 +872,16 @@ defmodule Calendrical.CoverageParsingTest do
     end
 
     test "hebrew day out of range for the month is rejected" do
-      assert {:error, %Calendrical.DateParseError{calendar: :hebrew}} =
-               Calendrical.Date.parse("2/30/5787", locale: :en, calendar: :hebrew)
+      assert {:error, %Calendrical.DateParseError{calendar: Calendrical.Hebrew}} =
+               Calendrical.Date.parse("2/30/5787", locale: :en, calendar: Calendrical.Hebrew)
     end
 
     test "buddhist calendar day-first numeric pattern in :th" do
-      assert Calendrical.Date.parse("16/5/2569", locale: :th, calendar: :buddhist) ==
+      assert Calendrical.Date.parse("16/5/2569", locale: :th, calendar: Calendrical.Buddhist) ==
                {:ok, ~D[2569-05-16 Calendrical.Buddhist]}
 
-      assert {:error, %Calendrical.DateParseError{calendar: :buddhist}} =
-               Calendrical.Date.parse("30/2/2570", locale: :th, calendar: :buddhist)
+      assert {:error, %Calendrical.DateParseError{calendar: Calendrical.Buddhist}} =
+               Calendrical.Date.parse("30/2/2570", locale: :th, calendar: Calendrical.Buddhist)
     end
 
     test "locale can be a string or a LanguageTag" do
@@ -886,7 +896,7 @@ defmodule Calendrical.CoverageParsingTest do
     test "chinese-calendar range endpoints convert from ISO input" do
       assert Calendrical.Date.parse_range("2026-05-05 – 2026-05-10",
                locale: :en,
-               calendar: :chinese
+               calendar: Calendrical.Chinese
              ) ==
                {:ok,
                 Date.range(~D[4663-03-19 Calendrical.Chinese], ~D[4663-03-24 Calendrical.Chinese])}

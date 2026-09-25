@@ -99,31 +99,28 @@ defmodule Calendrical.Date.Parser do
   @spec parse(String.t(), Keyword.t()) ::
           {:ok, Date.t() | map()} | {:error, Exception.t()}
   def parse(input, options \\ []) when is_binary(input) do
+    with {:ok, calendar_module} <- calendar_option(options) do
+      do_parse(input, options, calendar_module)
+    end
+  end
+
+  defp do_parse(input, options, calendar_module) do
     locale = Keyword.get(options, :locale) || Localize.get_locale()
-    cldr_calendar = normalise_calendar(Keyword.get(options, :calendar, :gregorian))
     reference_year = (Keyword.get(options, :reference_date) || Date.utc_today()).year
-    return_module = resolve_return_calendar(options, cldr_calendar)
     as = Keyword.get(options, :as, :struct)
 
     input =
       input
       |> normalise_input()
-      |> preprocess_safe(locale, cldr_calendar)
+      |> preprocess_safe(locale, calendar_module)
 
     attempt = fn current ->
-      case try_iso(current, return_module) do
+      case try_iso(current, calendar_module) do
         {:ok, date} ->
           {:ok, finalise_date(date, as)}
 
         :error ->
-          try_locale_patterns(
-            current,
-            locale,
-            cldr_calendar,
-            reference_year,
-            return_module,
-            as
-          )
+          try_locale_patterns(current, locale, calendar_module, reference_year, as)
       end
     end
 
@@ -183,8 +180,8 @@ defmodule Calendrical.Date.Parser do
   #   patterns) keep working; inputs only achievable via lenient
   #   rewrites (`"1st January"`) succeed on the retry.
   @doc false
-  def preprocess_safe(input, locale, cldr_calendar) when is_binary(input) do
-    strip_weekday_prefix(input, locale, cldr_calendar)
+  def preprocess_safe(input, locale, calendar_module) when is_binary(input) do
+    strip_weekday_prefix(input, locale, calendar_module)
   end
 
   # Strip a recognised weekday name from the start of `input`,
@@ -194,8 +191,8 @@ defmodule Calendrical.Date.Parser do
   # match the first letter of any token — don't strip
   # accidentally; narrow widths are also excluded from the
   # alternation for the same reason.
-  defp strip_weekday_prefix(input, locale, cldr_calendar) do
-    case Localize.Calendar.days(locale, cldr_calendar) do
+  defp strip_weekday_prefix(input, locale, calendar_module) do
+    case Localize.Calendar.days(locale, cldr_calendar_type(calendar_module)) do
       {:ok, %{} = days_data} ->
         names = collect_weekday_names(days_data)
 
@@ -351,32 +348,6 @@ defmodule Calendrical.Date.Parser do
     %{year: y, month: m, day: d, calendar: cal}
   end
 
-  # Resolve the target calendar module for the returned Date.
-  # The `:return_calendar` option accepts:
-  #
-  #   * `:native` (default) — return the Date in whatever
-  #     calendar the `:calendar` option named. So
-  #     `parse("2026-05-17", calendar: :hebrew)` returns
-  #     `~D[5786-09-01 Calendrical.Hebrew]`. This is the
-  #     natural behavior — the `:calendar` option says
-  #     "interpret AND return in this calendar".
-  #
-  #   * `:iso` — force the result into `Calendar.ISO`
-  #     (Gregorian). Use this when a downstream consumer
-  #     (e.g. an Ecto `:date` cast) requires ISO.
-  #
-  #   * a calendar module like `Calendrical.Persian` —
-  #     return the Date in that specific calendar regardless
-  #     of `:calendar`.
-  #
-  defp resolve_return_calendar(options, cldr_calendar) do
-    case Keyword.get(options, :return_calendar, :native) do
-      :iso -> Calendar.ISO
-      :native -> elem(resolve_calendar_module(cldr_calendar), 1)
-      module when is_atom(module) -> module
-    end
-  end
-
   @doc """
   Parses a single-string date range. See
   `Calendrical.Date.parse_range/2` for the public contract.
@@ -384,9 +355,13 @@ defmodule Calendrical.Date.Parser do
   @spec parse_range(String.t(), Keyword.t()) ::
           {:ok, Date.Range.t() | {map(), map()}} | {:error, Exception.t()}
   def parse_range(input, options \\ []) when is_binary(input) do
-    options = normalise_calendar_option(options)
+    with {:ok, calendar_module} <- calendar_option(options) do
+      do_parse_range(input, options, calendar_module)
+    end
+  end
+
+  defp do_parse_range(input, options, calendar_module) do
     locale = Keyword.get(options, :locale) || Localize.get_locale()
-    cldr_calendar = Keyword.get(options, :calendar, :gregorian)
     reference_year = (Keyword.get(options, :reference_date) || Date.utc_today()).year
     allow_inverted = Keyword.get(options, :allow_inverted, false)
     as = Keyword.get(options, :as, :struct)
@@ -401,7 +376,7 @@ defmodule Calendrical.Date.Parser do
     input =
       input
       |> normalise_input()
-      |> preprocess_safe(locale, cldr_calendar)
+      |> preprocess_safe(locale, calendar_module)
 
     # Strategy:
     # 1. Try the locale's CLDR interval patterns first — these
@@ -411,12 +386,12 @@ defmodule Calendrical.Date.Parser do
     # 2. Fall back to a naive split-then-parse-each-side. Catches
     #    inputs the interval patterns don't cover (e.g. mixed
     #    formats, ISO endpoints).
-    case match_any_interval_pattern(input, locale, cldr_calendar, reference_year, as) do
+    case match_any_interval_pattern(input, locale, calendar_module, reference_year, as) do
       {:ok, from, to} ->
         finalise_range(from, to, allow_inverted, as)
 
       :error ->
-        case split_on_interval_separator(input, locale, cldr_calendar) do
+        case split_on_interval_separator(input, locale, calendar_module) do
           {:ok, from_string, to_string} ->
             parse_range_pair(from_string, to_string, options)
 
@@ -455,7 +430,9 @@ defmodule Calendrical.Date.Parser do
   # fields not present in the pattern inherit from endpoint-2
   # (and vice versa), which is how `"May 5 – May 10, 2026"`
   # parses correctly even though the left side has no year.
-  defp match_any_interval_pattern(input, locale, cldr_calendar, reference_year, as) do
+  defp match_any_interval_pattern(input, locale, calendar_module, reference_year, as) do
+    cldr_calendar = cldr_calendar_type(calendar_module)
+
     with {:ok, intervals} <- Format.interval_formats(locale, cldr_calendar),
          {:ok, months_data} <- LCalendar.months(locale, cldr_calendar) do
       lenient = load_lenient_date(locale)
@@ -496,7 +473,7 @@ defmodule Calendrical.Date.Parser do
                eras_data,
                lenient,
                reference_year,
-               cldr_calendar,
+               calendar_module,
                as
              ) do
           {:ok, left, right} -> {:ok, left, right}
@@ -515,7 +492,7 @@ defmodule Calendrical.Date.Parser do
          eras_data,
          lenient,
          reference_year,
-         cldr_calendar,
+         calendar_module,
          as
        ) do
     {tokens_l, tokens_r} = split_interval_tokens(tokenize_pattern(pattern))
@@ -528,9 +505,10 @@ defmodule Calendrical.Date.Parser do
       with {:ok, regex} <-
              compile_interval_regex(tokens_l, tokens_r, months_data, eras_data, lenient),
            %{} = caps <- Regex.named_captures(regex, input),
-           {:ok, left_partial} <- extract_partial(caps, "left_", reference_year, cldr_calendar),
-           {:ok, right_partial} <- extract_partial(caps, "right_", reference_year, cldr_calendar) do
-        interval_endpoints_for(as, left_partial, right_partial, cldr_calendar)
+           {:ok, left_partial} <- extract_partial(caps, "left_", reference_year, calendar_module),
+           {:ok, right_partial} <-
+             extract_partial(caps, "right_", reference_year, calendar_module) do
+        interval_endpoints_for(as, left_partial, right_partial, calendar_module)
       else
         _ -> :error
       end
@@ -547,17 +525,16 @@ defmodule Calendrical.Date.Parser do
     Regex.compile("\\A" <> left_regex <> right_regex <> "\\z", "u")
   end
 
-  defp interval_endpoints_for(:struct, left_partial, right_partial, cldr_calendar) do
-    with {:ok, left_date} <- materialise(left_partial, right_partial, cldr_calendar),
-         {:ok, right_date} <- materialise(right_partial, left_partial, cldr_calendar) do
+  defp interval_endpoints_for(:struct, left_partial, right_partial, calendar_module) do
+    with {:ok, left_date} <- materialise(left_partial, right_partial, calendar_module),
+         {:ok, right_date} <- materialise(right_partial, left_partial, calendar_module) do
       {:ok, left_date, right_date}
     else
       _ -> :error
     end
   end
 
-  defp interval_endpoints_for(:map, left_partial, right_partial, cldr_calendar) do
-    {:ok, calendar_module} = resolve_calendar_module(cldr_calendar)
+  defp interval_endpoints_for(:map, left_partial, right_partial, calendar_module) do
     left_map = partial_to_map(left_partial, right_partial, calendar_module)
     right_map = partial_to_map(right_partial, left_partial, calendar_module)
 
@@ -822,17 +799,17 @@ defmodule Calendrical.Date.Parser do
   # interval. Any field may be absent (missing from this
   # endpoint's portion of the pattern); represented as `nil`
   # so `materialise/3` can fill from the other side.
-  defp extract_partial(caps, prefix, reference_year, cldr_calendar) do
-    year = extract_partial_year(caps, prefix, reference_year, cldr_calendar)
+  defp extract_partial(caps, prefix, reference_year, calendar_module) do
+    year = extract_partial_year(caps, prefix, reference_year, calendar_module)
     month = extract_partial_month(caps, prefix)
     day = extract_partial_day(caps, prefix)
     era_index = extract_partial_era_index(caps, prefix)
-    year = apply_partial_era_year(year, era_index, cldr_calendar)
+    year = apply_partial_era_year(year, era_index, calendar_module)
 
     {:ok, %{year: year, month: month, day: day}}
   end
 
-  defp extract_partial_year(caps, prefix, reference_year, cldr_calendar) do
+  defp extract_partial_year(caps, prefix, reference_year, calendar_module) do
     case Map.get(caps, prefix <> "year") do
       nil ->
         nil
@@ -842,7 +819,7 @@ defmodule Calendrical.Date.Parser do
 
       raw ->
         case Integer.parse(raw) do
-          {n, ""} -> maybe_pivot_two_digit_year(n, raw, reference_year, cldr_calendar)
+          {n, ""} -> maybe_pivot_two_digit_year(n, raw, reference_year, calendar_module)
           _ -> nil
         end
     end
@@ -851,8 +828,8 @@ defmodule Calendrical.Date.Parser do
   # The 2-digit-year pivot is a Gregorian convention (see the
   # note on `extract_year_field/3`). Non-Gregorian years are
   # taken literally.
-  defp maybe_pivot_two_digit_year(n, raw, reference_year, cldr_calendar) do
-    if cldr_calendar == :gregorian and String.length(raw) == 2 do
+  defp maybe_pivot_two_digit_year(n, raw, reference_year, calendar_module) do
+    if cldr_calendar_type(calendar_module) == :gregorian and String.length(raw) == 2 do
       pivot_year(n, reference_year)
     else
       n
@@ -896,8 +873,8 @@ defmodule Calendrical.Date.Parser do
     prefixed_indexed_capture(caps, prefix, "__e", ~r/__e(\d+)__$/)
   end
 
-  defp apply_partial_era_year(year, era_index, cldr_calendar) do
-    case {cldr_calendar, era_index, year} do
+  defp apply_partial_era_year(year, era_index, calendar_module) do
+    case {cldr_calendar_type(calendar_module), era_index, year} do
       {:japanese, era, y} when is_integer(era) and is_integer(y) ->
         case japanese_era_start_year(era) do
           {:ok, start_year} -> start_year + y - 1
@@ -962,7 +939,7 @@ defmodule Calendrical.Date.Parser do
   # keeps the requested calendar — both interval endpoints
   # are materialised under the same calendar so the resulting
   # `Date.Range` is well-formed for any calendar, not just ISO.
-  defp materialise(%{year: y, month: m, day: d}, inherit_from, cldr_calendar) do
+  defp materialise(%{year: y, month: m, day: d}, inherit_from, calendar_module) do
     year = y || inherit_from.year
     month = m || inherit_from.month
     day = d || inherit_from.day
@@ -970,8 +947,7 @@ defmodule Calendrical.Date.Parser do
     if is_nil(year) or is_nil(month) or is_nil(day) do
       :error
     else
-      with {:ok, calendar_module} <- resolve_calendar_module(cldr_calendar),
-           month when is_integer(month) <- named_month(month, year, calendar_module),
+      with month when is_integer(month) <- named_month(month, year, calendar_module),
            {:ok, date} <- build_date(year, month, day, calendar_module) do
         {:ok, date}
       else
@@ -988,7 +964,6 @@ defmodule Calendrical.Date.Parser do
           {:ok, Date.Range.t() | {map(), map()}} | {:error, Exception.t()}
   def parse_range_pair(from_string, to_string, options)
       when is_binary(from_string) and is_binary(to_string) do
-    options = normalise_calendar_option(options)
     allow_inverted = Keyword.get(options, :allow_inverted, false)
     as = Keyword.get(options, :as, :struct)
 
@@ -1019,6 +994,11 @@ defmodule Calendrical.Date.Parser do
            reason: reason_tag,
            cause: err
          )}
+
+      # Anything other than a parse failure, such as an invalid locale or an
+      # unknown calendar, is reported as it stands.
+      {:error, _other} = error ->
+        error
     end
   end
 
@@ -1046,8 +1026,8 @@ defmodule Calendrical.Date.Parser do
   # Lenient: also accept `-`, `/`, `~`, `〜`, the en/em dashes,
   # and the locale separator with optional surrounding
   # whitespace.
-  defp split_on_interval_separator(input, locale, cldr_calendar) do
-    cldr_sep = lookup_interval_separator(locale, cldr_calendar)
+  defp split_on_interval_separator(input, locale, calendar_module) do
+    cldr_sep = lookup_interval_separator(locale, calendar_module)
 
     candidates =
       [cldr_sep | ["–", "—", "−", "〜", "~", "to", " - ", " / "]]
@@ -1072,8 +1052,8 @@ defmodule Calendrical.Date.Parser do
     end)
   end
 
-  defp lookup_interval_separator(locale, cldr_calendar) do
-    case Format.interval_formats(locale, cldr_calendar) do
+  defp lookup_interval_separator(locale, calendar_module) do
+    case Format.interval_formats(locale, cldr_calendar_type(calendar_module)) do
       {:ok, intervals} ->
         case Map.get(intervals, :interval_format_fallback) do
           [0, separator, 1] when is_binary(separator) -> String.trim(separator)
@@ -1087,14 +1067,16 @@ defmodule Calendrical.Date.Parser do
 
   # ── ISO 8601 ─────────────────────────────────────────────────
 
-  defp try_iso(input, return_module) do
+  # An ISO 8601 date is read in `Calendar.ISO` and returned in the
+  # `:calendar` module.
+  defp try_iso(input, calendar_module) do
     with :error <- try_iso_extended(input),
          :error <- try_iso_basic(input),
          :error <- try_iso_ordinal(input),
          :error <- try_iso_week_date(input) do
       :error
     else
-      {:ok, date} -> {:ok, convert_to(date, return_module)}
+      {:ok, date} -> {:ok, convert_to(date, calendar_module)}
     end
   end
 
@@ -1185,9 +1167,10 @@ defmodule Calendrical.Date.Parser do
 
   # ── Locale patterns ──────────────────────────────────────────
 
-  defp try_locale_patterns(input, locale, cldr_calendar, reference_year, return_module, as) do
-    with {:ok, calendar_module} <- resolve_calendar_module(cldr_calendar),
-         {:ok, available} <- Format.available_formats(locale, cldr_calendar),
+  defp try_locale_patterns(input, locale, calendar_module, reference_year, as) do
+    cldr_calendar = cldr_calendar_type(calendar_module)
+
+    with {:ok, available} <- Format.available_formats(locale, cldr_calendar),
          {:ok, months_data} <- LCalendar.months(locale, cldr_calendar) do
       eras_data = maybe_load_eras(locale, cldr_calendar)
       quarters_data = maybe_load_quarters(locale, cldr_calendar)
@@ -1200,7 +1183,6 @@ defmodule Calendrical.Date.Parser do
         quarters: quarters_data,
         days: days_data,
         locale: locale,
-        cldr_calendar: cldr_calendar,
         months: months_data,
         eras: eras_data,
         lenient: lenient,
@@ -1218,7 +1200,7 @@ defmodule Calendrical.Date.Parser do
       result =
         case as do
           :struct ->
-            run_locale_pass(patterns, transliterated, ctx, return_module, :struct)
+            run_locale_pass(patterns, transliterated, ctx, :struct)
 
           :map ->
             # Pass 1 — strict: only accept a pattern whose fields
@@ -1232,59 +1214,56 @@ defmodule Calendrical.Date.Parser do
             # Pass 2 — lax: needed for legitimately partial inputs
             # that can't construct a date even with the reference
             # year (e.g. `"2026"` alone, or `"May"` alone).
-            run_locale_pass(patterns, transliterated, ctx, return_module, {:map, :strict}) ||
-              run_locale_pass(patterns, transliterated, ctx, return_module, {:map, :lax})
+            run_locale_pass(patterns, transliterated, ctx, {:map, :strict}) ||
+              run_locale_pass(patterns, transliterated, ctx, {:map, :lax})
         end
 
-      result || {:error, no_match_error(input, locale, cldr_calendar)}
+      result || {:error, no_match_error(input, locale, calendar_module)}
     end
   end
 
-  defp run_locale_pass(patterns, input, ctx, return_module, pass_as) do
+  defp run_locale_pass(patterns, input, ctx, pass_as) do
     Enum.find_value(patterns, fn {_kind, pattern} ->
       case match_pattern(input, pattern, ctx, pass_as) do
-        {:ok, %Date{} = date} -> {:ok, convert_to(date, return_module)}
+        {:ok, %Date{} = date} -> {:ok, convert_to(date, ctx.calendar_module)}
         {:ok, %{} = map} -> {:ok, map}
         :error -> nil
       end
     end)
   end
 
-  defp resolve_calendar_module(:gregorian), do: {:ok, Calendar.ISO}
-
-  defp resolve_calendar_module(cldr_calendar) do
-    case Calendrical.calendar_from_cldr_calendar_type(cldr_calendar) do
-      {:ok, module} -> {:ok, module}
-      {:error, _} -> {:ok, Calendar.ISO}
-    end
-  end
-
-  # The `:calendar` option accepts either a CLDR calendar type
-  # atom (`:gregorian`, `:hebrew`, …) or a calendar module
-  # (`Calendar.ISO`, `Calendrical.Hebrew`, …). Modules are
-  # coerced to their CLDR atom via the `cldr_calendar_type/0`
-  # callback; `Calendar.ISO` is the stdlib alias for
-  # proleptic-Gregorian and maps to `:gregorian`.
   @doc false
-  def normalise_calendar_option(options) do
-    case Keyword.fetch(options, :calendar) do
-      :error -> options
-      {:ok, value} -> Keyword.put(options, :calendar, normalise_calendar(value))
-    end
-  end
+  # The `:calendar` option is a calendar module, `Calendar.ISO` by default,
+  # and the date is built and returned in it. Anything else, a CLDR calendar
+  # type or a string included, is an unknown calendar. Every parse entry
+  # point runs this first, so the ISO 8601 path and the locale patterns
+  # report a calendar the same way.
+  @spec calendar_option(Keyword.t()) :: {:ok, module()} | {:error, Exception.t()}
+  def calendar_option(options) do
+    calendar_module = Keyword.get(options, :calendar, Calendar.ISO)
 
-  @doc false
-  def normalise_calendar(Calendar.ISO), do: :gregorian
-
-  def normalise_calendar(value) when is_atom(value) do
-    if Code.ensure_loaded?(value) and function_exported?(value, :cldr_calendar_type, 0) do
-      value.cldr_calendar_type()
+    if calendar_module?(calendar_module) do
+      {:ok, calendar_module}
     else
-      value
+      {:error, Localize.UnknownCalendarError.exception(calendar: calendar_module)}
     end
   end
 
-  def normalise_calendar(other), do: other
+  defp calendar_module?(module) do
+    is_atom(module) and Code.ensure_loaded?(module) and
+      function_exported?(module, :date_to_string, 3)
+  end
+
+  @doc false
+  # The CLDR calendar type of a calendar module, which selects the CLDR
+  # patterns and names the input is read with: its `cldr_calendar_type/0`,
+  # or `:gregorian` for `Calendar.ISO` and a calendar that names none.
+  @spec cldr_calendar_type(module()) :: atom()
+  def cldr_calendar_type(calendar_module) do
+    if function_exported?(calendar_module, :cldr_calendar_type, 0),
+      do: calendar_module.cldr_calendar_type(),
+      else: :gregorian
+  end
 
   # Convert `date` into `target_module`, gracefully degrading
   # on conversion failure (returns the original date so the
@@ -1986,14 +1965,13 @@ defmodule Calendrical.Date.Parser do
 
   # `ctx` carries the per-(locale, calendar) invariants built
   # once in `try_locale_patterns/6`: `:months`, `:eras`,
-  # `:lenient`, `:reference_year`, `:calendar_module`,
-  # `:cldr_calendar`, plus the `:days`/`:quarters`/`:locale`
-  # keys read by `field_regex/5`.
+  # `:lenient`, `:reference_year`, `:calendar_module`, plus the
+  # `:days`/`:quarters`/`:locale` keys read by `field_regex/5`.
   # Returns %{pattern => compiled_regex_or_nil} for every pattern, cached
   # in :persistent_term keyed by {locale, calendar}. One write per cold
   # (locale, calendar); every later parse reads precompiled regexes.
   defp pattern_regexes(patterns, ctx) do
-    key = {__MODULE__, :pattern_regexes, ctx.locale, ctx.cldr_calendar}
+    key = {__MODULE__, :pattern_regexes, ctx.locale, cldr_calendar_type(ctx.calendar_module)}
 
     case :persistent_term.get(key, nil) do
       nil ->
@@ -2028,7 +2006,7 @@ defmodule Calendrical.Date.Parser do
          %{} = caps <- Regex.named_captures(regex, input),
          {:ok, era_index} <- extract_era(caps),
          {:ok, fields} <-
-           extract_fields(caps, year_fallback, ctx.cldr_calendar, era_index, ctx.calendar_module) do
+           extract_fields(caps, year_fallback, era_index, ctx.calendar_module) do
       match_result_for(as, fields, caps, ctx.calendar_module)
     else
       _ -> :error
@@ -2120,11 +2098,15 @@ defmodule Calendrical.Date.Parser do
   # strategy. Most patterns supply only a subset; the
   # strategy table below resolves which combination yields a
   # full Date.
-  defp extract_fields(caps, reference_year, cldr_calendar, era_index, calendar_module) do
+  defp extract_fields(caps, reference_year, era_index, calendar_module) do
     with {:ok, year_in_calendar} <-
-           extract_year_field(caps, reference_year, cldr_calendar),
+           extract_year_field(caps, reference_year, calendar_module),
          {:ok, calendar_year} <-
-           resolve_calendar_year(year_in_calendar, era_index, cldr_calendar) do
+           resolve_calendar_year(
+             year_in_calendar,
+             era_index,
+             cldr_calendar_type(calendar_module)
+           ) do
       {:ok,
        %{
          year: calendar_year,
@@ -2138,8 +2120,7 @@ defmodule Calendrical.Date.Parser do
          day_of_week: extract_optional_day_of_week(caps),
          day_of_week_in_month: extract_optional_int(caps, "day_of_week_in_month"),
          weekday_name_index: extract_optional_weekday_name(caps),
-         calendar_module: calendar_module,
-         cldr_calendar: cldr_calendar
+         calendar_module: calendar_module
        }}
     end
   end
@@ -2154,13 +2135,13 @@ defmodule Calendrical.Date.Parser do
   # mode this is the reference year (so patterns like `MMM d`
   # parse against the current year); in `:map` mode it's `nil`
   # (so the year stays absent from the result map).
-  defp extract_year_field(caps, year_fallback, cldr_calendar) do
+  defp extract_year_field(caps, year_fallback, calendar_module) do
     case Map.get(caps, "year") || Map.get(caps, "week_based_year") do
       raw when is_binary(raw) and raw != "" ->
         case Integer.parse(raw) do
           {n, ""} ->
             reference_year = year_fallback || Date.utc_today().year
-            {:ok, maybe_pivot_two_digit_year(n, raw, reference_year, cldr_calendar)}
+            {:ok, maybe_pivot_two_digit_year(n, raw, reference_year, calendar_module)}
 
           _ ->
             :error
@@ -2595,7 +2576,7 @@ defmodule Calendrical.Date.Parser do
 
   # ── Errors ───────────────────────────────────────────────────
 
-  defp no_match_error(input, locale, calendar) do
-    DateParseError.exception(input: input, locale: locale, calendar: calendar)
+  defp no_match_error(input, locale, calendar_module) do
+    DateParseError.exception(input: input, locale: locale, calendar: calendar_module)
   end
 end

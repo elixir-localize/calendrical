@@ -109,33 +109,63 @@ defmodule Calendrical.DateTest do
   # formatted string through our parser, assert it returns
   # the original date.
   @cldr_cases [
-    %{locale: "en", calendar: :gregorian, input: ~D[2000-01-01], expected: "Jan 1, 2000"},
-    %{locale: "en", calendar: :gregorian, input: ~D[2024-07-01], expected: "Jul 1, 2024"},
-    %{locale: "en", calendar: :gregorian, input: ~D[2014-07-15], expected: "Jul 15, 2014"},
+    %{locale: "en", calendar: Calendar.ISO, input: ~D[2000-01-01], expected: "Jan 1, 2000"},
+    %{locale: "en", calendar: Calendar.ISO, input: ~D[2024-07-01], expected: "Jul 1, 2024"},
+    %{locale: "en", calendar: Calendar.ISO, input: ~D[2014-07-15], expected: "Jul 15, 2014"},
     %{
       locale: "ar-SA",
-      calendar: :islamic_civil,
+      calendar: Calendrical.Islamic.Civil,
       input: ~D[2000-01-01],
       expected: "٢٤ رمضان ١٤٢٠ هـ"
     },
     %{
       locale: "ar-SA",
-      calendar: :islamic_civil,
+      calendar: Calendrical.Islamic.Civil,
       input: ~D[2024-07-01],
       expected: "٢٤ ذو الحجة ١٤٤٥ هـ"
     },
     %{
       locale: "ar-SA",
-      calendar: :islamic_civil,
+      calendar: Calendrical.Islamic.Civil,
       input: ~D[2014-07-15],
       expected: "١٧ رمضان ١٤٣٥ هـ"
     },
-    %{locale: "th-TH", calendar: :buddhist, input: ~D[2000-01-01], expected: "1 ม.ค. 2543"},
-    %{locale: "th-TH", calendar: :buddhist, input: ~D[2024-07-01], expected: "1 ก.ค. 2567"},
-    %{locale: "th-TH", calendar: :buddhist, input: ~D[2014-07-15], expected: "15 ก.ค. 2557"},
-    %{locale: "ja-JP", calendar: :japanese, input: ~D[2000-01-01], expected: "平成12年1月1日"},
-    %{locale: "ja-JP", calendar: :japanese, input: ~D[2024-07-01], expected: "令和6年7月1日"},
-    %{locale: "ja-JP", calendar: :japanese, input: ~D[2014-07-15], expected: "平成26年7月15日"}
+    %{
+      locale: "th-TH",
+      calendar: Calendrical.Buddhist,
+      input: ~D[2000-01-01],
+      expected: "1 ม.ค. 2543"
+    },
+    %{
+      locale: "th-TH",
+      calendar: Calendrical.Buddhist,
+      input: ~D[2024-07-01],
+      expected: "1 ก.ค. 2567"
+    },
+    %{
+      locale: "th-TH",
+      calendar: Calendrical.Buddhist,
+      input: ~D[2014-07-15],
+      expected: "15 ก.ค. 2557"
+    },
+    %{
+      locale: "ja-JP",
+      calendar: Calendrical.Japanese,
+      input: ~D[2000-01-01],
+      expected: "平成12年1月1日"
+    },
+    %{
+      locale: "ja-JP",
+      calendar: Calendrical.Japanese,
+      input: ~D[2024-07-01],
+      expected: "令和6年7月1日"
+    },
+    %{
+      locale: "ja-JP",
+      calendar: Calendrical.Japanese,
+      input: ~D[2014-07-15],
+      expected: "平成26年7月15日"
+    }
   ]
 
   describe "parse_range/2 — pair form" do
@@ -232,7 +262,7 @@ defmodule Calendrical.DateTest do
                Calendrical.Date.parse_range(
                  {"2026-05-05", "2026-05-10"},
                  locale: :en,
-                 calendar: :buddhist
+                 calendar: Calendrical.Buddhist
                )
 
       assert %Date.Range{} = range
@@ -247,7 +277,7 @@ defmodule Calendrical.DateTest do
                Calendrical.Date.parse_range(
                  {"2026-05-05", "2026-05-10"},
                  locale: :en,
-                 calendar: :hebrew
+                 calendar: Calendrical.Hebrew
                )
 
       assert %Date.Range{} = range
@@ -262,7 +292,7 @@ defmodule Calendrical.DateTest do
                Calendrical.Date.parse_range(
                  {"2026-05-05", "2026-05-10"},
                  locale: :en,
-                 calendar: :persian
+                 calendar: Calendrical.Persian
                )
 
       assert %Date.Range{} = range
@@ -284,7 +314,7 @@ defmodule Calendrical.DateTest do
                Calendrical.Date.parse_range(
                  {"2026-05-10", "2026-05-05"},
                  locale: :en,
-                 calendar: :buddhist,
+                 calendar: Calendrical.Buddhist,
                  allow_inverted: true
                )
 
@@ -387,35 +417,38 @@ defmodule Calendrical.DateTest do
     test "a month name is the month of the parsed year" do
       # Nisan is the 7th month of the ordinary year 5785 and the 8th of
       # the leap year 5784
-      assert Calendrical.Date.parse("15 Nisan 5785", locale: :en, calendar: :hebrew) ==
+      assert Calendrical.Date.parse("15 Nisan 5785", locale: :en, calendar: Calendrical.Hebrew) ==
                {:ok, ~D[5785-07-15 Calendrical.Hebrew]}
 
-      assert Calendrical.Date.parse("15 Nisan 5784", locale: :en, calendar: :hebrew) ==
+      assert Calendrical.Date.parse("15 Nisan 5784", locale: :en, calendar: Calendrical.Hebrew) ==
                {:ok, ~D[5784-08-15 Calendrical.Hebrew]}
 
-      assert Calendrical.Date.parse("1 Elul 5785", locale: :en, calendar: :hebrew) ==
+      assert Calendrical.Date.parse("1 Elul 5785", locale: :en, calendar: Calendrical.Hebrew) ==
                {:ok, ~D[5785-12-01 Calendrical.Hebrew]}
     end
 
     test "Adar I and Adar II are months of a leap year only" do
-      assert Calendrical.Date.parse("14 Adar I 5784", locale: :en, calendar: :hebrew) ==
+      assert Calendrical.Date.parse("14 Adar I 5784", locale: :en, calendar: Calendrical.Hebrew) ==
                {:ok, ~D[5784-06-14 Calendrical.Hebrew]}
 
-      assert Calendrical.Date.parse("14 Adar II 5784", locale: :en, calendar: :hebrew) ==
+      assert Calendrical.Date.parse("14 Adar II 5784", locale: :en, calendar: Calendrical.Hebrew) ==
                {:ok, ~D[5784-07-14 Calendrical.Hebrew]}
 
       assert {:error, %Calendrical.DateParseError{}} =
-               Calendrical.Date.parse("14 Adar I 5785", locale: :en, calendar: :hebrew)
+               Calendrical.Date.parse("14 Adar I 5785", locale: :en, calendar: Calendrical.Hebrew)
 
       assert {:error, %Calendrical.DateParseError{}} =
-               Calendrical.Date.parse("14 Adar II 5785", locale: :en, calendar: :hebrew)
+               Calendrical.Date.parse("14 Adar II 5785",
+                 locale: :en,
+                 calendar: Calendrical.Hebrew
+               )
     end
 
     test "a plain Adar is Adar II in a leap year" do
-      assert Calendrical.Date.parse("14 Adar 5784", locale: :en, calendar: :hebrew) ==
+      assert Calendrical.Date.parse("14 Adar 5784", locale: :en, calendar: Calendrical.Hebrew) ==
                {:ok, ~D[5784-07-14 Calendrical.Hebrew]}
 
-      assert Calendrical.Date.parse("14 Adar 5785", locale: :en, calendar: :hebrew) ==
+      assert Calendrical.Date.parse("14 Adar 5785", locale: :en, calendar: Calendrical.Hebrew) ==
                {:ok, ~D[5785-06-14 Calendrical.Hebrew]}
     end
 
@@ -424,7 +457,10 @@ defmodule Calendrical.DateTest do
         {:ok, date} = Date.new(year, month, 14, Calendrical.Hebrew)
         name = Calendrical.localize(date, :month, locale: :en, style: :wide)
 
-        assert Calendrical.Date.parse("14 #{name} #{year}", locale: :en, calendar: :hebrew) ==
+        assert Calendrical.Date.parse("14 #{name} #{year}",
+                 locale: :en,
+                 calendar: Calendrical.Hebrew
+               ) ==
                  {:ok, date}
       end
     end
@@ -436,17 +472,9 @@ defmodule Calendrical.DateTest do
                Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendar.ISO)
     end
 
-    test "Calendrical.Hebrew is equivalent to :hebrew" do
-      assert {:ok, %Date{calendar: Calendrical.Hebrew} = d} =
-               Calendrical.Date.parse("2026-05-16",
-                 locale: :en,
-                 calendar: Calendrical.Hebrew
-               )
-
-      {:ok, expected} =
-        Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :hebrew)
-
-      assert d == expected
+    test "a CLDR calendar name is not a calendar" do
+      assert {:error, %Localize.UnknownCalendarError{calendar: :hebrew}} =
+               Calendrical.Date.parse("2026-05-16", locale: :en, calendar: :hebrew)
     end
 
     test "module form works for parse_range/2" do
@@ -479,7 +507,7 @@ defmodule Calendrical.DateTest do
       assert {:ok, ~D[0115-05-16 Calendrical.Roc]} =
                Calendrical.Date.parse("民國115年5月16日",
                  locale: :"zh-Hant-TW",
-                 calendar: :roc
+                 calendar: Calendrical.Roc
                )
     end
 
@@ -487,16 +515,7 @@ defmodule Calendrical.DateTest do
       assert {:ok, ~D[0115-05-16 Calendrical.Roc]} =
                Calendrical.Date.parse("民國115/5/16",
                  locale: :"zh-Hant-TW",
-                 calendar: :roc
-               )
-    end
-
-    test "with `return_calendar: :iso` round-trips to Gregorian" do
-      assert {:ok, ~D[2026-05-16]} =
-               Calendrical.Date.parse("民國115年5月16日",
-                 locale: :"zh-Hant-TW",
-                 calendar: :roc,
-                 return_calendar: :iso
+                 calendar: Calendrical.Roc
                )
     end
   end
@@ -506,7 +525,7 @@ defmodule Calendrical.DateTest do
       assert {:ok, ~D[0115-05-16 Calendrical.Roc]} =
                Calendrical.Date.parse("民國 115年5月16日",
                  locale: :"zh-Hant-TW",
-                 calendar: :roc
+                 calendar: Calendrical.Roc
                )
     end
 
@@ -514,13 +533,13 @@ defmodule Calendrical.DateTest do
       assert {:ok, ~D[2000-01-01 Calendrical.Japanese]} =
                Calendrical.Date.parse("平成 12年1月1日",
                  locale: :"ja-JP",
-                 calendar: :japanese
+                 calendar: Calendrical.Japanese
                )
 
       assert {:ok, ~D[2024-07-01 Calendrical.Japanese]} =
                Calendrical.Date.parse("令和 6年7月1日",
                  locale: :"ja-JP",
-                 calendar: :japanese
+                 calendar: Calendrical.Japanese
                )
     end
   end
@@ -563,7 +582,7 @@ defmodule Calendrical.DateTest do
     for fixture <- @cldr_cases do
       @tag fixture: fixture
 
-      test "#{fixture.locale}/#{fixture.calendar} parses #{inspect(fixture.expected)}",
+      test "#{fixture.locale}/#{inspect(fixture.calendar)} parses #{inspect(fixture.expected)}",
            %{fixture: fixture} do
         locale = String.to_atom(fixture.locale)
         expected_date = fixture.input
@@ -690,7 +709,7 @@ defmodule Calendrical.DateTest do
       assert {:ok, %{calendar: Calendrical.Hebrew, year: 5786, month: 8, day: 29}} =
                Calendrical.Date.parse("2026-05-16",
                  locale: :en,
-                 calendar: :hebrew,
+                 calendar: Calendrical.Hebrew,
                  as: :map
                )
     end
@@ -746,7 +765,7 @@ defmodule Calendrical.DateTest do
     test "non-Gregorian calendar honoured in :calendar key" do
       assert {:ok, {%{calendar: Calendrical.Buddhist}, %{calendar: Calendrical.Buddhist}}} =
                Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"},
-                 calendar: :buddhist,
+                 calendar: Calendrical.Buddhist,
                  as: :map
                )
     end
