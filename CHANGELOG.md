@@ -14,6 +14,8 @@ The format is based on
 
 * `Calendrical.parse/2`, `Calendrical.Date.parse/2` and `parse_range/2`, `Calendrical.Time.parse/2` and `Calendrical.DateTime.parse/2` delegate to Localize's parsers and return its errors, so `Calendrical.DateParseError`, `DateRangeParseError`, `DateTimeParseError`, `TimeParseError` and `ParseError` are removed. Results change where Localize is more correct: `week N of YYYY` follows the locale's week rules, an ISO 8601 offset is kept rather than normalised to UTC, and an unknown `:calendar` is an error.
 
+* The parse functions' `:calendar` option is a calendar module, and the date is returned in it: a CLDR calendar name such as `:hebrew` returns `Localize.UnknownCalendarError`, and a calendar that shares its CLDR type with another, such as `Calendrical.Gregorian` or a fiscal or composite calendar, no longer comes back as `Calendar.ISO`. `:return_calendar` is removed; convert the result with `Date.convert/2`.
+
 ### Added
 
 * `Calendrical.Hebrew.ordinal_month/2`, `lunar_month_of_year/1,2`, `leap_month/1` and `traditional_leap_month/1` convert between a Hebrew month's position and its RFC 7529 traditional month (Adar I is `{5, :leap}`), as the lunisolar calendars do.

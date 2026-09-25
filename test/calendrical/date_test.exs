@@ -518,15 +518,6 @@ defmodule Calendrical.DateTest do
                  calendar: Calendrical.Roc
                )
     end
-
-    test "with `return_calendar: :iso` round-trips to Gregorian" do
-      assert {:ok, ~D[2026-05-16]} =
-               Calendrical.Date.parse("民國115年5月16日",
-                 locale: :"zh-Hant-TW",
-                 calendar: Calendrical.Roc,
-                 return_calendar: :iso
-               )
-    end
   end
 
   describe "parse/2 — lenient spacing between adjacent fields" do

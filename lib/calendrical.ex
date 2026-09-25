@@ -919,9 +919,7 @@ defmodule Calendrical do
   * `:locale` — the locale to interpret the string under.
     Defaults to `Localize.get_locale/0`.
 
-  * `:calendar` — either a CLDR calendar key (`:gregorian`,
-    `:hebrew`, …) or a calendar module (`Calendar.ISO`,
-    `Calendrical.Hebrew`, …). Defaults to `:gregorian`.
+  * `:calendar` — the calendar module the input is read in and the result is returned in, such as `Calendar.ISO` (the default) or `Calendrical.Hebrew`. A CLDR calendar name such as `:hebrew` returns `Localize.UnknownCalendarError`.
 
   * `:reference_date` — the "today" anchor for two-digit-year
     pivoting and partial-date inheritance.

@@ -22,13 +22,7 @@ defmodule Calendrical.Date do
   input may parse to different dates under different locales
   by design.
 
-  Returns a `t:Date.t/0` in the calendar identified by the
-  `:calendar` option — `Calendar.ISO` for `:gregorian` (the
-  default), `Calendrical.Hebrew` for `:hebrew`,
-  `Calendrical.Japanese` for `:japanese`, and so on. Pass
-  `return_calendar: :iso` to force the result into Gregorian
-  regardless (useful for `Date.Range`, Ecto `:date` casts, or
-  any consumer that requires ISO).
+  Returns a `t:Date.t/0` in the `:calendar` module, `Calendar.ISO` by default. Convert it with `Date.convert/2` when a consumer needs another calendar, such as `Calendar.ISO` for a `Date.Range` or an Ecto `:date` field.
 
   ### Arguments
 
@@ -41,24 +35,10 @@ defmodule Calendrical.Date do
   * `:locale` — the locale to interpret the string under.
     Defaults to `Localize.get_locale/0`.
 
-  * `:calendar` — either a CLDR calendar key (e.g.
-    `:gregorian`, `:buddhist`, `:islamic_civil`, `:japanese`,
-    `:persian`, `:hebrew`) or a calendar module
-    (`Calendar.ISO`, `Calendrical.Hebrew`,
-    `Calendrical.Buddhist`, …). A module is coerced to its
-    CLDR atom via the `cldr_calendar_type/0` callback;
-    `Calendar.ISO` is an alias for `:gregorian`. Defaults to
-    `:gregorian`. Drives both how the input is interpreted
-    and what calendar the returned `Date` is in.
+  * `:calendar` — the calendar module the input is read in and the date is returned in, such as `Calendar.ISO` (the default), `Calendrical.Gregorian` or `Calendrical.Hebrew`. A CLDR calendar name such as `:hebrew` is not a calendar and returns `Localize.UnknownCalendarError`.
 
   * `:reference_date` — the "today" anchor for two-digit-year
     pivoting. Defaults to `Date.utc_today/0`.
-
-  * `:return_calendar` — `:native` (default) returns the
-    parsed date in whatever `:calendar` named. `:iso` forces
-    `Calendar.ISO`. A calendar module (e.g.
-    `Calendrical.Persian`) returns the date in that
-    specific calendar.
 
   * `:as` — `:struct` (default) returns a `t:Date.t/0`.
     `:map` returns a bare field map containing only what the
@@ -69,8 +49,7 @@ defmodule Calendrical.Date do
     [`Tempo`](https://github.com/elixir-localize/tempo))
     needs the unresolved partial rather than a defaulted
     `Date`. In `:map` mode the `:reference_date` fallback for
-    missing-year inputs is suppressed, and `:return_calendar`
-    has no effect (the map stays in the parsing calendar).
+    missing-year inputs is suppressed.
 
   ### Returns
 
@@ -107,10 +86,8 @@ defmodule Calendrical.Date do
       iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew)
       {:ok, ~D[5786-08-29 Calendrical.Hebrew]}
 
-      iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew)
-      {:ok, ~D[5786-08-29 Calendrical.Hebrew]}
-
-      iex> Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew, return_calendar: :iso)
+      iex> {:ok, date} = Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew)
+      iex> Date.convert(date, Calendar.ISO)
       {:ok, ~D[2026-05-16]}
 
       iex> Calendrical.Date.parse("Q2 2026", locale: :en)

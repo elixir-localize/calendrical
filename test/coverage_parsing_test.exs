@@ -138,24 +138,9 @@ defmodule Calendrical.CoverageParsingTest do
                {:ok, ~D[5786-08-29 Calendrical.Hebrew]}
     end
 
-    test ":calendar as module is coerced via cldr_calendar_type/0" do
+    test "the date is returned in the :calendar module" do
       assert Calendrical.Date.parse("2026-05-16", locale: :en, calendar: Calendrical.Hebrew) ==
                {:ok, ~D[5786-08-29 Calendrical.Hebrew]}
-    end
-
-    test "return_calendar: :iso forces Calendar.ISO" do
-      assert Calendrical.Date.parse("2026-05-16",
-               locale: :en,
-               calendar: Calendrical.Hebrew,
-               return_calendar: :iso
-             ) == {:ok, ~D[2026-05-16]}
-    end
-
-    test "return_calendar as a module converts the result" do
-      assert Calendrical.Date.parse("2026-05-16",
-               locale: :en,
-               return_calendar: Calendrical.Persian
-             ) == {:ok, ~D[1405-02-26 Calendrical.Persian]}
     end
 
     test "an unknown CLDR calendar key is an error" do
