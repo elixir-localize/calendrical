@@ -21,9 +21,15 @@ defmodule Calendrical.Islamic.Observational do
   criterion replaces Reingold's older Shaukat criterion and is the
   basis for several national Islamic calendar committees.
 
-  Months are 29 or 30 days long depending on whether the crescent
-  was visible on the eve of the 30th day; years are 354 or 355 days
-  long.
+  A month begins on the day after the evening its crescent is first
+  predicted to be visible: that evening is the eve of the month's first
+  day, when the Islamic day begins. Months are 29 or 30 days long
+  depending on whether the crescent was visible on the eve of the 30th
+  day; years are 354 or 355 days long. Because the Umm al-Qura rule
+  declares a month once the moon sets after the sun, before a crescent
+  can be seen, each month begins on the same day as in
+  `Calendrical.Islamic.UmmAlQura` or a day later (so for every month of
+  1400–1470 AH).
 
   ## Performance
 
@@ -151,10 +157,10 @@ defmodule Calendrical.Islamic.Observational do
   ### Examples
 
       iex> Calendrical.Islamic.Observational.leap_year?(1447)
-      true
+      false
 
       iex> Calendrical.Islamic.Observational.leap_year?(1446)
-      false
+      true
 
   """
   @impl true
@@ -177,7 +183,7 @@ defmodule Calendrical.Islamic.Observational do
   ### Examples
 
       iex> Calendrical.Islamic.Observational.days_in_year(1446)
-      354
+      355
 
   """
   @impl true
@@ -370,7 +376,7 @@ defmodule Calendrical.Islamic.Observational do
   ### Examples
 
       iex> Calendrical.Islamic.Observational.date_from_iso_days(739_252)
-      {1445, 6, 20}
+      {1445, 6, 19}
 
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}

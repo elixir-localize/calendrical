@@ -134,11 +134,15 @@ defmodule Calendrical.Islamic.Visibility do
     end
   end
 
-  # A date the ephemeris does not cover at all is an error rather than
-  # "not visible": treating missing data as invisibility would silently
-  # walk the crescent search forward and produce wrong month boundaries.
+  # The eve of `iso_days` is the evening before it, when the Islamic day
+  # begins, as in Reingold's `visible-crescent`, which looks at dusk on
+  # the previous day. Astro evaluates the evening of the date it is given,
+  # so it is asked about the day before. A date the ephemeris does not
+  # cover at all is an error rather than "not visible": treating missing
+  # data as invisibility would silently walk the crescent search forward
+  # and produce wrong month boundaries.
   defp crescent_visible(iso_days, location, method) do
-    date = Date.from_gregorian_days(iso_days)
+    date = Date.from_gregorian_days(iso_days - 1)
 
     case Astro.new_visible_crescent(location, date, method) do
       {:ok, visibility} -> {:ok, visibility in [:A, :B, :C]}

@@ -187,81 +187,102 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
   @cairo %Geo.PointZ{coordinates: {31.3, 30.1, 200.0}}
   @mecca %Geo.PointZ{coordinates: {39.8262, 21.4225, 277.0}}
 
-  # Ramadan 1445 AH began on 2024-03-11 (new moon 2024-03-10).
-  @ramadan_start Date.to_gregorian_days(~D[2024-03-11])
-  @new_moon_day Date.to_gregorian_days(~D[2024-03-10])
-  @mid_month Date.to_gregorian_days(~D[2024-03-25])
+  # Ramadan 1446 AH began on 2025-03-01 in Egypt and Saudi Arabia: the new
+  # moon fell at 00:45 UTC on 2025-02-28 and the crescent could be seen that
+  # evening, the eve of 1 Ramadan.
+  @ramadan_start Date.to_gregorian_days(~D[2025-03-01])
+  @new_moon_day Date.to_gregorian_days(~D[2025-02-28])
+  @mid_month Date.to_gregorian_days(~D[2025-03-15])
 
   describe "Visibility.visible_crescent?/3" do
-    test "crescent is visible at Cairo on 2024-03-11 for all methods" do
+    test "the crescent is visible at Cairo on the eve of 2025-03-01" do
       assert Visibility.visible_crescent?(@ramadan_start, @cairo)
       assert Visibility.visible_crescent?(@ramadan_start, @cairo, :odeh)
-      assert Visibility.visible_crescent?(@ramadan_start, @cairo, :yallop)
       assert Visibility.visible_crescent?(@ramadan_start, @cairo, :schaefer)
     end
 
-    test "crescent is not visible on the day of the new moon" do
+    test "Yallop's criterion, stricter for a young moon, does not see it yet" do
+      refute Visibility.visible_crescent?(@ramadan_start, @cairo, :yallop)
+    end
+
+    test "the eve of a date is the evening before it, not the evening of it" do
+      # Astro reports the crescent for the evening of the date it is given:
+      # visible on the evening of 2025-02-28, so on the eve of 1 March, and
+      # not on the eve of 28 February.
+      assert {:ok, class} = Astro.new_visible_crescent(@cairo, ~D[2025-02-28])
+      assert class in [:A, :B, :C]
       refute Visibility.visible_crescent?(@new_moon_day, @cairo)
+      assert Visibility.visible_crescent?(@ramadan_start, @cairo)
     end
   end
 
   describe "Visibility.phasis_on_or_before/3" do
-    test "finds the month start for all three methods" do
-      for method <- [:odeh, :yallop, :schaefer] do
+    test "finds the month start" do
+      for method <- [:odeh, :schaefer] do
         assert Date.from_gregorian_days(
                  Visibility.phasis_on_or_before(@ramadan_start, @cairo, method)
-               ) == ~D[2024-03-11],
-               "expected 2024-03-11 for method #{method}"
+               ) == ~D[2025-03-01],
+               "expected 2025-03-01 for method #{method}"
       end
+    end
+
+    test "under Yallop's criterion 2025-03-01 still belongs to the previous month" do
+      assert Date.from_gregorian_days(
+               Visibility.phasis_on_or_before(@ramadan_start, @cairo, :yallop)
+             ) == ~D[2025-01-31]
     end
 
     test "mid-month dates fall back to the month start" do
       assert Date.from_gregorian_days(Visibility.phasis_on_or_before(@mid_month, @cairo)) ==
-               ~D[2024-03-11]
+               ~D[2025-03-01]
     end
 
     test "a date just after the new moon belongs to the previous month" do
-      # 2024-03-10 is at most 3 days after the conjunction and the
-      # crescent is not yet visible, so the containing lunar month
-      # started ~30 days earlier (Sha'ban began 2024-02-11).
+      # 2025-02-28 is within 3 days of the conjunction and its eve shows no
+      # crescent, so the containing lunar month started ~30 days earlier
+      # (Sha'ban began 2025-01-31).
       assert Date.from_gregorian_days(Visibility.phasis_on_or_before(@new_moon_day, @cairo)) ==
-               ~D[2024-02-11]
+               ~D[2025-01-31]
     end
   end
 
   describe "Visibility.phasis_on_or_after/3" do
     test "the first day of a month is its own phasis" do
       assert Date.from_gregorian_days(Visibility.phasis_on_or_after(@ramadan_start, @mecca)) ==
-               ~D[2024-03-11]
+               ~D[2025-03-01]
     end
 
     test "mid-month dates advance to the next month start" do
+      # Eid al-Fitr was announced for 2025-03-30, but the Shawwal crescent
+      # could first be seen at Cairo on the evening of the 30th.
       assert Date.from_gregorian_days(Visibility.phasis_on_or_after(@mid_month, @cairo)) ==
-               ~D[2024-04-10]
+               ~D[2025-03-31]
     end
   end
 
   describe "observational calendars for modern dates" do
-    test "2024-03-11 is 1 Ramadan 1445 in the Cairo observational calendar" do
-      assert {:ok, date} = Date.convert(~D[2024-03-11], Calendrical.Islamic.Observational)
-      assert {date.year, date.month, date.day} == {1445, 9, 1}
+    test "2025-03-01 is 1 Ramadan 1446 in the Cairo and Mecca calendars" do
+      for calendar <- [Calendrical.Islamic.Observational, Calendrical.Islamic.Rgsa] do
+        assert {:ok, date} = Date.convert(~D[2025-03-01], calendar)
+        assert {date.year, date.month, date.day} == {1446, 9, 1}
+      end
     end
 
-    test "2024-03-11 is 1 Ramadan 1445 in the Mecca (RGSA) calendar" do
-      assert {:ok, date} = Date.convert(~D[2024-03-11], Calendrical.Islamic.Rgsa)
-      assert {date.year, date.month, date.day} == {1445, 9, 1}
-    end
-
-    test "2025-03-01 is 1 Ramadan 1446 in the Cairo observational calendar" do
-      assert {:ok, date} = Date.convert(~D[2025-03-01], Calendrical.Islamic.Observational)
-      assert {date.year, date.month, date.day} == {1446, 9, 1}
+    test "a month begins the day after its crescent can first be seen, not when announced" do
+      # Ramadan 1445 was announced for 2024-03-11 in Egypt and Saudi Arabia,
+      # but the new moon, at 09:00 UTC on 2024-03-10, left no crescent to see
+      # at Cairo or Mecca until the evening of the 11th.
+      for calendar <- [Calendrical.Islamic.Observational, Calendrical.Islamic.Rgsa] do
+        assert {:ok, date} = Date.convert(~D[2024-03-12], calendar)
+        assert {date.year, date.month, date.day} == {1445, 9, 1}
+      end
     end
 
     test "observational dates round-trip back to Gregorian" do
-      {:ok, observational} = Date.convert(~D[2024-03-11], Calendrical.Islamic.Observational)
+      {:ok, observational} = Date.convert(~D[2025-03-01], Calendrical.Islamic.Observational)
 
       assert Date.convert(observational, Calendrical.Gregorian) ==
-               {:ok, ~D[2024-03-11 Calendrical.Gregorian]}
+               {:ok, ~D[2025-03-01 Calendrical.Gregorian]}
     end
   end
 

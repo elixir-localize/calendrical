@@ -29,7 +29,11 @@ defmodule Calendrical.Islamic.Rgsa do
 
   As with `Calendrical.Islamic.Observational`, crescent visibility
   is computed by `Astro.new_visible_crescent/3` using the Odeh (2006)
-  criterion by default.
+  criterion by default, and a month begins on the day after the
+  evening its crescent is first predicted to be visible. Each month
+  therefore begins on the same day as in `UmmAlQura` or a day later,
+  as the KACST rule declares a month once the moon sets after the sun,
+  before a crescent can be seen.
 
   ## Reference
 
@@ -144,10 +148,10 @@ defmodule Calendrical.Islamic.Rgsa do
   ### Examples
 
       iex> Calendrical.Islamic.Rgsa.leap_year?(1447)
-      true
+      false
 
       iex> Calendrical.Islamic.Rgsa.leap_year?(1446)
-      false
+      true
 
   """
   @impl true
@@ -168,7 +172,7 @@ defmodule Calendrical.Islamic.Rgsa do
   ### Examples
 
       iex> Calendrical.Islamic.Rgsa.days_in_year(1446)
-      354
+      355
 
   """
   @impl true
@@ -359,7 +363,7 @@ defmodule Calendrical.Islamic.Rgsa do
   ### Examples
 
       iex> Calendrical.Islamic.Rgsa.date_from_iso_days(739_252)
-      {1445, 6, 20}
+      {1445, 6, 19}
 
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}
