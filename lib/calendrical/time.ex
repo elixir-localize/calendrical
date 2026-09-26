@@ -40,7 +40,11 @@ defmodule Calendrical.Time do
     `"11:30 PST"`). `:minute` and `:second` default to `0`
     only in `:struct` mode; in `:map` mode they are omitted
     unless captured. Microsecond is included only when the
-    input carried fractional precision.
+    input carried fractional precision. A fixed offset
+    (`"2:30 PM GMT+5"`) adds the `t:DateTime.t/0` zone fields
+    (`:time_zone`, `:utc_offset`, `:std_offset` and
+    `:zone_abbr`); a named zone, whose offset depends on a
+    date, stays in `:time_zone` as written.
 
   ### Returns
 

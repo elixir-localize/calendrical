@@ -38,6 +38,8 @@ The format is based on
 
 ### Changed
 
+* `weeks_to_days/1` takes a fractional number of weeks, as it always has, and documents that it truncates to whole days: `weeks_to_days(1.5)` is 10.
+
 * `quarter_of_year/3` returns the quarter `quarter/2` puts the month in, so the Hebrew, Coptic and Ethiopic calendars answer it rather than returning `{:error, :not_defined}`.
 
 * Requires Localize 1.4, which names months through the calendar's `month_of_year/3` as the Hebrew month positions need.
@@ -49,6 +51,8 @@ The format is based on
 * The Chinese, Korean, Vietnamese and Lunar Japanese calendars find a year's new year once per question and each new moon once, so `valid_date?/3`, `days_in_month/2`, `days_in_year/1`, `leap_year?/1`, `leap_month/1`, `new/3` and `lunar_month_of_year/2` ask for far fewer new moons — a quarter as many across a lunisolar holiday corpus. Results are unchanged.
 
 ### Fixed
+
+* `Calendrical.DateTime.parse/2` and `Calendrical.Time.parse/2` with `as: :map` give a fixed offset such as "GMT+5" the `DateTime` zone fields the struct form resolves, where the map kept `time_zone: "GMT+5"` with no offset; a named zone resolves too when the input gives its full date.
 
 * The parse functions try the input as given before stripping a leading weekday, so a month name that is also a weekday name (es "mar") keeps its month, and they accept format and stand-alone month names alike (ru "июль").
 

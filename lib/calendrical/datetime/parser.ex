@@ -37,6 +37,10 @@ defmodule Calendrical.DateTime.Parser do
   alias Calendrical.DateTimeParseError
   alias Localize.DateTime.Format
 
+  # A fixed offset is the same on every date; this is the date it is
+  # resolved on when the input gave none.
+  @fixed_offset_datetime ~N[2000-01-01 00:00:00]
+
   @standard_formats [:short, :medium, :long, :full]
 
   @doc """
@@ -113,10 +117,11 @@ defmodule Calendrical.DateTime.Parser do
     dt
     |> DateTime.to_naive()
     |> naive_datetime_to_map()
-    |> Map.put(:time_zone, dt.time_zone)
-    |> Map.put(:utc_offset, dt.utc_offset)
-    |> Map.put(:std_offset, dt.std_offset)
-    |> Map.put(:zone_abbr, dt.zone_abbr)
+    |> Map.merge(datetime_zone_fields(dt))
+  end
+
+  defp datetime_zone_fields(%DateTime{} = datetime) do
+    Map.take(datetime, [:time_zone, :utc_offset, :std_offset, :zone_abbr])
   end
 
   defp naive_datetime_to_map(%NaiveDateTime{
@@ -210,15 +215,66 @@ defmodule Calendrical.DateTime.Parser do
 
     # Time half first — cheaper and more selective — so a failing right
     # half short-circuits the expensive date parse (see try_split_as_struct).
-    with {:ok, %{} = time_map, _zone} <-
+    with {:ok, %{} = time_map, zone} <-
            Calendrical.Time.Parser.parse_with_zone(right, time_opts),
          {:ok, %{} = date_map} <- Calendrical.Date.parse(left, date_opts) do
       # Date map carries `:calendar`; time map carries the time
-      # fields plus `:time_zone` if any. Merge — date's
-      # `:calendar` wins (the time map has no calendar key).
-      {:ok, Map.merge(time_map, date_map)}
+      # fields plus the zone fields if any. Merge — date's
+      # `:calendar` wins (the time map has no calendar key) — and
+      # resolve a named zone against the full date when the input
+      # gave one.
+      merged = Map.merge(time_map, date_map)
+      {:ok, put_zone_fields(merged, zone, options)}
     else
       _ -> nil
+    end
+  end
+
+  defp put_zone_fields(map, nil, _options), do: map
+
+  defp put_zone_fields(map, zone, options),
+    do: Map.merge(map, zone_fields_for_map(zone, complete_naive_datetime(map), options))
+
+  # The full date and time a merged map gives, which a named zone's
+  # offset needs; `nil` when the input left the date partial.
+  defp complete_naive_datetime(
+         %{year: year, month: month, day: day, hour: hour, calendar: calendar} = map
+       ) do
+    minute = Map.get(map, :minute, 0)
+    second = Map.get(map, :second, 0)
+    microsecond = Map.get(map, :microsecond, {0, 0})
+
+    case NaiveDateTime.new(year, month, day, hour, minute, second, microsecond, calendar) do
+      {:ok, naive_datetime} -> naive_datetime
+      {:error, _reason} -> nil
+    end
+  end
+
+  defp complete_naive_datetime(_partial_map), do: nil
+
+  @doc false
+  # The zone fields a map-form parse carries for a captured zone, as the
+  # struct form's `DateTime` has them. A named zone's offset depends on
+  # the date, so it resolves only against `naive_datetime`, the full date
+  # and time the input gave. A fixed offset (`GMT+5`, `UTC-3:30`, `Z`) is
+  # the same on every date, so without one it resolves on any date, while
+  # a named zone keeps the name as captured — as does a zone that does not
+  # resolve.
+  @spec zone_fields_for_map(String.t(), NaiveDateTime.t() | nil, Keyword.t()) :: map()
+  def zone_fields_for_map(zone, %NaiveDateTime{} = naive_datetime, options) do
+    case Calendrical.TimeZone.resolve(zone, naive_datetime, options) do
+      {:ok, %DateTime{} = datetime} -> datetime_zone_fields(datetime)
+      {:error, _reason} -> %{time_zone: zone}
+    end
+  end
+
+  def zone_fields_for_map(zone, nil, options) do
+    case Calendrical.TimeZone.resolve(zone, @fixed_offset_datetime, options) do
+      {:ok, %DateTime{time_zone: time_zone} = datetime} when time_zone in ["Etc/UTC", "UTC"] ->
+        datetime_zone_fields(datetime)
+
+      _named_or_unresolved ->
+        %{time_zone: zone}
     end
   end
 

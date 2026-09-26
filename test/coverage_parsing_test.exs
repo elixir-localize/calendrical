@@ -496,6 +496,19 @@ defmodule Calendrical.CoverageParsingTest do
                {:ok, %{hour: 11, minute: 30, time_zone: "PST"}}
     end
 
+    test "as: :map resolves a captured fixed offset without a date" do
+      assert Calendrical.Time.parse("2:30 PM GMT+5", locale: :en, as: :map) ==
+               {:ok,
+                %{
+                  hour: 14,
+                  minute: 30,
+                  time_zone: "Etc/UTC",
+                  utc_offset: 18_000,
+                  std_offset: 0,
+                  zone_abbr: "+05:00"
+                }}
+    end
+
     test "unparseable input returns a TimeParseError with a rendered message" do
       assert {:error, %Calendrical.TimeParseError{} = error} =
                Calendrical.Time.parse("not a time", locale: :en)
@@ -912,18 +925,31 @@ defmodule Calendrical.CoverageParsingTest do
                 Date.range(~D[4663-03-19 Calendrical.Chinese], ~D[4663-03-24 Calendrical.Chinese])}
     end
 
-    test "as: :map surfaces the zone captured through the locale glue" do
-      assert Calendrical.DateTime.parse("May 16, 2026 2:30 PM PST", locale: :en, as: :map) ==
-               {:ok,
-                %{
-                  calendar: Calendar.ISO,
-                  year: 2026,
-                  month: 5,
-                  day: 16,
-                  hour: 14,
-                  minute: 30,
-                  time_zone: "PST"
-                }}
+    test "as: :map resolves a zone captured through the locale glue, as the struct does" do
+      zone_fields = [:time_zone, :utc_offset, :std_offset, :zone_abbr]
+
+      for input <- ["May 16, 2026 2:30 PM PST", "May 23, 2026, 2:30 PM GMT-3:30"] do
+        assert {:ok, map} = Calendrical.DateTime.parse(input, locale: :en, as: :map)
+        assert {:ok, %DateTime{} = datetime} = Calendrical.DateTime.parse(input, locale: :en)
+        assert Map.take(map, zone_fields) == Map.take(datetime, zone_fields)
+      end
+
+      assert {:ok, %{time_zone: "America/Los_Angeles", utc_offset: -28_800}} =
+               Calendrical.DateTime.parse("May 16, 2026 2:30 PM PST", locale: :en, as: :map)
+    end
+
+    test "as: :map resolves a fixed offset when the date is partial, and keeps a named zone" do
+      assert {:ok, map} =
+               Calendrical.DateTime.parse("May 5, 2:30 PM GMT+5", locale: :en, as: :map)
+
+      assert %{month: 5, day: 5, time_zone: "Etc/UTC", utc_offset: 18_000} = map
+      refute Map.has_key?(map, :year)
+
+      # A named zone's offset depends on the year the input left out.
+      assert {:ok, %{time_zone: "PST"} = map} =
+               Calendrical.DateTime.parse("May 5, 2:30 PM PST", locale: :en, as: :map)
+
+      refute Map.has_key?(map, :utc_offset)
     end
   end
 

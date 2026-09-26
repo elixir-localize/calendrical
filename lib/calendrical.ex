@@ -2672,15 +2672,29 @@ defmodule Calendrical do
   end
 
   @doc """
-  Returns the number of days in `n` weeks
+  Returns the number of whole days in `n` weeks.
 
-  ## Example
+  A fractional number of weeks is truncated toward zero to whole
+  days: one and a half weeks is 10 days.
+
+  ### Arguments
+
+  * `n` is a number of weeks, an integer or a float.
+
+  ### Returns
+
+  * The number of whole days in `n` weeks, as an integer.
+
+  ### Examples
 
       iex> Calendrical.weeks_to_days(2)
       14
 
+      iex> Calendrical.weeks_to_days(1.5)
+      10
+
   """
-  @spec weeks_to_days(integer) :: integer
+  @spec weeks_to_days(number()) :: integer()
   def weeks_to_days(n) do
     trunc(n * @days_in_a_week)
   end
