@@ -167,7 +167,7 @@ A **lunisolar** calendar tracks the synodic month *and* keeps the year aligned w
 
 | Calendar | CLDR | Algorithm | Leap rule |
 |---|---|---|---|
-| `Calendrical.Hebrew` | `:hebrew` | **Arithmetic** (Reingold) | 19-year Metonic cycle: years 3, 6, 8, 11, 14, 17, 19 are leap. Months are numbered by their position in the year from Tishri, so Adar I is month 6 of a leap year; `ordinal_month/2` takes the RFC 7529 traditional month. |
+| `Calendrical.Hebrew` | `:hebrew` | **Arithmetic** (Reingold) | 19-year Metonic cycle: years 3, 6, 8, 11, 14, 17, 19 are leap. Months are numbered by their position in the year from Tishri, so Adar I is month 6 of a leap year; `ordinal_month_from_traditional/2` takes the RFC 7529 traditional month. |
 | `Calendrical.Chinese` | `:chinese` | **Astronomical** (lunar phase + winter solstice at Beijing/China longitude) | Inserts a 13th leap month between the new moons that contain no major solar term. Uses the `Astro` library. |
 | `Calendrical.Korean` | `:dangi` | **Astronomical** (lunar phase + winter solstice at Seoul longitude) | Same algorithm as `Calendrical.Chinese` but observed from Seoul. The CLDR identifier `:dangi` refers to the *Dangi* era starting 2333 BCE. |
 | `Calendrical.LunarJapanese` | `:chinese` (shared) | **Astronomical** (lunar phase + winter solstice at Japan-standard-time longitude) | The historical Japanese lunisolar calendar used until 1873, when Japan switched to the proleptic Gregorian. |

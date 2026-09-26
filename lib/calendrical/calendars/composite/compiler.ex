@@ -376,13 +376,43 @@ defmodule Calendrical.Composite.Compiler do
       """
       @impl true
       def quarter(year, quarter) when quarter in 1..@quarters_in_year do
+        period_of_year(year, quarter, @quarters_in_year)
+      end
+
+      def quarter(_year, _quarter), do: {:error, :invalid_date}
+
+      @doc """
+      Returns a `Date.Range` representing a given quadrimester (third)
+      of a year, on the rules `quarter/2` follows.
+
+      """
+      @impl true
+      def quadrimester(year, quadrimester) when quadrimester in 1..3 do
+        period_of_year(year, quadrimester, 3)
+      end
+
+      def quadrimester(_year, _quadrimester), do: {:error, :invalid_date}
+
+      @doc """
+      Returns a `Date.Range` representing a given semester (half) of a
+      year, on the rules `quarter/2` follows.
+
+      """
+      @impl true
+      def semester(year, semester) when semester in 1..2 do
+        period_of_year(year, semester, 2)
+      end
+
+      def semester(_year, _semester), do: {:error, :invalid_date}
+
+      defp period_of_year(year, period, periods_in_year) do
         months_in_year = months_in_year(year)
 
-        if rem(months_in_year, @quarters_in_year) == 0 and january_year?(year) do
-          months_in_quarter = div(months_in_year, @quarters_in_year)
-          first_month = months_in_quarter * (quarter - 1) + 1
+        if rem(months_in_year, periods_in_year) == 0 and january_year?(year) do
+          months_in_period = div(months_in_year, periods_in_year)
+          first_month = months_in_period * (period - 1) + 1
 
-          first_month..(first_month + months_in_quarter - 1)
+          first_month..(first_month + months_in_period - 1)
           |> Enum.map(&month(year, &1))
           |> Enum.filter(&match?(%Date.Range{}, &1))
           |> quarter_range()
@@ -390,8 +420,6 @@ defmodule Calendrical.Composite.Compiler do
           {:error, :not_defined}
         end
       end
-
-      def quarter(_year, _quarter), do: {:error, :invalid_date}
 
       # A year labelled from a later new-year day (England's Lady Day years)
       # has no quarters, as its Julian year-start calendar has none.

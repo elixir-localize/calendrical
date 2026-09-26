@@ -956,6 +956,64 @@ defmodule Calendrical.Julian do
   def quarter(_year, _quarter), do: {:error, :invalid_date}
 
   @doc """
+  Returns a `t:Date.Range.t/0` representing a given quadrimester
+  (third) of a Julian year.
+
+  ### Arguments
+
+  * `year` is any non-zero Julian year as an integer.
+
+  * `quadrimester` is an integer in the range `1..3`.
+
+  ### Returns
+
+  * A `t:Date.Range.t/0` spanning the requested quadrimester, or
+
+  * `{:error, :invalid_date}` for a quadrimester outside `1..3`.
+
+  ### Examples
+
+      iex> Calendrical.Julian.quadrimester(2025, 2)
+      Date.range(~D[2025-05-01 Calendrical.Julian], ~D[2025-08-31 Calendrical.Julian])
+
+  """
+  @spec quadrimester(year, Calendrical.quadrimester()) ::
+          Date.Range.t() | {:error, :not_defined | :invalid_date}
+  @impl Calendrical
+  def quadrimester(year, quadrimester) do
+    Calendrical.Period.date_range(__MODULE__, year, quadrimester, 4)
+  end
+
+  @doc """
+  Returns a `t:Date.Range.t/0` representing a given semester
+  (half) of a Julian year.
+
+  ### Arguments
+
+  * `year` is any non-zero Julian year as an integer.
+
+  * `semester` is an integer in the range `1..2`.
+
+  ### Returns
+
+  * A `t:Date.Range.t/0` spanning the requested semester, or
+
+  * `{:error, :invalid_date}` for a semester outside `1..2`.
+
+  ### Examples
+
+      iex> Calendrical.Julian.semester(2025, 2)
+      Date.range(~D[2025-07-01 Calendrical.Julian], ~D[2025-12-31 Calendrical.Julian])
+
+  """
+  @spec semester(year, Calendrical.semester()) ::
+          Date.Range.t() | {:error, :not_defined | :invalid_date}
+  @impl Calendrical
+  def semester(year, semester) do
+    Calendrical.Period.date_range(__MODULE__, year, semester, 6)
+  end
+
+  @doc """
   Returns a `t:Date.Range.t/0` representing a given Julian
   year-and-month.
 

@@ -193,7 +193,6 @@ defmodule Calendrical.Behaviour do
       @behaviour Calendrical
 
       @days_in_week unquote(days_in_week)
-      @quarters_in_year 4
 
       @epoch unquote(epoch_iso_days)
       @epoch_day_of_week unquote(epoch_day_of_week)
@@ -370,15 +369,16 @@ defmodule Calendrical.Behaviour do
     quote location: :keep do
       @doc """
       Returns the quarter of the year from the given
-      `year`, `month`, and `day`.
+      `year`, `month`, and `day`: the quarter `quarter/2` puts the
+      month in.
 
       """
       @spec quarter_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
-              Calendrical.quarter()
+              Calendrical.quarter() | {:error, :invalid_date}
 
       @impl true
-      def quarter_of_year(year, month, day) do
-        ceil(month / (months_in_year(year) / @quarters_in_year))
+      def quarter_of_year(year, month, _day) do
+        Calendrical.Period.period_number_of_month(__MODULE__, year, month, 3)
       end
 
       @doc """
@@ -714,13 +714,39 @@ defmodule Calendrical.Behaviour do
 
       @doc """
       Returns a `t:Date.Range.t/0` representing
-      a given quarter of a year.
+      a given quarter of a year: three of its traditional months, a
+      leap month in the quarter of the month it repeats and a month
+      beyond the twelfth in the last quarter.
 
       """
       @impl true
 
-      def quarter(_year, _quarter) do
-        {:error, :not_defined}
+      def quarter(year, quarter) do
+        Calendrical.Period.date_range(__MODULE__, year, quarter, 3)
+      end
+
+      @doc """
+      Returns a `t:Date.Range.t/0` representing
+      a given quadrimester (third) of a year: four of its traditional
+      months, placed as `quarter/2` places them.
+
+      """
+      @impl true
+
+      def quadrimester(year, quadrimester) do
+        Calendrical.Period.date_range(__MODULE__, year, quadrimester, 4)
+      end
+
+      @doc """
+      Returns a `t:Date.Range.t/0` representing
+      a given semester (half) of a year: six of its traditional
+      months, placed as `quarter/2` places them.
+
+      """
+      @impl true
+
+      def semester(year, semester) do
+        Calendrical.Period.date_range(__MODULE__, year, semester, 6)
       end
 
       @doc """

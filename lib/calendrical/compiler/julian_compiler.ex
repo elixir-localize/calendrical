@@ -129,8 +129,18 @@ defmodule Calendrical.Julian.Compiler do
         end
       end
 
+      # Quarters, quadrimesters and semesters count months from the start of
+      # the year, as `month/2` and `quarter_of_year/3` do.
       def quarter(year, quarter) do
-        {:error, :not_defined}
+        Calendrical.Period.date_range(__MODULE__, year, quarter, 3)
+      end
+
+      def quadrimester(year, quadrimester) do
+        Calendrical.Period.date_range(__MODULE__, year, quadrimester, 4)
+      end
+
+      def semester(year, semester) do
+        Calendrical.Period.date_range(__MODULE__, year, semester, 6)
       end
 
       # `month/2` counts months from the start of the year: month 1 runs from

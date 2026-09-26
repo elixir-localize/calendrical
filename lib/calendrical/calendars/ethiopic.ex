@@ -21,12 +21,6 @@ defmodule Calendrical.Ethiopic do
 
   alias Calendrical.Base.Egyptian
 
-  # Ethiopic does not define quarters; quarter_of_year/3 returns
-  # `{:error, :not_defined}` rather than a non_neg_integer.
-  @dialyzer [
-    {:nowarn_function, quarter_of_year: 3}
-  ]
-
   @type year :: -9999..-1 | 1..9999
   @type month :: 1..13
   @type day :: 1..30
@@ -149,9 +143,9 @@ defmodule Calendrical.Ethiopic do
   end
 
   @doc """
-  Returns `{:error, :not_defined}` because the Ethiopic calendar
-  does not define quarters; the year has 13 months and so does not
-  divide evenly into four quarters.
+  Returns the quarter of the Ethiopic year that holds the given
+  `year`, `month`, and `day`: three months each, with the thirteenth
+  month (Pagume) in the fourth.
 
   ### Arguments
 
@@ -163,17 +157,22 @@ defmodule Calendrical.Ethiopic do
 
   ### Returns
 
-  * `{:error, :not_defined}`.
+  * The quarter, `1..4`, or
+
+  * `{:error, :invalid_date}` for a month the year does not have.
 
   ### Examples
 
       iex> Calendrical.Ethiopic.quarter_of_year(2018, 1, 1)
-      {:error, :not_defined}
+      1
+
+      iex> Calendrical.Ethiopic.quarter_of_year(2018, 13, 1)
+      4
 
   """
   @impl true
-  def quarter_of_year(_year, _month, _day) do
-    {:error, :not_defined}
+  def quarter_of_year(year, month, _day) do
+    Calendrical.Period.period_number_of_month(__MODULE__, year, month, 3)
   end
 
   @doc """

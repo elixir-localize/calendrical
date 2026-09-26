@@ -22,12 +22,6 @@ defmodule Calendrical.Coptic do
 
   alias Calendrical.Base.Egyptian
 
-  # Coptic does not define quarters; quarter_of_year/3 returns
-  # `{:error, :not_defined}` rather than a non_neg_integer.
-  @dialyzer [
-    {:nowarn_function, quarter_of_year: 3}
-  ]
-
   @type year :: -9999..-1 | 1..9999
   @type month :: 1..13
   @type day :: 1..30
@@ -150,9 +144,9 @@ defmodule Calendrical.Coptic do
   end
 
   @doc """
-  Returns `{:error, :not_defined}` because the Coptic calendar
-  does not define quarters; the year has 13 months and so does not
-  divide evenly into four quarters.
+  Returns the quarter of the Coptic year that holds the given
+  `year`, `month`, and `day`: three months each, with the thirteenth
+  month (the epagomenal days) in the fourth.
 
   ### Arguments
 
@@ -164,17 +158,22 @@ defmodule Calendrical.Coptic do
 
   ### Returns
 
-  * `{:error, :not_defined}`.
+  * The quarter, `1..4`, or
+
+  * `{:error, :invalid_date}` for a month the year does not have.
 
   ### Examples
 
       iex> Calendrical.Coptic.quarter_of_year(1742, 1, 1)
-      {:error, :not_defined}
+      1
+
+      iex> Calendrical.Coptic.quarter_of_year(1742, 13, 1)
+      4
 
   """
   @impl true
-  def quarter_of_year(_year, _month, _day) do
-    {:error, :not_defined}
+  def quarter_of_year(year, month, _day) do
+    Calendrical.Period.period_number_of_month(__MODULE__, year, month, 3)
   end
 
   @doc """
