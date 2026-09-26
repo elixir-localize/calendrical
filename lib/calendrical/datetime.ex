@@ -38,10 +38,13 @@ defmodule Calendrical.DateTime do
     merging the date and time fields, with only what the input
     actually supplied (so `"May 5, 11:30 AM"` yields
     `%{month: 5, day: 5, hour: 11, minute: 30, calendar: …}`
-    — no year, no second, no microsecond). When the time half
-    carries a zone marker the map also includes `:time_zone`
-    (and, for ISO inputs with a resolvable offset, the four
-    `DateTime` zone fields).
+    — no year, no second, no microsecond). A zone adds the
+    four `t:DateTime.t/0` zone fields (`:time_zone`,
+    `:utc_offset`, `:std_offset` and `:zone_abbr`) as the
+    struct form resolves them: a fixed offset always, and a
+    named zone when the input gives the full date its offset
+    depends on; otherwise `:time_zone` holds the zone as
+    written.
 
   ### Returns
 
@@ -73,6 +76,10 @@ defmodule Calendrical.DateTime do
 
       iex> Calendrical.DateTime.parse("May 5, 11:30 AM", locale: :en, as: :map)
       {:ok, %{calendar: Calendar.ISO, month: 5, day: 5, hour: 11, minute: 30}}
+
+      iex> {:ok, map} = Calendrical.DateTime.parse("May 5, 11:30 AM GMT+5", locale: :en, as: :map)
+      iex> Map.take(map, [:hour, :time_zone, :utc_offset])
+      %{hour: 11, time_zone: "Etc/UTC", utc_offset: 18000}
 
   """
   @spec parse(String.t(), Keyword.t()) ::
