@@ -174,7 +174,7 @@ defmodule Calendrical.MixProject do
 
   defp deps do
     [
-      {:localize, "~> 1.4"},
+      {:localize, github: "elixir-localize/calendrical", branch: "main"},
       {:astro, "~> 2.7"},
       {:tz_world, "~> 2.3", optional: true},
       {:tz, "~> 0.26", optional: true},
