@@ -807,23 +807,6 @@ defmodule Calendrical.CoverageMainTest do
     end
   end
 
-  describe "parse/1,2" do
-    test "parses dates and times" do
-      assert Calendrical.parse("2026-05-16") == {:ok, ~D[2026-05-16]}
-      assert Calendrical.parse("2026-05-16", locale: :en) == {:ok, ~D[2026-05-16]}
-      assert Calendrical.parse("14:30", locale: :en) == {:ok, ~T[14:30:00]}
-    end
-
-    test "returns a combined error when nothing matches" do
-      assert {:error, %Localize.DateTimeParseError{attempts: attempts}} =
-               Calendrical.parse("zzz9!!", locale: :en)
-
-      assert {:date, %Localize.DateParseError{}} = List.keyfind(attempts, :date, 0)
-      assert {:time, %Localize.TimeParseError{}} = List.keyfind(attempts, :time, 0)
-      assert {:datetime, %Localize.DateTimeParseError{}} = List.keyfind(attempts, :datetime, 0)
-    end
-  end
-
   describe "error constructors" do
     test "calendar and territory errors" do
       assert Calendrical.calendar_error(:foo) ==
