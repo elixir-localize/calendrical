@@ -739,20 +739,20 @@ defmodule Calendrical.Vietnamese do
   ### Examples
 
       # Y4662 (= AD 2025) has an intercalary 6th month
-      iex> Calendrical.Vietnamese.ordinal_month(4662, {6, :leap})
+      iex> Calendrical.Vietnamese.ordinal_month_from_traditional(4662, {6, :leap})
       {:ok, 7}
 
-      iex> Calendrical.Vietnamese.ordinal_month(4662, 7)
+      iex> Calendrical.Vietnamese.ordinal_month_from_traditional(4662, 7)
       {:ok, 8}
 
-      iex> Calendrical.Vietnamese.ordinal_month(4661, {6, :leap})
+      iex> Calendrical.Vietnamese.ordinal_month_from_traditional(4661, {6, :leap})
       {:error, :invalid_leap_month}
 
   """
-  @spec ordinal_month(Calendar.year(), Lunisolar.lunar_month()) ::
+  @spec ordinal_month_from_traditional(Calendar.year(), Lunisolar.lunar_month()) ::
           {:ok, Calendar.month()} | {:error, :invalid_month | :invalid_leap_month}
-  def ordinal_month(year, lunar_month) do
-    Lunisolar.ordinal_month(year, lunar_month, epoch(), &location/1)
+  def ordinal_month_from_traditional(year, lunar_month) do
+    Lunisolar.ordinal_month_from_traditional(year, lunar_month, epoch(), &location/1)
   end
 
   @doc """

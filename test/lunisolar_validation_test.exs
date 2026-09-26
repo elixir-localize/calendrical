@@ -136,7 +136,7 @@ defmodule Calendrical.LunisolarValidation.Test do
     end
   end
 
-  describe "ordinal_month/2" do
+  describe "ordinal_month_from_traditional/2" do
     for calendar <- @lunisolar do
       test "#{inspect(calendar)} agrees with the month new/3 builds" do
         calendar = unquote(calendar)
@@ -145,10 +145,12 @@ defmodule Calendrical.LunisolarValidation.Test do
             lunar_month <- Enum.to_list(1..12) ++ for(month <- 1..12, do: {month, :leap}) do
           case calendar.new(year, lunar_month, 1) do
             {:ok, date} ->
-              assert calendar.ordinal_month(year, lunar_month) == {:ok, date.month}
+              assert calendar.ordinal_month_from_traditional(year, lunar_month) ==
+                       {:ok, date.month}
 
             {:error, _} ->
-              assert {:error, :invalid_leap_month} = calendar.ordinal_month(year, lunar_month)
+              assert {:error, :invalid_leap_month} =
+                       calendar.ordinal_month_from_traditional(year, lunar_month)
           end
         end
       end
@@ -156,10 +158,12 @@ defmodule Calendrical.LunisolarValidation.Test do
 
     test "anything but a traditional month is not one" do
       for lunar_month <- [0, 13, {0, :leap}, {13, :leap}, :first, "1"] do
-        assert {:error, :invalid_month} = Calendrical.Chinese.ordinal_month(4662, lunar_month)
+        assert {:error, :invalid_month} =
+                 Calendrical.Chinese.ordinal_month_from_traditional(4662, lunar_month)
       end
 
-      assert {:error, :invalid_month} = Calendrical.Chinese.ordinal_month("4662", 1)
+      assert {:error, :invalid_month} =
+               Calendrical.Chinese.ordinal_month_from_traditional("4662", 1)
     end
   end
 

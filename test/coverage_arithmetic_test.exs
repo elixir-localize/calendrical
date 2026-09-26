@@ -132,11 +132,15 @@ defmodule CoverageArithmeticTest do
       assert range.last == ~D[1743-13-06 Calendrical.Coptic]
     end
 
-    test "quarter functions are not defined for 13-month calendars" do
-      assert Ethiopic.quarter(2018, 1) == {:error, :not_defined}
+    test "quarters are defined for 13-month calendars, the thirteenth month in the fourth" do
+      assert %Date.Range{} = Ethiopic.quarter(2018, 1)
+      assert Ethiopic.quarter_of_year(2018, 5, 1) == 2
+      assert Coptic.quarter_of_year(1742, 5, 1) == 2
+      assert Coptic.quarter_of_year(1742, 13, 1) == 4
+    end
+
+    test "ISO weeks are not defined for 13-month calendars" do
       assert Ethiopic.week(2018, 1) == {:error, :not_defined}
-      assert Ethiopic.quarter_of_year(2018, 5, 1) == {:error, :not_defined}
-      assert Coptic.quarter_of_year(1742, 5, 1) == {:error, :not_defined}
       assert Ethiopic.iso_week_of_year(2018, 5, 1) == {:error, :not_defined}
       assert Ethiopic.week_of_month(2018, 5, 1) == {:error, :not_defined}
     end

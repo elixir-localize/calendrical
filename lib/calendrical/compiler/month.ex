@@ -487,6 +487,26 @@ defmodule Calendrical.Compiler.Month do
 
       @doc """
       Returns a `t:Date.Range` representing
+      a given quadrimester (third) of a year.
+
+      """
+      @impl true
+      def quadrimester(year, quadrimester) do
+        Calendrical.Period.date_range(__MODULE__, year, quadrimester, 4)
+      end
+
+      @doc """
+      Returns a `t:Date.Range` representing
+      a given semester (half) of a year.
+
+      """
+      @impl true
+      def semester(year, semester) do
+        Calendrical.Period.date_range(__MODULE__, year, semester, 6)
+      end
+
+      @doc """
+      Returns a `t:Date.Range` representing
       a given month of a year.
 
       """

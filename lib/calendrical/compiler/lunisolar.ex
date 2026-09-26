@@ -155,11 +155,13 @@ defmodule Calendrical.Lunisolar do
 
   @doc false
   # The ordinal month of a traditional month in `year`, as `{:ok, month}`.
-  def ordinal_month(year, lunar_month, epoch, location_fun) when is_integer(year) do
+  def ordinal_month_from_traditional(year, lunar_month, epoch, location_fun)
+      when is_integer(year) do
     traditional_to_ordinal(lunar_month, leap_month(year, epoch, location_fun))
   end
 
-  def ordinal_month(_year, _lunar_month, _epoch, _location_fun), do: {:error, :invalid_month}
+  def ordinal_month_from_traditional(_year, _lunar_month, _epoch, _location_fun),
+    do: {:error, :invalid_month}
 
   # A leap month repeats the number of the month before it, so the months
   # from it on number one fewer than their ordinal: with a leap month at

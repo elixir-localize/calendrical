@@ -30,7 +30,7 @@ defmodule Calendrical.Hebrew do
   (and the `monthCode` of JavaScript's Temporal): *Tishri* is 1 and
   *Elul* 12, 6 is *Adar* in an ordinary year and *Adar II* in a leap
   year, and *Adar I* is `{5, :leap}`, the leap month that follows month
-  5. `ordinal_month/2` finds a traditional month's position in a year
+  5. `ordinal_month_from_traditional/2` finds a traditional month's position in a year
   and `lunar_month_of_year/2` goes the other way.
 
   | Month | Ordinary year | Leap year | Traditional | Days |
@@ -75,11 +75,6 @@ defmodule Calendrical.Hebrew do
     months_in_ordinary_year: 12,
     months_in_leap_year: 13,
     first_day_of_week: 7
-
-  # Quarters are not defined for a 12/13-month lunisolar calendar.
-  @dialyzer [
-    {:nowarn_function, quarter_of_year: 3}
-  ]
 
   @type year :: pos_integer()
   @type month :: 1..13
@@ -263,9 +258,10 @@ defmodule Calendrical.Hebrew do
   end
 
   @doc """
-  Returns `{:error, :not_defined}` because the Hebrew calendar does
-  not define quarters; the year has a variable number of months
-  (12 or 13) and so does not divide evenly into four quarters.
+  Returns the quarter of the Hebrew year that holds the given
+  `year`, `month`, and `day`. The quarters follow the traditional
+  months (Tishri–Kislev, Tevet–Adar, Nisan–Sivan, Tammuz–Elul), so a
+  leap year's Adar I and Adar II are both in the second.
 
   ### Arguments
 
@@ -277,17 +273,22 @@ defmodule Calendrical.Hebrew do
 
   ### Returns
 
-  * `{:error, :not_defined}`.
+  * The quarter, `1..4`, or
+
+  * `{:error, :invalid_date}` for a month the year does not have.
 
   ### Examples
 
       iex> Calendrical.Hebrew.quarter_of_year(5785, 1, 1)
-      {:error, :not_defined}
+      1
+
+      iex> Calendrical.Hebrew.quarter_of_year(5787, 7, 1)
+      2
 
   """
   @impl true
-  def quarter_of_year(_year, _month, _day) do
-    {:error, :not_defined}
+  def quarter_of_year(year, month, _day) do
+    Calendrical.Period.period_number_of_month(__MODULE__, year, month, 3)
   end
 
   @doc """
@@ -705,40 +706,42 @@ defmodule Calendrical.Hebrew do
   ### Examples
 
       # Nisan is the 7th month of an ordinary year and the 8th of a leap year
-      iex> Calendrical.Hebrew.ordinal_month(5785, 7)
+      iex> Calendrical.Hebrew.ordinal_month_from_traditional(5785, 7)
       {:ok, 7}
 
-      iex> Calendrical.Hebrew.ordinal_month(5784, 7)
+      iex> Calendrical.Hebrew.ordinal_month_from_traditional(5784, 7)
       {:ok, 8}
 
-      iex> Calendrical.Hebrew.ordinal_month(5784, {5, :leap})
+      iex> Calendrical.Hebrew.ordinal_month_from_traditional(5784, {5, :leap})
       {:ok, 6}
 
-      iex> Calendrical.Hebrew.ordinal_month(5785, {5, :leap})
+      iex> Calendrical.Hebrew.ordinal_month_from_traditional(5785, {5, :leap})
       {:error, :invalid_leap_month}
 
   """
-  @spec ordinal_month(Calendar.year(), traditional_month()) ::
+  @spec ordinal_month_from_traditional(Calendar.year(), traditional_month()) ::
           {:ok, Calendar.month()} | {:error, :invalid_month | :invalid_leap_month}
-  def ordinal_month(year, month) when is_integer(year) and is_integer(month) and month in 1..12 do
+  def ordinal_month_from_traditional(year, month)
+      when is_integer(year) and is_integer(month) and month in 1..12 do
     if month > @traditional_leap_month and leap_year?(year),
       do: {:ok, month + 1},
       else: {:ok, month}
   end
 
-  def ordinal_month(year, {@traditional_leap_month, :leap}) when is_integer(year) do
+  def ordinal_month_from_traditional(year, {@traditional_leap_month, :leap})
+      when is_integer(year) do
     if leap_year?(year), do: {:ok, @leap_month}, else: {:error, :invalid_leap_month}
   end
 
-  def ordinal_month(year, {_month, :leap}) when is_integer(year),
+  def ordinal_month_from_traditional(year, {_month, :leap}) when is_integer(year),
     do: {:error, :invalid_leap_month}
 
-  def ordinal_month(_year, _month), do: {:error, :invalid_month}
+  def ordinal_month_from_traditional(_year, _month), do: {:error, :invalid_month}
 
   @doc """
   Returns the traditional month of a Hebrew date.
 
-  The traditional numbering is described in `ordinal_month/2`.
+  The traditional numbering is described in `ordinal_month_from_traditional/2`.
 
   ### Arguments
 
@@ -771,7 +774,7 @@ defmodule Calendrical.Hebrew do
   @doc """
   Returns the traditional month at a position in a Hebrew year.
 
-  This is the inverse of `ordinal_month/2`, which describes the
+  This is the inverse of `ordinal_month_from_traditional/2`, which describes the
   traditional numbering.
 
   ### Arguments

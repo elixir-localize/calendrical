@@ -162,6 +162,18 @@ defmodule Calendrical do
   @type quarter :: 1..4
 
   @typedoc """
+  Specifies the quadrimester (third) of year for a calendar date.
+
+  """
+  @type quadrimester :: 1..3
+
+  @typedoc """
+  Specifies the semester (half) of year for a calendar date.
+
+  """
+  @type semester :: 1..2
+
+  @typedoc """
   Specifies the week of year for a calendar date.
 
   """
@@ -447,6 +459,22 @@ defmodule Calendrical do
 
   """
   @callback quarter(year :: year(), quarter :: Calendrical.quarter()) ::
+              Date.Range.t() | {:error, :not_defined | :invalid_date}
+
+  @doc """
+  Returns a date range representing the days in a
+  given quadrimester (third) of a calendar year.
+
+  """
+  @callback quadrimester(year :: year(), quadrimester :: Calendrical.quadrimester()) ::
+              Date.Range.t() | {:error, :not_defined | :invalid_date}
+
+  @doc """
+  Returns a date range representing the days in a
+  given semester (half) of a calendar year.
+
+  """
+  @callback semester(year :: year(), semester :: Calendrical.semester()) ::
               Date.Range.t() | {:error, :not_defined | :invalid_date}
 
   @doc """

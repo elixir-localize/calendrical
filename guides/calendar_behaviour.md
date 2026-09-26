@@ -151,7 +151,7 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 
 | Callback | Default behaviour |
 |---|---|
-| `quarter_of_year/3` | Returns `ceil(month / (months_in_year(year) / 4))`. **Override** with `{:error, :not_defined}` for calendars that don't define quarters (Coptic, Ethiopic, Hebrew). |
+| `quarter_of_year/3` | Returns the quarter `quarter/2` puts the month in, so the two always agree. |
 | `month_of_year/3` | Returns the month unchanged. **Override** when CLDR names a month by a number other than its position: return that number, or `{month, :leap}` for a leap month, so that `Calendrical.localize/3` finds its name (Hebrew returns CLDR's number and `{7, :leap}` for Adar II; the lunisolar calendars return the traditional month). |
 | `week_of_year/3` | Returns `{:error, :not_defined}`. **Override** for calendars that define weeks of the year. |
 | `iso_week_of_year/3` | Returns `{:error, :not_defined}`. |
@@ -176,7 +176,9 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 | Callback | Default behaviour |
 |---|---|
 | `year/1` | Returns a `Date.Range` covering 1 January (or the first valid month/day) through the last day of `months_in_year(year)`. |
-| `quarter/2` | Returns `{:error, :not_defined}`. |
+| `quarter/2` | Returns three of the year's twelve traditional months, from the first day of the first month's `month/2` range to the last day of the last. A calendar with leap months places them through `ordinal_month_from_traditional/2`, so a leap month falls in the quarter of the month it repeats (Hebrew Adar I in the second); a month beyond the twelfth (the Coptic and Ethiopic epagomenal month) falls in the fourth. |
+| `quadrimester/2` | Returns four traditional months, placed as `quarter/2` places them. |
+| `semester/2` | Returns six traditional months, placed as `quarter/2` places them. |
 | `month/2` | Returns a `Date.Range` covering the first to last day of the given month. |
 | `week/2` | Returns `{:error, :not_defined}`. |
 
@@ -292,9 +294,6 @@ defmodule MyApp.MyCoptic do
 
   @impl true
   def days_in_year(year), do: if(leap_year?(year), do: 366, else: 365)
-
-  @impl true
-  def quarter_of_year(_year, _month, _day), do: {:error, :not_defined}
 
   @impl true
   def day_of_week(year, month, day, :default) do

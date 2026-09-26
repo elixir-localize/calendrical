@@ -35,11 +35,6 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
     months_in_leap_year: 13,
     first_day_of_week: 7
 
-  # The 13-month Ethiopic year does not define quarters.
-  @dialyzer [
-    {:nowarn_function, quarter_of_year: 3}
-  ]
-
   @type year :: integer()
   @type month :: 1..13
   @type day :: 1..30
@@ -264,9 +259,9 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
   end
 
   @doc """
-  Returns `{:error, :not_defined}` because the Ethiopic calendar
-  does not define quarters; the year has 13 months and so does not
-  divide evenly into four quarters.
+  Returns the quarter of the Amete Alem year that holds the given
+  `year`, `month`, and `day`: three months each, with the thirteenth
+  month (Pagume) in the fourth.
 
   ### Arguments
 
@@ -278,16 +273,23 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
 
   ### Returns
 
-  * `{:error, :not_defined}`.
+  * The quarter, `1..4`, or
+
+  * `{:error, :invalid_date}` for a month the year does not have.
 
   ### Examples
 
       iex> Calendrical.Ethiopic.AmeteAlem.quarter_of_year(7518, 1, 1)
-      {:error, :not_defined}
+      1
+
+      iex> Calendrical.Ethiopic.AmeteAlem.quarter_of_year(7518, 13, 1)
+      4
 
   """
   @impl true
-  def quarter_of_year(_year, _month, _day), do: {:error, :not_defined}
+  def quarter_of_year(year, month, _day) do
+    Calendrical.Period.period_number_of_month(__MODULE__, year, month, 3)
+  end
 
   @doc """
   Returns whether the given `year`, `month`, and `day` form a valid

@@ -18,7 +18,9 @@ The format is based on
 
 ### Added
 
-* `Calendrical.Hebrew.ordinal_month/2`, `lunar_month_of_year/1,2`, `leap_month/1` and `traditional_leap_month/1` convert between a Hebrew month's position and its RFC 7529 traditional month (Adar I is `{5, :leap}`), as the lunisolar calendars do.
+* Every calendar has quarters, and new `quadrimester/2` and `semester/2` callbacks (with `Calendrical.Interval.quadrimester/3` and `semester/3`): runs of 3, 4 or 6 traditional months, a leap month with the month it repeats (Hebrew Adar I in the second quarter) and a thirteenth month in the last period (Coptic, Ethiopic).
+
+* `Calendrical.Hebrew.ordinal_month_from_traditional/2`, `lunar_month_of_year/1,2`, `leap_month/1` and `traditional_leap_month/1` convert between a Hebrew month's position and its RFC 7529 traditional month (Adar I is `{5, :leap}`), as the lunisolar calendars do.
 
 * `Calendrical.Vietnamese` — the Chinese lunisolar calendar observed from the 105° East (Hanoi) meridian, so Tết diverges from the Chinese New Year in 1985 (by a month), 2007, 2030 and 2053. It borrows the `:chinese` CLDR type, and `vi-u-ca-chinese` (or `Preference.calendar_from_territory(:VN, :chinese)`) resolves to it rather than `Calendrical.Chinese`.
 
@@ -32,9 +34,11 @@ The format is based on
 
 * `Calendrical.iso_days/4` validates a year, month and day in a calendar and returns its ISO day number in one step; the lunisolar calendars answer it through their own `iso_days/3` from a single computation of the lunar year.
 
-* `ordinal_month/2` on the Chinese, Korean, Vietnamese and Lunar Japanese calendars returns the ordinal month of a traditional month (`{month, :leap}` included), and their `days_in_month/1` returns `{:ambiguous, 29..30}`.
+* `ordinal_month_from_traditional/2` on the Chinese, Korean, Vietnamese and Lunar Japanese calendars returns the ordinal month of a traditional month (`{month, :leap}` included), and their `days_in_month/1` returns `{:ambiguous, 29..30}`.
 
 ### Changed
+
+* `quarter_of_year/3` returns the quarter `quarter/2` puts the month in, so the Hebrew, Coptic and Ethiopic calendars answer it rather than returning `{:error, :not_defined}`.
 
 * Requires Localize 1.4, which names months through the calendar's `month_of_year/3` as the Hebrew month positions need.
 

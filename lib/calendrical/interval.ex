@@ -111,6 +111,74 @@ defmodule Calendrical.Interval do
   end
 
   @doc """
+  Returns a `t:Date.Range.t/0` that represents the `quadrimester`
+  (third of the year).
+
+  The range is enumerable.
+
+  ### Arguments
+
+  * `year` is any `year` for `calendar`.
+
+  * `quadrimester` is `1`, `2` or `3`.
+
+  * `calendar` is any module that implements the `Calendar` and `Calendrical`
+    behaviours. The default is `Calendrical.Gregorian`.
+
+  ### Returns
+
+  * A `t:Date.Range.t/0` representing the enumerable days in the
+    `quadrimester`, or
+
+  * `{:error, reason}` when the calendar has no such quadrimester.
+
+  ### Examples
+
+      iex> Calendrical.Interval.quadrimester 2026, 2
+      Date.range(~D[2026-05-01 Calendrical.Gregorian], ~D[2026-08-31 Calendrical.Gregorian])
+
+  """
+  @spec quadrimester(Calendar.year(), Calendrical.quadrimester(), Calendrical.calendar()) ::
+          Date.Range.t() | {:error, :not_defined | :invalid_date}
+  def quadrimester(year, quadrimester, calendar \\ Calendrical.Gregorian) do
+    calendar.quadrimester(year, quadrimester)
+  end
+
+  @doc """
+  Returns a `t:Date.Range.t/0` that represents the `semester`
+  (half of the year).
+
+  The range is enumerable.
+
+  ### Arguments
+
+  * `year` is any `year` for `calendar`.
+
+  * `semester` is `1` or `2`.
+
+  * `calendar` is any module that implements the `Calendar` and `Calendrical`
+    behaviours. The default is `Calendrical.Gregorian`.
+
+  ### Returns
+
+  * A `t:Date.Range.t/0` representing the enumerable days in the
+    `semester`, or
+
+  * `{:error, reason}` when the calendar has no such semester.
+
+  ### Examples
+
+      iex> Calendrical.Interval.semester 2026, 2
+      Date.range(~D[2026-07-01 Calendrical.Gregorian], ~D[2026-12-31 Calendrical.Gregorian])
+
+  """
+  @spec semester(Calendar.year(), Calendrical.semester(), Calendrical.calendar()) ::
+          Date.Range.t() | {:error, :not_defined | :invalid_date}
+  def semester(year, semester, calendar \\ Calendrical.Gregorian) do
+    calendar.semester(year, semester)
+  end
+
+  @doc """
   Returns a `t:Date.Range.t/0` that represents the `month`.
 
   The range is enumerable.

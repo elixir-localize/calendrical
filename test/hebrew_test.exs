@@ -233,8 +233,12 @@ defmodule Calendrical.HebrewTest do
   end
 
   describe "quarter_of_year/3" do
-    test "is not defined" do
-      assert Hebrew.quarter_of_year(5785, 1, 1) == {:error, :not_defined}
+    test "follows the traditional months, Adar I and Adar II in the second quarter" do
+      assert Hebrew.quarter_of_year(5785, 1, 1) == 1
+      # 5787 is a leap year: Adar I is position 6, Adar II 7 and Nisan 8.
+      assert Hebrew.quarter_of_year(5787, 6, 1) == 2
+      assert Hebrew.quarter_of_year(5787, 7, 1) == 2
+      assert Hebrew.quarter_of_year(5787, 8, 1) == 3
     end
   end
 
@@ -242,22 +246,24 @@ defmodule Calendrical.HebrewTest do
     test "a traditional month names the same month in every year" do
       # Nisan is traditional month 7: the 7th month of an ordinary year and
       # the 8th of a leap year
-      assert Hebrew.ordinal_month(5785, 7) == {:ok, 7}
-      assert Hebrew.ordinal_month(5784, 7) == {:ok, 8}
+      assert Hebrew.ordinal_month_from_traditional(5785, 7) == {:ok, 7}
+      assert Hebrew.ordinal_month_from_traditional(5784, 7) == {:ok, 8}
 
       # Adar is traditional month 6, which is Adar II in a leap year
-      assert Hebrew.ordinal_month(5785, 6) == {:ok, 6}
-      assert Hebrew.ordinal_month(5784, 6) == {:ok, 7}
+      assert Hebrew.ordinal_month_from_traditional(5785, 6) == {:ok, 6}
+      assert Hebrew.ordinal_month_from_traditional(5784, 6) == {:ok, 7}
 
       # Adar I is the leap month that follows traditional month 5
-      assert Hebrew.ordinal_month(5784, {5, :leap}) == {:ok, 6}
-      assert Hebrew.ordinal_month(5785, {5, :leap}) == {:error, :invalid_leap_month}
+      assert Hebrew.ordinal_month_from_traditional(5784, {5, :leap}) == {:ok, 6}
+
+      assert Hebrew.ordinal_month_from_traditional(5785, {5, :leap}) ==
+               {:error, :invalid_leap_month}
     end
 
-    test "ordinal_month/2 and lunar_month_of_year/2 are inverses over every month" do
+    test "ordinal_month_from_traditional/2 and lunar_month_of_year/2 are inverses over every month" do
       for year <- 5780..5800, month <- 1..Hebrew.months_in_year(year) do
         traditional = Hebrew.lunar_month_of_year(year, month)
-        assert Hebrew.ordinal_month(year, traditional) == {:ok, month}
+        assert Hebrew.ordinal_month_from_traditional(year, traditional) == {:ok, month}
       end
     end
 
@@ -281,11 +287,11 @@ defmodule Calendrical.HebrewTest do
 
     test "invalid input is an error, never an exception" do
       for bad <- [nil, "", :"", 0, 13, {6, :leap}, {5, :other}, 1.0, %{}] do
-        assert {:error, _reason} = Hebrew.ordinal_month(5784, bad)
+        assert {:error, _reason} = Hebrew.ordinal_month_from_traditional(5784, bad)
       end
 
       for bad_year <- [nil, "", :"", 1.0] do
-        assert Hebrew.ordinal_month(bad_year, 1) == {:error, :invalid_month}
+        assert Hebrew.ordinal_month_from_traditional(bad_year, 1) == {:error, :invalid_month}
         assert Hebrew.lunar_month_of_year(bad_year, 1) == {:error, :invalid_month}
         assert Hebrew.leap_month(bad_year) == nil
         assert Hebrew.traditional_leap_month(bad_year) == nil

@@ -828,20 +828,20 @@ defmodule Calendrical.Korean do
   ### Examples
 
       # Y4358 (= AD 2025) has an intercalary 6th month (윤6월)
-      iex> Calendrical.Korean.ordinal_month(4358, {6, :leap})
+      iex> Calendrical.Korean.ordinal_month_from_traditional(4358, {6, :leap})
       {:ok, 7}
 
-      iex> Calendrical.Korean.ordinal_month(4358, 7)
+      iex> Calendrical.Korean.ordinal_month_from_traditional(4358, 7)
       {:ok, 8}
 
-      iex> Calendrical.Korean.ordinal_month(4357, {6, :leap})
+      iex> Calendrical.Korean.ordinal_month_from_traditional(4357, {6, :leap})
       {:error, :invalid_leap_month}
 
   """
-  @spec ordinal_month(Calendar.year(), Lunisolar.lunar_month()) ::
+  @spec ordinal_month_from_traditional(Calendar.year(), Lunisolar.lunar_month()) ::
           {:ok, Calendar.month()} | {:error, :invalid_month | :invalid_leap_month}
-  def ordinal_month(year, lunar_month) do
-    Lunisolar.ordinal_month(year, lunar_month, epoch(), &location/1)
+  def ordinal_month_from_traditional(year, lunar_month) do
+    Lunisolar.ordinal_month_from_traditional(year, lunar_month, epoch(), &location/1)
   end
 
   @doc """
