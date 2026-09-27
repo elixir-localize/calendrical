@@ -12,6 +12,7 @@ defmodule Calendrical.TimeZoneTest do
   doctest Calendrical.TimeZone
 
   @naive ~N[2026-07-05 12:00:00]
+  @winter ~N[2026-01-05 12:00:00]
 
   describe "resolve/3" do
     test "resolves an ISO 8601 offset" do
@@ -109,7 +110,7 @@ defmodule Calendrical.TimeZoneTest do
   describe "resolve/3 metazone names" do
     test "resolves a metazone name to its golden zone" do
       assert {:ok, %DateTime{time_zone: "America/Los_Angeles"}} =
-               Calendrical.TimeZone.resolve("Pacific Standard Time", @naive)
+               Calendrical.TimeZone.resolve("Pacific Standard Time", @winter)
 
       assert {:ok, %DateTime{time_zone: "Asia/Tokyo"}} =
                Calendrical.TimeZone.resolve("Japan Standard Time", @naive)
@@ -125,12 +126,12 @@ defmodule Calendrical.TimeZoneTest do
                Calendrical.TimeZone.resolve("Mitteleuropäische Zeit", @naive, locale: :de)
 
       assert {:ok, %DateTime{time_zone: "America/Toronto"}} =
-               Calendrical.TimeZone.resolve("Eastern Standard Time", @naive, locale: :"en-CA")
+               Calendrical.TimeZone.resolve("Eastern Standard Time", @winter, locale: :"en-CA")
     end
 
     test "falls back to the golden zone when the locale territory has no mapping" do
       assert {:ok, %DateTime{time_zone: "America/New_York"}} =
-               Calendrical.TimeZone.resolve("Eastern Standard Time", @naive, locale: :en)
+               Calendrical.TimeZone.resolve("Eastern Standard Time", @winter, locale: :en)
     end
 
     test "resolves a non-Latin metazone name" do
@@ -139,7 +140,67 @@ defmodule Calendrical.TimeZoneTest do
     end
   end
 
+  describe "resolve/3 standard and daylight names" do
+    test "a standard name keeps its own offset when the zone keeps daylight time" do
+      assert {:ok, datetime} = Calendrical.TimeZone.resolve("EST", @naive)
+      assert time_and_label(datetime) == {"2026-07-05 12:00:00-05:00", "EST"}
+
+      assert {:ok, datetime} = Calendrical.TimeZone.resolve("Eastern Standard Time", @naive)
+      assert time_and_label(datetime) == {"2026-07-05 12:00:00-05:00", "EST"}
+    end
+
+    test "a daylight name keeps its own offset when the zone keeps standard time" do
+      assert {:ok, datetime} = Calendrical.TimeZone.resolve("EDT", @winter)
+      assert time_and_label(datetime) == {"2026-01-05 12:00:00-04:00", "EDT"}
+
+      assert {:ok, datetime} =
+               Calendrical.TimeZone.resolve("Mitteleuropäische Sommerzeit", @winter, locale: :de)
+
+      assert time_and_label(datetime) == {"2026-01-05 12:00:00+02:00", "MESZ"}
+    end
+
+    test "is the zone's own time when the zone keeps it" do
+      assert {:ok, %DateTime{time_zone: "America/New_York", zone_abbr: "EST"}} =
+               Calendrical.TimeZone.resolve("EST", @winter)
+
+      assert {:ok, %DateTime{time_zone: "America/New_York", zone_abbr: "EDT"}} =
+               Calendrical.TimeZone.resolve("EDT", @naive)
+    end
+
+    test "a generic name follows the zone" do
+      assert {:ok, %DateTime{time_zone: "America/New_York", zone_abbr: "EDT"}} =
+               Calendrical.TimeZone.resolve("Eastern Time", @naive)
+    end
+
+    test "picks the zone's reading of an overlap that keeps the named time" do
+      assert {:ok, %DateTime{time_zone: "America/New_York", zone_abbr: "EST"}} =
+               Calendrical.TimeZone.resolve("EST", ~N[2026-11-01 01:30:00])
+
+      assert {:ok, %DateTime{time_zone: "America/New_York", zone_abbr: "EDT"}} =
+               Calendrical.TimeZone.resolve("EDT", ~N[2026-11-01 01:30:00])
+    end
+
+    test "keeps the wall clock given in a spring-forward gap" do
+      assert {:ok, datetime} = Calendrical.TimeZone.resolve("EST", ~N[2026-03-08 02:30:00])
+      assert time_and_label(datetime) == {"2026-03-08 02:30:00-05:00", "EST"}
+    end
+
+    test "reads daylight time as the zone's greater offset" do
+      # The time zone database may write Europe/Dublin's winter as a
+      # negative saving; Irish Standard Time is its summer time.
+      assert {:ok, datetime} = Calendrical.TimeZone.resolve("Irish Standard Time", @winter)
+      assert time_and_label(datetime) == {"2026-01-05 12:00:00+01:00", "+01:00"}
+
+      assert {:ok, %DateTime{time_zone: "Europe/Dublin", zone_abbr: "IST"}} =
+               Calendrical.TimeZone.resolve("Irish Standard Time", @naive)
+    end
+  end
+
   test "tz_database/0 returns the configured database module" do
     assert Calendrical.TimeZone.tz_database() == Tz.TimeZoneDatabase
   end
+
+  # The wall clock with its offset, and the label a fixed offset
+  # carries in place of a zone.
+  defp time_and_label(datetime), do: {to_string(datetime), datetime.zone_abbr}
 end

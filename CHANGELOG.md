@@ -54,6 +54,8 @@ The format is based on
 
 * `Calendrical.DateTime.parse/2` and `Calendrical.Time.parse/2` with `as: :map` give a fixed offset such as "GMT+5" the `DateTime` zone fields the struct form resolves, where the map kept `time_zone: "GMT+5"` with no offset; a named zone resolves too when the input gives its full date.
 
+* `Calendrical.TimeZone.resolve/3` keeps the offset of a name specific to standard or daylight time, as ICU parses it: "14:00 EST" in May is 14:00 at -05:00, a fixed offset labelled EST, where it became 14:00 EDT. A generic name ("Eastern Time") still follows the zone.
+
 * The parse functions try the input as given before stripping a leading weekday, so a month name that is also a weekday name (es "mar") keeps its month, and they accept format and stand-alone month names alike (ru "июль").
 
 * Dates with an era parse: CLDR's alternative era names made the regex of every pattern with an era fail to compile. Era and weekday names of another width are accepted where they name a single era or day.

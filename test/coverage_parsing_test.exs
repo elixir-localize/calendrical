@@ -588,6 +588,11 @@ defmodule Calendrical.CoverageParsingTest do
 
     test "zone abbreviation resolves to a DateTime" do
       assert {:ok, %DateTime{time_zone: "America/Los_Angeles", hour: 14, minute: 30}} =
+               Calendrical.DateTime.parse("May 16, 2026 2:30 PM PDT", locale: :en)
+    end
+
+    test "a standard-time abbreviation in summer keeps its own offset" do
+      assert {:ok, %DateTime{zone_abbr: "PST", utc_offset: -28_800, std_offset: 0, hour: 14}} =
                Calendrical.DateTime.parse("May 16, 2026 2:30 PM PST", locale: :en)
     end
 
@@ -934,8 +939,8 @@ defmodule Calendrical.CoverageParsingTest do
         assert Map.take(map, zone_fields) == Map.take(datetime, zone_fields)
       end
 
-      assert {:ok, %{time_zone: "America/Los_Angeles", utc_offset: -28_800}} =
-               Calendrical.DateTime.parse("May 16, 2026 2:30 PM PST", locale: :en, as: :map)
+      assert {:ok, %{time_zone: "America/Los_Angeles", utc_offset: -28_800, std_offset: 3600}} =
+               Calendrical.DateTime.parse("May 16, 2026 2:30 PM PDT", locale: :en, as: :map)
     end
 
     test "as: :map resolves a fixed offset when the date is partial, and keeps a named zone" do
