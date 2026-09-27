@@ -4305,22 +4305,67 @@ defmodule Calendrical do
     Localize.Calendar.known_calendars()
   end
 
-  # Calendars Calendrical implements for which CLDR/BCP 47 defines no
-  # calendar identifier. Localize stays strictly CLDR-compliant and never
-  # validates these, so Calendrical resolves them here, ahead of the CLDR
-  # lookup, keyed by the identifier used in the IXDTF `[u-ca=…]` suffix.
+  # Every calendar Calendrical implements that no CLDR calendar type
+  # resolves to: those with no CLDR/BCP 47 identifier (Julian and its
+  # year-start variants, the reform calendars, NRF, ISO week dates, and the
+  # Vietnamese and Japanese lunisolar calendars, which share CLDR's
+  # `chinese`), and `iso8601`, which CLDR does define, the Gregorian
+  # calendar with ISO 8601's week rules. Localize stays strictly
+  # CLDR-compliant and never validates most of these, so Calendrical
+  # resolves them here, ahead of the CLDR lookup. Each key is the IXDTF
+  # `[u-ca=…]` identifier as an atom, written with hyphens in the suffix
+  # (`julian_march25` is `[u-ca=julian-march25]`), as CLDR's
+  # `islamic_civil` is `islamic-civil`.
   @additional_calendars %{
-    julian: Calendrical.Julian
+    iso8601: Calendrical.ISO,
+    iso_week: Calendrical.ISOWeek,
+    julian: Calendrical.Julian,
+    julian_dec25: Calendrical.Julian.Dec25,
+    julian_jan1: Calendrical.Julian.Jan1,
+    julian_march1: Calendrical.Julian.March1,
+    julian_march25: Calendrical.Julian.March25,
+    julian_sept1: Calendrical.Julian.Sept1,
+    lunar_japanese: Calendrical.LunarJapanese,
+    nrf: Calendrical.NRF,
+    reform_england: Calendrical.Reform.England,
+    reform_japan: Calendrical.Reform.Japan,
+    reform_sweden: Calendrical.Reform.Sweden,
+    reform_sweden_transitional: Calendrical.Reform.Sweden.Transitional,
+    vietnamese: Calendrical.Vietnamese
   }
 
-  @doc """
-  Returns the non-CLDR calendars Calendrical resolves as a `%{atom => module}`
-  map, keyed by the identifier used in the IXDTF `[u-ca=…]` suffix.
+  @typedoc "The calendars `additional_calendars/0` returns, by IXDTF identifier."
+  @type additional_calendars :: %{
+          iso8601: Calendrical.ISO,
+          iso_week: Calendrical.ISOWeek,
+          julian: Calendrical.Julian,
+          julian_dec25: Calendrical.Julian.Dec25,
+          julian_jan1: Calendrical.Julian.Jan1,
+          julian_march1: Calendrical.Julian.March1,
+          julian_march25: Calendrical.Julian.March25,
+          julian_sept1: Calendrical.Julian.Sept1,
+          lunar_japanese: Calendrical.LunarJapanese,
+          nrf: Calendrical.NRF,
+          reform_england: Calendrical.Reform.England,
+          reform_japan: Calendrical.Reform.Japan,
+          reform_sweden: Calendrical.Reform.Sweden,
+          reform_sweden_transitional: Calendrical.Reform.Sweden.Transitional,
+          vietnamese: Calendrical.Vietnamese
+        }
 
-  These are calendars Calendrical implements for which CLDR/BCP 47 defines no
-  calendar identifier (currently `:julian`). They are resolved by
+  @doc """
+  Returns every calendar Calendrical implements that no CLDR calendar type
+  resolves to, as a `%{atom => module}` map keyed by its IXDTF `[u-ca=…]`
+  identifier.
+
+  Most have no CLDR/BCP 47 calendar identifier: Julian and its year-start
+  variants, the reform calendars, NRF, ISO week dates, and the Vietnamese and
+  Japanese lunisolar calendars, which CLDR files under `chinese`. `:iso8601`,
+  which CLDR does define, is the Gregorian calendar with ISO 8601's week
+  rules, `Calendrical.ISO`. The identifiers are resolved by
   `calendar_from_cldr_calendar_type/1` ahead of the CLDR lookup, so consumers
-  that keep to CLDR identifiers are unaffected.
+  that keep to CLDR identifiers are unaffected. An identifier is written with
+  hyphens in the suffix: `:julian_march25` is `[u-ca=julian-march25]`.
 
   ### Returns
 
@@ -4328,11 +4373,14 @@ defmodule Calendrical do
 
   ### Examples
 
-      iex> Calendrical.additional_calendars()
-      %{julian: Calendrical.Julian}
+      iex> Calendrical.additional_calendars()[:vietnamese]
+      Calendrical.Vietnamese
+
+      iex> Calendrical.additional_calendars()[:julian_march25]
+      Calendrical.Julian.March25
 
   """
-  @spec additional_calendars() :: %{julian: Calendrical.Julian}
+  @spec additional_calendars() :: additional_calendars()
   def additional_calendars, do: @additional_calendars
 
   @doc """
@@ -4346,8 +4394,10 @@ defmodule Calendrical do
   Calendrical calendar module if it is loaded in the
   current build.
 
-  The non-CLDR calendars in `additional_calendars/0` (currently `:julian`,
-  which CLDR has no identifier for) resolve here too, ahead of the CLDR lookup.
+  The calendars in `additional_calendars/0` resolve here too, ahead of the
+  CLDR lookup — every calendar Calendrical implements that no CLDR type
+  reaches, such as `:vietnamese` and `:julian_march25` (`"julian-march25"`),
+  and `:iso8601`, the Gregorian calendar with ISO 8601's week rules.
 
   ### Arguments
 
@@ -4387,6 +4437,15 @@ defmodule Calendrical do
       iex> Calendrical.calendar_from_cldr_calendar_type(:julian)
       {:ok, Calendrical.Julian}
 
+      iex> Calendrical.calendar_from_cldr_calendar_type(:iso8601)
+      {:ok, Calendrical.ISO}
+
+      iex> Calendrical.calendar_from_cldr_calendar_type("vietnamese")
+      {:ok, Calendrical.Vietnamese}
+
+      iex> Calendrical.calendar_from_cldr_calendar_type("reform-england")
+      {:ok, Calendrical.Reform.England}
+
       iex> {:error, %Localize.UnknownCalendarError{}} =
       ...>   Calendrical.calendar_from_cldr_calendar_type(:not_a_calendar)
 
@@ -4420,11 +4479,17 @@ defmodule Calendrical do
 
   defp additional_calendar(calendar_type) when is_binary(calendar_type) do
     Enum.find_value(@additional_calendars, :error, fn {identifier, module} ->
-      if Atom.to_string(identifier) == calendar_type, do: {:ok, module}
+      if ixdtf_identifier(identifier) == calendar_type, do: {:ok, module}
     end)
   end
 
   defp additional_calendar(_calendar_type), do: :error
+
+  # An identifier as the IXDTF suffix writes it, with hyphens for its
+  # underscores.
+  defp ixdtf_identifier(identifier) do
+    identifier |> Atom.to_string() |> String.replace("_", "-")
+  end
 
   #
   # Helpers

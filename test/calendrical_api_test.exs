@@ -10,6 +10,35 @@ defmodule Calendrical.ApiTest do
 
   @sunday ~D[2026-07-05]
 
+  describe "calendar identifiers" do
+    test "each additional calendar resolves from its identifier and its IXDTF spelling" do
+      for {identifier, calendar} <- Calendrical.additional_calendars() do
+        ixdtf = identifier |> Atom.to_string() |> String.replace("_", "-")
+
+        assert Calendrical.calendar_from_cldr_calendar_type(identifier) == {:ok, calendar}
+        assert Calendrical.calendar_from_cldr_calendar_type(ixdtf) == {:ok, calendar}
+      end
+    end
+
+    test "every calendar Calendrical implements has an identifier that resolves to it" do
+      {:ok, modules} = :application.get_key(:calendrical, :modules)
+
+      calendars =
+        Enum.filter(modules, fn module ->
+          Code.ensure_loaded?(module) and function_exported?(module, :date_to_iso_days, 3) and
+            function_exported?(module, :days_in_month, 2) and library_module?(module)
+        end)
+
+      unreachable =
+        Enum.reject(calendars, fn calendar ->
+          Calendrical.calendar_from_cldr_calendar_type(calendar.cldr_calendar_type()) ==
+            {:ok, calendar} or calendar in Map.values(Calendrical.additional_calendars())
+        end)
+
+      assert unreachable == []
+    end
+  end
+
   describe "period navigation" do
     test "next/2 across period types" do
       assert Calendrical.next(@sunday, :day) == ~D[2026-07-06]
@@ -186,5 +215,13 @@ defmodule Calendrical.ApiTest do
       assert julian.calendar == Calendrical.Julian
       assert {:ok, _iso} = Date.convert(julian, Calendar.ISO)
     end
+  end
+
+  # A module compiled from the library's own source, not a test calendar.
+  defp library_module?(module) do
+    module.module_info(:compile)[:source]
+    |> to_string()
+    |> Path.relative_to_cwd()
+    |> String.starts_with?("lib/")
   end
 end

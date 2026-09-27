@@ -30,6 +30,8 @@ The format is based on
 
 ### Added
 
+* `calendar_from_cldr_calendar_type/1` and `additional_calendars/0` give every calendar Calendrical implements an IXDTF `[u-ca=…]` identifier where no CLDR type reaches it: `iso8601` (`Calendrical.ISO`, the Gregorian calendar with ISO 8601's week rules), `iso-week`, `vietnamese`, `lunar-japanese`, `nrf`, the Julian year-start variants (`julian-march25`…) and the reform calendars (`reform-england`…), beside `julian`.
+
 * Every calendar has quarters, and new `quadrimester/2` and `semester/2` callbacks (with `Calendrical.Interval.quadrimester/3` and `semester/3`): runs of 3, 4 or 6 traditional months, a leap month with the month it repeats (Hebrew Adar I in the second quarter) and a thirteenth month in the last period (Coptic, Ethiopic).
 
 * `Calendrical.Hebrew.ordinal_month_from_traditional/2`, `lunar_month_of_year/1,2`, `leap_month/1` and `traditional_leap_month/1` convert between a Hebrew month's position and its RFC 7529 traditional month (Adar I is `{5, :leap}`), as the lunisolar calendars do.
