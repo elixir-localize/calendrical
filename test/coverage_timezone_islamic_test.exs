@@ -21,9 +21,14 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
   # ── TimeZone — common abbreviations ──────────────────────────────
 
   describe "TimeZone.resolve/3 with common abbreviations" do
-    test "PST resolves to America/Los_Angeles and honours DST in July" do
+    test "PST keeps its own offset in July, when Los Angeles keeps PDT" do
+      assert {:ok, %DateTime{zone_abbr: "PST"} = dt} = TimeZone.resolve("PST", @july)
+      assert dt.utc_offset + dt.std_offset == -8 * 3600
+    end
+
+    test "PDT resolves to America/Los_Angeles in July" do
       assert {:ok, %DateTime{time_zone: "America/Los_Angeles", zone_abbr: "PDT"} = dt} =
-               TimeZone.resolve("PST", @july)
+               TimeZone.resolve("PDT", @july)
 
       assert dt.utc_offset + dt.std_offset == -7 * 3600
     end

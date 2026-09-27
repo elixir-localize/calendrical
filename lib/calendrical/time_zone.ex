@@ -37,7 +37,13 @@ defmodule Calendrical.TimeZone do
   IANA zone, the resolver uses the instant to pick between
   standard / daylight offsets (e.g. `2024-07-15 14:00 America/New_York`
   → `EDT (-04:00)`, while `2024-01-15 14:00 America/New_York`
-  → `EST (-05:00)`).
+  → `EST (-05:00)`). A generic name (`Eastern Time`) does the same.
+
+  A name specific to standard or daylight time (`EST`,
+  `Pacific Daylight Time`) keeps its own offset, as ICU parses
+  it: `2024-07-15 14:00 EST` is 14:00 at `-05:00`, a fixed offset
+  labelled `EST`, since New York keeps daylight time in July. On
+  a date the zone keeps that time, the result is the zone's own.
 
   """
 
@@ -83,9 +89,13 @@ defmodule Calendrical.TimeZone do
       iex> {datetime.zone_abbr, datetime.utc_offset}
       {"JST", 32400}
 
-      iex> {:ok, datetime} = Calendrical.TimeZone.resolve("Pacific Standard Time", ~N[2024-07-15 14:00:00])
-      iex> datetime.time_zone
-      "America/Los_Angeles"
+      iex> {:ok, datetime} = Calendrical.TimeZone.resolve("Pacific Time", ~N[2024-07-15 14:00:00])
+      iex> {datetime.time_zone, datetime.zone_abbr}
+      {"America/Los_Angeles", "PDT"}
+
+      iex> {:ok, datetime} = Calendrical.TimeZone.resolve("EST", ~N[2024-07-15 14:00:00])
+      iex> {to_string(datetime), datetime.zone_abbr}
+      {"2024-07-15 14:00:00-05:00", "EST"}
 
       iex> {:ok, datetime} = Calendrical.TimeZone.resolve("Mitteleuropäische Zeit", ~N[2024-07-15 14:00:00], locale: :de)
       iex> datetime.time_zone
@@ -109,8 +119,9 @@ defmodule Calendrical.TimeZone do
       iana_name?(zone_string) ->
         resolve_iana(zone_string, naive_dt)
 
-      abbrev = Map.get(common_abbreviations(), zone_string) ->
-        resolve_iana(abbrev, naive_dt)
+      named_time = Map.get(common_abbreviations(), zone_string) ->
+        {zone, time_type} = named_time
+        resolve_named_time(zone, time_type, zone_string, naive_dt)
 
       true ->
         case resolve_locale_name(zone_string, naive_dt, options) do
@@ -338,43 +349,127 @@ defmodule Calendrical.TimeZone do
   # Picks the most-common reading per abbreviation. Documented
   # ambiguities (CST = Central US vs China Standard) resolve
   # to the more commonly-typed form (US). Consumers needing
-  # different defaults should pass an IANA name instead.
+  # different defaults should pass an IANA name instead. Each
+  # abbreviation names the zone's standard or its daylight time.
   defp common_abbreviations do
     %{
       # North America
-      "EST" => "America/New_York",
-      "EDT" => "America/New_York",
-      "CST" => "America/Chicago",
-      "CDT" => "America/Chicago",
-      "MST" => "America/Denver",
-      "MDT" => "America/Denver",
-      "PST" => "America/Los_Angeles",
-      "PDT" => "America/Los_Angeles",
-      "AKST" => "America/Anchorage",
-      "AKDT" => "America/Anchorage",
-      "HST" => "Pacific/Honolulu",
+      "EST" => {"America/New_York", :standard},
+      "EDT" => {"America/New_York", :daylight},
+      "CST" => {"America/Chicago", :standard},
+      "CDT" => {"America/Chicago", :daylight},
+      "MST" => {"America/Denver", :standard},
+      "MDT" => {"America/Denver", :daylight},
+      "PST" => {"America/Los_Angeles", :standard},
+      "PDT" => {"America/Los_Angeles", :daylight},
+      "AKST" => {"America/Anchorage", :standard},
+      "AKDT" => {"America/Anchorage", :daylight},
+      "HST" => {"Pacific/Honolulu", :standard},
       # Europe
-      "GMT" => "Etc/UTC",
-      "BST" => "Europe/London",
-      "WET" => "Europe/Lisbon",
-      "WEST" => "Europe/Lisbon",
-      "CET" => "Europe/Berlin",
-      "CEST" => "Europe/Berlin",
-      "EET" => "Europe/Athens",
-      "EEST" => "Europe/Athens",
+      "GMT" => {"Etc/UTC", :standard},
+      "BST" => {"Europe/London", :daylight},
+      "WET" => {"Europe/Lisbon", :standard},
+      "WEST" => {"Europe/Lisbon", :daylight},
+      "CET" => {"Europe/Berlin", :standard},
+      "CEST" => {"Europe/Berlin", :daylight},
+      "EET" => {"Europe/Athens", :standard},
+      "EEST" => {"Europe/Athens", :daylight},
       # Asia / Pacific
-      "JST" => "Asia/Tokyo",
-      "KST" => "Asia/Seoul",
-      "HKT" => "Asia/Hong_Kong",
-      "SGT" => "Asia/Singapore",
-      "IST" => "Asia/Kolkata",
-      "AEST" => "Australia/Sydney",
-      "AEDT" => "Australia/Sydney",
-      "AWST" => "Australia/Perth",
-      "NZST" => "Pacific/Auckland",
-      "NZDT" => "Pacific/Auckland"
+      "JST" => {"Asia/Tokyo", :standard},
+      "KST" => {"Asia/Seoul", :standard},
+      "HKT" => {"Asia/Hong_Kong", :standard},
+      "SGT" => {"Asia/Singapore", :standard},
+      "IST" => {"Asia/Kolkata", :standard},
+      "AEST" => {"Australia/Sydney", :standard},
+      "AEDT" => {"Australia/Sydney", :daylight},
+      "AWST" => {"Australia/Perth", :standard},
+      "NZST" => {"Pacific/Auckland", :standard},
+      "NZDT" => {"Pacific/Auckland", :daylight}
     }
   end
+
+  # ── Standard and daylight names ────────────────────────────
+
+  # A name specific to standard or daylight time keeps its own
+  # offset, as ICU parses it: "14:00 EST" in May is 14:00 at
+  # -05:00, an hour after 14:00 EDT. The zone's own `DateTime` is
+  # the answer when the zone keeps that time at the wall clock
+  # given; otherwise it is a fixed offset labelled with the name.
+  # A generic name ("Eastern Time") follows the zone.
+  defp resolve_named_time(zone, :generic, _label, naive_dt), do: resolve_iana(zone, naive_dt)
+
+  defp resolve_named_time(zone, time_type, label, naive_dt) do
+    case tz_database() do
+      nil -> {:error, :no_tz_database_loaded}
+      database -> named_time(canonical_iana_zone(zone), time_type, label, naive_dt, database)
+    end
+  end
+
+  defp named_time(zone, time_type, label, naive_dt, database) do
+    case DateTime.from_naive(naive_dt, zone, database) do
+      {:error, _reason} ->
+        {:error, :unknown_iana_zone}
+
+      from_naive ->
+        {candidates, others} = zone_readings(from_naive)
+        readings = candidates ++ others ++ nearby_readings(zone, naive_dt, database)
+        totals = Enum.map(readings, &total_offset/1)
+        offset = named_time_offset(time_type, Enum.min(totals), Enum.max(totals))
+
+        candidates
+        |> Enum.find(&(total_offset(&1) == offset))
+        |> named_time_datetime(offset, label, naive_dt)
+    end
+  end
+
+  defp named_time_datetime(%DateTime{} = datetime, _offset, _label, _naive_dt),
+    do: {:ok, datetime}
+
+  defp named_time_datetime(nil, offset, nil, naive_dt),
+    do: build_dt(naive_dt, offset, "Etc/UTC", offset_label(offset))
+
+  defp named_time_datetime(nil, offset, label, naive_dt),
+    do: build_dt(naive_dt, offset, "Etc/UTC", label)
+
+  defp offset_label(offset) when offset < 0, do: format_offset(?-, -offset)
+  defp offset_label(offset), do: format_offset(?+, offset)
+
+  # The zone's readings of the wall clock that could be the
+  # answer — one, or both sides of a fall-back overlap — and, in a
+  # spring-forward gap, which has none, the gap's two sides, whose
+  # offsets are still the zone's.
+  defp zone_readings({:ok, datetime}), do: {[datetime], []}
+  defp zone_readings({:ambiguous, first, second}), do: {[first, second], []}
+  defp zone_readings({:gap, just_before, just_after}), do: {[], [just_after, just_before]}
+
+  # The same wall clock every three months for nine months either
+  # side, which meets both the zone's standard and its daylight
+  # time if it keeps both.
+  defp nearby_readings(zone, naive_dt, database) do
+    Enum.flat_map([-9, -6, -3, 3, 6, 9], fn months ->
+      naive_dt
+      |> NaiveDateTime.shift(month: months)
+      |> DateTime.from_naive(zone, database)
+      |> nearby_reading()
+    end)
+  end
+
+  defp nearby_reading({:ok, datetime}), do: [datetime]
+  defp nearby_reading({:ambiguous, first, _second}), do: [first]
+  defp nearby_reading({:gap, _just_before, just_after}), do: [just_after]
+  defp nearby_reading({:error, _reason}), do: []
+
+  # Daylight time is the zone's greater offset and standard time
+  # its lesser, however the time zone database divides them (it
+  # may write Europe/Dublin's winter as a negative saving). A
+  # daylight name for a zone keeping no daylight time is an hour
+  # on its standard offset, as ICU falls back to.
+  defp named_time_offset(:standard, standard, _greatest), do: standard
+  defp named_time_offset(:daylight, standard, standard), do: standard + 3600
+  defp named_time_offset(:daylight, _standard, daylight), do: daylight
+
+  defp total_offset(%DateTime{utc_offset: utc_offset, std_offset: std_offset}),
+    do: utc_offset + std_offset
 
   # IANA zone ids are case-sensitive, but CLDR locale data keys
   # them lowercased and users type freely. Map case-insensitively
@@ -452,14 +547,23 @@ defmodule Calendrical.TimeZone do
   defp resolve_locale_name(zone_string, naive_dt, options) do
     locale = Keyword.get(options, :locale) || safe_get_locale()
 
-    iana =
+    named_zone =
       lookup_cldr_zone_name(zone_string, locale) ||
         lookup_cldr_metazone_name(zone_string, locale)
 
-    case iana do
+    case named_zone do
       nil -> {:error, :no_cldr_match}
-      iana_name -> resolve_iana(iana_name, naive_dt)
+      {iana_name, names} -> resolve_cldr_name(iana_name, names, zone_string, naive_dt)
     end
+  end
+
+  # A CLDR name is the zone's generic, standard or daylight name —
+  # generic first, where a locale spells two the same. A standard or
+  # daylight time the zone does not keep on the date is labelled
+  # with the locale's short name for it, or else its offset.
+  defp resolve_cldr_name(iana_name, names, zone_string, naive_dt) do
+    time_type = name_type(names, zone_string)
+    resolve_named_time(iana_name, time_type, get_in(names, [:short, time_type]), naive_dt)
   end
 
   defp safe_get_locale do
@@ -495,9 +599,7 @@ defmodule Calendrical.TimeZone do
     case Localize.Locale.get(locale, [:dates, :time_zone_names, :metazone]) do
       {:ok, metazone_map} when is_map(metazone_map) ->
         Enum.find_value(metazone_map, fn {metazone, names} ->
-          if name_matches?(names, zone_string) do
-            Localize.DateTime.Timezone.zone_for_metazone(metazone, locale_territory(locale))
-          end
+          if name_type(names, zone_string), do: metazone_zone(metazone, names, locale)
         end)
 
       _ ->
@@ -505,6 +607,13 @@ defmodule Calendrical.TimeZone do
     end
   rescue
     _ -> nil
+  end
+
+  defp metazone_zone(metazone, names, locale) do
+    case Localize.DateTime.Timezone.zone_for_metazone(metazone, locale_territory(locale)) do
+      zone when is_binary(zone) -> {zone, names}
+      _no_zone -> nil
+    end
   end
 
   defp locale_territory(locale) do
@@ -524,14 +633,14 @@ defmodule Calendrical.TimeZone do
   end
 
   defp find_in_branch(%{} = sub, target, prefix) when is_map(sub) do
-    if match?(%{long: _}, sub) and name_matches?(sub, target) do
-      prefix
+    if match?(%{long: _}, sub) and name_type(sub, target) do
+      {prefix, sub}
     else
       Enum.find_value(sub, fn {key, value} ->
         next_prefix = "#{prefix}/#{key}"
 
         cond do
-          match?(%{long: _}, value) and name_matches?(value, target) -> next_prefix
+          match?(%{long: _}, value) and name_type(value, target) -> {next_prefix, value}
           is_map(value) -> find_in_branch(value, target, next_prefix)
           true -> nil
         end
@@ -541,11 +650,12 @@ defmodule Calendrical.TimeZone do
 
   defp find_in_branch(_, _, _), do: nil
 
-  defp name_matches?(data, target) do
-    Enum.any?(
-      Map.values(Map.get(data, :long, %{})) ++ Map.values(Map.get(data, :short, %{})),
-      &(&1 == target)
-    )
+  # Which of the zone's names `target` is — `:generic`, `:standard`
+  # or `:daylight`, in its long or short form — or `nil`.
+  defp name_type(data, target) do
+    Enum.find([:generic, :standard, :daylight], fn time_type ->
+      target in [get_in(data, [:long, time_type]), get_in(data, [:short, time_type])]
+    end)
   end
 
   # ── Common builder ──────────────────────────────────────────
