@@ -38,7 +38,7 @@ defmodule Calendrical.PreferenceTest do
       assert Preference.calendar_from_locale("en-u-ca-coptic") == {:ok, Calendrical.Coptic}
       assert Preference.calendar_from_locale("en-u-ca-persian") == {:ok, Calendrical.Persian}
       assert Preference.calendar_from_locale("en-u-ca-japanese") == {:ok, Calendrical.Japanese}
-      assert Preference.calendar_from_locale("en-u-ca-iso8601") == {:ok, Calendrical.ISOWeek}
+      assert Preference.calendar_from_locale("en-u-ca-iso8601") == {:ok, Calendrical.ISO}
     end
 
     test "resolves an explicit gregorian request through the territory" do
@@ -82,7 +82,7 @@ defmodule Calendrical.PreferenceTest do
   describe "calendar_module/1" do
     test "maps CLDR calendar types to modules" do
       assert Preference.calendar_module(:persian) == Calendrical.Persian
-      assert Preference.calendar_module(:iso8601) == Calendrical.ISOWeek
+      assert Preference.calendar_module(:iso8601) == Calendrical.ISO
       assert Preference.calendar_module(:gregorian) == Calendrical.Gregorian
     end
   end

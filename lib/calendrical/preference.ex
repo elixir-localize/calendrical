@@ -199,7 +199,7 @@ defmodule Calendrical.Preference do
       {:ok, Calendrical.US}
 
       iex> Calendrical.Preference.calendar_from_locale("en-u-ca-iso8601")
-      {:ok, Calendrical.ISOWeek}
+      {:ok, Calendrical.ISO}
 
       iex> Calendrical.Preference.calendar_from_locale("en-u-fw-mon")
       {:ok, Calendrical.Gregorian}
@@ -330,6 +330,10 @@ defmodule Calendrical.Preference do
     end
   end
 
+  # CLDR's `iso8601` is the Gregorian calendar with ISO 8601's week rules,
+  # `Calendrical.ISO`, as the IXDTF identifier `[u-ca=iso8601]` resolves in
+  # `Calendrical.additional_calendars/0`; `Calendrical.ISOWeek` is the ISO
+  # week-date calendar (`iso-week`).
   @calendar_modules @known_calendars
                     |> Enum.map(fn c ->
                       {c,
@@ -337,7 +341,7 @@ defmodule Calendrical.Preference do
                     end)
                     |> Map.new()
                     |> Map.merge(@calendar_module_overrides)
-                    |> Map.put(:iso8601, Calendrical.ISOWeek)
+                    |> Map.put(:iso8601, Calendrical.ISO)
 
   @doc false
   def calendar_modules do
@@ -350,7 +354,7 @@ defmodule Calendrical.Preference do
   end
 
   def calendar_module(:iso8601) do
-    Calendrical.ISOWeek
+    Calendrical.ISO
   end
 
   def calendar_module(other) do

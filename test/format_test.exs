@@ -103,6 +103,24 @@ defmodule Calendrical.Format.Test do
     assert first_day == 7
   end
 
+  test "a month opening in a short calendar week still lays out whole weeks" do
+    # 1 Tishri 5787 is a Saturday, alone in its year's week 1
+    weeks =
+      Calendrical.Format.month(5787, 1,
+        formatter: Calendrical.Test.Formatter,
+        calendar: Calendrical.Hebrew
+      )
+      |> Map.get(:weeks)
+
+    assert Enum.all?(weeks, &(length(&1.days) == 7))
+    assert List.last(hd(weeks).days) == ~D[5787-01-01 Calendrical.Hebrew]
+
+    weeks
+    |> Enum.flat_map(& &1.days)
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.each(fn [day, next] -> assert Date.diff(next, day) == 1 end)
+  end
+
   test "Setting the :day_names option" do
     day_names = [
       {1, "One"},

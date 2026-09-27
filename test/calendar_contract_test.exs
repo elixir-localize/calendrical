@@ -79,8 +79,7 @@ defmodule Calendrical.CalendarContract.Test do
         for interval <- [
               &Calendrical.Interval.year/1,
               &Calendrical.Interval.quarter/1,
-              &Calendrical.Interval.month/1,
-              &Calendrical.Interval.week/1
+              &Calendrical.Interval.month/1
             ] do
           case interval.(date) do
             %Date.Range{first_in_iso_days: first, last_in_iso_days: last} ->
@@ -89,6 +88,42 @@ defmodule Calendrical.CalendarContract.Test do
             {:error, _not_defined} ->
               :ok
           end
+        end
+
+        assert %Date.Range{first_in_iso_days: first, last_in_iso_days: last} =
+                 Calendrical.Interval.week(date)
+
+        assert first <= iso_days and iso_days <= last
+      end
+
+      # Each day of the sighting-based calendars costs a crescent search, so
+      # walking their year takes minutes; they number weeks as the tabular
+      # Islamic calendars do.
+      unless calendar in @sighting_calendars do
+        test "every day of the year is in the week it numbers, and the weeks follow on",
+             %{date: date} do
+          calendar = unquote(calendar)
+
+          for day <- Calendrical.Interval.year(date) do
+            {week_year, week} = Calendrical.week_of_year(day)
+            iso_days = Date.to_gregorian_days(day)
+
+            assert %Date.Range{first_in_iso_days: first, last_in_iso_days: last} =
+                     Calendrical.Interval.week(week_year, week, calendar)
+
+            assert first <= iso_days and iso_days <= last
+          end
+
+          {weeks, _days_in_last_week} = calendar.weeks_in_year(date.year)
+
+          1..weeks
+          |> Enum.map(&Calendrical.Interval.week(date.year, &1, calendar))
+          |> Enum.chunk_every(2, 1, :discard)
+          |> Enum.each(fn [earlier, later] ->
+            assert earlier.last_in_iso_days + 1 == later.first_in_iso_days
+          end)
+
+          assert {:error, :invalid_date} = calendar.week(date.year, weeks + 1)
         end
       end
 

@@ -181,13 +181,18 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
-      Calculates the week of the year for the given date.
+      Calculates the week of the year for the given date: the member
+      calendar's week in a year one member governs throughout, and in a
+      year a transition falls in, the composite's own calendar-aligned
+      week, cut to the year.
 
       """
       @impl true
       def week_of_year(year, month, day) do
-        calendar = calendar_for_date(year, month, day)
-        calendar.week_of_year(year, month, day)
+        case year_calendar(year) do
+          nil -> Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
+          calendar -> calendar.week_of_year(year, month, day)
+        end
       end
 
       @doc """
@@ -201,11 +206,21 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
-      Composite calendars do not define week-of-month.
+      Calculates the week of the month for the given date, as the
+      calendar in effect on that date numbers it, or in a month a
+      transition cuts short or splits, as the composite's own
+      calendar-aligned weeks number it.
 
       """
       @impl true
-      def week_of_month(_year, _week, _day), do: {:error, :not_defined}
+      def week_of_month(year, month, day) when {year, month} in @transition_months do
+        Calendrical.Base.Common.week_of_month(__MODULE__, year, month, day)
+      end
+
+      def week_of_month(year, month, day) do
+        calendar = calendar_for_date(year, month, day)
+        calendar.week_of_month(year, month, day)
+      end
 
       @doc """
       Calculates the day and era for the given date.
@@ -301,15 +316,47 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
-      Returns the number of weeks in the given year (in the context
-      of the calendar that starts the year).
+      Returns the number of weeks in the given year, as
+      `week_of_year/3` counts them.
 
       """
       @impl true
       def weeks_in_year(year) do
-        calendar = calendar_for_date(year, 1, 1)
-        calendar.weeks_in_year(year)
+        case year_calendar(year) do
+          nil -> Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
+          calendar -> calendar.weeks_in_year(year)
+        end
       end
+
+      # The member calendar that governs every day of `year`, or nil for
+      # a year a transition falls in or cuts short, whose weeks are the
+      # composite's own.
+      defp year_calendar(year) when is_integer(year) do
+        case year_bounds(year) do
+          {first, last} ->
+            whole_year_calendar(
+              calendar_for_iso_days(first),
+              calendar_for_iso_days(last),
+              year,
+              first,
+              last
+            )
+
+          nil ->
+            nil
+        end
+      end
+
+      defp year_calendar(_year), do: nil
+
+      defp whole_year_calendar(calendar, calendar, year, first, last) do
+        case calendar.year(year) do
+          %Date.Range{first_in_iso_days: ^first, last_in_iso_days: ^last} -> calendar
+          _cut_short -> nil
+        end
+      end
+
+      defp whole_year_calendar(_calendar, _other_calendar, _year, _first, _last), do: nil
 
       @doc """
       Returns the number of days in the given year and month.
@@ -497,32 +544,34 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
-      Returns a `Date.Range` representing a given week of a year.
-
-      Not all base calendars define weeks; the result depends on the
-      calendar in effect on 1 January of the given year.
+      Returns a `Date.Range` representing a given week of a year, as
+      `week_of_year/3` numbers weeks.
 
       """
       @impl true
       def week(year, week) do
-        base_calendar = calendar_for_date(year, 1, 1)
-
-        case member_week(base_calendar, year, week) do
-          %Date.Range{first_in_iso_days: first_days, last_in_iso_days: last_days} ->
-            Date.range(date_at(first_days), date_at(last_days))
-
-          other ->
-            other
+        case year_calendar(year) do
+          nil -> Calendrical.Base.Common.week(__MODULE__, year, week)
+          calendar -> calendar |> member_week(year, week) |> week_in_composite()
         end
       end
 
+      defp week_in_composite(%Date.Range{
+             first_in_iso_days: first_days,
+             last_in_iso_days: last_days
+           }),
+           do: Date.range(date_at(first_days), date_at(last_days))
+
+      defp week_in_composite(other), do: other
+
       # Dispatches `week/2` to the member calendar in effect. The widening
       # spec keeps the `Date.Range` clause in `week/2` reachable for the type
-      # checker: composites whose member calendars all return
-      # `{:error, :not_defined}` (e.g. a lunisolar base with no week support)
-      # would otherwise have that clause flagged as unreachable.
+      # checker whatever week support the member calendars have: a
+      # composite of calendars that return `{:error, :not_defined}` (a
+      # consumer's calendar without weeks) would otherwise have that clause
+      # flagged as unreachable.
       @spec member_week(module(), Calendar.year(), non_neg_integer()) ::
-              Date.Range.t() | {:error, :not_defined}
+              Date.Range.t() | {:error, :not_defined | :invalid_date}
       defp member_week(calendar, year, week) do
         calendar.week(year, week)
       end

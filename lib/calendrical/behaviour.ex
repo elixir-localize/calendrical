@@ -168,6 +168,7 @@ defmodule Calendrical.Behaviour do
       identity_and_validity(cldr_calendar_type, cldr_calendar_base),
       era_functions(cldr_calendar_type),
       period_functions(cldr_calendar_type),
+      week_functions(),
       shift_functions(),
       count_functions(months_in_year_result),
       range_functions(),
@@ -395,54 +396,6 @@ defmodule Calendrical.Behaviour do
       end
 
       @doc """
-      Calculates the week of the year from the given
-      `year`, `month`, and `day`.
-
-      By default this function always returns
-      `{:error, :not_defined}`.
-
-      """
-      @spec week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
-              {:error, :not_defined}
-
-      @impl true
-      def week_of_year(_year, _month, _day) do
-        {:error, :not_defined}
-      end
-
-      @doc """
-      Calculates the ISO week of the year from the
-      given `year`, `month`, and `day`.
-
-      By default this function always returns
-      `{:error, :not_defined}`.
-
-      """
-      @spec iso_week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
-              {:error, :not_defined}
-
-      @impl true
-      def iso_week_of_year(_year, _month, _day) do
-        {:error, :not_defined}
-      end
-
-      @doc """
-      Calculates the week of the year from the given
-      `year`, `month`, and `day`.
-
-      By default this function always returns
-      `{:error, :not_defined}`.
-
-      """
-      @spec week_of_month(Calendar.year(), Calendar.month(), Calendar.day()) ::
-              {pos_integer(), pos_integer()} | {:error, :not_defined}
-
-      @impl true
-      def week_of_month(_year, _month, _day) do
-        {:error, :not_defined}
-      end
-
-      @doc """
       Calculates the day and era from the given
       `year`, `month`, and `day`.
 
@@ -520,6 +473,63 @@ defmodule Calendrical.Behaviour do
     end
   end
 
+  # Weeks apply everywhere: the calendar's own weeks, cut short at the ends
+  # of the year (or month), and the ISO 8601 week of the day.
+  defp week_functions do
+    quote location: :keep do
+      @doc """
+      Calculates the week of the year from the given
+      `year`, `month`, and `day`.
+
+      Weeks run on the calendar's own week boundary (the day
+      `day_of_week/4` numbers 1), and week 1 is the week holding the
+      first day of the year, so a year that opens mid-week has a
+      short week 1. Every date numbers within its own year.
+
+      """
+      @spec week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
+              {Calendar.year(), Calendrical.week()} | {:error, :invalid_date}
+
+      @impl true
+      def week_of_year(year, month, day) do
+        Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
+      end
+
+      @doc """
+      Calculates the ISO week of the year from the
+      given `year`, `month`, and `day`.
+
+      This is the ISO 8601 week of the day: weeks start on Monday
+      and week 1 holds the fourth day of the Gregorian year.
+
+      """
+      @spec iso_week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
+              {Calendar.year(), Calendrical.week()} | {:error, :invalid_date}
+
+      @impl true
+      def iso_week_of_year(year, month, day) do
+        Calendrical.Base.Common.iso_week_of_year(__MODULE__, year, month, day)
+      end
+
+      @doc """
+      Calculates the week of the month from the given
+      `year`, `month`, and `day`.
+
+      Weeks run on the calendar's own week boundary, as
+      `week_of_year/3` counts them, and week 1 is the week holding
+      the first day of the month.
+
+      """
+      @spec week_of_month(Calendar.year(), Calendar.month(), Calendar.day()) ::
+              {Calendar.month(), Calendrical.week()} | {:error, :invalid_date}
+
+      @impl true
+      def week_of_month(year, month, day) do
+        Calendrical.Base.Common.week_of_month(__MODULE__, year, month, day)
+      end
+    end
+  end
+
   defp shift_functions do
     quote location: :keep do
       @impl true
@@ -592,13 +602,15 @@ defmodule Calendrical.Behaviour do
 
       @doc """
       Returns the number of weeks in a
-      given `year`.
+      given `year`, and the number of days in its last week.
+
+      Weeks are counted as `week_of_year/3` counts them.
 
       """
       @impl true
 
-      def weeks_in_year(_year) do
-        {:error, :not_defined}
+      def weeks_in_year(year) do
+        Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
       end
 
       @doc """
@@ -767,13 +779,14 @@ defmodule Calendrical.Behaviour do
 
       @doc """
       Returns a `t:Date.Range.t/0` representing
-      a given week of a year.
+      a given week of a year: the calendar week holding
+      it, as `week_of_year/3` counts weeks, cut to the year.
 
       """
       @impl true
 
-      def week(_year, _week) do
-        {:error, :not_defined}
+      def week(year, week) do
+        Calendrical.Base.Common.week(__MODULE__, year, week)
       end
     end
   end

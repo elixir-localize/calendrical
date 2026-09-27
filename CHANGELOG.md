@@ -20,6 +20,8 @@ The format is based on
 
 * `calendar_from_cldr_calendar_type/1` and `additional_calendars/0` give every calendar Calendrical implements an IXDTF `[u-ca=…]` identifier where no CLDR type reaches it: `iso8601` (`Calendrical.ISO`, the Gregorian calendar with ISO 8601's week rules), `iso-week`, `vietnamese`, `lunar-japanese`, `nrf`, the Julian year-start variants (`julian-march25`…) and the reform calendars (`reform-england`…), beside `julian`.
 
+* Every calendar has weeks: `week_of_year/3`, `weeks_in_year/1`, `week/2` and `week_of_month/3` default to the calendar's own weeks, cut short at the ends of the year or month, and a composite numbers a transition year's weeks itself, where the Behaviour and Julian calendars returned `{:error, :not_defined}`. `iso_week_of_year/3` gives the ISO 8601 week of the day in every calendar.
+
 * Every calendar has quarters, and new `quadrimester/2` and `semester/2` callbacks (with `Calendrical.Interval.quadrimester/3` and `semester/3`): runs of 3, 4 or 6 traditional months, a leap month with the month it repeats (Hebrew Adar I in the second quarter) and a thirteenth month in the last period (Coptic, Ethiopic).
 
 * `Calendrical.Hebrew.ordinal_month_from_traditional/2`, `lunar_month_of_year/1,2`, `leap_month/1` and `traditional_leap_month/1` convert between a Hebrew month's position and its RFC 7529 traditional month (Adar I is `{5, :leap}`), as the lunisolar calendars do.
@@ -39,6 +41,10 @@ The format is based on
 * `ordinal_month_from_traditional/2` on the Chinese, Korean, Vietnamese and Lunar Japanese calendars returns the ordinal month of a traditional month (`{month, :leap}` included), and their `days_in_month/1` returns `{:ambiguous, 29..30}`.
 
 ### Changed
+
+* `Calendrical.Preference` resolves a locale's `-u-ca-iso8601` to `Calendrical.ISO`, the Gregorian calendar with ISO 8601's week rules, as the IXDTF identifier `[u-ca=iso8601]` does, instead of the ISO week-date calendar `Calendrical.ISOWeek`.
+
+* `next/3` and `previous/3` step a week range to the week holding the day after or before it, so a week cut short at the end of a year is never stepped over.
 
 * `weeks_to_days/1` takes a fractional number of weeks, as it always has, and documents that it truncates to whole days: `weeks_to_days(1.5)` is 10.
 

@@ -91,12 +91,27 @@ defmodule Calendrical.JulianTest do
       assert Julian.month_of_year(2026, 6, 22) == 6
     end
 
-    test "weeks are not defined for the Julian calendar" do
-      assert Julian.week_of_year(2026, 6, 22) == {:error, :not_defined}
-      assert Julian.iso_week_of_year(2026, 6, 22) == {:error, :not_defined}
-      assert Julian.week_of_month(2026, 6, 22) == {:error, :not_defined}
-      assert Julian.week(2026, 2) == {:error, :not_defined}
-      assert Julian.weeks_in_year(2026) == {:error, :not_defined}
+    test "weeks run from Monday and number within the year" do
+      assert Julian.week_of_year(2026, 6, 22) == {2026, 25}
+      assert Julian.week_of_month(2026, 6, 22) == {6, 4}
+
+      assert Julian.week(2026, 2) ==
+               Date.range(~D[2026-01-06 Calendrical.Julian], ~D[2026-01-12 Calendrical.Julian])
+
+      assert Julian.weeks_in_year(2026) == {53, 3}
+    end
+
+    test "the ISO 8601 week is the one the same day has in the Gregorian calendar" do
+      # 22 June 2026 (Julian) is 5 July 2026 (Gregorian), a Sunday
+      assert Julian.iso_week_of_year(2026, 6, 22) == {2026, 27}
+    end
+
+    test "a date that is not a Julian date has no week" do
+      assert Julian.week_of_year(2025, 13, 1) == {:error, :invalid_date}
+      assert Julian.week_of_month(2025, 2, 30) == {:error, :invalid_date}
+      assert Julian.iso_week_of_year(2025, 2, 30) == {:error, :invalid_date}
+      assert Julian.weeks_in_year(nil) == {:error, :invalid_date}
+      assert Julian.week(2025, 0) == {:error, :invalid_date}
     end
 
     test "year, quarter and month ranges" do

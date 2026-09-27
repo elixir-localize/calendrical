@@ -139,10 +139,16 @@ defmodule CoverageArithmeticTest do
       assert Coptic.quarter_of_year(1742, 13, 1) == 4
     end
 
-    test "ISO weeks are not defined for 13-month calendars" do
-      assert Ethiopic.week(2018, 1) == {:error, :not_defined}
-      assert Ethiopic.iso_week_of_year(2018, 5, 1) == {:error, :not_defined}
-      assert Ethiopic.week_of_month(2018, 5, 1) == {:error, :not_defined}
+    test "13-month calendars have week ranges, ISO weeks and weeks of the month" do
+      assert Ethiopic.week(2018, 1) ==
+               Date.range(
+                 ~D[2018-01-01 Calendrical.Ethiopic],
+                 ~D[2018-01-03 Calendrical.Ethiopic]
+               )
+
+      # 1 Tir 2018 is 9 January 2026, in ISO 8601 week 2
+      assert Ethiopic.iso_week_of_year(2018, 5, 1) == {2026, 2}
+      assert Ethiopic.week_of_month(2018, 5, 1) == {5, 1}
     end
 
     test "calendar-aligned weeks are defined for 13-month calendars" do
@@ -261,8 +267,8 @@ defmodule CoverageArithmeticTest do
       assert Julian.periods_in_year(2025) == 12
       assert Julian.months_in_year(2025) == 12
       assert Julian.days_in_week() == 7
-      assert Julian.weeks_in_year(2025) == {:error, :not_defined}
-      assert Julian.week_of_year(2025, 1, 1) == {:error, :not_defined}
+      assert Julian.weeks_in_year(2025) == {53, 2}
+      assert Julian.week_of_year(2025, 1, 1) == {2025, 1}
       assert Julian.day_rollover_relative_to_midnight_utc() == {0, 1}
     end
 
@@ -313,8 +319,14 @@ defmodule CoverageArithmeticTest do
       assert range.last == ~D[2024-02-29 Calendrical.Julian]
     end
 
-    test "week/2 is not defined" do
-      assert Julian.week(2025, 1) == {:error, :not_defined}
+    test "week/2 is the calendar week, cut to the year" do
+      assert Julian.week(2025, 1) ==
+               Date.range(~D[2025-01-01 Calendrical.Julian], ~D[2025-01-06 Calendrical.Julian])
+
+      assert Julian.week(2025, 53) ==
+               Date.range(~D[2025-12-30 Calendrical.Julian], ~D[2025-12-31 Calendrical.Julian])
+
+      assert Julian.week(2025, 54) == {:error, :invalid_date}
     end
   end
 
@@ -470,8 +482,9 @@ defmodule CoverageArithmeticTest do
                Date.range(~D[2019-W05-1 Calendrical.NRF], ~D[2019-W05-7 Calendrical.NRF])
     end
 
-    test "week/3 on a calendar without weeks returns an error" do
-      assert Interval.week(2019, 5, Calendrical.Julian) == {:error, :not_defined}
+    test "week/3 on a calendar with calendar-aligned weeks" do
+      assert Interval.week(2019, 52, Calendrical.Julian) ==
+               Date.range(~D[2019-12-24 Calendrical.Julian], ~D[2019-12-30 Calendrical.Julian])
     end
 
     test "day/1, day/3 and the invalid day error" do
@@ -524,7 +537,7 @@ defmodule CoverageArithmeticTest do
       modules = Preference.calendar_modules()
 
       assert modules[:gregorian] == Calendrical.Gregorian
-      assert modules[:iso8601] == Calendrical.ISOWeek
+      assert modules[:iso8601] == Calendrical.ISO
       assert modules[:islamic] == Calendrical.Islamic.Observational
       assert modules[:islamic_civil] == Calendrical.Islamic.Civil
       assert modules[:islamic_umalqura] == Calendrical.Islamic.UmmAlQura
@@ -540,7 +553,7 @@ defmodule CoverageArithmeticTest do
     end
 
     test "calendar_module resolves known and unknown calendars" do
-      assert Preference.calendar_module(:iso8601) == Calendrical.ISOWeek
+      assert Preference.calendar_module(:iso8601) == Calendrical.ISO
 
       assert {:error, %Localize.UnknownCalendarError{calendar: :bogus}} =
                Preference.calendar_module(:bogus)

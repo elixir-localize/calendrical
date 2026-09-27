@@ -261,18 +261,27 @@ defmodule Calendrical.Format do
     end
   end
 
-  # The week holding `date`: the calendar's own week where it defines
-  # week ranges, and otherwise the seven days from its first day of the
-  # week, so a calendar without numbered weeks still lays out by week.
+  # The week holding `date`, as a row of the month's layout: the calendar's
+  # own week where it holds a full week of days, and otherwise (a week cut
+  # short at the start or end of its year) the full week from the date's
+  # first day of the week, so every row lays out a whole week.
   defp week_holding(date) do
-    case Calendrical.Interval.week(date) do
-      %Date.Range{} = week ->
-        week
+    date
+    |> Calendrical.Interval.week()
+    |> full_week_holding(date, days_in_week(date.calendar))
+  end
 
-      {:error, _not_defined} ->
-        first = Date.shift(date, day: 1 - Date.day_of_week(date, :default))
-        Date.range(first, Date.shift(first, day: days_in_week(date.calendar) - 1))
-    end
+  defp full_week_holding(
+         %Date.Range{first_in_iso_days: first, last_in_iso_days: last} = week,
+         _date,
+         days_in_week
+       )
+       when last - first + 1 == days_in_week,
+       do: week
+
+  defp full_week_holding(_short_week, date, days_in_week) do
+    first = Date.shift(date, day: 1 - Date.day_of_week(date, :default))
+    Date.range(first, Date.shift(first, day: days_in_week - 1))
   end
 
   defp days_in_week(calendar) do

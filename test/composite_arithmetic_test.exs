@@ -147,6 +147,71 @@ defmodule Calendrical.CompositeArithmetic.Test do
     end
   end
 
+  describe "weeks" do
+    # A year one member calendar governs throughout keeps that calendar's
+    # weeks. A year a transition falls in or cuts short numbers the
+    # composite's own calendar-aligned weeks, cut to the year.
+    test "a year one calendar governs keeps that calendar's weeks" do
+      assert England.week(2026, 1) ==
+               Date.range(
+                 ~D[2025-12-29 Calendrical.Reform.England],
+                 ~D[2026-01-04 Calendrical.Reform.England]
+               )
+    end
+
+    test "the week holding the dropped days runs across them" do
+      # Wednesday 2 September 1752 was followed by Thursday 14 September
+      week =
+        Date.range(
+          ~D[1752-08-31 Calendrical.Reform.England],
+          ~D[1752-09-17 Calendrical.Reform.England]
+        )
+
+      assert Calendrical.Interval.week(~D[1752-09-02 Calendrical.Reform.England]) == week
+      assert Calendrical.Interval.week(~D[1752-09-14 Calendrical.Reform.England]) == week
+      assert Enum.count(week) == 7
+
+      assert England.week_of_month(1752, 9, 14) == {9, 1}
+      assert England.week_of_month(1752, 9, 18) == {9, 2}
+    end
+
+    test "every day of a transition year is in the week it numbers, and the weeks follow on" do
+      for {calendar, year} <- [
+            {England, 1155},
+            {England, 1751},
+            {England, 1752},
+            {Sweden, 1700},
+            {Sweden, 1712},
+            {Sweden, 1753},
+            # Japan's last lunisolar year, which ended on 2 December 1228
+            # (31 December 1872)
+            {Japan, 1228},
+            {Russia, 1918}
+          ] do
+        for day <- Calendrical.Interval.year(year, calendar) do
+          {week_year, week} = Calendrical.week_of_year(day)
+          iso_days = Date.to_gregorian_days(day)
+
+          assert %Date.Range{first_in_iso_days: first, last_in_iso_days: last} =
+                   Calendrical.Interval.week(week_year, week, calendar)
+
+          assert first <= iso_days and iso_days <= last
+        end
+
+        {weeks, _days_in_last_week} = calendar.weeks_in_year(year)
+
+        1..weeks
+        |> Enum.map(&calendar.week(year, &1))
+        |> Enum.chunk_every(2, 1, :discard)
+        |> Enum.each(fn [earlier, later] ->
+          assert earlier.last_in_iso_days + 1 == later.first_in_iso_days
+        end)
+
+        assert {:error, :invalid_date} = calendar.week(year, weeks + 1)
+      end
+    end
+  end
+
   describe "localization and formatting" do
     test "a composite date's month is localized" do
       assert Calendrical.localize(~D[1752-09-20 Calendrical.Reform.England], :month, locale: :en) ==

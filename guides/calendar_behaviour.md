@@ -153,9 +153,9 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 |---|---|
 | `quarter_of_year/3` | Returns the quarter `quarter/2` puts the month in, so the two always agree. |
 | `month_of_year/3` | Returns the month unchanged. **Override** when CLDR names a month by a number other than its position: return that number, or `{month, :leap}` for a leap month, so that `Calendrical.localize/3` finds its name (Hebrew returns CLDR's number and `{7, :leap}` for Adar II; the lunisolar calendars return the traditional month). |
-| `week_of_year/3` | Returns `{:error, :not_defined}`. **Override** for calendars that define weeks of the year. |
-| `iso_week_of_year/3` | Returns `{:error, :not_defined}`. |
-| `week_of_month/3` | Returns `{:error, :not_defined}`. |
+| `week_of_year/3` | Returns the calendar-aligned `{year, week}`: weeks turn over on the calendar's own week boundary and week 1 holds the first day of the year, so a year that opens mid-week has a short week 1. **Override** for a calendar with week rules of its own. |
+| `iso_week_of_year/3` | Returns the ISO 8601 `{year, week}` of the day. |
+| `week_of_month/3` | Returns `{month, week}`, counting the month's weeks as `week_of_year/3` counts the year's. |
 | `day_of_year/3` | Returns `iso_days(year, month, day) - iso_days(year, 1, 1) + 1`. Works for any month-based calendar. |
 | `day_of_week/4` | Computes the ISO day-of-week (1=Mon, 7=Sun) using the calendar's `date_to_iso_days/3`. **Override** for calendars whose week starts on a non-Monday (Coptic and Ethiopic both use Saturday). |
 
@@ -165,7 +165,7 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 |---|---|
 | `periods_in_year/1` | Delegates to `months_in_year/1`. |
 | `months_in_year/1` | Returns `months_in_leap_year` or `months_in_ordinary_year` based on `leap_year?/1`. |
-| `weeks_in_year/1` | Returns `{:error, :not_defined}`. |
+| `weeks_in_year/1` | Returns `{weeks, days_in_last_week}` for the weeks `week_of_year/3` counts. |
 | `days_in_year/1` | Computes `date_to_iso_days(year + 1, 1, 1) - date_to_iso_days(year, 1, 1)`. **Override** for an explicit constant when known. |
 | `days_in_month/1` | Returns `{:error, :undefined}`. **Override** if the month length is independent of the year. |
 | `days_in_month/2` | Computes the difference between the start of the month and the start of the next month. **Override** for any non-trivial calendar (this is one of the most commonly overridden callbacks). |
@@ -180,7 +180,7 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 | `quadrimester/2` | Returns four traditional months, placed as `quarter/2` places them. |
 | `semester/2` | Returns six traditional months, placed as `quarter/2` places them. |
 | `month/2` | Returns a `Date.Range` covering the first to last day of the given month. |
-| `week/2` | Returns `{:error, :not_defined}`. |
+| `week/2` | Returns a `Date.Range` of the week's days, cut to the year. |
 
 ### Arithmetic
 
