@@ -283,7 +283,7 @@ defmodule Calendrical.Interval do
       Date.range(~D[2019-W52-1 Calendrical.ISOWeek], ~D[2019-W52-7 Calendrical.ISOWeek])
 
       iex> Calendrical.Interval.week 2019, 52, Calendrical.Julian
-      {:error, :not_defined}
+      Date.range(~D[2019-12-24 Calendrical.Julian], ~D[2019-12-30 Calendrical.Julian])
 
   """
   @spec week(Calendar.year(), Calendrical.week(), Calendrical.calendar()) ::

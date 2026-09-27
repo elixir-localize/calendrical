@@ -396,8 +396,11 @@ defmodule Calendrical.Julian do
   end
 
   @doc """
-  Returns `{:error, :not_defined}` because the Julian calendar does
-  not define a week-of-year scheme of its own.
+  Returns the week of the Julian year holding the given date.
+
+  Weeks run from Monday, and week 1 is the week holding the first day
+  of the year, so a year that opens mid-week has a short week 1. Every
+  date numbers within its own year.
 
   ### Arguments
 
@@ -409,23 +412,31 @@ defmodule Calendrical.Julian do
 
   ### Returns
 
-  * `{:error, :not_defined}`.
+  * `{year, week}`, or
+
+  * `{:error, :invalid_date}` if the date is not a Julian date.
 
   ### Examples
 
       iex> Calendrical.Julian.week_of_year(2025, 1, 1)
-      {:error, :not_defined}
+      {2025, 1}
+
+      iex> Calendrical.Julian.week_of_year(2025, 1, 7)
+      {2025, 2}
 
   """
-  @spec week_of_year(year, month, day) :: {:error, :not_defined}
+  @spec week_of_year(year, month, day) :: {year, Calendrical.week()} | {:error, :invalid_date}
   @impl Calendrical
-  def week_of_year(_year, _month, _day) do
-    {:error, :not_defined}
+  def week_of_year(year, month, day) do
+    Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
   end
 
   @doc """
-  Returns `{:error, :not_defined}` because ISO weeks are not defined
-  for the Julian calendar.
+  Returns the ISO 8601 week holding the given Julian date.
+
+  ISO 8601 weeks run from Monday, and week 1 of a year is the week
+  holding the fourth day of the Gregorian year, so the week is the one
+  the same day has in `Calendrical.ISOWeek`.
 
   ### Arguments
 
@@ -437,23 +448,28 @@ defmodule Calendrical.Julian do
 
   ### Returns
 
-  * `{:error, :not_defined}`.
+  * `{iso_week_year, iso_week}`, or
+
+  * `{:error, :invalid_date}` if the date is not a Julian date.
 
   ### Examples
 
       iex> Calendrical.Julian.iso_week_of_year(2025, 1, 1)
-      {:error, :not_defined}
+      {2025, 3}
 
   """
-  @spec iso_week_of_year(year, month, day) :: {:error, :not_defined}
+  @spec iso_week_of_year(year, month, day) ::
+          {Calendar.year(), Calendrical.week()} | {:error, :invalid_date}
   @impl Calendrical
-  def iso_week_of_year(_year, _month, _day) do
-    {:error, :not_defined}
+  def iso_week_of_year(year, month, day) do
+    Calendrical.Base.Common.iso_week_of_year(__MODULE__, year, month, day)
   end
 
   @doc """
-  Returns `{:error, :not_defined}` because the Julian calendar does
-  not define a week-of-month scheme.
+  Returns the week of the Julian month holding the given date.
+
+  Weeks run from Monday, as `week_of_year/3` counts them, and week 1
+  is the week holding the first day of the month.
 
   ### Arguments
 
@@ -465,18 +481,23 @@ defmodule Calendrical.Julian do
 
   ### Returns
 
-  * `{:error, :not_defined}`.
+  * `{month, week}`, or
+
+  * `{:error, :invalid_date}` if the date is not a Julian date.
 
   ### Examples
 
       iex> Calendrical.Julian.week_of_month(2025, 1, 1)
-      {:error, :not_defined}
+      {1, 1}
+
+      iex> Calendrical.Julian.week_of_month(2025, 1, 7)
+      {1, 2}
 
   """
-  @spec week_of_month(year, month, day) :: {pos_integer(), pos_integer()} | {:error, :not_defined}
+  @spec week_of_month(year, month, day) :: {month, Calendrical.week()} | {:error, :invalid_date}
   @impl Calendrical
-  def week_of_month(_year, _month, _day) do
-    {:error, :not_defined}
+  def week_of_month(year, month, day) do
+    Calendrical.Base.Common.week_of_month(__MODULE__, year, month, day)
   end
 
   @doc """
@@ -758,10 +779,31 @@ defmodule Calendrical.Julian do
     @months_in_year
   end
 
-  @doc false
+  @doc """
+  Returns the number of weeks in the given Julian `year`, as
+  `week_of_year/3` counts weeks.
+
+  ### Arguments
+
+  * `year` is any non-zero Julian year as an integer.
+
+  ### Returns
+
+  * `{weeks_in_year, days_in_last_week}`, where the last week is short
+    when the year does not end on a Sunday, or
+
+  * `{:error, :invalid_date}` if `year` is not a Julian year.
+
+  ### Examples
+
+      iex> Calendrical.Julian.weeks_in_year(2025)
+      {53, 2}
+
+  """
+  @spec weeks_in_year(year) :: {Calendrical.week(), Calendar.day()} | {:error, :invalid_date}
   @impl Calendrical
-  def weeks_in_year(_year) do
-    {:error, :not_defined}
+  def weeks_in_year(year) do
+    Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
   end
 
   @doc """
@@ -1043,8 +1085,8 @@ defmodule Calendrical.Julian do
   end
 
   @doc """
-  Returns `{:error, :not_defined}` because the Julian calendar does
-  not define a week-of-year scheme.
+  Returns the days of a week of the Julian year, as `week_of_year/3`
+  counts weeks.
 
   ### Arguments
 
@@ -1054,18 +1096,20 @@ defmodule Calendrical.Julian do
 
   ### Returns
 
-  * `{:error, :not_defined}`.
+  * A `t:Date.Range.t/0` of the week's days, cut to the year, or
+
+  * `{:error, :invalid_date}` when the year has no such week.
 
   ### Examples
 
       iex> Calendrical.Julian.week(2025, 1)
-      {:error, :not_defined}
+      Date.range(~D[2025-01-01 Calendrical.Julian], ~D[2025-01-06 Calendrical.Julian])
 
   """
-  @spec week(year, Calendrical.week()) :: {:error, :not_defined}
+  @spec week(year, Calendrical.week()) :: Date.Range.t() | {:error, :invalid_date}
   @impl Calendrical
-  def week(_year, _week) do
-    {:error, :not_defined}
+  def week(year, week) do
+    Calendrical.Base.Common.week(__MODULE__, year, week)
   end
 
   @doc """

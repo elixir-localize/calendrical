@@ -282,7 +282,7 @@ defmodule Calendrical do
               month :: month() | Calendrical.week(),
               day :: day()
             ) ::
-              {Calendar.year(), Calendar.week()} | {:error, :not_defined}
+              {Calendar.year(), Calendar.week()} | {:error, :not_defined | :invalid_date}
 
   @doc """
   Returns a tuple of `{year, week_in_year}` for a given `year`, `month` or `week`, and `day`
@@ -296,7 +296,7 @@ defmodule Calendrical do
               month :: month() | Calendrical.week(),
               day :: day()
             ) ::
-              {Calendar.year(), Calendar.week()} | {:error, :not_defined}
+              {Calendar.year(), Calendar.week()} | {:error, :not_defined | :invalid_date}
 
   @doc """
   Returns a tuple of `{month, week_in_month}` for a given `year`, `month` or `week`, and `day`
@@ -306,7 +306,7 @@ defmodule Calendrical do
 
   """
   @callback week_of_month(year(), Calendrical.week(), day()) ::
-              {Calendar.month(), Calendrical.week()} | {:error, :not_defined}
+              {Calendar.month(), Calendrical.week()} | {:error, :not_defined | :invalid_date}
 
   @doc """
   Returns the CLDR calendar type.
@@ -353,7 +353,7 @@ defmodule Calendrical do
 
   """
   @callback weeks_in_year(year :: year()) ::
-              {Calendrical.week(), Calendar.day()} | {:error, :not_defined}
+              {Calendrical.week(), Calendar.day()} | {:error, :not_defined | :invalid_date}
 
   @doc """
   Returns the number of days in a year.
@@ -1941,7 +1941,7 @@ defmodule Calendrical do
       iex> Calendrical.week_of_year(~D[2019-26-01 Calendrical.NRF])
       {2019, 26}
       iex> Calendrical.week_of_year(~D[2019-12-01 Calendrical.Julian])
-      {:error, :not_defined}
+      {2019, 48}
 
   """
   @spec week_of_year(date()) :: {Calendar.year(), week()} | {:error, Exception.t()}
@@ -1980,7 +1980,7 @@ defmodule Calendrical do
       iex> Calendrical.iso_week_of_year(~D[2019-26-01 Calendrical.NRF])
       {2019, 30}
       iex> Calendrical.iso_week_of_year(~D[2019-12-01 Calendrical.Julian])
-      {:error, :not_defined}
+      {2019, 50}
 
   """
   @spec iso_week_of_year(date()) :: {Calendar.year(), week()} | {:error, Exception.t()}
@@ -2025,7 +2025,7 @@ defmodule Calendrical do
       iex> Calendrical.week_of_month(~D[2018-12-31 Calendrical.BasicWeek])
       {12, 5}
       iex> Calendrical.week_of_month(~D[2018-12-31 Calendrical.Julian])
-      {:error, :not_defined}
+      {12, 5}
 
   """
   @spec week_of_month(date()) :: {Calendar.month(), week()} | {:error, Exception.t()}
@@ -2884,8 +2884,10 @@ defmodule Calendrical do
     Date.shift(date, month: 1)
   end
 
+  # The week after a week is the one holding the day after it, so a week
+  # cut short at the end of its calendar's year is never stepped over.
   def next(%Date.Range{last: date}, :week, options) do
-    next(date, :week, options)
+    next(date, :day, options)
     |> Interval.week()
   end
 
@@ -2972,8 +2974,10 @@ defmodule Calendrical do
     Date.shift(date, month: -1)
   end
 
+  # The week before a week is the one holding the day before it, so a week
+  # cut short at the start of its calendar's year is never stepped over.
   def previous(%Date.Range{first: date}, :week, options) do
-    previous(date, :week, options)
+    previous(date, :day, options)
     |> Interval.week()
   end
 
@@ -3343,16 +3347,18 @@ defmodule Calendrical do
   # one. Calendars declare this with the optional `era_calendar_type/0`
   # callback.
   # The seven days of the week that holds `date`, in its calendar's week
-  # order. A calendar without numbered weeks (the lunisolar calendars) still
-  # has a seven-day week, so its days count from the date's day of the week.
+  # order. A calendar week cut short at the start or end of its year still
+  # has seven days of the week, so they count from the date's own day of
+  # the week whenever the calendar's week holds fewer.
   defp days_of_the_week(date) do
     case Interval.week(date) do
-      {:error, _reason} ->
+      %Date.Range{first_in_iso_days: first, last_in_iso_days: last} = week
+      when last - first == 6 ->
+        week
+
+      _short_week ->
         first = Date.add(date, 1 - day_of_week(date))
         Date.range(first, Date.add(first, 6))
-
-      week ->
-        week
     end
   end
 

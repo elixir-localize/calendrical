@@ -142,6 +142,14 @@ defmodule Calendrical.ApiTest do
       assert {7, "Sun"} in days
       assert length(days) == 7
     end
+
+    test "localize days_of_week returns the whole week for a day in a short calendar week" do
+      # 1 Tishri 5787 is a Saturday, alone in its year's week 1
+      days = Calendrical.localize(~D[5787-01-01 Calendrical.Hebrew], :days_of_week, locale: :en)
+      assert length(days) == 7
+      assert hd(days) == {1, "Sun"}
+      assert List.last(days) == {7, "Sat"}
+    end
   end
 
   describe "cyclic year localization" do

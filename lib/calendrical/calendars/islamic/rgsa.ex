@@ -200,7 +200,9 @@ defmodule Calendrical.Islamic.Rgsa do
 
   ### Returns
 
-  * A two-tuple `{year, week_in_year}`.
+  * A two-tuple `{year, week_in_year}`, or
+
+  * `{:error, :invalid_date}` if the date is not valid.
 
   ### Examples
 
@@ -213,7 +215,7 @@ defmodule Calendrical.Islamic.Rgsa do
   """
   @impl true
   @spec week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
-          {Calendar.year(), Calendar.week()}
+          {Calendar.year(), Calendar.week()} | {:error, :invalid_date}
   def week_of_year(year, month, day) do
     Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
   end
@@ -229,7 +231,9 @@ defmodule Calendrical.Islamic.Rgsa do
 
   * A two-tuple `{weeks_in_year, days_in_last_week}` where the
     final week is short when the year does not end on the last
-    day of the calendar's week.
+    day of the calendar's week, or
+
+  * `{:error, :invalid_date}` if `year` is not valid.
 
   ### Examples
 
@@ -238,7 +242,8 @@ defmodule Calendrical.Islamic.Rgsa do
 
   """
   @impl true
-  @spec weeks_in_year(Calendar.year()) :: {Calendrical.week(), Calendar.day()}
+  @spec weeks_in_year(Calendar.year()) ::
+          {Calendrical.week(), Calendar.day()} | {:error, :invalid_date}
   def weeks_in_year(year) do
     Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
   end
