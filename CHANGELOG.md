@@ -18,6 +18,8 @@ The format is based on
 
 ### Added
 
+* `Calendrical.diff/3`, and a `diff/3` callback on every calendar, count the whole years, quarters, months, weeks or days from one date to another — the inverse of `plus/6`, negative backwards. The Hebrew and lunisolar calendars count months in one calculation, from the Metonic cycle and the new moons.
+
 * `calendar_from_cldr_calendar_type/1` and `additional_calendars/0` give every calendar Calendrical implements an IXDTF `[u-ca=…]` identifier where no CLDR type reaches it: `iso8601` (`Calendrical.ISO`, the Gregorian calendar with ISO 8601's week rules), `iso-week`, `vietnamese`, `lunar-japanese`, `nrf`, the Julian year-start variants (`julian-march25`…) and the reform calendars (`reform-england`…), beside `julian`.
 
 * Every calendar has weeks: `week_of_year/3`, `weeks_in_year/1`, `week/2` and `week_of_month/3` default to the calendar's own weeks, cut short at the ends of the year or month, and a composite numbers a transition year's weeks itself, where the Behaviour and Julian calendars returned `{:error, :not_defined}`. `iso_week_of_year/3` gives the ISO 8601 week of the day in every calendar.

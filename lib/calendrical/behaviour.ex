@@ -101,8 +101,8 @@ defmodule Calendrical.Behaviour do
 
   * Ranges: `year/1`, `quarter/2`, `month/2`, `week/2`.
 
-  * Arithmetic: `plus/5`, `plus/6`, `shift_date/4`, `shift_time/5`,
-    `shift_naive_datetime/8`.
+  * Arithmetic: `plus/5`, `plus/6`, `diff/3`, `shift_date/4`,
+    `shift_time/5`, `shift_naive_datetime/8`.
 
   * Conversion: `naive_datetime_to_iso_days/7`,
     `naive_datetime_from_iso_days/1`,
@@ -846,6 +846,23 @@ defmodule Calendrical.Behaviour do
         date_from_iso_days(iso_days)
       end
 
+      @doc """
+      Returns the whole number of `date_part`s from one
+      `{year, month, day}` to another — the inverse of `plus/6`.
+
+      `date_part` can be `:years`, `:quarters`, `:months`, `:weeks`
+      or `:days`. The count is the largest number `plus/6`, coercing
+      the day into a shorter month, can add to the earlier date
+      without passing the later one; it is negative when `to` is
+      before `from`.
+
+      """
+      @impl true
+
+      def diff(from, to, date_part) do
+        Calendrical.Base.Common.diff(__MODULE__, from, to, date_part)
+      end
+
       if @months_in_ordinary_year == @months_in_leap_year do
         # Every year has the same months, so the shift is a division. A
         # non-positive month from div_amod belongs to the prior year —
@@ -1066,6 +1083,7 @@ defmodule Calendrical.Behaviour do
       defoverridable week: 2
       defoverridable plus: 5
       defoverridable plus: 6
+      defoverridable diff: 3
 
       defoverridable epoch: 0
       defoverridable cldr_calendar_type: 0

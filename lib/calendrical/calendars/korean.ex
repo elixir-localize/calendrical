@@ -894,6 +894,27 @@ defmodule Calendrical.Korean do
     super(year, month, day, date_part, increment, options)
   end
 
+  @doc """
+  Returns the whole number of `date_part`s from one `{year, month, day}`
+  to another — the inverse of `plus/6`.
+
+  `date_part` can be `:years`, `:quarters`, `:months`, `:weeks` or
+  `:days`. The count is the largest number `plus/6`, coercing the day
+  into a shorter month, can add to the earlier date without passing the
+  later one; it is negative when `to` is before `from`. Months are
+  counted by the new moons that open them (`Calendrical.Lunisolar`), so
+  a leap month counts as a month and a span of any length costs one
+  calculation.
+
+  """
+  @impl true
+  def diff(from, to, date_part) do
+    Calendrical.Base.Common.diff(__MODULE__, from, to, date_part, &months_between/3)
+  end
+
+  defp months_between(_calendar, from, to),
+    do: Lunisolar.months_between(from, to, epoch(), &location/1)
+
   @doc false
   def new_moon_on_or_after(iso_days) do
     Lunisolar.new_moon_on_or_after(iso_days, &location/1)

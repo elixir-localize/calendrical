@@ -756,6 +756,17 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
+      Returns the whole number of `date_part`s from one
+      `{year, month, day}` to another — the inverse of `plus/6`,
+      counted through each calendar a span crosses.
+
+      """
+      @impl true
+      def diff(from, to, date_part) do
+        Calendrical.Base.Common.diff(__MODULE__, from, to, date_part)
+      end
+
+      @doc """
       Shifts a date by the given duration: years, then months, then
       weeks and days, as `plus/6` adds them.
 
