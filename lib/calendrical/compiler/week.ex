@@ -528,6 +528,22 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
+      Returns the whole number of `date_part`s from one
+      `{year, week, day}` to another — the inverse of `plus/6`.
+
+      `date_part` can be `:years`, `:quarters`, `:months`, `:weeks`
+      or `:days`; a month is a period of the calendar's weeks, as
+      `plus/6` counts it. The count is the largest number `plus/6`
+      can add to the earlier date without passing the later one; it
+      is negative when `to` is before `from`.
+
+      """
+      @impl true
+      def diff(from, to, date_part) do
+        Calendrical.Base.Common.diff(__MODULE__, from, to, date_part)
+      end
+
+      @doc """
       Adds a :year, :month, :day or time increments
 
       These functions support CalendarInterval

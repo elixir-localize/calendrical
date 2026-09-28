@@ -17,7 +17,7 @@ The lunisolar calendars are Behaviour calendars that delegate their conversion m
 
 ## The Behaviour template
 
-`Calendrical.Behaviour.__using__/1` accepts `:epoch` (mandatory), `:cldr_calendar_type`, `:cldr_calendar_base`, `:days_in_week`, `:first_day_of_week`, `:months_in_ordinary_year` and `:months_in_leap_year`. It sets `@behaviour Calendar` and `@behaviour Calendrical`, stores the options as module attributes, and generates roughly 48 functions in one quoted block: identity accessors, validity checks, year/era functions, period queries, counts, `Date.Range` builders, arithmetic (`plus`, `shift_*`), iso-days conversion plumbing, and parse/format delegates. Everything generated is `defoverridable`.
+`Calendrical.Behaviour.__using__/1` accepts `:epoch` (mandatory), `:cldr_calendar_type`, `:cldr_calendar_base`, `:days_in_week`, `:first_day_of_week`, `:months_in_ordinary_year` and `:months_in_leap_year`. It sets `@behaviour Calendar` and `@behaviour Calendrical`, stores the options as module attributes, and generates roughly 48 functions in one quoted block: identity accessors, validity checks, year/era functions, period queries, counts, `Date.Range` builders, arithmetic (`plus`, `diff`, `shift_*`), iso-days conversion plumbing, and parse/format delegates. Everything generated is `defoverridable`.
 
 Two functions are deliberately not generated and must be supplied by the using module: `date_to_iso_days/3` and `date_from_iso_days/1`. They are the only calendar-specific mathematics the template needs; every default implementation is written against them.
 

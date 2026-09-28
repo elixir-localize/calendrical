@@ -100,6 +100,17 @@ defmodule Calendrical.Julian.Compiler do
         date_from_iso_days(iso_days)
       end
 
+      # `plus/6` is the plain Julian calendar's on the Julian date, relabelled,
+      # so the count between two dates is the Julian calendar's between their
+      # Julian dates — the same days, the same months.
+      def diff({year, month, day}, {to_year, to_month, to_day}, date_part) do
+        Calendrical.Julian.diff(
+          {julian_year(year, month, day), month, day},
+          {julian_year(to_year, to_month, to_day), to_month, to_day},
+          date_part
+        )
+      end
+
       def days_in_year(year) do
         last_iso_day_of_year(year) - first_iso_day_of_year(year) + 1
       end

@@ -1219,6 +1219,31 @@ defmodule Calendrical.Julian do
     date_from_iso_days(iso_days)
   end
 
+  @doc """
+  Returns the whole number of `date_part`s from one `{year, month, day}`
+  to another — the inverse of `plus/6`.
+
+  `date_part` can be `:years`, `:quarters`, `:months`, `:weeks` or
+  `:days`. The count is the largest number `plus/6`, coercing the day
+  into a shorter month, can add to the earlier date without passing the
+  later one; it is negative when `to` is before `from`. There is no year
+  zero, so year -1 to year 1 is one year.
+
+  ### Examples
+
+      iex> Calendrical.Julian.diff({1582, 10, 4}, {1583, 10, 4}, :months)
+      12
+
+      iex> Calendrical.Julian.diff({-1, 6, 1}, {1, 6, 1}, :years)
+      1
+
+  """
+  @impl Calendrical
+  @spec diff({year, month, day}, {year, month, day}, atom()) :: integer()
+  def diff(from, to, date_part) do
+    Calendrical.Base.Common.diff(__MODULE__, from, to, date_part)
+  end
+
   # The Julian calendar has no year zero, so year arithmetic that
   # lands on or crosses zero skips it: year -1 plus one year is
   # year 1, and year 1 minus one year is year -1.

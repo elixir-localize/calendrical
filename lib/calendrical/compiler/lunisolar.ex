@@ -227,6 +227,25 @@ defmodule Calendrical.Lunisolar do
 
   defp constrained_ordinal(lunar_month, _leap_month), do: lunar_month
 
+  @doc false
+  # The months from one ordinal date's month to another's, counted by the new
+  # moons that open them: every month begins on the day of a new moon, and a
+  # true new moon falls within a day or two of the mean one, so the days
+  # between two month starts divided by the mean synodic month, rounded, is
+  # the count — one calculation, however many years apart the dates are.
+  def months_between(
+        {year_from, month_from, _day_from},
+        {year_to, month_to, _day_to},
+        epoch,
+        location_fun
+      ) do
+    days =
+      date_to_iso_days(year_to, month_to, 1, epoch, location_fun) -
+        date_to_iso_days(year_from, month_from, 1, epoch, location_fun)
+
+    round(days / Time.mean_synodic_month())
+  end
+
   @doc """
   Returns the Gregorian date for the lunar month and day in a
   given Gregorian year.

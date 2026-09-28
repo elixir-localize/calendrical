@@ -576,6 +576,42 @@ defmodule Calendrical.Hebrew do
     super(year, month, day, date_part, increment, options)
   end
 
+  @doc """
+  Returns the whole number of `date_part`s from one `{year, month, day}`
+  to another — the inverse of `plus/6`.
+
+  `date_part` can be `:years`, `:quarters`, `:months`, `:weeks` or
+  `:days`. The count is the largest number `plus/6`, coercing the day
+  into a shorter month, can add to the earlier date without passing the
+  later one; it is negative when `to` is before `from`. Months count a
+  leap year's Adar I, and come from the months elapsed before each year
+  (235 in every 19), so a span of any length costs the same.
+
+  ### Examples
+
+      # 5784 is a leap year of thirteen months, 5785 an ordinary one
+      iex> Calendrical.Hebrew.diff({5784, 1, 1}, {5785, 1, 1}, :months)
+      13
+
+      iex> Calendrical.Hebrew.diff({5784, 1, 1}, {5786, 1, 1}, :months)
+      25
+
+  """
+  @impl true
+  @spec diff({year, month, day}, {year, month, day}, atom()) :: integer()
+  def diff(from, to, date_part) do
+    Calendrical.Base.Common.diff(__MODULE__, from, to, date_part, &months_between/3)
+  end
+
+  # A month's position counts from Tishri, as the months elapsed before a year
+  # do, so the months between two dates are the difference of the two counts.
+  defp months_between(
+         _calendar,
+         {year_from, month_from, _day_from},
+         {year_to, month_to, _day_to}
+       ),
+       do: months_elapsed(year_to) + month_to - (months_elapsed(year_from) + month_from)
+
   # Nineteen years hold 235 months (the Metonic cycle), so a long shift
   # moves whole cycles before walking the remaining years.
   @months_in_cycle 235
@@ -976,12 +1012,15 @@ defmodule Calendrical.Hebrew do
     epoch() + hebrew_calendar_elapsed_days(year) + hebrew_year_length_correction(year)
   end
 
+  # The months from the epoch to Tishri of `year`: 235 in every 19 years.
+  defp months_elapsed(year), do: Integer.floor_div(235 * year - 234, 19)
+
   # Number of days elapsed from the (Sunday) noon prior to the epoch
   # of the Hebrew calendar to the *molad of Tishri* of Hebrew year y,
   # or one day later (the *dehiyyah* — postponements that prevent
   # certain holidays from falling on prohibited weekdays).
   defp hebrew_calendar_elapsed_days(year) do
-    months_elapsed = Integer.floor_div(235 * year - 234, 19)
+    months_elapsed = months_elapsed(year)
     parts_elapsed = 12_084 + 13_753 * months_elapsed
     days = 29 * months_elapsed + Integer.floor_div(parts_elapsed, 25_920)
 

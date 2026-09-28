@@ -67,6 +67,21 @@ defmodule Calendrical.CalendarContract.Test do
         assert calendar.valid_date?(year, month, day)
       end
 
+      # A sighting calendar's every date costs a crescent search, so it counts
+      # back a single period; its arithmetic is the tabular calendars'.
+      test "diff/3 counts back what plus/6 adds", %{date: date} do
+        calendar = unquote(calendar)
+        from = {date.year, date.month, date.day}
+        counts = if calendar in @sighting_calendars, do: [0, 1], else: [0, 1, 13]
+
+        for date_part <- [:years, :quarters, :months, :weeks, :days], count <- counts do
+          to = calendar.plus(date.year, date.month, date.day, date_part, count, coerce: true)
+
+          assert calendar.diff(from, to, date_part) == count
+          assert calendar.diff(to, from, date_part) == -count
+        end
+      end
+
       test "the days of the week are localized in week order", %{date: date} do
         days = Calendrical.localize(date, :days_of_week, locale: :en)
         assert length(days) == 7

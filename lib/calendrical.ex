@@ -511,6 +511,21 @@ defmodule Calendrical do
               options :: Keyword.t()
             ) :: {Calendar.year(), Calendar.month(), Calendar.day()}
 
+  @doc """
+  Returns the whole number of years, quarters, months, weeks or days
+  from one `{year, month, day}` to another — the inverse of `plus/6`.
+
+  The count is the largest number of `date_part`s that `plus/6`, coercing
+  the day into a shorter month, can add to the earlier date without
+  passing the later one; it is negative when `to` is before `from`.
+
+  """
+  @callback diff(
+              from :: {year(), month() | week(), day()},
+              to :: {year(), month() | week(), day()},
+              date_part :: :years | :quarters | :months | :weeks | :days
+            ) :: integer()
+
   @days [1, 2, 3, 4, 5, 6, 7]
   @days_in_a_week Enum.count(@days)
   @the_world Localize.Territory.the_world()
@@ -3804,6 +3819,109 @@ defmodule Calendrical do
   defp precision_to_shift(:months), do: {:month, 1}
   defp precision_to_shift(:weeks), do: {:week, 1}
   defp precision_to_shift(:days), do: {:day, 1}
+
+  @doc """
+  Returns the whole number of years, quarters, months, weeks or days
+  from one date to another, in the dates' own calendar.
+
+  `diff/3` is the inverse of adding periods to a date: the count is the
+  largest number of `date_part`s that can be added to the earlier date —
+  a day that a shorter month lacks becoming that month's last day, as
+  `Date.shift/2` does — without passing the later date, and it is negative
+  when `date_to` is before `date_from`. `Date.diff/2` answers the same
+  question in days.
+
+  ### Arguments
+
+  * `date_from` and `date_to` are `t:Calendar.date/0` values in the same
+    calendar. A `Calendar.ISO` date counts as a `Calendrical.Gregorian`
+    one.
+
+  * `date_part` is one of `:years`, `:quarters`, `:months`, `:weeks` or
+    `:days`.
+
+  ### Returns
+
+  * The whole number of `date_part`s from `date_from` to `date_to`, as an
+    integer.
+
+  * `{:error, %Calendrical.IncompatibleCalendarError{}}` when the dates
+    are in different calendars.
+
+  * `{:error, %Calendrical.InvalidPartError{}}` when `date_part` is not
+    one of the five.
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` when a date lacks a
+    year, month or day, and `{:error,
+    %Calendrical.InvalidCalendarModuleError{}}` when its calendar is not
+    a Calendrical calendar.
+
+  ### Examples
+
+      iex> Calendrical.diff(~D[2026-01-01], ~D[2027-04-01], :months)
+      15
+
+      iex> Calendrical.diff(~D[2026-01-01], ~D[2027-04-01], :years)
+      1
+
+      iex> Calendrical.diff(~D[2027-04-01], ~D[2026-01-01], :months)
+      -15
+
+      iex> Calendrical.diff(~D[2026-01-31], ~D[2026-02-28], :months)
+      1
+
+  A Hebrew leap year has thirteen months:
+
+      iex> {:ok, from} = Date.new(5784, 1, 1, Calendrical.Hebrew)
+      iex> {:ok, to} = Date.new(5786, 1, 1, Calendrical.Hebrew)
+      iex> Calendrical.diff(from, to, :months)
+      25
+
+  """
+  @spec diff(Calendar.date(), Calendar.date(), :years | :quarters | :months | :weeks | :days) ::
+          integer() | {:error, Exception.t()}
+  def diff(date_from, date_to, date_part)
+
+  def diff(date_from, date_to, date_part)
+      when is_full_date(date_from) and is_full_date(date_to) and date_part in @valid_precision do
+    {year_from, month_from, day_from, calendar} = extract_date(date_from)
+    {year_to, month_to, day_to, calendar_to} = extract_date(date_to)
+
+    cond do
+      calendar != calendar_to ->
+        {:error, Calendrical.IncompatibleCalendarError.exception(from: calendar, to: calendar_to)}
+
+      not (Code.ensure_loaded?(calendar) and function_exported?(calendar, :diff, 3)) ->
+        {:error, invalid_calendar_error(calendar)}
+
+      true ->
+        calendar.diff({year_from, month_from, day_from}, {year_to, month_to, day_to}, date_part)
+    end
+  end
+
+  def diff(date_from, date_to, date_part)
+      when is_full_date(date_from) and is_full_date(date_to) do
+    {:error,
+     Calendrical.InvalidPartError.exception(part: date_part, valid_parts: @valid_precision)}
+  end
+
+  def diff(date_from, date_to, _date_part) do
+    date = if full_date?(date_from), do: date_to, else: date_from
+
+    {:error,
+     missing_date_error(
+       "Calendrical.diff/3",
+       field(date, :year),
+       field(date, :month),
+       field(date, :day)
+     )}
+  end
+
+  defp full_date?(date) when is_full_date(date), do: true
+  defp full_date?(_date), do: false
+
+  defp field(%{} = date, key), do: Map.get(date, key)
+  defp field(_not_a_map, _key), do: nil
 
   @doc """
   Returns an a `Stream` function than can be lazily

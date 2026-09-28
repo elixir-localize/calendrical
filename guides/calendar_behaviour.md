@@ -187,6 +187,7 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 | Callback | Default behaviour |
 |---|---|
 | `plus/5` and `plus/6` | Adds an increment of `:months` to a `{year, month, day}`. Used internally by `shift_date/4`. The default handles only `:months`; calendars that need `:years`, `:weeks`, etc. should override. |
+| `diff/3` | Counts the whole `:years`, `:quarters`, `:months`, `:weeks` or `:days` from one `{year, month, day}` to another, the inverse of `plus/6`. The Hebrew and lunisolar calendars override it with a faster month count. |
 | `shift_date/4` | Delegates to `Calendrical.shift_date/5` with the calendar module. |
 | `shift_time/5` | Delegates to `Calendar.ISO.shift_time/5`. |
 | `shift_naive_datetime/8` | Delegates to `Calendrical.shift_naive_datetime/9` with the calendar module. |
