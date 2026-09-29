@@ -44,8 +44,15 @@ defmodule Calendrical.Coverage.LunisolarTest do
       assert Chinese.cyclic_year(Date.new!(4662, 7, 1, Chinese)) == 42
     end
 
-    test "Lunisolar.cyclic_year/3 ignores month and day" do
-      assert Lunisolar.cyclic_year(4663, 5, 1) == 43
+    # The sexagenary cycle began with 甲子 in 4 CE and 1984; 2025 is
+    # 乙巳, the 42nd year, and ICU4C 78.3 gives the lunar year that
+    # began in -6001 place 56.
+    test "Lunisolar.cyclic_year_from_related_gregorian_year/1 counts from 4 CE" do
+      assert Lunisolar.cyclic_year_from_related_gregorian_year(4) == 1
+      assert Lunisolar.cyclic_year_from_related_gregorian_year(3) == 60
+      assert Lunisolar.cyclic_year_from_related_gregorian_year(1984) == 1
+      assert Lunisolar.cyclic_year_from_related_gregorian_year(2025) == 42
+      assert Lunisolar.cyclic_year_from_related_gregorian_year(-6001) == 56
     end
   end
 
@@ -274,9 +281,11 @@ defmodule Calendrical.Coverage.LunisolarTest do
       assert Korean.month_of_year(4358, 7, 1) == {6, :leap}
     end
 
+    # Korean 4359 began in 2026 (丙午, 43) and 4358 in 2025 (乙巳, 42):
+    # the cycle follows the lunar year, not the Korean year's number.
     test "cyclic_year/2 and cyclic_year/1" do
-      assert Korean.cyclic_year(4359, 1) == 39
-      assert Korean.cyclic_year(Date.new!(4358, 7, 1, Korean)) == 38
+      assert Korean.cyclic_year(4359, 1) == 43
+      assert Korean.cyclic_year(Date.new!(4358, 7, 1, Korean)) == 42
     end
 
     test "valid_date?/3 true and false branches" do
@@ -375,9 +384,11 @@ defmodule Calendrical.Coverage.LunisolarTest do
       assert LunarJapanese.elapsed_years(24, 2) == 1382
     end
 
+    # Lunar Japanese 1382 began in 2026 (丙午, 43) and 1381 in 2025
+    # (乙巳, 42).
     test "cyclic_year/2 and cyclic_year/1" do
-      assert LunarJapanese.cyclic_year(1382, 1) == 2
-      assert LunarJapanese.cyclic_year(Date.new!(1381, 7, 1, LunarJapanese)) == 1
+      assert LunarJapanese.cyclic_year(1382, 1) == 43
+      assert LunarJapanese.cyclic_year(Date.new!(1381, 7, 1, LunarJapanese)) == 42
     end
 
     test "leap_year?/1 both branches" do

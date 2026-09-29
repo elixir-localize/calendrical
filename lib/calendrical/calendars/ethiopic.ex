@@ -21,7 +21,7 @@ defmodule Calendrical.Ethiopic do
 
   alias Calendrical.Base.Egyptian
 
-  @type year :: -9999..-1 | 1..9999
+  @type year :: -9999..9999
   @type month :: 1..13
   @type day :: 1..30
 
@@ -63,9 +63,11 @@ defmodule Calendrical.Ethiopic do
   @doc """
   Returns the year and era for the given Ethiopic `year`.
 
-  The Ethiopic calendar has two eras: the current era which starts
-  in year 1 and is defined as era `1` (Amete Mihret); and a
-  second era for years less than 1, defined as era `0`.
+  The Ethiopic calendar has two eras: Amete Mihret, the Era of
+  Mercy (era `1`), which numbers the years from 1; and Amete Alem,
+  the Era of the World (era `0`), which begins 5500 years earlier
+  and numbers the years before it, as CLDR defines it: year 0 is
+  Amete Alem 5500.
 
   ### Arguments
 
@@ -80,13 +82,20 @@ defmodule Calendrical.Ethiopic do
       iex> Calendrical.Ethiopic.year_of_era(2018)
       {2018, 1}
 
+      iex> Calendrical.Ethiopic.year_of_era(0)
+      {5500, 0}
+
       iex> Calendrical.Ethiopic.year_of_era(-50)
-      {50, 0}
+      {5450, 0}
 
   """
-  @spec year_of_era(year) :: {pos_integer(), 0..1}
+  @spec year_of_era(year) :: {integer(), 0..1}
+  def year_of_era(year) when year >= 1 do
+    {year, 1}
+  end
+
   def year_of_era(year) do
-    Egyptian.year_of_era(year)
+    {Calendrical.Ethiopic.AmeteAlem.amete_alem_year(year), 0}
   end
 
   @doc """
@@ -112,7 +121,7 @@ defmodule Calendrical.Ethiopic do
 
   """
   @impl true
-  @spec year_of_era(year, month, day) :: {pos_integer(), 0..1}
+  @spec year_of_era(year, month, day) :: {integer(), 0..1}
   def year_of_era(year, _month, _day), do: year_of_era(year)
 
   @doc """
@@ -189,7 +198,10 @@ defmodule Calendrical.Ethiopic do
 
   ### Returns
 
-  * A two-tuple `{day_in_era, era}` where `era` is `0` or `1`.
+  * A two-tuple `{day_in_era, era}` where `era` is `0` or `1`,
+    counting from the era's first day: 1 Meskerem of year 1 in
+    Amete Mihret and of Amete Alem 1 (year -5499) in Amete Alem.
+    The days before Amete Alem are day 0, -1 and so on.
 
   ### Examples
 
@@ -199,11 +211,14 @@ defmodule Calendrical.Ethiopic do
       iex> Calendrical.Ethiopic.day_of_era(1, 1, 1)
       {1, 1}
 
+      iex> Calendrical.Ethiopic.day_of_era(-5499, 1, 1)
+      {1, 0}
+
   """
   @impl true
-  @spec day_of_era(year, month, day) :: {non_neg_integer(), 0..1}
+  @spec day_of_era(year, month, day) :: {integer(), 0..1}
   def day_of_era(year, month, day) do
-    Egyptian.day_of_era(year, month, day, epoch())
+    Calendrical.Era.day_of_era(:ethiopic, date_to_iso_days(year, month, day))
   end
 
   @doc """

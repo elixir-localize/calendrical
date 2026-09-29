@@ -140,12 +140,12 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 
 | Callback | Default behaviour |
 |---|---|
-| `year_of_era/1` and `year_of_era/3` | Computes era and year-of-era using the auto-generated `Calendrical.Era.<CalendarType>` module from CLDR era data. **Override** when the calendar's era logic doesn't match the CLDR data (e.g. Coptic and Ethiopic, which use simple year-sign logic). |
+| `year_of_era/1` and `year_of_era/3` | Answers from the CLDR era data through `Calendrical.Era`. **Override** when the calendar's years do not follow CLDR's era boundaries (e.g. Ethiopic's Amete Alem years, or Julian's missing year 0). |
 | `calendar_year/3` | Returns the year unchanged. **Override** for calendars where the displayed year differs from the storage year (e.g. Japanese era years). |
 | `extended_year/3` | Returns the year unchanged. |
-| `related_gregorian_year/3` | Returns the year unchanged. **Override** to return the actual Gregorian year that contains the given calendar date — used by some localization formats. |
-| `cyclic_year/3` | Returns the year unchanged. **Override** for calendars with named year cycles (Chinese 60-year sexagenary cycle, etc.). |
-| `day_of_era/3` | Computes day-in-era from the auto-generated era module. **Override** when era boundaries are not in the CLDR data. |
+| `related_gregorian_year/3` | Returns the Gregorian year in which the calendar year begins, the same for every date of the year. |
+| `cyclic_year/3` | Returns the year unchanged. **Override** for calendars with named year cycles: the lunisolar calendars return the year's place in the 60-year sexagenary cycle. |
+| `day_of_era/3` | Answers from the CLDR era data through `Calendrical.Era`. **Override** with `year_of_era/3`. |
 
 ### Periods
 
@@ -219,25 +219,25 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 
 ## Era support
 
-When the using module is compiled, an `@after_compile` hook automatically calls `Calendrical.Era.define_era_module/1`. This:
+The default `year_of_era/1`, `year_of_era/3` and `day_of_era/3` answer from `Calendrical.Era`, which reads the CLDR era data for the calendar's `:cldr_calendar_type` on first use and caches it in `:persistent_term`. For most calendars (Persian, Buddhist, Indian, ROC, Hebrew, Coptic, the Islamic calendars, …) this is exactly what you want — the CLDR era data has the correct era boundaries and your calendar gets era support for free:
 
-1. Reads the CLDR era data for the calendar's `:cldr_calendar_type`.
-2. Generates a `Calendrical.Era.<CalendarType>` module containing a `year_of_era/2` and `day_of_era/1` lookup function.
-3. Wires the calendar's default `year_of_era/{1, 3}` and `day_of_era/3` to use this generated module.
+* A calendar whose years count from its only era, such as the Buddhist or Coptic calendar, numbers the years before its first 0, -1 and so on of that era.
 
-For most calendars (Persian, Buddhist, Indian, ROC, …) this is exactly what you want — the CLDR era data has the correct era boundaries and your calendar gets era support for free.
+* A calendar with a before era in CLDR (BCE, before ROC, before Hijra) counts that era's years and days back from its end.
 
-A few calendars (Coptic, Ethiopic, Julian) use a simpler "positive year = era 1, negative year = era 0" convention that does not match the CLDR data. They override `year_of_era/1`, `year_of_era/3`, and `day_of_era/3` directly:
+* A date before a calendar's first era counts back from that era's start, so its year and day of era are 0 or less.
+
+Override the three functions when a calendar's years do not follow CLDR's era boundaries. `Calendrical.Ethiopic` gives its years before 1 to Amete Alem, 5500 years earlier, and `Calendrical.Julian` has no year 0, so its year -1 is 1 BC:
 
 ```elixir
 def year_of_era(year) when year > 0, do: {year, 1}
-def year_of_era(year) when year < 0, do: {abs(year), 0}
+def year_of_era(year) when year < 0, do: {-year, 0}
 
 @impl true
 def year_of_era(year, _month, _day), do: year_of_era(year)
 ```
 
-If two calendars share the same `:cldr_calendar_type` (for example `Calendrical.Chinese` and `Calendrical.LunarJapanese` both use `:chinese`), the era module is created exactly once. The `Calendrical.Era.define_era_module/1` function uses an ETS-based lock to coordinate creation under parallel compilation.
+Calendars that share a `:cldr_calendar_type` (`Calendrical.Chinese`, `Calendrical.Vietnamese` and `Calendrical.LunarJapanese` all use `:chinese`) share its era data.
 
 ## Worked examples
 

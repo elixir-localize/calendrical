@@ -164,10 +164,70 @@ defmodule Calendrical.EraTest do
       assert Era.day_of_era(:japanese, iso_days(~D[2019-05-31])) == {31, 236}
     end
 
-    test "a date before all eras raises a clear error" do
-      assert_raise ArgumentError, ~r/before all eras/, fn ->
-        Era.day_of_era(:chinese, iso_days(~D[-9999-01-01]))
+    test "a date before every era counts back from the first era's start" do
+      # The Chinese era begins on -2636-02-15.
+      assert Era.day_of_era(:chinese, iso_days(~D[-2636-02-15])) == {1, 0}
+      assert Era.day_of_era(:chinese, iso_days(~D[-2636-02-14])) == {0, 0}
+      assert Era.day_of_era(:chinese, iso_days(~D[-2636-02-12])) == {-2, 0}
+      assert {_day, 0} = Era.day_of_era(:chinese, iso_days(~D[-9999-01-01]))
+    end
+
+    test "a before era counts back from its last day, as Calendar.ISO counts BCE" do
+      for date <- Date.range(~D[-0002-12-25], ~D[0001-01-05]) do
+        assert Era.day_of_era(:gregorian, iso_days(date)) ==
+                 Calendar.ISO.day_of_era(date.year, date.month, date.day)
       end
+
+      assert Era.day_of_era(:roc, iso_days(~D[1911-12-31])) == {1, 0}
+      assert Era.day_of_era(:roc, iso_days(~D[1911-01-01])) == {365, 0}
+      assert Era.day_of_era(:islamic_civil, iso_days(~D[0622-07-18])) == {1, 1}
+      assert Calendrical.Roc.day_of_era(0, 12, 31) == {1, 0}
+    end
+  end
+
+  # ICU4C 78.3 counts the Japanese years before Taika, the first era,
+  # back from it: the Gregorian year 0 is Taika -644.
+  describe "the Japanese calendars before Taika" do
+    test "count their years back from Taika" do
+      assert Calendrical.Japanese.year_of_era(0, 12, 31) == {-644, 0}
+      assert Calendrical.Japanese.year_of_era(600, 1, 1) == {-44, 0}
+      assert Calendrical.Japanese.year_of_era(-6000, 1, 1) == {-6644, 0}
+      assert Calendrical.Japanese.calendar_year(600, 1, 1) == -44
+      assert Calendrical.Japanese.day_of_era(645, 7, 19) == {0, 0}
+
+      date = Date.convert!(~D[0600-06-01], Calendrical.LunarJapanese)
+      assert Calendrical.LunarJapanese.year_of_era(date.year, date.month, date.day) == {-44, 0}
+      assert Calendrical.LunarJapanese.calendar_year(date.year, date.month, date.day) == -44
+    end
+  end
+
+  # CLDR 49 and ICU4C 78.3 give the Ethiopic years before Amete Mihret 1
+  # to Amete Alem, the Era of the World, 5500 years earlier.
+  describe "the Ethiopic eras" do
+    test "the years before 1 are Amete Alem years" do
+      assert Calendrical.Ethiopic.year_of_era(1, 1, 1) == {1, 1}
+      assert Calendrical.Ethiopic.year_of_era(0, 13, 5) == {5500, 0}
+      assert Calendrical.Ethiopic.year_of_era(-1, 1, 1) == {5499, 0}
+      assert Calendrical.Ethiopic.year_of_era(-6008, 6, 22) == {-508, 0}
+    end
+
+    test "days count from each era's first day" do
+      assert Calendrical.Ethiopic.day_of_era(1, 1, 1) == {1, 1}
+      assert Calendrical.Ethiopic.day_of_era(0, 13, 5) == {2_008_875, 0}
+      assert Calendrical.Ethiopic.day_of_era(-5499, 1, 1) == {1, 0}
+      assert Calendrical.Ethiopic.day_of_era(-5500, 13, 5) == {0, 0}
+    end
+  end
+
+  # CLDR 49 gives the Coptic calendar a single era, anno martyrum, having
+  # removed Before Diocletian (CLDR-18465); ICU4C 78.3 still has it.
+  describe "the Coptic era" do
+    test "the years before 1 stay in anno martyrum" do
+      assert Calendrical.Coptic.year_of_era(1, 1, 1) == {1, 1}
+      assert Calendrical.Coptic.year_of_era(0, 13, 5) == {0, 1}
+      assert Calendrical.Coptic.year_of_era(-5, 11, 7) == {-5, 1}
+      assert Calendrical.Coptic.day_of_era(1, 1, 1) == {1, 1}
+      assert Calendrical.Coptic.day_of_era(0, 13, 5) == {0, 1}
     end
   end
 

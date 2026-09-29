@@ -22,7 +22,7 @@ defmodule Calendrical.Coptic do
 
   alias Calendrical.Base.Egyptian
 
-  @type year :: -9999..-1 | 1..9999
+  @type year :: -9999..9999
   @type month :: 1..13
   @type day :: 1..30
 
@@ -64,9 +64,10 @@ defmodule Calendrical.Coptic do
   @doc """
   Returns the year and era for the given Coptic `year`.
 
-  The Coptic calendar has two eras: the current era which starts
-  in year 1 and is defined as era `1` (anno martyrum); and a
-  second era for years less than 1, defined as era `0`.
+  The Coptic calendar has one era, anno martyrum (era `1`), whose
+  year 1 began on 29 August 284. CLDR defines no era before it, so
+  the years before its first are year 0, -1 and so on of the same
+  era, as Temporal numbers them.
 
   ### Arguments
 
@@ -74,20 +75,23 @@ defmodule Calendrical.Coptic do
 
   ### Returns
 
-  * A two-tuple `{year_in_era, era}` where `era` is `0` or `1`.
+  * A two-tuple `{year, 1}`.
 
   ### Examples
 
       iex> Calendrical.Coptic.year_of_era(1742)
       {1742, 1}
 
+      iex> Calendrical.Coptic.year_of_era(0)
+      {0, 1}
+
       iex> Calendrical.Coptic.year_of_era(-50)
-      {50, 0}
+      {-50, 1}
 
   """
-  @spec year_of_era(year) :: {pos_integer(), 0..1}
+  @spec year_of_era(year) :: {year, 1}
   def year_of_era(year) do
-    Egyptian.year_of_era(year)
+    {year, 1}
   end
 
   @doc """
@@ -104,7 +108,7 @@ defmodule Calendrical.Coptic do
 
   ### Returns
 
-  * A two-tuple `{year_in_era, era}` where `era` is `0` or `1`.
+  * A two-tuple `{year, 1}`.
 
   ### Examples
 
@@ -113,7 +117,7 @@ defmodule Calendrical.Coptic do
 
   """
   @impl true
-  @spec year_of_era(year, month, day) :: {pos_integer(), 0..1}
+  @spec year_of_era(year, month, day) :: {year, 1}
   def year_of_era(year, _month, _day), do: year_of_era(year)
 
   @doc """
@@ -190,7 +194,8 @@ defmodule Calendrical.Coptic do
 
   ### Returns
 
-  * A two-tuple `{day_in_era, era}` where `era` is `0` or `1`.
+  * A two-tuple `{day_in_era, 1}`, counting from 1 Thout of year 1:
+    the days before it are day 0, -1 and so on.
 
   ### Examples
 
@@ -200,11 +205,14 @@ defmodule Calendrical.Coptic do
       iex> Calendrical.Coptic.day_of_era(1, 1, 1)
       {1, 1}
 
+      iex> Calendrical.Coptic.day_of_era(0, 13, 5)
+      {0, 1}
+
   """
   @impl true
-  @spec day_of_era(year, month, day) :: {non_neg_integer(), 0..1}
+  @spec day_of_era(year, month, day) :: {integer(), 1}
   def day_of_era(year, month, day) do
-    Egyptian.day_of_era(year, month, day, epoch())
+    Calendrical.Era.day_of_era(:coptic, date_to_iso_days(year, month, day))
   end
 
   @doc """

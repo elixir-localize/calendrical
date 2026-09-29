@@ -501,17 +501,17 @@ defmodule Calendrical.LunarJapanese do
 
   ### Examples
 
-      iex> Calendrical.LunarJapanese.cyclic_year(~D[1380-04-01 Calendrical.LunarJapanese])
-      60
-
       iex> Calendrical.LunarJapanese.cyclic_year(~D[1381-01-01 Calendrical.LunarJapanese])
+      42
+
+      iex> Calendrical.LunarJapanese.cyclic_year(~D[1340-01-01 Calendrical.LunarJapanese])
       1
 
-      iex> Calendrical.LunarJapanese.cyclic_year(~D[1200-01-02 Calendrical.LunarJapanese])
+      iex> Calendrical.LunarJapanese.cyclic_year(~D[1339-04-01 Calendrical.LunarJapanese])
       60
 
-      iex> Calendrical.LunarJapanese.cyclic_year(~D[1260-01-01 Calendrical.LunarJapanese])
-      60
+      iex> Calendrical.LunarJapanese.cyclic_year(~D[1200-01-02 Calendrical.LunarJapanese])
+      41
 
   """
   @spec cyclic_year(date :: Date.t()) :: Lunisolar.cycle()
@@ -538,16 +538,51 @@ defmodule Calendrical.LunarJapanese do
 
   ### Examples
 
-      iex> Calendrical.LunarJapanese.cyclic_year(1380, 4)
-      60
+      iex> Calendrical.LunarJapanese.cyclic_year(1381, 4)
+      42
 
-      iex> Calendrical.LunarJapanese.cyclic_year(1381, 1)
+      iex> Calendrical.LunarJapanese.cyclic_year(1340, 1)
       1
 
   """
   @spec cyclic_year(year :: Calendar.year(), month :: Calendar.month()) :: Lunisolar.cycle()
   def cyclic_year(year, month) when is_integer(year) and is_integer(month) do
-    Lunisolar.cyclic_year(year, month, 1)
+    cyclic_year(year, month, 1)
+  end
+
+  @doc """
+  Returns the year in the lunisolar sexagesimal 60-year cycle for
+  a given calendar year, month and day.
+
+  The cycle runs with the lunar year, so every day of a year has the
+  place its related Gregorian year gives it: this calendar counts its
+  years from 645, so a year's place differs from its number's.
+
+  ### Arguments
+
+  * `year` is any year in the `#{inspect(__MODULE__)}` calendar.
+
+  * `month` is any ordinal month number in the `#{inspect(__MODULE__)}`
+    calendar.
+
+  * `day` is any day of the month.
+
+  ### Returns
+
+  * the integer year within the sexagesimal cycle of 60 years.
+
+  ### Examples
+
+      iex> Calendrical.LunarJapanese.cyclic_year(1381, 4, 1)
+      42
+
+  """
+  @impl true
+  @spec cyclic_year(Calendar.year(), Calendar.month(), Calendar.day()) :: Lunisolar.cycle()
+  def cyclic_year(year, month, day) do
+    year
+    |> related_gregorian_year(month, day)
+    |> Lunisolar.cyclic_year_from_related_gregorian_year()
   end
 
   @doc """

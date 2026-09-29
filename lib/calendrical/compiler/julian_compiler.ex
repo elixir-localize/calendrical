@@ -289,8 +289,18 @@ defmodule Calendrical.Julian.Compiler do
         Calendrical.Julian.day_of_week(julian_year(year, month, day), month, day, starts_on)
       end
 
+      # Day 1 of the common era is the first day of label year 1, and
+      # the era before it counts back from the day before.
       def day_of_era(year, month, day) do
-        Calendrical.Julian.day_of_era(julian_year(year, month, day), month, day)
+        {_year, era} = year_of_era(year, month, day)
+        days = date_to_iso_days(year, month, day)
+        epoch = first_iso_day_of_year(1)
+
+        if era == 1 do
+          {days - epoch + 1, era}
+        else
+          {epoch - days, era}
+        end
       end
 
       def iso_week_of_year(year, month, day) do
@@ -303,8 +313,10 @@ defmodule Calendrical.Julian.Compiler do
         Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
       end
 
-      def year_of_era(year, month, day) do
-        Calendrical.Julian.year_of_era(julian_year(year, month, day), month, day)
+      # The label year names the era: in March25, 1-24 March AD 1 carry
+      # the label 1 BC and belong to that era.
+      def year_of_era(year, _month, _day) do
+        Calendrical.Julian.year_of_era(year)
       end
 
       def week(year, week), do: Calendrical.Base.Common.week(__MODULE__, year, week)

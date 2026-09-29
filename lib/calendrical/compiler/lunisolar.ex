@@ -270,11 +270,14 @@ defmodule Calendrical.Lunisolar do
     Calendar.ISO.date_from_iso_days(iso_days)
   end
 
+  # The sexagenary cycle runs with the lunar year, and 4 CE began one
+  # (甲子), so a year's place in it follows from the Gregorian year its
+  # lunar year begins in, whatever year a calendar counts from.
   @doc false
-  @spec cyclic_year(integer, Calendar.month(), Calendar.day()) :: integer
-  def cyclic_year(year, _month, _day) when is_integer(year) do
-    {_cycle, year} = cycle_and_year(year)
-    year
+  @spec cyclic_year_from_related_gregorian_year(integer) :: cycle
+  def cyclic_year_from_related_gregorian_year(related_gregorian_year)
+      when is_integer(related_gregorian_year) do
+    Integer.mod(related_gregorian_year - 4, @years_in_cycle) + 1
   end
 
   @doc false

@@ -3193,9 +3193,10 @@ defmodule Calendrical do
 
       cyclic_year ->
         # CLDR cyclic names are keyed by the position in the
-        # sexagesimal cycle (1..60) while the calendars return
-        # elapsed years, so reduce before the lookup. Calendars
-        # without cyclic name data fall back to the numeric year.
+        # sexagesimal cycle (1..60), which the lunisolar calendars
+        # return; other calendars return their year, so reduce
+        # before the lookup. Calendars without cyclic name data
+        # fall back to the numeric year.
         cycle_position = Localize.Utils.Math.amod(cyclic_year, 60)
 
         with {:ok, cyclic_year_data} <- Localize.Calendar.cyclic_years(locale, calendar_type),

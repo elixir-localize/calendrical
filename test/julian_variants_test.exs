@@ -185,4 +185,32 @@ defmodule Calendrical.JulianVariantsTest do
       end
     end
   end
+
+  # The year label names the era: under the Annunciation style the days
+  # up to 24 March AD 1 were still 1 BC, and under the Nativity style
+  # 25 December 1 BC was already AD 1.
+  describe "the era of a label year" do
+    test "the new-year day begins the era" do
+      assert Calendrical.Julian.March25.year_of_era(-1, 3, 24) == {1, 0}
+      assert Calendrical.Julian.March25.year_of_era(1, 3, 25) == {1, 1}
+      assert Calendrical.Julian.Dec25.year_of_era(-1, 12, 24) == {1, 0}
+      assert Calendrical.Julian.Dec25.year_of_era(1, 12, 25) == {1, 1}
+
+      assert Calendrical.Julian.March25.day_of_era(-1, 3, 24) == {1, 0}
+      assert Calendrical.Julian.March25.day_of_era(1, 3, 25) == {1, 1}
+    end
+
+    test "the year of era is the calendar year, and the day of era agrees" do
+      for variant <- @variants, iso <- Date.range(~D[-0002-12-01], ~D[0002-04-30]) do
+        %{year: year, month: month, day: day} = Date.convert!(iso, variant)
+        {year_of_era, era} = variant.year_of_era(year, month, day)
+        calendar_year = variant.calendar_year(year, month, day)
+
+        assert calendar_year == if(era == 1, do: year_of_era, else: -year_of_era),
+               "#{inspect(variant)} #{iso}"
+
+        assert {_day, ^era} = variant.day_of_era(year, month, day)
+      end
+    end
+  end
 end

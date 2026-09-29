@@ -58,6 +58,28 @@ defmodule Calendrical.Composite.Compiler do
       @impl true
       def cldr_calendar_type, do: :gregorian
 
+      @member_calendars config |> Enum.map(&elem(&1, 4)) |> Enum.uniq()
+
+      # The CLDR calendar whose era names the member calendars share:
+      # `Calendrical.Reform.Japan`'s lunisolar and Gregorian members both
+      # name their eras from the Japanese calendar. Members that name
+      # them from different calendars leave `cldr_calendar_type/0`.
+      @doc false
+      @impl Calendrical
+      def era_calendar_type do
+        @member_calendars
+        |> Enum.map(fn calendar ->
+          if Code.ensure_loaded?(calendar) and function_exported?(calendar, :era_calendar_type, 0),
+            do: calendar.era_calendar_type(),
+            else: calendar.cldr_calendar_type()
+        end)
+        |> Enum.uniq()
+        |> case do
+          [era_calendar_type] -> era_calendar_type
+          _era_calendar_types -> cldr_calendar_type()
+        end
+      end
+
       @doc """
       Identify the base calendar for a given date.
 
@@ -127,37 +149,53 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
-      Returns the calendar year as displayed on rendered calendars.
+      Returns the calendar year as displayed on rendered calendars,
+      as the calendar in effect on the date gives it.
 
       """
       @spec calendar_year(Calendar.year(), Calendar.month(), Calendar.day()) :: Calendar.year()
       @impl true
-      def calendar_year(year, _month, _day), do: year
+      def calendar_year(year, month, day) do
+        calendar = calendar_for_date(year, month, day)
+        calendar.calendar_year(year, month, day)
+      end
 
       @doc """
-      Returns the related Gregorian year.
+      Returns the related Gregorian year, as the calendar in effect
+      on the date gives it.
 
       """
       @spec related_gregorian_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
               Calendar.year()
       @impl true
-      def related_gregorian_year(year, _month, _day), do: year
+      def related_gregorian_year(year, month, day) do
+        calendar = calendar_for_date(year, month, day)
+        calendar.related_gregorian_year(year, month, day)
+      end
 
       @doc """
-      Returns the extended year.
+      Returns the extended year, as the calendar in effect on the
+      date gives it.
 
       """
       @spec extended_year(Calendar.year(), Calendar.month(), Calendar.day()) :: Calendar.year()
       @impl true
-      def extended_year(year, _month, _day), do: year
+      def extended_year(year, month, day) do
+        calendar = calendar_for_date(year, month, day)
+        calendar.extended_year(year, month, day)
+      end
 
       @doc """
-      Returns the cyclic year.
+      Returns the cyclic year, as the calendar in effect on the date
+      gives it.
 
       """
       @spec cyclic_year(Calendar.year(), Calendar.month(), Calendar.day()) :: Calendar.year()
       @impl true
-      def cyclic_year(year, _month, _day), do: year
+      def cyclic_year(year, month, day) do
+        calendar = calendar_for_date(year, month, day)
+        calendar.cyclic_year(year, month, day)
+      end
 
       @doc """
       Calculates the quarter of the year (1..4) for the given date, as

@@ -18,6 +18,10 @@ The format is based on
 
 * `Calendrical.DateTime.parse/2` keeps an ISO 8601 offset's wall time, so "2026-05-23T14:30:00+05:00" is 14:30 at +05:00 rather than 09:30 UTC — the struct a locale-formatted offset already gave.
 
+* `Calendrical.Coptic` has CLDR 49's single era, so its years before 1 are year 0, -1 and so on of anno martyrum (`{-5, 1}`), not an era 0 that CLDR no longer names. `Calendrical.Ethiopic` gives them to Amete Alem, 5500 years earlier, as CLDR and ICU do: year -50 is `{5450, 0}`, not `{50, 0}`.
+
+* The Julian new-year variants (`March1`, `March25`, `Sept1`, `Dec25`) take a date's era and year of era from its label year, so 24 March AD 1 is 1 BC in `March25`, where it was AD 1 and was written as the following year's 24 March.
+
 ### Added
 
 * `Calendrical.diff/3`, and a `diff/3` callback on every calendar, count the whole years, quarters, months, weeks or days from one date to another — the inverse of `plus/6`, negative backwards. The Hebrew and lunisolar calendars count months in one calculation, from the Metonic cycle and the new moons.
@@ -65,6 +69,14 @@ The format is based on
 * The Chinese, Korean, Vietnamese and Lunar Japanese calendars find a year's new year once per question and each new moon once, so `valid_date?/3`, `days_in_month/2`, `days_in_year/1`, `leap_year?/1`, `leap_month/1`, `new/3` and `lunar_month_of_year/2` ask for far fewer new moons — a quarter as many across a lunisolar holiday corpus. Results are unchanged.
 
 ### Fixed
+
+* A date before a calendar's first era, such as a Japanese date before Taika (645) or a Coptic or Ethiopic year 0, no longer raises in `year_of_era/3`, `day_of_era/3` or `calendar_year/3`: it counts back from the first era, as ICU does.
+
+* `day_of_era/3` counts a before era (before ROC, before Hijra) back from its last day, as `Calendar.ISO` counts BCE, where it counted the days from 0000-01-01.
+
+* `Calendrical.Korean` and `Calendrical.LunarJapanese` place a year in the sexagenary cycle by its related Gregorian year, as ICU does, so Korean 4358 (2025) is 42, where it was 38. Every lunisolar calendar's `cyclic_year/3` returns that place, where it returned the calendar year.
+
+* A composite calendar's `calendar_year/3`, `related_gregorian_year/3`, `extended_year/3` and `cyclic_year/3` answer as the calendar in effect on the date does, so a `Calendrical.Reform.Japan` date in 1700 is in Genroku 12 and related year 1699, not year 1055. Its `era_calendar_type/0` is the calendar its members name their eras from, so both sides of Japan's reform have Japanese era names.
 
 * `Calendrical.DateTime.parse/2` and `Calendrical.Time.parse/2` with `as: :map` give a fixed offset such as "GMT+5" the `DateTime` zone fields the struct form resolves, where the map kept `time_zone: "GMT+5"` with no offset; a named zone resolves too when the input gives its full date.
 

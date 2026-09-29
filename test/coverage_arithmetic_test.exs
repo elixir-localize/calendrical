@@ -50,11 +50,13 @@ defmodule CoverageArithmeticTest do
   end
 
   describe "Ethiopic and Coptic eras" do
-    test "year_of_era for era 0 (years before year 1)" do
-      assert Ethiopic.year_of_era(-50) == {50, 0}
-      assert Ethiopic.year_of_era(-50, 1, 1) == {50, 0}
-      assert Coptic.year_of_era(-50) == {50, 0}
-      assert Coptic.year_of_era(-50, 2, 3) == {50, 0}
+    # CLDR 49 gives the Ethiopic years before 1 to Amete Alem, 5500 years
+    # earlier, as ICU4C 78.3 does, and the Coptic calendar a single era.
+    test "year_of_era for years before year 1" do
+      assert Ethiopic.year_of_era(-50) == {5450, 0}
+      assert Ethiopic.year_of_era(-50, 1, 1) == {5450, 0}
+      assert Coptic.year_of_era(-50) == {-50, 1}
+      assert Coptic.year_of_era(-50, 2, 3) == {-50, 1}
     end
 
     test "year_of_era for era 1" do
@@ -64,7 +66,7 @@ defmodule CoverageArithmeticTest do
 
     test "day_of_era returns the era for era-0 and era-1 dates" do
       assert {_day, 0} = Ethiopic.day_of_era(-50, 1, 1)
-      assert {_day, 0} = Coptic.day_of_era(-50, 1, 1)
+      assert {_day, 1} = Coptic.day_of_era(-50, 1, 1)
       assert {_day, 1} = Ethiopic.day_of_era(2018, 1, 1)
       assert {_day, 1} = Coptic.day_of_era(1742, 1, 1)
     end
@@ -590,9 +592,9 @@ defmodule CoverageArithmeticTest do
                Era.era_data(:islamic_tbla).records
     end
 
-    test "day_of_era for an end-dated (BCE-style) era record counts to the era end" do
-      assert Era.day_of_era(:gregorian, Date.to_gregorian_days(~D[0000-01-01])) == {1, 0}
-      assert Era.day_of_era(:gregorian, Date.to_gregorian_days(~D[0000-12-31])) == {366, 0}
+    test "day_of_era for an end-dated (BCE-style) era record counts back from the era end" do
+      assert Era.day_of_era(:gregorian, Date.to_gregorian_days(~D[0000-12-31])) == {1, 0}
+      assert Era.day_of_era(:gregorian, Date.to_gregorian_days(~D[0000-01-01])) == {366, 0}
     end
 
     test "gregorian_offset year_of_era clamps to year 1 before the era label year" do
