@@ -6,21 +6,11 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.0] — Unreleased
+## [1.4.0] — Unreleased
 
 ### Breaking changes
 
 * `Calendrical.parse/2`, `Calendrical.Date.parse/2` and `parse_range/2`, `Calendrical.Time.parse/2` and `Calendrical.DateTime.parse/2` delegate to Localize's parsers and return its errors, so `Calendrical.DateParseError`, `DateRangeParseError`, `DateTimeParseError`, `TimeParseError` and `ParseError` are removed. Results change where Localize is more correct: `week N of YYYY` follows the locale's week rules, an ISO 8601 offset is kept rather than normalised to UTC, and an unknown `:calendar` is an error.
-
-### Changed
-
-* Requires Localize 1.5 (CLDR 49), which now implements the date, time, datetime and interval parsers.
-
-* Japanese era boundaries before Meiji are the proleptic Gregorian dates Localize now publishes, read as they are instead of converted from CLDR's lunisolar values, and `Calendrical.LunarJapanese` counts an era's years from the lunar year of its proclamation.
-
-## [1.4.0] — 2026-09-25
-
-### Breaking changes
 
 * `Calendrical.Hebrew` numbers a date's month by its position in the year, as `Date.new/4` and `months_in_year/1` expect, instead of by CLDR's fixed numbers: in an ordinary year Adar is month 6, Nisan 7 and Elul 12. Leap-year dates are unchanged, and `days_in_month/2` returns 0 for a month the year does not have.
 
@@ -56,6 +46,10 @@ The format is based on
 
 ### Changed
 
+* Requires Localize 1.4 (CLDR 49), which implements the date, time, datetime and interval parsers and names months through the calendar's `month_of_year/3`, as the Hebrew month positions need.
+
+* Japanese era boundaries before Meiji are the proleptic Gregorian dates Localize now publishes, read as they are instead of converted from CLDR's lunisolar values, and `Calendrical.LunarJapanese` counts an era's years from the lunar year of its proclamation.
+
 * `Calendrical.Preference` resolves a locale's `-u-ca-iso8601` to `Calendrical.ISO`, the Gregorian calendar with ISO 8601's week rules, as the IXDTF identifier `[u-ca=iso8601]` does, instead of the ISO week-date calendar `Calendrical.ISOWeek`.
 
 * `next/3` and `previous/3` step a week range to the week holding the day after or before it, so a week cut short at the end of a year is never stepped over.
@@ -63,8 +57,6 @@ The format is based on
 * `weeks_to_days/1` takes a fractional number of weeks, as it always has, and documents that it truncates to whole days: `weeks_to_days(1.5)` is 10.
 
 * `quarter_of_year/3` returns the quarter `quarter/2` puts the month in, so the Hebrew, Coptic and Ethiopic calendars answer it rather than returning `{:error, :not_defined}`.
-
-* Requires Localize 1.4, which names months through the calendar's `month_of_year/3` as the Hebrew month positions need.
 
 * `first_day_for_territory/1` and `min_days_for_territory/1` (and their locale variants) resolve from Localize's runtime week data instead of clauses compiled from it, so the values follow the loaded CLDR data without recompiling Calendrical. Results are unchanged for every territory.
 

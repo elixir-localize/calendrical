@@ -1,6 +1,6 @@
 # Calendrical
 
-Localized month- and week-based calendars, fiscal-year support, calendar arithmetic, and 18+ CLDR-based calendar systems for Elixir, built on the [Unicode CLDR](https://cldr.unicode.org/) repository via [Localize](https://hex.pm/packages/localize).
+Localized month- and week-based calendars, fiscal-year support, calendar arithmetic, and 18+ CLDR-based calendar systems for Elixir, built on the [Unicode CLDR](https://cldr.unicode.org/) repository via [Localize](https://hex.pm/packages/localize). Calendrical 1.4 is built on Localize 1.4 and CLDR 49.
 
 Calendrical extends Elixir's standard `Calendar` and `Date` modules with comprehensive support for the calendar systems used around the world, including arithmetic and astronomical lunar calendars, year-shifted variants such as Buddhist and ROC, and the official tabular and observational Islamic calendars.
 
@@ -12,7 +12,7 @@ Calendrical extends Elixir's standard `Calendar` and `Date` modules with compreh
 
 * **Composite calendars** — `Calendrical.Composite` lets you build a calendar that uses one base calendar before a specified date and another after, supporting historical Julian-to-Gregorian transitions and similar splices.
 
-* **Localized formatting** — era names, quarter names, month names, day names, day periods (AM/PM), and full date formatting via `Calendrical.localize/3` and `Calendrical.strftime_options!/1`. Falls through to all 766+ CLDR locales available from `Localize`.
+* **Localized formatting** — era names, quarter names, month names, day names, day periods (AM/PM), and full date formatting via `Calendrical.localize/3` and `Calendrical.strftime_options!/1`. Falls through to all 657 CLDR locales available from `Localize`.
 
 * **Fiscal-year calendars** — pre-built fiscal calendars for ~50 territories (US, UK, AU, JP, …) plus a configurable `Calendrical.FiscalYear.calendar_for/1` factory.
 
@@ -41,7 +41,7 @@ Add `calendrical` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:calendrical, "~> 1.0"}
+    {:calendrical, "~> 1.4"}
   ]
 end
 ```
