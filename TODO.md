@@ -8,6 +8,8 @@ Calendrical's open work. Design documents live in `plans/`.
 
 * [ ] **Umm al-Qura years outside the official tables** — ICU4C 78.3 falls back to the civil calendar there, and `Calendrical.Islamic.UmmAlQura` begins some years a day earlier: 1 Muharram 1178 is 1764-06-30 here and 1764-07-01 in ICU (also 607, 717, 758 and 1261 AH). Find which fallback Calendrical uses and document or change it.
 
+* [ ] **The Persian calendar raises outside Gregorian 1001 to 3000** — `valid_date?/3` answers `false` there, but `months_in_year/1` and `days_in_month/2` raise, so a hand-built date such as `%Date{year: 2, calendar: Calendrical.Persian}` raises in `Localize.Date.to_string/2` rather than returning an error. Answer those callbacks, or reject the year, without raising.
+
 * [ ] **Eras around 1 January AD 1 in `Calendrical.NRF` and `Calendrical.Reform.Sweden.Transitional`** — `day_of_era/3` takes the Gregorian date's era and `year_of_era/3` the calendar year's, so they disagree on NRF's fiscal year 0 days in AD 1 and on the Swedish calendar's first days of AD 1, which are Gregorian 1 BC.
 
 ## Done
