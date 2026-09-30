@@ -14,6 +14,10 @@ Calendrical's open work. Design documents live in `plans/`.
 
 * [ ] **Delegate `Calendrical.TimeZone.resolve/3` to Localize** — Localize now parses and resolves a zone in every form a locale writes (`Localize.DateTime.Timezone.parse_zone/2` and `resolve/3`) and no longer calls this module, which duplicates it with a table of abbreviations and resolves a fall-back hour to daylight time where ICU and Localize take standard.
 
+* [ ] **Shift a date-time by weeks and days with calendar arithmetic** — `shift_datetime_options/1` in `lib/calendrical.ex` turns a duration's weeks and days into seconds (`week * 7 * 86_400 + day * 86_400 + …`), so across a daylight-saving change a day is 24 hours of elapsed time rather than a calendar day, which the calendar-arithmetic rule in `CLAUDE.md` forbids.
+
+* [ ] **`shift_date_options/1` raises on a time-unit duration** — shifting a date by a duration with hours, minutes or seconds raises `ArgumentError` from `lib/calendrical.ex`, where library code returns `{:error, exception}`.
+
 ## Done
 
 * [x] **Era and year answers match CLDR 49 and ICU4C 78.3** — no calendar raises before its first era, and Coptic and Ethiopic eras, lunisolar cyclic years, the Julian new-year variants and composites answer as CLDR and ICU do. 2026-09-29, v1.4.0.
