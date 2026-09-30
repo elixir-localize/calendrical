@@ -3597,36 +3597,62 @@ defmodule Calendrical do
 
     new_day =
       year
-      |> calendar.days_in_month(month)
+      |> calendar.days_in_month(new_month)
       |> min(day)
 
     {new_month, new_day}
   end
 
   @doc false
+  # Shifts a date as ISO 8601 (`Calendar.ISO.shift_date/4`) and ECMA-262
+  # Temporal's `NonISODateAdd` shift one: the years keep the month by its
+  # name, the months count on from it, the day is brought into the month
+  # reached once, and then the weeks and days are added. So 29 February 2024
+  # and a year and a month is 29 March 2025, where bringing the day into
+  # February 2025 on the way would lose it.
   def shift_date(year, month, day, calendar, duration) do
-    shift_options = shift_date_options(duration)
+    %Duration{year: years, month: months, week: weeks, day: days} = date_duration(duration)
 
-    Enum.reduce(shift_options, {year, month, day}, fn
-      {_, 0}, date ->
-        date
+    {year, month, day}
+    |> shift_months(calendar, years, months)
+    |> shift_days(calendar, weeks, days)
+  end
 
-      # Year and month shifts clamp the day to the end of the target
-      # month, matching the Calendar.ISO shift contract — otherwise
-      # an invalid date such as February 31 escapes into a Date
-      # struct.
-      {:year, value}, {year, month, day} ->
-        calendar.plus(year, month, day, :years, value, coerce: true)
+  defp shift_months(date, _calendar, 0, 0), do: date
 
-      {:month, value}, {year, month, day} ->
-        calendar.plus(year, month, day, :months, value, coerce: true)
+  defp shift_months({year, month, day}, calendar, years, months) do
+    if week_based?(calendar) do
+      # A calendar of weeks keeps its week in the new year and shifts by
+      # months from the week and day of the month, placing the day once.
+      {year, month, day}
+      |> plus_unless_zero(calendar, :years, years)
+      |> plus_unless_zero(calendar, :months, months)
+    else
+      # The years move the month by a whole number of months, measured from
+      # the first of the month, which every month has: twelve a year, or the
+      # months of the years crossed where a lunisolar month keeps its name.
+      # The date is shifted by those months and the months asked for in one
+      # step, so the calendar brings the day into the month reached once, as
+      # its `plus/6` does for a shorter month or a reform's missing days.
+      {year_on, month_on, _first} = plus_unless_zero({year, month, 1}, calendar, :years, years)
+      months = calendar.diff({year, month, 1}, {year_on, month_on, 1}, :months) + months
+      plus_unless_zero({year, month, day}, calendar, :months, months)
+    end
+  end
 
-      {:week, value}, {year, month, day} ->
-        calendar.plus(year, month, day, :weeks, value)
+  defp shift_days(date, calendar, weeks, days) do
+    date
+    |> plus_unless_zero(calendar, :weeks, weeks)
+    |> plus_unless_zero(calendar, :days, days)
+  end
 
-      {:day, value}, {year, month, day} ->
-        calendar.plus(year, month, day, :days, value)
-    end)
+  defp plus_unless_zero(date, _calendar, _date_part, 0), do: date
+
+  defp plus_unless_zero({year, month, day}, calendar, date_part, increment),
+    do: calendar.plus(year, month, day, date_part, increment, coerce: true)
+
+  defp week_based?(calendar) do
+    function_exported?(calendar, :calendar_base, 0) and calendar.calendar_base() == :week
   end
 
   @doc false
@@ -3641,29 +3667,36 @@ defmodule Calendrical do
         calendar,
         duration
       ) do
-    shift_options = shift_datetime_options(duration)
+    %Duration{
+      year: years,
+      month: months,
+      week: weeks,
+      day: days,
+      hour: hours,
+      minute: minutes,
+      second: seconds,
+      microsecond: microseconds
+    } = duration
 
-    Enum.reduce(shift_options, {year, month, day, hour, minute, second, microsecond}, fn
-      {_, 0}, naive_datetime ->
-        naive_datetime
+    # The date is shifted as `shift_date/5` shifts it, by its calendar's
+    # arithmetic, and then the clock by the time units, which have a fixed
+    # length.
+    {year, month, day} =
+      {year, month, day}
+      |> shift_months(calendar, years, months)
+      |> shift_days(calendar, weeks, days)
 
-      # Year and month shifts clamp the day to the end of the target
-      # month, matching the Calendar.ISO shift contract.
-      {:year, value}, {year, month, day, hour, minute, second, microsecond} ->
-        {new_year, new_month, new_day} =
-          calendar.plus(year, month, day, :years, value, coerce: true)
+    Enum.reduce(
+      [second: hours * 3600 + minutes * 60 + seconds, microsecond: microseconds],
+      {year, month, day, hour, minute, second, microsecond},
+      fn
+        {_, 0}, naive_datetime ->
+          naive_datetime
 
-        {new_year, new_month, new_day, hour, minute, second, microsecond}
-
-      {:month, value}, {year, month, day, hour, minute, second, microsecond} ->
-        {new_year, new_month, new_day} =
-          calendar.plus(year, month, day, :months, value, coerce: true)
-
-        {new_year, new_month, new_day, hour, minute, second, microsecond}
-
-      {time_unit, value}, naive_datetime ->
-        shift_time_unit(naive_datetime, calendar, value, time_unit)
-    end)
+        {time_unit, value}, naive_datetime ->
+          shift_time_unit(naive_datetime, calendar, value, time_unit)
+      end
+    )
   end
 
   defp shift_time_unit(
@@ -3701,45 +3734,17 @@ defmodule Calendrical do
     {value, original_precision}
   end
 
-  defp shift_date_options(%Duration{
-         year: year,
-         month: month,
-         week: week,
-         day: day,
-         hour: 0,
-         minute: 0,
-         second: 0,
-         microsecond: {0, 0}
-       }) do
-    [
-      year: year,
-      month: month,
-      week: week,
-      day: day
-    ]
-  end
+  # A date has no clock to shift, and the `Calendar` callback has no error to
+  # return, so a time unit raises as `Calendar.ISO.shift_date/4` raises;
+  # `Date.shift/2` rejects one before it reaches the calendar.
+  defp date_duration(
+         %Duration{hour: 0, minute: 0, second: 0, microsecond: {0, _precision}} = duration
+       ),
+       do: duration
 
-  defp shift_date_options(_duration) do
+  defp date_duration(_duration) do
     raise ArgumentError,
           "cannot shift date by time scale unit. Expected :year, :month, :week, :day"
-  end
-
-  defp shift_datetime_options(%Duration{
-         year: year,
-         month: month,
-         week: week,
-         day: day,
-         hour: hour,
-         minute: minute,
-         second: second,
-         microsecond: microsecond
-       }) do
-    [
-      year: year,
-      month: month,
-      second: week * 7 * 86_400 + day * 86_400 + hour * 3600 + minute * 60 + second,
-      microsecond: microsecond
-    ]
   end
 
   @doc """

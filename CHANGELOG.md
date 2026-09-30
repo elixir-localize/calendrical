@@ -70,6 +70,10 @@ The format is based on
 
 ### Fixed
 
+* `Date.shift/2` and `NaiveDateTime.shift/2` add years and months together and bring the day into the month reached once, as `Calendar.ISO` and ECMA-262 Temporal do, where they clamped it after the years and again after the months. 29 February 2024 and a year and a month is 29 March 2025, and 30 Adar I 5784 and a year and a month 30 Nisan 5785.
+
+* A week-based calendar's `plus/6` by more than one month places the day of the month once, where each month on the way clamped it, so the last day of a five-week NRF month is the last day of a five-week month three months on.
+
 * A date before a calendar's first era, such as a Japanese date before Taika (645) or a Coptic or Ethiopic year 0, no longer raises in `year_of_era/3`, `day_of_era/3` or `calendar_year/3`: it counts back from the first era, as ICU does.
 
 * `day_of_era/3` counts a before era (before ROC, before Hijra) back from its last day, as `Calendar.ISO` counts BCE, where it counted the days from 0000-01-01.

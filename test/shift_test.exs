@@ -118,5 +118,78 @@ if Code.ensure_loaded?(Calendar.ISO) && function_exported?(Calendar.ISO, :shift_
       assert DateTime.shift(~U[2000-02-29 00:00:00Z Calendrical.Gregorian], month: -1, day: -29) ==
                ~U[1999-12-31 00:00:00Z]
     end
+
+    # Years and months are added together and the day brought into the month
+    # reached once, as Calendar.ISO adds them: 29 February 2024 and a year and
+    # a month is 29 March 2025, where bringing the day into February 2025 on
+    # the way would make it the 28th.
+    test "years and months bring the day into the month reached once" do
+      assert Calendrical.Gregorian.shift_date(2024, 2, 29, Duration.new!(year: 1, month: 1)) ==
+               {2025, 3, 29}
+
+      assert Calendrical.Gregorian.shift_date(2024, 2, 29, Duration.new!(year: -1, month: 1)) ==
+               {2023, 3, 29}
+
+      assert Calendrical.Gregorian.shift_naive_datetime(
+               2024,
+               2,
+               29,
+               23,
+               30,
+               0,
+               {0, 0},
+               Duration.new!(year: 1, month: 1, hour: 1)
+             ) == {2025, 3, 30, 0, 30, 0, {0, 0}}
+    end
+
+    # Calendar.ISO is the oracle: every day of 2023 to 2025, the leap day
+    # among them, shifted by each duration of a grid lands where
+    # Calendar.ISO lands it, as a date and as a date-time.
+    test "every date shifts as Calendar.ISO shifts it" do
+      dates = Enum.map(0..1095, &Date.add(~D[2023-01-01], &1))
+
+      durations =
+        for year <- [-1, 0, 1],
+            month <- [-13, -1, 0, 1, 13],
+            week <- [0, -1],
+            day <- [0, 1, 30] do
+          Duration.new!(year: year, month: month, week: week, day: day)
+        end
+
+      for date <- dates, duration <- durations do
+        assert Calendrical.Gregorian.shift_date(date.year, date.month, date.day, duration) ==
+                 Calendar.ISO.shift_date(date.year, date.month, date.day, duration),
+               "#{inspect(date)} + #{inspect(duration)}"
+      end
+
+      time_durations =
+        for month <- [0, 13], day <- [0, -1], hour <- [0, -30], second <- [0, 3601] do
+          Duration.new!(
+            year: 1,
+            month: month,
+            day: day,
+            hour: hour,
+            second: second,
+            microsecond: {250, 6}
+          )
+        end
+
+      for date <- dates, date.day >= 27, duration <- time_durations do
+        {year, month, day} = {date.year, date.month, date.day}
+
+        assert Calendrical.Gregorian.shift_naive_datetime(
+                 year,
+                 month,
+                 day,
+                 23,
+                 30,
+                 15,
+                 {5, 6},
+                 duration
+               ) ==
+                 Calendar.ISO.shift_naive_datetime(year, month, day, 23, 30, 15, {5, 6}, duration),
+               "#{inspect(date)} 23:30:15 + #{inspect(duration)}"
+      end
+    end
   end
 end

@@ -128,6 +128,23 @@ defmodule Calendrical.JulianVariantsTest do
       end
     end
 
+    test "years and months together land on the same day as in plain Julian" do
+      durations = [
+        [year: 1, month: 1],
+        [year: -1, month: 13],
+        [year: 2, month: -1],
+        [year: 1, month: -12]
+      ]
+
+      for variant <- [Calendrical.Julian.Jan1 | @variants],
+          {julian, in_variant} <- day_pairs(variant),
+          duration <- durations do
+        assert Date.convert!(Date.shift(in_variant, duration), Calendar.ISO) ==
+                 Date.convert!(Date.shift(julian, duration), Calendar.ISO),
+               "#{inspect(in_variant)} + #{inspect(duration)}"
+      end
+    end
+
     test "plain Julian shifts by weeks" do
       assert Date.shift(~D[2025-01-01 Calendrical.Julian], week: 1) ==
                ~D[2025-01-08 Calendrical.Julian]

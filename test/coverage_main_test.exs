@@ -771,9 +771,12 @@ defmodule Calendrical.CoverageMainTest do
   end
 
   describe "month_day/5 and start_end_gregorian_years/2" do
+    # The day is brought into the month it is coerced to: December has 31
+    # days, and Elul, the last of the twelve months of 5785, 29.
     test "month_day with and without coercion" do
       assert Calendrical.month_day(2026, 2, 31, Calendrical.Gregorian, false) == {2, 31}
-      assert Calendrical.month_day(2026, 14, 31, Calendrical.Gregorian, true) == {12, 28}
+      assert Calendrical.month_day(2026, 14, 31, Calendrical.Gregorian, true) == {12, 31}
+      assert Calendrical.month_day(5785, 13, 30, Calendrical.Hebrew, true) == {12, 29}
     end
 
     test "start_end_gregorian_years for January-first and December-last" do

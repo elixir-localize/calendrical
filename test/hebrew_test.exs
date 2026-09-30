@@ -63,6 +63,19 @@ defmodule Calendrical.HebrewTest do
     end
   end
 
+  # ECMA-262 Temporal's NonISODateAdd: the year keeps the month by its code,
+  # Adar I (M05L) becoming Adar (M06) in an ordinary year, the months count
+  # on from it, and only then is the day brought into the month reached. So
+  # 30 Adar I 5784 and a year and a month is 30 Nisan 5785, where bringing
+  # the day into Adar's 29 days on the way would make it the 29th.
+  describe "shift_date/4" do
+    test "years and months bring the day into the month reached once" do
+      assert Hebrew.shift_date(5784, 6, 30, Duration.new!(year: 1, month: 1)) == {5785, 7, 30}
+      assert Hebrew.shift_date(5784, 6, 30, Duration.new!(year: 1)) == {5785, 6, 29}
+      assert Hebrew.month_of_year(5785, 7, 30) == 8
+    end
+  end
+
   describe "leap_year?/1" do
     test "follows the 19-year Metonic cycle" do
       for y <- 1..200 do

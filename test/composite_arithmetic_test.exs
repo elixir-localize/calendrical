@@ -21,6 +21,16 @@ defmodule Calendrical.CompositeArithmetic.Test do
                ~D[1918-02-14 Calendrical.Russia]
     end
 
+    # Years and months are one shift, so the day is brought into the month
+    # reached once, not into February 2025 on the way, as Calendar.ISO does.
+    test "years and months together bring the day into the month reached once" do
+      assert Date.shift(~D[2024-02-29 Calendrical.Reform.England], year: 1, month: 1) ==
+               ~D[2025-03-29 Calendrical.Reform.England]
+
+      assert Date.shift(~D[1752-01-25 Calendrical.Reform.Sweden], year: 1, month: 1) ==
+               ~D[1753-02-17 Calendrical.Reform.Sweden]
+    end
+
     test "a day beyond the month's last becomes its last day" do
       assert Date.shift(~D[1752-08-31 Calendrical.Reform.England], month: 1) ==
                ~D[1752-09-30 Calendrical.Reform.England]

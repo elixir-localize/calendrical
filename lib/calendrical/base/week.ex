@@ -357,18 +357,22 @@ defmodule Calendrical.Base.Week do
     add_days(year, week, day, day_of_month - 1, config, options)
   end
 
-  # Accounting for long years is complex. So for now adding and
-  # subtracting months is done one month at a time. Therefore
-  # performance for large additions/subsctractions will be poor.
-  # Each single-month step coerces the day-of-month downward when
-  # the target month is shorter, so no post-hoc reconciliation of
-  # the day-of-month is possible or required.
-  def plus(year, week, day, config, :months, months, _options) when abs(months) > 1 do
+  # Accounting for long years is complex, so several months are walked one
+  # at a time, from the first day of each month to the first day of the
+  # next, and the day of the month is placed once, in the month reached. A
+  # shorter month on the way does not take the day with it: the last day of
+  # a five-week month is the last day of a five-week month three months on.
+  def plus(year, week, day, config, :months, months, options) when abs(months) > 1 do
     increment = if months > 0, do: 1, else: -1
+    day_of_month = day_of_month(year, week, day, config)
+    first_day = first_day_of_month(year, week, day, config)
 
-    Enum.reduce(1..abs(months), {year, week, day}, fn _i, {year, week, day} ->
-      plus(year, week, day, config, :months, increment, coerce: @default_coercion)
-    end)
+    {year, week, day} =
+      Enum.reduce(1..abs(months), first_day, fn _i, {year, week, day} ->
+        plus(year, week, day, config, :months, increment, coerce: @default_coercion)
+      end)
+
+    add_days(year, week, day, day_of_month - 1, config, options)
   end
 
   def plus(year, month, day, config, :weeks, weeks, _options) do
