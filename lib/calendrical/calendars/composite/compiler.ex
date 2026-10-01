@@ -68,11 +68,7 @@ defmodule Calendrical.Composite.Compiler do
       @impl Calendrical
       def era_calendar_type do
         @member_calendars
-        |> Enum.map(fn calendar ->
-          if Code.ensure_loaded?(calendar) and function_exported?(calendar, :era_calendar_type, 0),
-            do: calendar.era_calendar_type(),
-            else: calendar.cldr_calendar_type()
-        end)
+        |> Enum.map(& &1.era_calendar_type())
         |> Enum.uniq()
         |> case do
           [era_calendar_type] -> era_calendar_type

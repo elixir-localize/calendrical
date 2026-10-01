@@ -417,18 +417,15 @@ defmodule Calendrical do
   @optional_callbacks months_in_year: 0
 
   @doc """
-  Returns the CLDR calendar type used for era names, when it differs
-  from `cldr_calendar_type/0`.
+  Returns the CLDR calendar type that names the calendar's eras.
 
-  The lunisolar Japanese calendar takes its month names from the
-  Chinese CLDR calendar but its era names (元号) from the Japanese
-  one. `Calendrical.localize/3` consults this callback, when
-  implemented, to localize the `:era` part.
+  It is `cldr_calendar_type/0` unless the calendar takes its era names
+  from another CLDR calendar than its month names: the lunisolar
+  Japanese calendar takes its month names from the Chinese CLDR
+  calendar but its era names (元号) from the Japanese one.
 
   """
   @callback era_calendar_type() :: atom()
-
-  @optional_callbacks era_calendar_type: 0
 
   @doc """
   Returns a the year in a calendar year.
@@ -3185,7 +3182,7 @@ defmodule Calendrical do
 
   def localize(datetime, :era, _type, style, locale, options) do
     calendar = Map.get(datetime, :calendar, @default_calendar)
-    calendar_type = era_calendar_type(calendar)
+    calendar_type = calendar.era_calendar_type()
     variant? = options[:era] == :variant
 
     with {_, era} <- day_of_era(datetime) do
@@ -3384,14 +3381,6 @@ defmodule Calendrical do
       _short_week ->
         first = Date.add(date, 1 - day_of_week(date))
         Date.range(first, Date.add(first, 6))
-    end
-  end
-
-  defp era_calendar_type(calendar) do
-    if Code.ensure_loaded?(calendar) && function_exported?(calendar, :era_calendar_type, 0) do
-      calendar.era_calendar_type()
-    else
-      calendar.cldr_calendar_type()
     end
   end
 

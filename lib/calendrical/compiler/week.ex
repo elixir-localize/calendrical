@@ -56,6 +56,16 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
+      Returns the CLDR calendar type that names the calendar's
+      eras: its `cldr_calendar_type/0`.
+
+      """
+      @impl true
+      def era_calendar_type do
+        :gregorian
+      end
+
+      @doc """
       Determines if the date given is valid according to the this calendar.
 
       """

@@ -338,6 +338,7 @@ defmodule Calendrical.Julian.Compiler do
 
       defdelegate date_to_string(year, month, day), to: Calendrical.Julian
       defdelegate cldr_calendar_type(), to: Calendrical.Julian
+      defdelegate era_calendar_type(), to: Calendrical.Julian
       defdelegate calendar_base(), to: Calendrical.Julian
 
       def week_of_month(year, month, day) do

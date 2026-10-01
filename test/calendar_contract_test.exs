@@ -59,6 +59,10 @@ defmodule Calendrical.CalendarContract.Test do
         assert calendar.cardinal_month(month) in 1..13
       end
 
+      test "its eras are named by a CLDR calendar" do
+        assert unquote(calendar).era_calendar_type() in Localize.Calendar.known_calendars()
+      end
+
       test "the day of the week agrees with ISO for any first day", %{date: date} do
         iso = Date.convert!(date, Calendar.ISO)
 

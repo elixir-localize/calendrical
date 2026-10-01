@@ -74,6 +74,25 @@ defmodule Calendrical.Julian do
   end
 
   @doc """
+  Returns the CLDR calendar type that names the Julian calendar's eras.
+
+  ### Returns
+
+  * `:gregorian`, its `cldr_calendar_type/0`.
+
+  ### Examples
+
+      iex> Calendrical.Julian.era_calendar_type()
+      :gregorian
+
+  """
+  @spec era_calendar_type() :: :gregorian
+  @impl Calendrical
+  def era_calendar_type do
+    :gregorian
+  end
+
+  @doc """
   Returns the CLDR calendar base for this calendar.
 
   ### Returns
