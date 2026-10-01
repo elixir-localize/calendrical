@@ -28,6 +28,7 @@ defmodule Calendrical.Base.Week do
     quote bind_quoted: [options: options] do
       @options options
       @before_compile Calendrical.Compiler.Week
+      @before_compile {Calendrical.Compiler.DateCheck, :partial_dates}
     end
   end
 

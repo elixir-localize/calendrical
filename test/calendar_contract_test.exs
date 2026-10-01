@@ -12,6 +12,25 @@ defmodule Calendrical.CalendarContract.Test do
 
   @sighting_calendars [Calendrical.Islamic.Observational, Calendrical.Islamic.Rgsa]
 
+  # The callbacks that answer a question about a date, with the arguments
+  # after its year, month and day.
+  @date_callbacks [
+    day_of_week: [:default],
+    day_of_week: [:monday],
+    day_of_year: [],
+    day_of_era: [],
+    year_of_era: [],
+    quarter_of_year: [],
+    month_of_year: [],
+    week_of_year: [],
+    iso_week_of_year: [],
+    week_of_month: [],
+    calendar_year: [],
+    extended_year: [],
+    related_gregorian_year: [],
+    cyclic_year: []
+  ]
+
   @calendars for module <- Enum.sort(modules),
                  Code.ensure_loaded?(module),
                  function_exported?(module, :valid_date?, 3),
@@ -36,6 +55,45 @@ defmodule Calendrical.CalendarContract.Test do
               {date.year, -1, -1}
             ] do
           refute calendar.valid_date?(year, month, day)
+        end
+      end
+
+      # A question about a date the calendar does not have is an error,
+      # never a raise nor an answer for some other date.
+      test "a date the calendar does not have is an error in every date callback",
+           %{date: date} do
+        calendar = unquote(calendar)
+
+        impossible =
+          for {year, month, day} <- [
+                {date.year, 0, 1},
+                {date.year, 1, 0},
+                {date.year, 99, 1},
+                {date.year, 1, 99},
+                {date.year, -1, -1}
+              ],
+              not calendar.valid_date?(year, month, day),
+              do: {year, month, day}
+
+        assert impossible != []
+
+        for {year, month, day} <- impossible ++ [{date.year, "1", 1}, {date.year, 1, :""}],
+            {callback, extra} <- @date_callbacks,
+            function_exported?(calendar, callback, 3 + length(extra)) do
+          assert apply(calendar, callback, [year, month, day | extra]) == {:error, :invalid_date},
+                 "#{callback}#{inspect([year, month, day | extra])}"
+        end
+      end
+
+      # A date missing a field is answered as a partial date where the
+      # callback can answer one, and is otherwise an error, never a raise.
+      test "a date missing a field never raises in a date callback", %{date: date} do
+        calendar = unquote(calendar)
+
+        for {year, month, day} <- [{nil, 1, 1}, {date.year, nil, 1}, {date.year, 1, nil}],
+            {callback, extra} <- @date_callbacks,
+            function_exported?(calendar, callback, 3 + length(extra)) do
+          apply(calendar, callback, [year, month, day | extra])
         end
       end
 

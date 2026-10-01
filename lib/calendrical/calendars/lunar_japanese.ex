@@ -514,7 +514,7 @@ defmodule Calendrical.LunarJapanese do
       41
 
   """
-  @spec cyclic_year(date :: Date.t()) :: Lunisolar.cycle()
+  @spec cyclic_year(date :: Date.t()) :: Lunisolar.cycle() | Calendrical.date_error()
   def cyclic_year(%Date{year: year, month: month, calendar: __MODULE__}) do
     cyclic_year(year, month)
   end
@@ -545,7 +545,8 @@ defmodule Calendrical.LunarJapanese do
       1
 
   """
-  @spec cyclic_year(year :: Calendar.year(), month :: Calendar.month()) :: Lunisolar.cycle()
+  @spec cyclic_year(year :: Calendar.year(), month :: Calendar.month()) ::
+          Lunisolar.cycle() | Calendrical.date_error()
   def cyclic_year(year, month) when is_integer(year) and is_integer(month) do
     cyclic_year(year, month, 1)
   end
@@ -578,7 +579,8 @@ defmodule Calendrical.LunarJapanese do
 
   """
   @impl true
-  @spec cyclic_year(Calendar.year(), Calendar.month(), Calendar.day()) :: Lunisolar.cycle()
+  @spec cyclic_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
+          Lunisolar.cycle() | Calendrical.date_error()
   def cyclic_year(year, month, day) do
     year
     |> related_gregorian_year(month, day)
@@ -1089,8 +1091,10 @@ defmodule Calendrical.LunarJapanese do
   @doc false
   @impl true
   def calendar_year(year, month, day) do
-    {year, _era} = year_of_era(year, month, day)
-    year
+    case year_of_era(year, month, day) do
+      {:error, _reason} = error -> error
+      {year, _era} -> year
+    end
   end
 
   # Era names come from the Japanese CLDR calendar even though month

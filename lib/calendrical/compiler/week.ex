@@ -117,7 +117,7 @@ defmodule Calendrical.Compiler.Week do
               day :: Calendrical.day()
             ) ::
               {year :: Calendar.year(), era :: Calendrical.era()}
-              | {:error, Exception.t()}
+              | Calendrical.date_error()
 
       @impl true
 
@@ -135,7 +135,7 @@ defmodule Calendrical.Compiler.Week do
               week :: Calendrical.week(),
               day :: Calendrical.day()
             ) ::
-              year :: Calendar.year() | {:error, Exception.t()}
+              year :: Calendar.year() | Calendrical.date_error()
 
       @impl true
       def calendar_year(year, _week, _day) when is_integer(year) do
@@ -156,7 +156,7 @@ defmodule Calendrical.Compiler.Week do
               week :: Calendrical.week(),
               day :: Calendrical.day()
             ) ::
-              year :: Calendar.year() | {:error, Exception.t()}
+              year :: Calendar.year() | Calendrical.date_error()
 
       @impl true
       def related_gregorian_year(year, _week, _day) when is_integer(year) do
@@ -177,7 +177,7 @@ defmodule Calendrical.Compiler.Week do
               week :: Calendrical.week(),
               day :: Calendrical.day()
             ) ::
-              year :: Calendar.year() | {:error, Exception.t()}
+              year :: Calendar.year() | Calendrical.date_error()
 
       @impl true
       def extended_year(year, week, day) when is_integer(year) do
@@ -198,7 +198,7 @@ defmodule Calendrical.Compiler.Week do
               week :: Calendrical.week(),
               day :: Calendrical.day()
             ) ::
-              year :: Calendar.year() | {:error, Exception.t()}
+              year :: Calendar.year() | Calendrical.date_error()
 
       @impl true
       def cyclic_year(year, _week, _day) when is_integer(year) do
@@ -219,7 +219,7 @@ defmodule Calendrical.Compiler.Week do
               week :: Calendrical.week(),
               day :: Calendrical.day()
             ) ::
-              quarter :: Calendrical.quarter() | {:error, Exception.t()}
+              quarter :: Calendrical.quarter() | Calendrical.date_error()
 
       @impl true
       def quarter_of_year(year, week, day) do
@@ -236,7 +236,7 @@ defmodule Calendrical.Compiler.Week do
               week :: Calendrical.week(),
               day :: Calendrical.day()
             ) ::
-              month :: Calendar.month() | {:error, Exception.t()}
+              month :: Calendar.month() | Calendrical.date_error()
 
       @impl true
       def month_of_year(year, week, day) do
@@ -263,7 +263,7 @@ defmodule Calendrical.Compiler.Week do
       """
       @spec week_of_year(Calendrical.year(), Calendrical.month(), Calendrical.day()) ::
               {year :: Calendar.year(), week :: Calendrical.week()}
-              | {:error, Exception.t()}
+              | Calendrical.date_error()
 
       @impl true
       def week_of_year(year, week, day) do
@@ -277,7 +277,7 @@ defmodule Calendrical.Compiler.Week do
       """
       @spec iso_week_of_year(Calendrical.year(), Calendrical.month(), Calendrical.day()) ::
               {year :: Calendar.year(), week :: Calendrical.week()}
-              | {:error, Exception.t()}
+              | Calendrical.date_error()
 
       @impl true
       def iso_week_of_year(year, week, day) do
@@ -291,7 +291,7 @@ defmodule Calendrical.Compiler.Week do
       """
       @spec week_of_month(Calendrical.year(), Calendrical.week(), Calendar.day()) ::
               {month :: Calendar.month(), week :: Calendrical.week()}
-              | {:error, Exception.t()}
+              | Calendrical.date_error()
 
       @impl true
       def week_of_month(year, week, day) do
@@ -304,7 +304,7 @@ defmodule Calendrical.Compiler.Week do
       """
       @spec day_of_era(Calendrical.year(), Calendrical.month(), Calendrical.day()) ::
               {day :: Calendrical.day(), era :: Calendrical.era()}
-              | {:error, Exception.t()}
+              | Calendrical.date_error()
 
       @impl true
       def day_of_era(year, week, day) do
@@ -317,7 +317,7 @@ defmodule Calendrical.Compiler.Week do
 
       """
       @spec day_of_year(Calendrical.year(), Calendrical.month(), Calendrical.day()) ::
-              day :: Calendar.day() | {:error, Exception.t()}
+              day :: Calendar.day() | Calendrical.date_error()
 
       @impl true
       def day_of_year(year, week, day) do
@@ -341,7 +341,7 @@ defmodule Calendrical.Compiler.Week do
               {day_of_week :: Calendar.day_of_week(),
                first_day_of_week ::
                  Calendar.day_of_week(), last_day_of_week :: Calendar.day_of_week()}
-              | {:error, Exception.t()}
+              | Calendrical.date_error()
 
       @impl true
       def day_of_week(year, week, day, starting_on) do

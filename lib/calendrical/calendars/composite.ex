@@ -120,6 +120,7 @@ defmodule Calendrical.Composite do
 
       @options options
       @before_compile Calendrical.Composite.Compiler
+      @before_compile Calendrical.Compiler.DateCheck
     end
   end
 

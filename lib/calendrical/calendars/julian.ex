@@ -34,6 +34,7 @@ defmodule Calendrical.Julian do
 
   @behaviour Calendar
   @behaviour Calendrical
+  @before_compile Calendrical.Compiler.DateCheck
 
   @type year :: -9999..-1 | 1..9999
   @type month :: 1..12
@@ -48,6 +49,7 @@ defmodule Calendrical.Julian do
     quote bind_quoted: [options: options] do
       @options options
       @before_compile Calendrical.Julian.Compiler
+      @before_compile Calendrical.Compiler.DateCheck
     end
   end
 
@@ -317,7 +319,7 @@ defmodule Calendrical.Julian do
       2025
 
   """
-  @spec related_gregorian_year(year, month, day) :: Calendar.year()
+  @spec related_gregorian_year(year, month, day) :: Calendar.year() | Calendrical.date_error()
   @impl Calendrical
   def related_gregorian_year(year, _month, _day) do
     iso_days = date_to_iso_days(year, 1, 1)
@@ -401,7 +403,7 @@ defmodule Calendrical.Julian do
       2
 
   """
-  @spec quarter_of_year(year, month, day) :: 1..4
+  @spec quarter_of_year(year, month, day) :: 1..4 | Calendrical.date_error()
   @impl Calendar
   def quarter_of_year(_year, month, _day) do
     Float.ceil(month / @months_in_quarter)
@@ -489,7 +491,7 @@ defmodule Calendrical.Julian do
       {2025, 2}
 
   """
-  @spec week_of_year(year, month, day) :: {year, Calendrical.week()} | {:error, :invalid_date}
+  @spec week_of_year(year, month, day) :: {year, Calendrical.week()} | Calendrical.date_error()
   @impl Calendrical
   def week_of_year(year, month, day) do
     Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
@@ -523,7 +525,7 @@ defmodule Calendrical.Julian do
 
   """
   @spec iso_week_of_year(year, month, day) ::
-          {Calendar.year(), Calendrical.week()} | {:error, :invalid_date}
+          {Calendar.year(), Calendrical.week()} | Calendrical.date_error()
   @impl Calendrical
   def iso_week_of_year(year, month, day) do
     Calendrical.Base.Common.iso_week_of_year(__MODULE__, year, month, day)
@@ -558,7 +560,7 @@ defmodule Calendrical.Julian do
       {1, 2}
 
   """
-  @spec week_of_month(year, month, day) :: {month, Calendrical.week()} | {:error, :invalid_date}
+  @spec week_of_month(year, month, day) :: {month, Calendrical.week()} | Calendrical.date_error()
   @impl Calendrical
   def week_of_month(year, month, day) do
     Calendrical.Base.Common.week_of_month(__MODULE__, year, month, day)
@@ -624,7 +626,7 @@ defmodule Calendrical.Julian do
       60
 
   """
-  @spec day_of_year(year, month, day) :: 1..366
+  @spec day_of_year(year, month, day) :: 1..366 | Calendrical.date_error()
   @impl Calendar
   def day_of_year(year, month, day) do
     first_day = date_to_iso_days(year, 1, 1) |> floor()
@@ -672,7 +674,7 @@ defmodule Calendrical.Julian do
         ) ::
           {Calendar.day_of_week(), first_day_of_week :: non_neg_integer(),
            last_day_of_week :: non_neg_integer()}
-          | {:error, Exception.t()}
+          | Calendrical.date_error()
 
   @impl Calendar
   @epoch_day_of_week 6

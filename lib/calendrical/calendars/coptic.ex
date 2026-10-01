@@ -353,7 +353,7 @@ defmodule Calendrical.Coptic do
   """
   @impl true
   @spec week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
-          {Calendar.year(), Calendar.week()} | {:error, :invalid_date}
+          {Calendar.year(), Calendar.week()} | Calendrical.date_error()
   def week_of_year(year, month, day) do
     Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
   end

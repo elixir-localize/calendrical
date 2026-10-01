@@ -76,6 +76,8 @@ The format is based on
 
 ### Fixed
 
+* Every calendar answers a question about a date (`day_of_week/4`, `day_of_year/3`, `year_of_era/3`, `week_of_month/3`, `cyclic_year/3` and the rest) only for a date it has: a date its `valid_date?/3` rejects is `{:error, :invalid_date}` and one missing a field the question needs a `Calendrical.MissingFieldsError`, where many raised or answered for another date. The `Calendrical.date_error/0` type names both.
+
 * A month calendar with a first day of the week numbers a month's weeks as TR35 does, where `week_of_month/3` laid the year's weeks over 4-4-5 periods: week 1 is the first week holding `min_days_in_first_week` days of the month, so `Calendrical.Gregorian` puts 23 January 1995 in week 5 of January, not week 1 of February.
 
 * `Date.shift/2` and `NaiveDateTime.shift/2` add years and months together and bring the day into the month reached once, as `Calendar.ISO` and ECMA-262 Temporal do, where they clamped it after the years and again after the months. 29 February 2024 and a year and a month is 29 March 2025, and 30 Adar I 5784 and a year and a month 30 Nisan 5785.

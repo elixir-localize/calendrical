@@ -180,6 +180,12 @@ defmodule Calendrical do
   @type week :: pos_integer()
 
   @typedoc """
+  The error a question about a date returns: `:invalid_date` for a date the calendar does not have, or a `Calendrical.MissingFieldsError` for a date missing a field the question needs.
+
+  """
+  @type date_error :: {:error, :invalid_date | Exception.t()}
+
+  @typedoc """
   Represents the number of days since the
   calendar epoch.
 
@@ -268,7 +274,7 @@ defmodule Calendrical do
               month :: month() | Calendrical.week(),
               day :: day()
             ) ::
-              Calendar.month() | {Calendar.month(), leap_month?()}
+              Calendar.month() | {Calendar.month(), leap_month?()} | date_error()
 
   @doc """
   Returns the month of the calendar's CLDR calendar that a month of
@@ -295,7 +301,7 @@ defmodule Calendrical do
               month :: month() | Calendrical.week(),
               day :: day()
             ) ::
-              {Calendar.year(), Calendar.week()} | {:error, :not_defined | :invalid_date}
+              {Calendar.year(), Calendar.week()} | {:error, :not_defined} | date_error()
 
   @doc """
   Returns a tuple of `{year, week_in_year}` for a given `year`, `month` or `week`, and `day`
@@ -309,7 +315,7 @@ defmodule Calendrical do
               month :: month() | Calendrical.week(),
               day :: day()
             ) ::
-              {Calendar.year(), Calendar.week()} | {:error, :not_defined | :invalid_date}
+              {Calendar.year(), Calendar.week()} | {:error, :not_defined} | date_error()
 
   @doc """
   Returns a tuple of `{month, week_in_month}` for a given `year`, `month` or `week`, and `day`
@@ -319,7 +325,7 @@ defmodule Calendrical do
 
   """
   @callback week_of_month(year(), Calendrical.week(), day()) ::
-              {Calendar.month(), Calendrical.week()} | {:error, :not_defined | :invalid_date}
+              {Calendar.month(), Calendrical.week()} | {:error, :not_defined} | date_error()
 
   @doc """
   Returns the CLDR calendar type.
@@ -445,28 +451,28 @@ defmodule Calendrical do
 
   """
   @callback calendar_year(year :: year(), month :: month(), day :: day()) ::
-              Calendar.year()
+              Calendar.year() | date_error()
 
   @doc """
   Returns a the extended year in a calendar year.
 
   """
   @callback extended_year(year :: year(), month :: month(), day :: day()) ::
-              Calendar.year()
+              Calendar.year() | date_error()
 
   @doc """
   Returns a the related year in a calendar year.
 
   """
   @callback related_gregorian_year(year :: year(), month :: month(), day :: day()) ::
-              Calendar.year()
+              Calendar.year() | date_error()
 
   @doc """
   Returns a the cyclic year in a calendar year.
 
   """
   @callback cyclic_year(year :: year(), month :: month(), day :: day()) ::
-              Calendar.year()
+              Calendar.year() | date_error()
 
   @doc """
   Returns a date range representing the days in a
@@ -474,7 +480,7 @@ defmodule Calendrical do
 
   """
   @callback year(year :: year()) ::
-              Date.Range.t() | {:error, :not_defined | :invalid_date}
+              Date.Range.t() | {:error, :not_defined} | date_error()
 
   @doc """
   Returns a date range representing the days in a
@@ -482,7 +488,7 @@ defmodule Calendrical do
 
   """
   @callback quarter(year :: year(), quarter :: Calendrical.quarter()) ::
-              Date.Range.t() | {:error, :not_defined | :invalid_date}
+              Date.Range.t() | {:error, :not_defined} | date_error()
 
   @doc """
   Returns a date range representing the days in a
@@ -490,7 +496,7 @@ defmodule Calendrical do
 
   """
   @callback quadrimester(year :: year(), quadrimester :: Calendrical.quadrimester()) ::
-              Date.Range.t() | {:error, :not_defined | :invalid_date}
+              Date.Range.t() | {:error, :not_defined} | date_error()
 
   @doc """
   Returns a date range representing the days in a
@@ -498,7 +504,7 @@ defmodule Calendrical do
 
   """
   @callback semester(year :: year(), semester :: Calendrical.semester()) ::
-              Date.Range.t() | {:error, :not_defined | :invalid_date}
+              Date.Range.t() | {:error, :not_defined} | date_error()
 
   @doc """
   Returns a date range representing the days in a
@@ -506,7 +512,7 @@ defmodule Calendrical do
 
   """
   @callback month(year :: year(), month :: month()) ::
-              Date.Range.t() | {:error, :not_defined | :invalid_date}
+              Date.Range.t() | {:error, :not_defined} | date_error()
 
   @doc """
   Returns a date range representing the days in a
@@ -514,7 +520,7 @@ defmodule Calendrical do
 
   """
   @callback week(year :: year(), week :: week()) ::
-              Date.Range.t() | {:error, :not_defined | :invalid_date}
+              Date.Range.t() | {:error, :not_defined} | date_error()
 
   @doc """
   Increments a `t:Calendar.date/0` or `t:Date.Range.t/0` by a specified positive
@@ -1552,7 +1558,7 @@ defmodule Calendrical do
       {2019, 1}
 
   """
-  @spec year_of_era(date()) :: {Calendar.day(), Calendar.era()} | {:error, Exception.t()}
+  @spec year_of_era(date()) :: {Calendar.day(), Calendar.era()} | Calendrical.date_error()
 
   def year_of_era(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1586,7 +1592,7 @@ defmodule Calendrical do
       {737456, 1}
 
   """
-  @spec day_of_era(date()) :: {Calendar.day(), Calendar.era()} | {:error, Exception.t()}
+  @spec day_of_era(date()) :: {Calendar.day(), Calendar.era()} | Calendrical.date_error()
 
   def day_of_era(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1762,7 +1768,7 @@ defmodule Calendrical do
       2019
 
   """
-  @spec calendar_year(date()) :: Calendar.year() | {:error, Exception.t()}
+  @spec calendar_year(date()) :: Calendar.year() | Calendrical.date_error()
 
   def calendar_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1796,7 +1802,7 @@ defmodule Calendrical do
       2019
 
   """
-  @spec extended_year(date()) :: Calendar.year() | {:error, Exception.t()}
+  @spec extended_year(date()) :: Calendar.year() | Calendrical.date_error()
 
   def extended_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1834,7 +1840,7 @@ defmodule Calendrical do
       2019
 
   """
-  @spec related_gregorian_year(date()) :: Calendar.year() | {:error, Exception.t()}
+  @spec related_gregorian_year(date()) :: Calendar.year() | Calendrical.date_error()
 
   def related_gregorian_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1871,7 +1877,7 @@ defmodule Calendrical do
       2019
 
   """
-  @spec cyclic_year(date()) :: Calendar.year() | {:error, Exception.t()}
+  @spec cyclic_year(date()) :: Calendar.year() | Calendrical.date_error()
 
   def cyclic_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1906,7 +1912,7 @@ defmodule Calendrical do
 
   """
   @spec quarter_of_year(date()) ::
-          Calendrical.quarter() | {:error, :not_defined} | {:error, Exception.t()}
+          Calendrical.quarter() | {:error, :not_defined} | Calendrical.date_error()
 
   def quarter_of_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1943,7 +1949,7 @@ defmodule Calendrical do
   @spec month_of_year(date()) ::
           Calendar.month()
           | {Calendar.month(), leap_month :: :leap}
-          | {:error, Exception.t()}
+          | Calendrical.date_error()
 
   def month_of_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -1982,7 +1988,7 @@ defmodule Calendrical do
       {2019, 48}
 
   """
-  @spec week_of_year(date()) :: {Calendar.year(), week()} | {:error, Exception.t()}
+  @spec week_of_year(date()) :: {Calendar.year(), week()} | Calendrical.date_error()
 
   def week_of_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -2021,7 +2027,7 @@ defmodule Calendrical do
       {2019, 50}
 
   """
-  @spec iso_week_of_year(date()) :: {Calendar.year(), week()} | {:error, Exception.t()}
+  @spec iso_week_of_year(date()) :: {Calendar.year(), week()} | Calendrical.date_error()
 
   def iso_week_of_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -2059,7 +2065,7 @@ defmodule Calendrical do
       {12, 5}
 
   """
-  @spec week_of_month(date()) :: {Calendar.month(), week()} | {:error, Exception.t()}
+  @spec week_of_month(date()) :: {Calendar.month(), week()} | Calendrical.date_error()
 
   def week_of_month(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -2099,7 +2105,7 @@ defmodule Calendrical do
       371
 
   """
-  @spec day_of_year(date()) :: Calendar.day() | {:error, Exception.t()}
+  @spec day_of_year(date()) :: Calendar.day() | Calendrical.date_error()
 
   def day_of_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
