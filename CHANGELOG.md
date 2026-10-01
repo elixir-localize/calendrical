@@ -12,9 +12,11 @@ The format is based on
 
 * `era_calendar_type/0` is a required callback, the CLDR calendar that names a calendar's eras: `cldr_calendar_type/0` unless the calendar takes its era names elsewhere, as the lunisolar Japanese calendar does. Localize asks for it without probing, so a calendar implementing the behaviour itself must implement it.
 
+* `parsing_calendar/0` is a required callback, the calendar a date written for a calendar is parsed in before it is converted into it: the calendar itself, or `Calendar.ISO` for a calendar of weeks, whose month and day name no single week. Localize reads "Feb 1, 2024" in `Calendrical.ISOWeek` as 1 February 2024, 2024-W05-4.
+
 * `cardinal_month/1` is a callback every calendar implements, naming the CLDR month a month of the year stands for (a year beginning in July names its first month July), in place of the module function `Calendrical.cardinal_month/3`. Localize names months through it, so a calendar implementing the behaviour itself must implement it.
 
-* `Calendrical.parse/2`, `Calendrical.Date.parse/2` and `parse_range/2`, `Calendrical.Time.parse/2` and `Calendrical.DateTime.parse/2` delegate to Localize's parsers and return its errors, so `Calendrical.DateParseError`, `DateRangeParseError`, `DateTimeParseError`, `TimeParseError` and `ParseError` are removed. Results change where Localize is more correct: `week N of YYYY` follows the locale's week rules, an ISO 8601 offset is kept rather than normalised to UTC, and an unknown `:calendar` is an error.
+* `Calendrical.parse/2`, `Calendrical.Date.parse/2` and `parse_range/2`, `Calendrical.Time.parse/2` and `Calendrical.DateTime.parse/2` delegate to Localize's parsers and return its errors, so `Calendrical.DateParseError`, `DateRangeParseError`, `DateTimeParseError`, `TimeParseError` and `ParseError` are removed. Results change where Localize is more correct: `week N of YYYY` counts the calendar's own weeks, ISO 8601's for `Calendar.ISO`, an ISO 8601 offset is kept rather than normalised to UTC, and an unknown `:calendar` is an error.
 
 * `Calendrical.Hebrew` numbers a date's month by its position in the year, as `Date.new/4` and `months_in_year/1` expect, instead of by CLDR's fixed numbers: in an ordinary year Adar is month 6, Nisan 7 and Elul 12. Leap-year dates are unchanged, and `days_in_month/2` returns 0 for a month the year does not have.
 

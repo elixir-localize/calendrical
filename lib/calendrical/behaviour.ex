@@ -249,6 +249,16 @@ defmodule Calendrical.Behaviour do
       end
 
       @doc """
+      Returns the calendar module a date written for this calendar
+      is parsed in: the calendar itself.
+
+      """
+      @impl true
+      def parsing_calendar do
+        __MODULE__
+      end
+
+      @doc """
       Identifies whether this calendar is month
       or week based.
 
@@ -1114,6 +1124,7 @@ defmodule Calendrical.Behaviour do
       defoverridable epoch: 0
       defoverridable cldr_calendar_type: 0
       defoverridable era_calendar_type: 0
+      defoverridable parsing_calendar: 0
       defoverridable calendar_base: 0
 
       defoverridable calendar_year: 3

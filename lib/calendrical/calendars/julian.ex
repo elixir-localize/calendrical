@@ -93,6 +93,27 @@ defmodule Calendrical.Julian do
   end
 
   @doc """
+  Returns the calendar module a date written for the Julian
+  calendar is parsed in.
+
+  ### Returns
+
+  * `Calendrical.Julian`, the calendar itself, whose written month
+    and day name its own dates.
+
+  ### Examples
+
+      iex> Calendrical.Julian.parsing_calendar()
+      Calendrical.Julian
+
+  """
+  @spec parsing_calendar() :: Calendrical.Julian
+  @impl Calendrical
+  def parsing_calendar do
+    __MODULE__
+  end
+
+  @doc """
   Returns the CLDR calendar base for this calendar.
 
   ### Returns

@@ -63,6 +63,16 @@ defmodule Calendrical.Compiler.Month do
       end
 
       @doc """
+      Returns the calendar module a date written for this calendar
+      is parsed in: the calendar itself.
+
+      """
+      @impl true
+      def parsing_calendar do
+        __MODULE__
+      end
+
+      @doc """
       Determines if the date given is valid according to this calendar.
 
       """

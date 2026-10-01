@@ -1,32 +1,35 @@
 defmodule Calendrical.NonGregorianFormattingTest do
   use ExUnit.Case, async: true
 
-  describe "Localize.DateTime.Formatter — non-Gregorian calendar integration" do
-    test "Hebrew date renders correct ISO week — `:calendar.iso_week_number/1` was being called on the raw Hebrew y/m/d before the fix" do
-      # 5784-09-12 Hebrew = 2024-05-20 Gregorian → ISO week 21
-      # of 2024. The formatter now consults the calendar's
-      # `iso_week_of_year/3` callback (returns `{:error,
-      # :not_defined}` for Hebrew) and falls back to
-      # converting to `Calendar.ISO` before computing the
-      # week.
-      {:ok, d} = Date.new(5784, 9, 12, Calendrical.Hebrew)
-      assert {:ok, "21"} = Localize.DateTime.Formatter.format(d, "w", :"he-IL", %{})
-      assert {:ok, "2024"} = Localize.DateTime.Formatter.format(d, "Y", :"he-IL", %{})
+  # Localize writes `w` and `Y` in the date's calendar's own weeks, its
+  # `week_of_year/3`, never the locale's week data, so each calendar here is
+  # its own oracle.
+  describe "Localize.DateTime.Formatter — the calendar's own weeks" do
+    test "a Hebrew date's week is the Hebrew calendar's" do
+      {:ok, date} = Date.new(5784, 9, 12, Calendrical.Hebrew)
+      {week_year, week} = Calendrical.Hebrew.week_of_year(5784, 9, 12)
+
+      assert Localize.DateTime.Formatter.format(date, "w", :"he-IL", %{}) ==
+               {:ok, Integer.to_string(week)}
+
+      assert Localize.DateTime.Formatter.format(date, "Y", :"he-IL", %{}) ==
+               {:ok, Integer.to_string(week_year)}
     end
 
-    test "Gregorian-aligned calendars use their own iso_week_of_year callback" do
-      # `Calendrical.Gregorian` implements
-      # `iso_week_of_year/3` properly — the formatter should
-      # use the callback, not the Erlang stdlib fallback.
-      {:ok, d} = Date.new(2024, 7, 1, Calendrical.Japanese)
-      # Calendrical.Japanese returns {:error, :not_defined} so
-      # we fall back to ISO conversion. Result still correct.
-      assert {:ok, "27"} = Localize.DateTime.Formatter.format(d, "w", :"ja-JP", %{})
+    test "a Japanese date's week is the Japanese calendar's" do
+      {:ok, date} = Date.new(2024, 7, 1, Calendrical.Japanese)
+      {_week_year, week} = Calendrical.Japanese.week_of_year(2024, 7, 1)
+
+      assert Localize.DateTime.Formatter.format(date, "w", :"ja-JP", %{}) ==
+               {:ok, Integer.to_string(week)}
     end
 
-    test "Buddhist year renders correctly with ISO week" do
-      {:ok, d} = Date.new(2569, 5, 16, Calendrical.Buddhist)
-      assert {:ok, "20"} = Localize.DateTime.Formatter.format(d, "w", :"th-TH", %{})
+    test "a Buddhist date's week is the Buddhist calendar's" do
+      {:ok, date} = Date.new(2569, 5, 16, Calendrical.Buddhist)
+      {_week_year, week} = Calendrical.Buddhist.week_of_year(2569, 5, 16)
+
+      assert Localize.DateTime.Formatter.format(date, "w", :"th-TH", %{}) ==
+               {:ok, Integer.to_string(week)}
     end
   end
 end

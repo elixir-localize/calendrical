@@ -428,6 +428,19 @@ defmodule Calendrical do
   @callback era_calendar_type() :: atom()
 
   @doc """
+  Returns the calendar module a date written for this calendar is
+  parsed in, before it is converted into this calendar.
+
+  It is the calendar itself unless a written month and day cannot
+  name one of its dates: a calendar of weeks has no month or day of
+  the month of its own, and "Feb 1, 2024" names no single one of its
+  weeks, so its dates are read as Gregorian dates, in `Calendar.ISO`,
+  and converted.
+
+  """
+  @callback parsing_calendar() :: module()
+
+  @doc """
   Returns a the year in a calendar year.
 
   """
@@ -3363,11 +3376,6 @@ defmodule Calendrical do
     get_in(day_periods_data, [type, style, day_period])
   end
 
-  # Era names may come from a different CLDR calendar than the other
-  # localized names: the lunisolar Japanese calendar takes month names
-  # from the Chinese calendar but era names (元号) from the Japanese
-  # one. Calendars declare this with the optional `era_calendar_type/0`
-  # callback.
   # The seven days of the week that holds `date`, in its calendar's week
   # order. A calendar week cut short at the start or end of its year still
   # has seven days of the week, so they count from the date's own day of

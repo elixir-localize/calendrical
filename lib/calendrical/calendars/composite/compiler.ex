@@ -77,6 +77,16 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
+      Returns the calendar module a date written for this calendar
+      is parsed in: the calendar itself.
+
+      """
+      @impl Calendrical
+      def parsing_calendar do
+        __MODULE__
+      end
+
+      @doc """
       Identify the base calendar for a given date.
 
       This function derives the calendar we delegate to for a given

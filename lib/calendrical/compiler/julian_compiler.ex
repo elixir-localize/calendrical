@@ -341,6 +341,13 @@ defmodule Calendrical.Julian.Compiler do
       defdelegate era_calendar_type(), to: Calendrical.Julian
       defdelegate calendar_base(), to: Calendrical.Julian
 
+      @doc """
+      Returns the calendar module a date written for this calendar
+      is parsed in: the calendar itself.
+
+      """
+      def parsing_calendar, do: __MODULE__
+
       def week_of_month(year, month, day) do
         Calendrical.Julian.week_of_month(julian_year(year, month, day), month, day)
       end

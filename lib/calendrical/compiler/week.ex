@@ -66,6 +66,18 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
+      Returns the calendar module a date written for this calendar
+      is parsed in: `Calendar.ISO`. A written month and day, such as
+      "Feb 1, 2024", name no single week, so a date is read as a
+      Gregorian date and converted into this calendar.
+
+      """
+      @impl true
+      def parsing_calendar do
+        Calendar.ISO
+      end
+
+      @doc """
       Determines if the date given is valid according to the this calendar.
 
       """

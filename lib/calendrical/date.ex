@@ -99,7 +99,7 @@ defmodule Calendrical.Date do
       {:ok, ~D[2026-04-01]}
 
       iex> Calendrical.Date.parse("week 20 of 2026", locale: :en)
-      {:ok, ~D[2026-05-10]}
+      {:ok, ~D[2026-05-11]}
 
       iex> Calendrical.Date.parse("Saturday, May 16, 2026", locale: :en)
       {:ok, ~D[2026-05-16]}
