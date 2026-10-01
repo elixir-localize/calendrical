@@ -4,13 +4,11 @@ defmodule Calendrical.Parse do
   @split_reg "[\\sT]"
 
   def parse_date(<<"-", year::bytes-4, "-", month::bytes-2, "-", day::bytes-2>>, calendar) do
-    with {:ok, {year, month, day}} <- return_date(year, month, day, calendar) do
-      {:ok, {-year, month, day}}
-    end
+    return_date({"-", year}, month, day, calendar)
   end
 
   def parse_date(<<year::bytes-4, "-", month::bytes-2, "-", day::bytes-2>>, calendar) do
-    return_date(year, month, day, calendar)
+    return_date({"", year}, month, day, calendar)
   end
 
   def parse_date(_string, _calendar) do
@@ -18,30 +16,37 @@ defmodule Calendrical.Parse do
   end
 
   def parse_week_date(<<"-", year::bytes-4, "-W", month::bytes-2, "-", day::bytes-1>>, calendar) do
-    with {:ok, {year, month, day}} <- return_date(year, month, day, calendar) do
-      {:ok, {-year, month, day}}
-    end
+    return_date({"-", year}, month, day, calendar)
   end
 
   def parse_week_date(<<year::bytes-4, "-W", month::bytes-2, "-", day::bytes-1>>, calendar) do
-    return_date(year, month, day, calendar)
+    return_date({"", year}, month, day, calendar)
   end
 
   def parse_week_date(string, calendar) do
     parse_date(string, calendar)
   end
 
-  defp return_date(year, month, day, calendar) do
-    year = String.to_integer(year)
-    month = String.to_integer(month)
-    day = String.to_integer(day)
+  # The fields are digits or the text is no date, and the date is checked
+  # with its sign, as a year before 1 is a year of its own.
+  defp return_date({sign, year}, month, day, calendar) do
+    if digits?(year) and digits?(month) and digits?(day) do
+      year = String.to_integer(sign <> year)
+      month = String.to_integer(month)
+      day = String.to_integer(day)
 
-    if calendar.valid_date?(year, month, day) do
-      {:ok, {year, month, day}}
+      if calendar.valid_date?(year, month, day) do
+        {:ok, {year, month, day}}
+      else
+        {:error, :invalid_date}
+      end
     else
-      {:error, :invalid_date}
+      {:error, :invalid_format}
     end
   end
+
+  defp digits?(<<digit, rest::binary>>) when digit in ?0..?9, do: rest == "" or digits?(rest)
+  defp digits?(_text), do: false
 
   [match_time, guard_time, read_time] =
     quote do
@@ -113,6 +118,9 @@ defmodule Calendrical.Parse do
 
               {:ok, {year, month, day, hour, minute, second, microsecond}, offset}
           end
+        else
+          {:error, _reason} = error -> error
+          _not_a_time_and_offset -> {:error, :invalid_format}
         end
 
       _ ->

@@ -43,8 +43,10 @@ A *week-based* Gregorian calendar lays out years as a fixed number of **52 (or 5
 
 | Calendar | CLDR | Layout | Year start rule |
 |---|---|---|---|
-| `Calendrical.ISOWeek` | (n/a) | 52/53 ISO-8601 weeks. Each week starts on Monday. | The week containing 4 January (i.e. the first week with at least 4 days in the new Gregorian year). |
-| `Calendrical.NRF` | (n/a) | 52/53 weeks in a 4-4-5 / 4-5-4 / 5-4-4 quarter pattern. Each week starts on Sunday. | The Sunday closest to 1 February. |
+| `Calendrical.ISOWeek` | `:generic` | 52/53 ISO-8601 weeks. Each week starts on Monday. | The week containing 4 January (i.e. the first week with at least 4 days in the new Gregorian year). |
+| `Calendrical.NRF` | `:generic` | 52/53 weeks in a 4-4-5 / 4-5-4 / 5-4-4 quarter pattern. Each week starts on Sunday. | The Sunday closest to 1 February. |
+
+A week-based calendar's "months" have no names of their own, so its `cldr_calendar_type/0` is `:generic` and they take the names of CLDR's generic calendar, "M01" to "M12", while its days, quarters and eras keep the Gregorian names. A date is written as `date_to_string/3` writes it, "2026-W25-2", which `parse_date/1` and the `~D` sigil read back, and Localize writes a week-based date the same way at every standard format.
 
 The key differences between month- and week-based Gregorian calendars:
 

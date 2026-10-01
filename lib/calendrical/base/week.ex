@@ -549,8 +549,11 @@ defmodule Calendrical.Base.Week do
     {year, week, day}
   end
 
+  # An ISO 8601 week date, its year written as `Calendar.ISO` writes one, at
+  # least four digits and signed before year 0, so `parse_date/1` reads it
+  # back: "0004-W09-7", "-0044-W11-4".
   def date_to_string(year, week, day) do
-    "#{year}-W#{lpad(week)}-#{day}"
+    year_to_string(year) <> "-W" <> zero_pad(week, 2) <> "-" <> Integer.to_string(day)
   end
 
   def naive_datetime_from_iso_days({days, day_fraction}, config) do
@@ -617,13 +620,10 @@ defmodule Calendrical.Base.Week do
       Calendar.ISO.time_to_string(hour, minute, second, microsecond)
   end
 
-  defp lpad(week) when week < 10 do
-    "0#{week}"
-  end
+  defp year_to_string(year) when year < 0, do: "-" <> zero_pad(-year, 4)
+  defp year_to_string(year), do: zero_pad(year, 4)
 
-  defp lpad(week) do
-    week
-  end
+  defp zero_pad(value, digits), do: String.pad_leading(Integer.to_string(value), digits, "0")
 
   defp week_to_days(week) do
     (week - 1) * days_in_week()

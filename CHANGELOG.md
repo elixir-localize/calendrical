@@ -10,6 +10,8 @@ The format is based on
 
 ### Breaking changes
 
+* A calendar of weeks names its months from CLDR's generic calendar, "M01" to "M12", since they are the ordinal periods of its pattern of weeks and have no names: its `cldr_calendar_type/0` is `:generic`, where `Calendrical.ISOWeek` and `Calendrical.NRF` named period 7 "Jul". Its eras keep the Gregorian names through `era_calendar_type/0`.
+
 * `era_calendar_type/0` is a required callback, the CLDR calendar that names a calendar's eras: `cldr_calendar_type/0` unless the calendar takes its era names elsewhere, as the lunisolar Japanese calendar does. Localize asks for it without probing, so a calendar implementing the behaviour itself must implement it.
 
 * `parsing_calendar/0` is a required callback, the calendar a date written for a calendar is parsed in before it is converted into it: the calendar itself, or `Calendar.ISO` for a calendar of weeks, whose month and day name no single week. Localize reads "Feb 1, 2024" in `Calendrical.ISOWeek` as 1 February 2024, 2024-W05-4.
@@ -75,6 +77,10 @@ The format is based on
 * The Chinese, Korean, Vietnamese and Lunar Japanese calendars find a year's new year once per question and each new moon once, so `valid_date?/3`, `days_in_month/2`, `days_in_year/1`, `leap_year?/1`, `leap_month/1`, `new/3` and `lunar_month_of_year/2` ask for far fewer new moons — a quarter as many across a lunisolar holiday corpus. Results are unchanged.
 
 ### Fixed
+
+* Every calendar's `parse_date/1`, `parse_naive_datetime/1` and `parse_utc_datetime/1` answer text that is no date with `{:error, :invalid_format}`, as `Calendar.ISO` does, where a field of letters raised `ArgumentError` and a malformed time or offset returned `:error` or the text. A negative year's date is checked in that year, so "-0003-13-06" is no Coptic date.
+
+* A calendar of weeks writes its year with four digits at least, as `Calendar.ISO` does, so a week date before year 1000 reads back: "0004-W09-7", where it wrote "4-W09-7".
 
 * Every calendar answers a question about a date (`day_of_week/4`, `day_of_year/3`, `year_of_era/3`, `week_of_month/3`, `cyclic_year/3` and the rest) only for a date it has: a date its `valid_date?/3` rejects is `{:error, :invalid_date}` and one missing a field the question needs a `Calendrical.MissingFieldsError`, where many raised or answered for another date. The `Calendrical.date_error/0` type names both.
 

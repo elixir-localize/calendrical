@@ -115,21 +115,24 @@ defmodule Calendrical.IsoParseTest do
                Parse.parse_utc_datetime("1742-01-01 10:30:00-05", @calendar)
     end
 
+    test "rejects a time that is not one" do
+      for text <- ["1742-01-01 1x:30:00Z", "1742-01-01 garbage", "1742-0a-01 10:30:00Z"] do
+        assert {:error, reason} = Parse.parse_utc_datetime(text, @calendar)
+        assert reason in [:invalid_format, :invalid_date]
+      end
+    end
+
     test "rejects a missing offset" do
       assert Parse.parse_utc_datetime("1742-01-01 10:30:00", @calendar) ==
                {:error, :missing_offset}
     end
 
     test "rejects the -00:00 offset and out-of-range offsets" do
-      assert Parse.parse_utc_datetime("1742-01-01 10:30:00-00:00", @calendar) in [
-               :error,
+      assert Parse.parse_utc_datetime("1742-01-01 10:30:00-00:00", @calendar) ==
                {:error, :invalid_format}
-             ]
 
-      assert Parse.parse_utc_datetime("1742-01-01 10:30:00+25:00", @calendar) in [
-               :error,
+      assert Parse.parse_utc_datetime("1742-01-01 10:30:00+25:00", @calendar) ==
                {:error, :invalid_format}
-             ]
     end
 
     test "rejects input without a time part" do

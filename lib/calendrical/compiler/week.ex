@@ -44,20 +44,20 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
-      Defines the CLDR calendar type for this calendar.
+      Returns the CLDR calendar type whose data names this calendar's months, days and quarters: `:generic`.
 
-      This type is used in support of `Calendrical.localize/3`.
-      Currently only `:gregorian` is supported.
+      A calendar of weeks has no month names of its own: its months are the ordinal periods of its pattern of weeks (4-4-5, 4-5-4 or 5-4-4), so they take the names of CLDR's generic calendar, "M01" to "M12". Its days, quarters and day periods are the generic calendar's, which are the Gregorian calendar's.
 
       """
       @impl true
       def cldr_calendar_type do
-        :gregorian
+        :generic
       end
 
       @doc """
-      Returns the CLDR calendar type that names the calendar's
-      eras: its `cldr_calendar_type/0`.
+      Returns the CLDR calendar type that names the calendar's eras: `:gregorian`.
+
+      A calendar of weeks counts its years as the Gregorian calendar does, and CLDR's generic calendar leaves its eras unnamed ("ERA0", "ERA1"), so its eras take the Gregorian calendar's names.
 
       """
       @impl true

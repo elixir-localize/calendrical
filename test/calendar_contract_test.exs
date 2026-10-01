@@ -134,6 +134,33 @@ defmodule Calendrical.CalendarContract.Test do
         assert unquote(calendar).parsing_calendar() == expected
       end
 
+      # Localize reads a calendar of weeks' dates back as the calendar writes
+      # them, through `parse_date/1`, so a calendar reads back the date it
+      # writes, and answers text that is no date, or no date it has, with an
+      # error, never a raise.
+      test "its parse callbacks read back what it writes and answer anything else with an error",
+           %{date: date} do
+        calendar = unquote(calendar)
+        written = calendar.date_to_string(date.year, date.month, date.day)
+
+        assert calendar.parse_date(written) == {:ok, {date.year, date.month, date.day}}
+
+        for text <- ["abcd-ef-gh", "2026-0a-01", "-abcd-01-01", "2026-W2a-1", "abcd-Wxx-y", ""] do
+          assert {:error, reason} = calendar.parse_date(text)
+          assert is_atom(reason)
+        end
+
+        for text <- [written, "2026-0a-01", "2026-W2a-1"],
+            time <- ["10:00:00Z", "1x:00:00", "garbage", "10:00:00.", "10:00:00+0a:00"],
+            callback <- [:parse_naive_datetime, :parse_utc_datetime] do
+          case apply(calendar, callback, [text <> "T" <> time]) do
+            {:ok, _fields} -> assert text == written and callback == :parse_naive_datetime
+            {:ok, _fields, _offset} -> assert text == written and time == "10:00:00Z"
+            {:error, reason} -> assert is_atom(reason)
+          end
+        end
+      end
+
       test "the day of the week agrees with ISO for any first day", %{date: date} do
         iso = Date.convert!(date, Calendar.ISO)
 
