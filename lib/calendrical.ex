@@ -2029,28 +2029,19 @@ defmodule Calendrical do
   end
 
   @doc """
-  Returns the `{month, week_number}`
-  for a `date`.
+  Returns the `{month, week_number}` for a `date`: the month the date's week belongs to and the week's number in it.
 
-  The nature of a week depends on the
-  calendar configuration and therefore
-  some results may be surprising.  For example
-  the date of December 31st 2018 is actually
-  in month one of the ISO Week calendar of
-  2019.
+  The weeks are the calendar's own, so a day near the end of a month can be in the next month's first week. `Calendar.ISO` dates are counted in `Calendrical.Gregorian`, whose weeks begin on Monday and whose week 1 of a month is the week holding the month's first day, so Monday 31 December 2018 is in week 1 of January 2019. `Calendrical.ISO` keeps ISO 8601's rule, under which a week belongs to the month holding four or more of its days.
 
   ### Arguments
 
-  * `date` is any `t:Calendar.date/0` or a map with one or
-    more of the fields `:year`, `:month`, `:day` and
-    optionally `:calendar`.
+  * `date` is any `t:Calendar.date/0` or a map with one or more of the fields `:year`, `:month`, `:day` and optionally `:calendar`.
 
   ### Returns
 
-  * a tuple of the form `{month, week}` or
+  * a tuple of the form `{month, week}`, or
 
-  * `{:error, :not_defined}` if the calendar
-    does not support the concept of weeks.
+  * `{:error, reason}` if the date is missing a field.
 
   ### Examples
 
@@ -2058,6 +2049,8 @@ defmodule Calendrical do
       {1, 1}
       iex> Calendrical.week_of_month(~D[2018-12-31])
       {1, 1}
+      iex> Calendrical.week_of_month(~D[2021-10-01 Calendrical.ISO])
+      {9, 5}
       iex> Calendrical.week_of_month(~D[2019-01-01 Calendrical.BasicWeek])
       {1, 1}
       iex> Calendrical.week_of_month(~D[2018-12-31 Calendrical.BasicWeek])

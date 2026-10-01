@@ -24,8 +24,6 @@ defmodule Calendrical.Base.Month do
   @slide_probe_year 2000
   @months_in_quarter 3
   @months_in_gregorian_year 12
-  @weeks_in_quarter 13
-  @weeks_in_long_year 53
   @iso_week_first_day 1
   @iso_week_min_days 4
   @january 1
@@ -143,36 +141,46 @@ defmodule Calendrical.Base.Month do
   end
 
   def week_of_month(year, month, day, config) when is_date(year, month, day) do
-    {_year, week} = week_of_year(year, month, day, config)
-    month_and_week_from_week_of_year(week, config)
+    iso_days = date_to_iso_days(year, month, day, config)
+    {year, month} = month_of_week(iso_days, year, month, config)
+    week = div(iso_days - first_day_of_first_week(year, month, config), @days_in_week) + 1
+    {month, week}
   end
 
   def week_of_month(year, month, day, _config) do
     {:error, missing_date_error("week_of_month", year, month, day)}
   end
 
-  # Week 53 of a long year belongs to the last month of the fourth
-  # quarter with the leap week appended, mirroring
-  # `Base.Week.month_in_quarter/2`. Without this clause the quarter
-  # arithmetic below yields month 13 in a 12-month structure.
-  defp month_and_week_from_week_of_year(@weeks_in_long_year = week, config) do
-    month = @quarters_in_year * @months_in_quarter
+  # A month's weeks are numbered as TR35 numbers a year's: week 1 is the
+  # first week, starting on the calendar's first day of the week, that
+  # holds `min_days_in_first_week` or more of the month's days, and the
+  # weeks run on to the next month's week 1. So a day before its month's
+  # week 1 is in the last week of the month before, and a day in the next
+  # month's week 1 is in that.
+  defp month_of_week(iso_days, year, month, config) do
+    {next_year, next_month} = add_month(year, month, 1)
 
-    weeks_before_month =
-      (@quarters_in_year - 1) * @weeks_in_quarter +
-        Base.Week.weeks_from_months(@months_in_quarter - 1, config)
+    cond do
+      iso_days >= first_day_of_first_week(next_year, next_month, config) ->
+        {next_year, next_month}
 
-    {month, week - weeks_before_month}
+      iso_days < first_day_of_first_week(year, month, config) ->
+        add_month(year, month, -1)
+
+      true ->
+        {year, month}
+    end
   end
 
-  defp month_and_week_from_week_of_year(week, config) do
-    {quarters, weeks_remaining_in_quarter} = Math.div_amod(week, @weeks_in_quarter)
-    month_in_quarter = Base.Week.month_from_weeks(weeks_remaining_in_quarter, config)
+  # The first day of a month's week 1: the calendar's first day of the
+  # week on or before the month's `min_days_in_first_week`th day, so that
+  # week holds that many of the month's days and the week before it fewer.
+  defp first_day_of_first_week(year, month, config) do
+    %Config{day_of_week: first_day, min_days_in_first_week: min_days} = config
+    iso_days = date_to_iso_days(year, month, min_days, config)
 
-    month = quarters * @months_in_quarter + month_in_quarter
-    week = weeks_remaining_in_quarter - Base.Week.weeks_from_months(month_in_quarter - 1, config)
-
-    {month, week}
+    iso_days -
+      Integer.mod(Calendrical.iso_days_to_day_of_week(iso_days) - first_day, @days_in_week)
   end
 
   def day_of_era(year, month, day, config) when is_date(year, month, day) do

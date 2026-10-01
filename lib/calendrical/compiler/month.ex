@@ -288,21 +288,22 @@ defmodule Calendrical.Compiler.Month do
       end
 
       @doc """
-      Calculates the week of the month from the given `year`, `month`, and `day`.
-      It is an integer from 1 to 5.
+      Calculates the week of the month from the given `year`, `month`, and `day`: the month the day's week belongs to and the week's number in it, from 1 to 5.
+
+      A month's weeks are numbered as a year's are: week 1 is the first week, starting on the calendar's first day of the week, with at least the calendar's minimum number of days in the month, and the weeks run on to the next month's week 1. So a day before its month's week 1 is in the last week of the month before, and a day in the next month's week 1 is in that. A calendar whose weeks start on the first day of its year numbers a month's weeks from the month's first day.
 
       """
       @spec week_of_month(
               year :: Calendrical.year(),
-              month :: Calendrical.week(),
+              month :: Calendrical.month(),
               day :: Calendar.day()
             ) ::
               {month :: Calendar.month(), week :: Calendrical.week()}
               | {:error, Exception.t()}
 
       @impl true
-      def week_of_month(year, week, day) do
-        Month.week_of_month(year, week, day, __config__())
+      def week_of_month(year, month, day) do
+        Month.week_of_month(year, month, day, __config__())
       end
 
       @doc """
