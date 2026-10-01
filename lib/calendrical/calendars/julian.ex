@@ -396,6 +396,30 @@ defmodule Calendrical.Julian do
   end
 
   @doc """
+  Returns the month of the CLDR calendar that a month of the Julian year
+  names: the Julian months are the Gregorian calendar's.
+
+  ### Arguments
+
+  * `month` is a month of the year, as `month_of_year/3` returns it.
+
+  ### Returns
+
+  * The integer month.
+
+  ### Examples
+
+      iex> Calendrical.Julian.cardinal_month(4)
+      4
+
+  """
+  @spec cardinal_month(month) :: month
+  @impl Calendrical
+  def cardinal_month(month) do
+    month
+  end
+
+  @doc """
   Returns the week of the Julian year holding the given date.
 
   Weeks run from Monday, and week 1 is the week holding the first day

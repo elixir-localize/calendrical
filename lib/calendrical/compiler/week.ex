@@ -222,6 +222,19 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
+      Returns the Gregorian month that a month of the year, as
+      `month_of_year/3` returns it, names: counted from the month
+      the year begins in.
+
+      """
+      @spec cardinal_month(Calendar.month()) :: Calendar.month()
+
+      @impl true
+      def cardinal_month(month) do
+        Week.cardinal_month(month, __config__())
+      end
+
+      @doc """
       Calculates the week of the year from the given `year`, `month`, and `day`.
       It is an integer from 1 to 53.
 

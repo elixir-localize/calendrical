@@ -219,6 +219,17 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
+      Returns the month of the CLDR calendar that a month of
+      the year names: its member calendars' months are the
+      CLDR calendar's.
+
+      """
+      @impl true
+      def cardinal_month(month) do
+        month
+      end
+
+      @doc """
       Calculates the week of the year for the given date: the member
       calendar's week in a year one member governs throughout, and in a
       year a transition falls in, the composite's own calendar-aligned

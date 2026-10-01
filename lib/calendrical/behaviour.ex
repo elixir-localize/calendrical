@@ -396,6 +396,21 @@ defmodule Calendrical.Behaviour do
       end
 
       @doc """
+      Returns the month of the CLDR calendar that a month of
+      year names: the index of its localized name.
+
+      A calendar's year begins in its CLDR calendar's first
+      month, so its months are the CLDR calendar's.
+
+      """
+      @spec cardinal_month(Calendar.month()) :: Calendar.month()
+
+      @impl true
+      def cardinal_month(month) do
+        month
+      end
+
+      @doc """
       Calculates the day and era from the given
       `year`, `month`, and `day`.
 
@@ -1062,6 +1077,7 @@ defmodule Calendrical.Behaviour do
       defoverridable year_of_era: 3
       defoverridable quarter_of_year: 3
       defoverridable month_of_year: 3
+      defoverridable cardinal_month: 1
       defoverridable week_of_year: 3
       defoverridable iso_week_of_year: 3
       defoverridable week_of_month: 3

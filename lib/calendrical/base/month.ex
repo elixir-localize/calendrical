@@ -82,6 +82,16 @@ defmodule Calendrical.Base.Month do
     {:error, missing_month_error("month_of_year", month)}
   end
 
+  # A year that begins in another month than the first numbers its months
+  # from there, so its first month is the Gregorian month it begins in.
+  def cardinal_month(month, %Config{month_of_year: 1}) do
+    month
+  end
+
+  def cardinal_month(month, %Config{month_of_year: month_of_year}) do
+    Math.amod(month + month_of_year - 1, @months_in_gregorian_year)
+  end
+
   def week_of_year(year, month, day, %Config{day_of_week: :first} = config)
       when is_date(year, month, day) do
     this_day = date_to_iso_days(year, month, day, config)

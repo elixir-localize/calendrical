@@ -271,6 +271,19 @@ defmodule Calendrical do
               Calendar.month() | {Calendar.month(), leap_month?()}
 
   @doc """
+  Returns the month of the calendar's CLDR calendar that a month of
+  year names: the index of its localized name.
+
+  `month` is a month of year as `month_of_year/3` returns it, without a
+  leap month's flag. A calendar whose year begins in another month than
+  the first numbers its months from there, so its first month is the
+  CLDR month its year begins in; every other calendar's months are its
+  CLDR calendar's.
+
+  """
+  @callback cardinal_month(month :: Calendar.month()) :: Calendar.month()
+
+  @doc """
   Returns a tuple of `{year, week_in_year}` for a given `year`, `month` or `week`, and `day`
   for a a calendar.
 
@@ -3258,19 +3271,15 @@ defmodule Calendrical do
       |> Map.put_new(:year, Date.utc_today().year)
       |> Map.put_new(:calendar, calendar)
 
-    months_in_year = months_in_year(datetime)
-
     case month_of_year(datetime) do
       month when is_number(month) ->
-        cardinal_month =
-          cardinal_month(month, calendar, months_in_year)
+        cardinal_month = calendar.cardinal_month(month)
 
         months_data = unwrap!(Localize.Calendar.months(locale, calendar_type))
         get_in(months_data, [type, style, cardinal_month])
 
       {month, :leap} when is_number(month) ->
-        cardinal_month =
-          cardinal_month(month, calendar, months_in_year)
+        cardinal_month = calendar.cardinal_month(month)
 
         months_data = unwrap!(Localize.Calendar.months(locale, calendar_type))
 
@@ -3392,31 +3401,6 @@ defmodule Calendrical do
 
   defp am_pm(_hour) do
     :pm
-  end
-
-  # Get the month of the calendar-specific year as the month
-  # in the gregorian calendar (starting in January)
-  @doc false
-  def cardinal_month(month, calendar, months_in_year) do
-    if Code.ensure_loaded?(calendar) && function_exported?(calendar, :__config__, 0) do
-      do_cardinal_month(month, calendar.__config__(), months_in_year)
-    else
-      month
-    end
-  end
-
-  defp do_cardinal_month(month, %{month_of_year: 1}, _months_in_year) do
-    month
-  end
-
-  defp do_cardinal_month(month, %{month_of_year: month_of_year}, months_in_year) do
-    Localize.Utils.Math.amod(month + month_of_year - 1, months_in_year)
-  end
-
-  # A composite calendar's configuration is its list of transitions; its
-  # months are numbered as its member calendars number them.
-  defp do_cardinal_month(month, _config, _months_in_year) do
-    month
   end
 
   # Get the calendar-specific day of the week as the day

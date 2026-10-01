@@ -197,6 +197,12 @@ defmodule Calendrical.Julian.Compiler do
         month
       end
 
+      # The Julian month names the CLDR month whichever month the year
+      # begins in.
+      def cardinal_month(month) do
+        month
+      end
+
       # The month's place in the year, the new-year month's days before the
       # new-year day ending the year as a long month 12.
       defp position_in_year(month, day)

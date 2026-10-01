@@ -78,6 +78,8 @@ defmodule Calendrical.Base.Week do
     months_in_prior_quarters + month_in_quarter
   end
 
+  defdelegate cardinal_month(month, config), to: Month
+
   def week_of_year(year, week, _day, _config) when is_integer(year) and is_integer(week) do
     {year, week}
   end

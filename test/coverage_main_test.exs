@@ -746,15 +746,10 @@ defmodule Calendrical.CoverageMainTest do
     end
   end
 
-  describe "cardinal_month/3 and cardinal_day_of_week/2" do
+  describe "cardinal_month/1 and cardinal_day_of_week/2" do
     test "cardinal_month for January-start and offset calendars" do
-      Code.ensure_loaded!(Calendrical.Gregorian)
-      Code.ensure_loaded!(Calendrical.Test.Calendars.Sunday)
-
-      assert Calendrical.cardinal_month(5, Calendrical.Gregorian, 12) == 5
-      assert Calendrical.cardinal_month(5, Calendrical.Test.Calendars.Sunday, 12) == 8
-      # A module without __config__/0 returns the month unchanged.
-      assert Calendrical.cardinal_month(5, Enum, 12) == 5
+      assert Calendrical.Gregorian.cardinal_month(5) == 5
+      assert Calendrical.Test.Calendars.Sunday.cardinal_month(5) == 8
     end
 
     test "cardinal_day_of_week for Monday-start and other calendars" do

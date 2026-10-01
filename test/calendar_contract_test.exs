@@ -47,6 +47,18 @@ defmodule Calendrical.CalendarContract.Test do
         assert {:error, _} = calendar.week(date.year, 99)
       end
 
+      test "a month of the year names a month of the CLDR calendar", %{date: date} do
+        calendar = unquote(calendar)
+
+        month =
+          case calendar.month_of_year(date.year, date.month, date.day) do
+            {month, _leap} -> month
+            month -> month
+          end
+
+        assert calendar.cardinal_month(month) in 1..13
+      end
+
       test "the day of the week agrees with ISO for any first day", %{date: date} do
         iso = Date.convert!(date, Calendar.ISO)
 
