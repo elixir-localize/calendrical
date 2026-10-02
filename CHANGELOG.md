@@ -10,6 +10,8 @@ The format is based on
 
 ### Breaking changes
 
+* `Calendrical.strftime/3` returns `{:ok, string}` or `{:error, exception}` where it raised on an invalid locale, format, option or value; `Calendrical.strftime!/3` returns the string. It now passes `Calendar.strftime/3`'s own options, such as `:preferred_date`, through instead of dropping them.
+
 * A calendar of weeks names its months from CLDR's generic calendar, "M01" to "M12", since they are the ordinal periods of its pattern of weeks and have no names: its `cldr_calendar_type/0` is `:generic`, where `Calendrical.ISOWeek` and `Calendrical.NRF` named period 7 "Jul". Its eras keep the Gregorian names through `era_calendar_type/0`.
 
 * `era_calendar_type/0` is a required callback, the CLDR calendar that names a calendar's eras: `cldr_calendar_type/0` unless the calendar takes its era names elsewhere, as the lunisolar Japanese calendar does. Localize asks for it without probing, so a calendar implementing the behaviour itself must implement it.

@@ -11,7 +11,7 @@ defmodule Calendrical.StrftimeTest do
 
   use ExUnit.Case, async: true
 
-  defp strftime(date, format), do: Calendrical.strftime(date, format, locale: :en)
+  defp strftime(date, format), do: Calendrical.strftime!(date, format, locale: :en)
 
   defp convert(gregorian, calendar) do
     {:ok, date} = Date.convert(gregorian, calendar)
@@ -63,6 +63,47 @@ defmodule Calendrical.StrftimeTest do
 
   test "a value without a date is formatted" do
     assert strftime(~T[14:30:00], "%H:%M %p") == "14:30 PM"
+  end
+
+  test "the options of Calendar.strftime/3 are passed through" do
+    assert Calendrical.strftime(~D[2019-11-03], "%x", locale: :fr, preferred_date: "%A %d %B %Y") ==
+             {:ok, "dimanche 03 novembre 2019"}
+
+    assert Calendrical.strftime(~N[2019-11-03 14:05:00], "%X",
+             locale: :en,
+             preferred_time: "%I:%M %p"
+           ) ==
+             {:ok, "02:05 PM"}
+
+    assert Calendrical.strftime(~D[2019-11-03], "%B",
+             locale: :en,
+             month_names: fn _ -> "Brumaire" end
+           ) ==
+             {:ok, "Brumaire"}
+  end
+
+  test "input it cannot format is answered with an error" do
+    assert {:error, %Localize.InvalidLocaleError{}} =
+             Calendrical.strftime(~D[2019-11-03], "%B", locale: :zz_invalid)
+
+    assert {:error, %Localize.InvalidLocaleError{}} =
+             Calendrical.strftime(~D[2019-11-03], "%B", locale: 123)
+
+    assert {:error, %ArgumentError{}} = Calendrical.strftime(~D[2019-11-03], "%Q", locale: :en)
+    assert {:error, %ArgumentError{}} = Calendrical.strftime(~D[2019-11-03], "%B", unknown: 1)
+    assert {:error, %ArgumentError{}} = Calendrical.strftime(~D[2019-11-03], "%B", :not_options)
+    assert {:error, %ArgumentError{}} = Calendrical.strftime(~D[2019-11-03], "%B", [1, 2])
+    assert {:error, _exception} = Calendrical.strftime(nil, "%B", locale: :en)
+    assert {:error, _exception} = Calendrical.strftime(~D[2019-11-03], nil, locale: :en)
+    assert {:error, _exception} = Calendrical.strftime(%{year: 2019, month: 13, day: 1}, "%B")
+  end
+
+  test "strftime!/3 raises the error strftime/3 answers" do
+    assert_raise Localize.InvalidLocaleError, fn ->
+      Calendrical.strftime!(~D[2019-11-03], "%B", locale: :zz_invalid)
+    end
+
+    assert_raise ArgumentError, fn -> Calendrical.strftime!(~D[2019-11-03], "%Q") end
   end
 
   {:ok, fiscal_year_us} = Calendrical.FiscalYear.calendar_for(:US)

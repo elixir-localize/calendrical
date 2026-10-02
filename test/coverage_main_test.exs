@@ -264,18 +264,21 @@ defmodule Calendrical.CoverageMainTest do
 
   describe "strftime/2,3 and strftime_options!/0,1" do
     test "strftime formats dates, times and naive datetimes" do
-      assert Calendrical.strftime(~D[2026-07-05], "%a %B %Y", locale: :en) == "Sun July 2026"
-      assert Calendrical.strftime(~D[2026-07-05], "%a", locale: :fr) == "dim."
-      assert Calendrical.strftime(~T[14:30:00], "%H:%M", locale: :en) == "14:30"
-      assert Calendrical.strftime(~N[2026-07-05 14:30:00], "%y %p", locale: :en) == "26 PM"
+      assert Calendrical.strftime(~D[2026-07-05], "%a %B %Y", locale: :en) ==
+               {:ok, "Sun July 2026"}
+
+      assert Calendrical.strftime(~D[2026-07-05], "%a", locale: :fr) == {:ok, "dim."}
+      assert Calendrical.strftime(~T[14:30:00], "%H:%M", locale: :en) == {:ok, "14:30"}
+      assert Calendrical.strftime(~N[2026-07-05 14:30:00], "%y %p", locale: :en) == {:ok, "26 PM"}
     end
 
     test "strftime with default options" do
-      assert Calendrical.strftime(~D[2026-07-05], "%d/%m/%Y") == "05/07/2026"
+      assert Calendrical.strftime(~D[2026-07-05], "%d/%m/%Y") == {:ok, "05/07/2026"}
     end
 
     test "strftime names the day of a calendar whose weeks begin on Sunday" do
-      assert Calendrical.strftime(~D[2025-01-26 Calendrical.IL], "%a", locale: :he) == "יום א׳"
+      assert Calendrical.strftime(~D[2025-01-26 Calendrical.IL], "%a", locale: :he) ==
+               {:ok, "יום א׳"}
     end
 
     test "strftime_options! returns localization callback options" do

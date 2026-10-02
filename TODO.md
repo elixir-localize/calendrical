@@ -28,6 +28,8 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Done
 
+* [x] **`Calendrical.strftime/3` answers errors and passes `Calendar.strftime/3`'s options through** — it raised on an invalid locale, format, option or value and dropped options such as `:preferred_date`; it now returns `{:ok, string}` or `{:error, exception}`, with `strftime!/3` for the string. 2026-10-03, v1.4.0.
+
 * [x] **`Calendrical.strftime/3` names the month and the day from the date** — it named them by the date's fields, so a calendar of weeks raised from week 13 and named a week as a month, Hebrew, Chinese leap and fiscal months were misnamed, and every calendar whose weeks begin on another day than Monday named the wrong day (1 January 2019 "Wednesday" in Hebrew). It now asks `Localize.Calendar.localize/3`; `strftime_options!/1` documents that it names by the field numbers. Held by `test/strftime_test.exs`. 2026-10-03, v1.4.0.
 
 * [x] **`iso_week_of_year/3` gives the ISO week of the day a fiscal calendar's date names** — `Calendrical.Base.Month` read the date's fields as a Gregorian date, so the five fiscal month calendars gave the wrong week (`Calendrical.FiscalYear.US.iso_week_of_year(2019, 1, 1)`, 1 October 2018, was `{2019, 1}` and is `{2018, 40}`) and raised `ArgumentError` where the fields name no Gregorian day. Held for 22 calendars over every day of 2018 to 2020 against `:calendar.iso_week_number/1` by `test/iso_week_of_year_test.exs`. 2026-10-03, v1.4.0.

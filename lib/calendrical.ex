@@ -1062,11 +1062,8 @@ defmodule Calendrical do
   defdelegate parse(input, options \\ []), to: Localize.DateTime.Parser
 
   @doc """
-  Formats the given date, time, or datetime into a string.
-
-  This function is a thin wrapper around `Calendar.strftime/3` intended
-  to ease formatting for localized calendars. Localized strings will
-  be automatically injected as options to `Calendar.strftime/3`.
+  Formats a date, time or datetime with `Calendar.strftime/3`, naming its
+  month, day of the week and day period in a locale.
 
   The month and the day of the week are named from the date, as
   `Localize.Calendar.localize/3` names them, not from its fields: a
@@ -1075,29 +1072,117 @@ defmodule Calendrical do
   weeks' week by the month it falls in, and the day by the day it is,
   whichever day the calendar's weeks begin on.
 
-  See `Calendar.strftime/3` for details of formatting strings and
-  other options.
+  See `Calendar.strftime/3` for the format string.
 
-  Examples:
+  ### Arguments
+
+  * `value` is a `t:Date.t/0`, `t:Time.t/0`, `t:NaiveDateTime.t/0` or
+    `t:DateTime.t/0` in any calendar.
+
+  * `format` is a `Calendar.strftime/3` format string.
+
+  * `options` is a keyword list of options.
+
+  ### Options
+
+  * `:locale` is a locale identifier atom, string, or a
+    `t:Localize.LanguageTag.t/0`. The default is `Localize.get_locale/0`.
+
+  * Every option of `Calendar.strftime/3` (`:preferred_date`,
+    `:preferred_time`, `:preferred_datetime`, `:month_names` and the
+    other name callbacks). A name callback given here replaces the
+    localized one.
+
+  ### Returns
+
+  * `{:ok, string}`, or
+
+  * `{:error, exception}` if the locale is not valid, or `value`,
+    `format` or an option cannot be formatted, or a name the format
+    needs cannot be found for `value`.
+
+  ### Examples
 
       iex> Calendrical.strftime(~D[2025-01-26 Calendrical.IL], "%a", locale: :he)
-      "יום א׳"
+      {:ok, "יום א׳"}
 
       iex> Calendrical.strftime(Date.new!(5779, 7, 1, Calendrical.Hebrew), "%A %B", locale: :en)
-      "Friday Adar II"
+      {:ok, "Friday Adar II"}
+
+      iex> Calendrical.strftime(~D[2019-11-03], "%x", locale: :fr, preferred_date: "%A %d %B %Y")
+      {:ok, "dimanche 03 novembre 2019"}
 
   """
-  @spec strftime(any_date_time(), String.t(), Keyword.t()) :: String.t()
-  def strftime(date_or_time_or_datetime, format, options \\ []) do
-    calendar = Map.get(date_or_time_or_datetime, :calendar)
-    options = Keyword.merge(options, calendar: calendar)
-    strftime_options = strftime_options!(options)
-    locale = Keyword.get(options, :locale, Localize.get_locale())
+  @spec strftime(any_date_time(), String.t(), Keyword.t()) ::
+          {:ok, String.t()} | {:error, Exception.t()}
+  def strftime(value, format, options \\ []) do
+    with :ok <- validate_strftime_options(options),
+         {:ok, locale} <-
+           Localize.validate_locale(Keyword.get(options, :locale, Localize.get_locale())) do
+      format_strftime(value, format, locale, Keyword.drop(options, [:locale, :calendar]))
+    end
+  end
 
-    strftime_options =
-      Keyword.merge(strftime_options, date_names(date_or_time_or_datetime, locale))
+  @doc """
+  Formats a date, time or datetime with `Calendar.strftime/3`, naming its
+  month, day of the week and day period in a locale, or raises.
 
-    Calendar.strftime(date_or_time_or_datetime, format, strftime_options)
+  ### Arguments
+
+  * `value` is a `t:Date.t/0`, `t:Time.t/0`, `t:NaiveDateTime.t/0` or
+    `t:DateTime.t/0` in any calendar.
+
+  * `format` is a `Calendar.strftime/3` format string.
+
+  * `options` is a keyword list of options.
+
+  ### Options
+
+  * The options of `strftime/3`.
+
+  ### Returns
+
+  * The formatted string, or
+
+  * raises the exception `strftime/3` returns.
+
+  ### Examples
+
+      iex> Calendrical.strftime!(~D[2025-01-26 Calendrical.IL], "%A", locale: :en)
+      "Sunday"
+
+  """
+  @spec strftime!(any_date_time(), String.t(), Keyword.t()) :: String.t()
+  def strftime!(value, format, options \\ []) do
+    case strftime(value, format, options) do
+      {:ok, string} -> string
+      {:error, exception} -> raise exception
+    end
+  end
+
+  defp validate_strftime_options(options) do
+    if Keyword.keyword?(options) do
+      :ok
+    else
+      {:error,
+       ArgumentError.exception("expected options to be a keyword list, got: #{inspect(options)}")}
+    end
+  end
+
+  # `Calendar.strftime/3` raises on a value, format or option it cannot
+  # format, and the name callbacks raise when a name cannot be found; both
+  # are answered as errors.
+  defp format_strftime(value, format, locale, strftime_options) do
+    calendar = if is_map(value), do: Map.get(value, :calendar), else: nil
+
+    names =
+      [locale: locale, calendar: calendar]
+      |> strftime_options!()
+      |> Keyword.merge(date_names(value, locale))
+
+    {:ok, Calendar.strftime(value, format, Keyword.merge(names, strftime_options))}
+  rescue
+    exception -> {:error, exception}
   end
 
   # `Calendar.strftime/3` passes the name callbacks the month field and the
@@ -1126,7 +1211,7 @@ defmodule Calendrical do
 
   @doc """
   Returns a keyword list of options than can be applied to
-  `Calendar.strftime/3` or `Calendrical.strftime/3`.
+  `Calendar.strftime/3`.
 
   `strftime_options!` returns a keyword list than can be used as
   options to return localised names for days, months and am/pm.
