@@ -4,8 +4,6 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Open
 
-* [ ] **`iso_week_of_year/3` reads a fiscal calendar's date as Gregorian** — the month compiler passes `Base.Month.iso_week_of_year/3` no config, so `Calendrical.Fiscal.US.iso_week_of_year(2019, 1, 1)`, 1 October 2018 and ISO week 2018-W40, answers `{2019, 1}`.
-
 * [ ] **`Calendrical.strftime/3` raises for `%B` and `%b` in a calendar of weeks** — its dates' month field holds a week, which has no name, and what the lookup answers makes `Calendar.strftime/3` raise `ArgumentError`. Write the period's CLDR generic name ("M06"), or the week.
 
 * [ ] **The Persian calendar raises outside Gregorian 1001 to 3000** — `valid_date?/3` answers `false` there, so its date callbacks and Localize return errors for such a date, but `months_in_year/1` and `days_in_month/2` raise `Calendrical.UnsupportedDateRangeError`, and so does converting a date outside the range into it, so `Localize.Date.parse("0001-001", calendar: Calendrical.Persian)` raises as it does for the Umm al-Qura calendar (below). Answer those callbacks, or reject the year, without raising.
@@ -31,6 +29,8 @@ Calendrical's open work. Design documents live in `plans/`.
 * [ ] **`Calendrical.UnsupportedDateRangeError`'s `:range` is English prose** — the Persian calendar and the Islamic visibility calculations give it a phrase such as "dates covered by the installed JPL ephemeris", which is bound into the translated message untranslated. Carry the bounds as data and write them in the message.
 
 ## Done
+
+* [x] **`iso_week_of_year/3` gives the ISO week of the day a fiscal calendar's date names** — `Calendrical.Base.Month` read the date's fields as a Gregorian date, so the five fiscal month calendars gave the wrong week (`Calendrical.FiscalYear.US.iso_week_of_year(2019, 1, 1)`, 1 October 2018, was `{2019, 1}` and is `{2018, 40}`) and raised `ArgumentError` where the fields name no Gregorian day. Held for 22 calendars over every day of 2018 to 2020 against `:calendar.iso_week_number/1` by `test/iso_week_of_year_test.exs`. 2026-10-03, v1.4.0.
 
 * [x] **`:year` numbers a month or week calendar's year by the Gregorian year it begins or ends in** — `:beginning` and `:ending` raised `FunctionClauseError` in two pairings with `:first_or_last` and numbered the year the other way in the other two, and a month calendar read `first_or_last: :last` as making `:month_of_year` its last month; no fiscal calendar relied on it (the territory fiscal years use `:majority`). Held for every kind, pairing and month by `test/year_numbering_test.exs`. 2026-10-03, v1.4.0.
 

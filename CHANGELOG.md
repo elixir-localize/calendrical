@@ -88,6 +88,8 @@ The format is based on
 
 ### Fixed
 
+* A month calendar's `iso_week_of_year/3` gives the ISO 8601 week of the day its date names, where a fiscal calendar's date was read as a Gregorian one: `Calendrical.FiscalYear.US`'s first day of 2019, 1 October 2018, answered `{2019, 1}` and is `{2018, 40}`, and days whose fields are no Gregorian date raised `ArgumentError`.
+
 * `year: :beginning` and `year: :ending` number a month or week calendar's year by the Gregorian year it begins or ends in, where two of their four pairings with `:first_or_last` raised `FunctionClauseError` on every date and the other two numbered the year the other way. A month calendar's `:month_of_year` is its first month whatever `:first_or_last` says, so a January or December year no longer spans two years or ends before it begins.
 
 * A composite calendar's `year/1` runs from the first to the last of a year's days that has a date of its own, so England's 1155 is 1 January to 31 December, where it ended on 24 March, and a year whose two ends have no dates of their own gives `Date.range/2` no negative range and warning. A change of calendar dated before the base calendar's year -9999 takes effect after the base calendar, where the two changed places.

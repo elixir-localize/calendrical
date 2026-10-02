@@ -133,6 +133,22 @@ defmodule Calendrical.Base.Month do
     {:error, missing_date_error("iso_week_of_year", year, month, day)}
   end
 
+  # The ISO week of the day a month calendar's date names. The calendar's
+  # year, month and day are a Gregorian date only when its year begins in
+  # January, so the day is found through the configuration first.
+  def iso_week_of_year(year, month, day, %Config{} = config) when is_date(year, month, day) do
+    {year, month, day} =
+      year
+      |> date_to_iso_days(month, day, config)
+      |> ISO.date_from_iso_days()
+
+    iso_week_of_year(year, month, day)
+  end
+
+  def iso_week_of_year(year, month, day, _config) do
+    {:error, missing_date_error("iso_week_of_year", year, month, day)}
+  end
+
   def week_of_month(year, month, day, %Config{day_of_week: :first} = config)
       when is_date(year, month, day) do
     this_day = date_to_iso_days(year, month, day, config)

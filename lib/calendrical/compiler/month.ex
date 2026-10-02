@@ -269,8 +269,8 @@ defmodule Calendrical.Compiler.Month do
       end
 
       @doc """
-      Calculates the ISO week of the year from the given `year`, `month`, and `day`.
-      It is an integer from 1 to 53.
+      Calculates the ISO 8601 week of the day that the given `year`, `month`
+      and `day` name, as `{iso_year, week}`. The week is an integer from 1 to 53.
 
       """
       @spec iso_week_of_year(
@@ -283,7 +283,7 @@ defmodule Calendrical.Compiler.Month do
 
       @impl true
       def iso_week_of_year(year, month, day) do
-        Month.iso_week_of_year(year, month, day)
+        Month.iso_week_of_year(year, month, day, __config__())
       end
 
       @doc """
