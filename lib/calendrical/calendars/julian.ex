@@ -328,7 +328,9 @@ defmodule Calendrical.Julian do
   end
 
   @doc """
-  Returns the extended year as displayed on rendered calendars.
+  Returns the extended year: a single number for the year, running on through both eras.
+
+  The Julian calendar has no year 0, so its years are numbered 2 BC, 1 BC, AD 1. The extended year counts them without the gap, as TR35 defines it for the `u` format symbol: AD years are themselves, 1 BC is 0 and 2 BC is -1.
 
   ### Arguments
 
@@ -340,16 +342,26 @@ defmodule Calendrical.Julian do
 
   ### Returns
 
-  * The integer Julian year.
+  * The extended year as an integer.
 
   ### Examples
 
       iex> Calendrical.Julian.extended_year(2025, 1, 1)
       2025
 
+      iex> Calendrical.Julian.extended_year(-1, 6, 15)
+      0
+
+      iex> Calendrical.Julian.extended_year(-544, 6, 15)
+      -543
+
   """
   @spec extended_year(year, month, day) :: Calendar.year()
   @impl Calendrical
+  def extended_year(year, _month, _day) when year < 0 do
+    year + 1
+  end
+
   def extended_year(year, _month, _day) do
     year
   end

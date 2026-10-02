@@ -39,12 +39,15 @@ defmodule Calendrical.LocalizePeriodsTest do
 
   # The Julian calendar has no year 0, and its variants turn the year on
   # other days than 1 January, so their years are counted around 1 BC too.
+  # Sweden's transitional calendar is the Julian calendar outside 1700 to
+  # 1712.
   @julian [
     Calendrical.Julian,
     Calendrical.Julian.March1,
     Calendrical.Julian.March25,
     Calendrical.Julian.Sept1,
-    Calendrical.Julian.Dec25
+    Calendrical.Julian.Dec25,
+    Calendrical.Reform.Sweden.Transitional
   ]
 
   @gaps [-800, -400, -366, -365, -92, -62, -31, -30, -1, 0, 1, 27, 28, 29, 30, 31, 32] ++
@@ -143,6 +146,69 @@ defmodule Calendrical.LocalizePeriodsTest do
                )
     end
 
+    # Two date-times in time zones are two moments, measured where the
+    # earlier is: noon UTC on 9 March 2024 to 11:00 in New York on 10 April
+    # 2025, which is 15:00 UTC. The years, months and days are the calendar's
+    # own to noon UTC that day, as `Date.shift/2` adds them, and three hours
+    # pass after it.
+    test "between two date-times in time zones, in the calendar's own periods" do
+      from = ~U[2024-03-09 12:00:00Z]
+      to = DateTime.new!(~D[2025-04-10], ~T[11:00:00], "America/New_York")
+
+      assert DateTime.shift_zone!(to, "Etc/UTC") == ~U[2025-04-10 15:00:00Z]
+
+      for calendar <- [
+            Calendrical.Gregorian,
+            Calendrical.Julian,
+            Calendrical.Julian.March25,
+            Calendrical.Hebrew,
+            Calendrical.Coptic,
+            Calendrical.Islamic.Civil,
+            Calendrical.ISOWeek
+          ] do
+        from_date = Date.convert!(~D[2024-03-09], calendar)
+        to_date = Date.convert!(~D[2025-04-10], calendar)
+
+        assert {:ok, duration} =
+                 Localize.Duration.new(
+                   DateTime.convert!(from, calendar),
+                   DateTime.convert!(to, calendar)
+                 ),
+               inspect(calendar)
+
+        %{year: years, month: months, day: days} = duration
+
+        assert Date.shift(from_date, year: years, month: months, day: days) == to_date,
+               "#{inspect(calendar)}: #{inspect({years, months, days})}"
+
+        assert {duration.hour, duration.minute, duration.second} == {3, 0, 0}, inspect(calendar)
+      end
+    end
+
+    # A calendar of weeks keeps its week in the year reached, so a year on
+    # from week 53 is week 52, and counts its months on from there, where
+    # twelve months on from week 53 is the last day of the month: the two
+    # are different days. A duration is the span the calendar's own shifting
+    # adds, so a year on from Monday of 2026's week 53 is a year and no more.
+    test "from week 53 of a calendar of weeks" do
+      week_53 = ~D[2026-W53-1 Calendrical.ISOWeek]
+
+      assert Date.shift(week_53, year: 1) == ~D[2027-W52-1 Calendrical.ISOWeek]
+      assert Date.shift(week_53, month: 12) == ~D[2027-W52-7 Calendrical.ISOWeek]
+
+      assert {:ok, %{year: 1, month: 0, day: 0}} =
+               Localize.Duration.new(week_53, ~D[2027-W52-1 Calendrical.ISOWeek])
+
+      for {calendar, days} <- [
+            {Calendrical.ISOWeek, Date.range(~D[2026-12-28], ~D[2027-01-03])},
+            {Calendrical.ISOWeek, Date.range(~D[2020-12-28], ~D[2021-01-03])},
+            {Calendrical.NRF, Date.range(~D[2024-01-28], ~D[2024-02-03])}
+          ] do
+        assert Enum.all?(days, &(Date.convert!(&1, calendar).month == 53)), inspect(calendar)
+        assert_durations_add_back(calendar, days)
+      end
+    end
+
     # A calendar of weeks' months are its periods of weeks, and a Hebrew leap
     # year has thirteen months: neither is twelve months of the month field.
     test "in a calendar of weeks and across a Hebrew leap year" do
@@ -168,8 +234,11 @@ defmodule Calendrical.LocalizePeriodsTest do
   # Every duration between two dates of the calendar has no negative part,
   # is the span `Date.shift/2` adds to the earlier date to reach the later,
   # and holds the most years, and then the most months, that do not pass it.
-  defp assert_durations_add_back(calendar) do
-    for from_iso <- Enum.take_every(Date.range(~D[2023-01-01], ~D[2026-12-31]), 61),
+  defp assert_durations_add_back(
+         calendar,
+         from_days \\ Enum.take_every(Date.range(~D[2023-01-01], ~D[2026-12-31]), 61)
+       ) do
+    for from_iso <- from_days,
         gap <- @gaps,
         gap >= 0 do
       from = Date.convert!(from_iso, calendar)

@@ -164,8 +164,7 @@ defmodule Calendrical.Compiler.Month do
       end
 
       @doc """
-      Returns the extended year as displayed
-      on rendered calendars.
+      Returns the extended year, one number for the year through every era: the calendar year itself in this calendar.
 
       """
       @spec extended_year(

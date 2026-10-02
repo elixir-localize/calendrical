@@ -192,37 +192,51 @@ defmodule Calendrical.Base.Week do
     {:error, missing_year_error("days_in_year", year)}
   end
 
-  # The last month may be a long month so the
-  # days in month might be a week longer
-  def days_in_month(year, @months_in_year, config) do
+  # A date's month field is its week in a calendar of weeks, and Elixir's
+  # `Date.days_in_month/1` and `Date.end_of_month/1` put that field to this
+  # callback, so the days "in the month" are the seven of the week: the
+  # last day of 2026-W25 is 2026-W25-7. The days of a month of the calendar's
+  # pattern (4-4-5 and its kin) are those of `month/3`.
+  def days_in_month(year, week, config) when is_integer(year) and is_integer(week) do
+    {weeks_in_year, _days_in_last_week} = weeks_in_year(year, config)
+    if week in 1..weeks_in_year, do: days_in_week(), else: {:error, :invalid_date}
+  end
+
+  def days_in_month(year, _week, _config) when is_integer(year) do
+    {:error, :invalid_date}
+  end
+
+  def days_in_month(year, _week, _config) do
+    {:error, missing_year_error("days_in_month", year)}
+  end
+
+  # Without a year, every week a year can have has seven days.
+  def days_in_month(week, _config) when week in 1..@weeks_in_long_year do
+    days_in_week()
+  end
+
+  def days_in_month(week, _config) when is_integer(week) do
+    {:error, :invalid_date}
+  end
+
+  def days_in_month(week, _config) do
+    {:error, missing_year_error("days_in_month", week)}
+  end
+
+  # The days of a month of the calendar's pattern of weeks, `month` being
+  # its place in the year, 1 to 12: four or five weeks as the pattern gives
+  # them, and one more in the last month of a long year. Month arithmetic
+  # counts with it.
+  def days_in_pattern_month(year, @months_in_year, config) do
     %Config{weeks_in_month: [_, _, weeks_in_last_month]} = config
     weeks = if long_year?(year, config), do: weeks_in_last_month + 1, else: weeks_in_last_month
     trunc(weeks * days_in_week())
   end
 
-  def days_in_month(_year, month, config) do
+  def days_in_pattern_month(_year, month, config) do
     %Config{weeks_in_month: weeks_in_month} = config
     month_in_quarter = Math.amod(rem(month, @months_in_quarter), @months_in_quarter)
     (Enum.at(weeks_in_month, month_in_quarter - 1) * days_in_week()) |> trunc()
-  end
-
-  # If the month is the last month of the year then it will be different
-  # number of days in a long year.
-  @any_year 2000
-
-  def days_in_month(month, %Config{weeks_in_month: [_, _, weeks_in_last_month]} = config)
-      when is_integer(month) do
-    if month == @months_in_year do
-      long_year_days = trunc((weeks_in_last_month + 1) * days_in_week())
-      short_year_days = trunc(weeks_in_last_month * days_in_week())
-      {:ambiguous, [short_year_days, long_year_days]}
-    else
-      days_in_month(@any_year, month, config)
-    end
-  end
-
-  def days_in_month(month, _config) do
-    {:error, missing_year_error("days_in_month", month)}
   end
 
   defdelegate days_in_week(), to: Calendrical.Base.Common
@@ -416,7 +430,7 @@ defmodule Calendrical.Base.Week do
     days_to_add =
       if Keyword.get(options, :coerce, @default_coercion) do
         month = month_of_year(year, week, day, config)
-        min(days_in_month(year, month, config) - 1, days)
+        min(days_in_pattern_month(year, month, config) - 1, days)
       else
         days
       end
@@ -443,7 +457,7 @@ defmodule Calendrical.Base.Week do
   def last_day_of_month(year, week, day, config) do
     {year, week, day} = first_day_of_month(year, week, day, config)
     month_of_year = month_of_year(year, week, day, config)
-    days_in_month = days_in_month(year, month_of_year, config)
+    days_in_month = days_in_pattern_month(year, month_of_year, config)
     add_days(year, week, day, days_in_month - 1, config)
   end
 

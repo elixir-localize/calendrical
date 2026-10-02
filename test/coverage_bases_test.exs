@@ -313,13 +313,22 @@ defmodule CoverageBasesTest do
       assert ISOWeek.weeks_in_year(2021) == {52, 7}
     end
 
-    test "days_in_month/2 for month 12 gains a week in a long year" do
-      assert NRF.days_in_month(2023, 12) == 35
+    # NRF's months are four, five and four weeks, and 2023 is a long year
+    # whose last month takes the 53rd week.
+    test "month/2 for month 12 gains a week in a long year" do
+      assert Enum.count(NRF.month(2023, 12)) == 35
+      assert Enum.count(NRF.month(2022, 12)) == 28
     end
 
-    test "days_in_month/1 for month 12 is ambiguous, other months fixed" do
-      assert NRF.days_in_month(12) == {:ambiguous, [28, 35]}
-      assert NRF.days_in_month(1) == 28
+    # `days_in_month/2` is asked about a date's month field, which is its
+    # week in a calendar of weeks.
+    test "days_in_month/2 and days_in_month/1 count a week's days" do
+      assert NRF.days_in_month(2023, 12) == 7
+      assert NRF.days_in_month(2023, 53) == 7
+      assert NRF.days_in_month(2022, 53) == {:error, :invalid_date}
+      assert NRF.days_in_month(12) == 7
+      assert NRF.days_in_month(1) == 7
+      assert NRF.days_in_month(54) == {:error, :invalid_date}
     end
 
     test "days_in_week/2" do

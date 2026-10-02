@@ -121,6 +121,32 @@ defmodule Calendrical.Format.Test do
     |> Enum.each(fn [day, next] -> assert Date.diff(next, day) == 1 end)
   end
 
+  # A calendar of weeks' month is the weeks its pattern gives it. ISO weeks
+  # are laid out 4-5-4 through each quarter, and the last month takes the
+  # 53rd week of a long year: 2026 has 53 ISO weeks and 2025 has 52.
+  test "a calendar of weeks' month is laid out as the weeks of its pattern" do
+    assert :calendar.iso_week_number({2026, 12, 31}) == {2026, 53}
+    assert :calendar.iso_week_number({2025, 12, 28}) == {2025, 52}
+
+    for {year, month, first_week, weeks} <- [
+          {2026, 1, 1, 4},
+          {2026, 2, 5, 5},
+          {2026, 3, 10, 4},
+          {2026, 12, 49, 5},
+          {2025, 12, 49, 4}
+        ] do
+      formatted =
+        Calendrical.Format.month(year, month,
+          formatter: Calendrical.Test.Formatter,
+          calendar: Calendrical.ISOWeek
+        )
+
+      assert length(formatted[:weeks]) == weeks, "#{year} month #{month}"
+      assert hd(formatted[:weeks])[:week_number] == first_week, "#{year} month #{month}"
+      assert Enum.all?(formatted[:weeks], &(length(&1.days) == 7))
+    end
+  end
+
   test "Setting the :day_names option" do
     day_names = [
       {1, "One"},

@@ -16,17 +16,19 @@ Calendrical's open work. Design documents live in `plans/`.
 
 * [ ] **The Persian calendar raises outside Gregorian 1001 to 3000** — `valid_date?/3` answers `false` there, so its date callbacks and Localize return errors for such a date, but `months_in_year/1` and `days_in_month/2` raise `Calendrical.UnsupportedDateRangeError`, and so does converting a date outside the range into it, so `Localize.Date.parse("0001-001", calendar: Calendrical.Persian)` raises as it does for the Umm al-Qura calendar (above). Answer those callbacks, or reject the year, without raising.
 
-* [ ] **Eras around 1 January AD 1 in `Calendrical.NRF` and `Calendrical.Reform.Sweden.Transitional`** — `day_of_era/3` takes the Gregorian date's era and `year_of_era/3` the calendar year's, so they disagree on NRF's fiscal year 0 days in AD 1 and on the Swedish calendar's first days of AD 1, which are Gregorian 1 BC.
+* [ ] **Eras around 1 January AD 1 in `Calendrical.NRF`** — `day_of_era/3` takes the Gregorian date's era and `year_of_era/3` the calendar year's, so they disagree on NRF's fiscal year 0 days in AD 1.
 
-* [ ] **`Calendrical.Reform.Sweden.Transitional` before AD 1** — its `plus/6` reaches a year 0 it does not have (`plus(-2, 6, 3, :years, 2)` is `{0, 6, 3}`), its `diff/3` counts two years from 3 June 2 BC to 3 June 1 BC, and `valid_date?(-1, 12, 8)` is false for a date `Date.convert/2` gives it (ISO 0000-12-06), so Localize's relative time there is wrong or an error (6,069 of 24,720 checks by days). Outside 1700 to 1712 the calendar is the Julian calendar and could pass these to it.
-
-* [ ] **A calendar of weeks' `days_in_month/2` counts a period, not the month field** — `Calendrical.ISOWeek.days_in_month(2026, 25)` is 28, the days of a four-week period, though a week date's month field is its week, so `Date.days_in_month(~D[2026-W25-2 Calendrical.ISOWeek])` is 28 and `Date.end_of_month/1` gives 2026-W25-28, which is no date of the calendar. Elixir's `Date` functions read the month field: answer seven there, or decide what the two should mean in a calendar of weeks.
-
-* [ ] **`extended_year/3` of a year BC in the Julian calendars** — TR35's extended year counts 1 BCE as year 0, but `Calendrical.Julian.extended_year(-1, 1, 1)` is -1, the calendar year as given, as it is in the new-year variants. Localize's `u` does not ask for it yet (Localize's `TODO.md`).
+* [ ] **A composite calendar's `day_of_era/3` steps back where its calendar changes** — it is the member calendar's answer, counted from that member's own first day, and the Julian and Gregorian calendars' first days are two days apart: in `Calendrical.Reform.England` 2 September 1752 is day 639,798 and the next day, 14 September, is 639,797, the number 1 September has. Count a composite's days of the era from one day, its base calendar's.
 
 * [ ] **Delegate `Calendrical.TimeZone.resolve/3` to Localize** — Localize now parses and resolves a zone in every form a locale writes (`Localize.DateTime.Timezone.parse_zone/2` and `resolve/3`) and no longer calls this module, which duplicates it with a table of abbreviations and resolves a fall-back hour to daylight time where ICU and Localize take standard.
 
 ## Done
+
+* [x] **`Calendrical.Reform.Sweden.Transitional` has no year 0** — outside 1700 to 1712 it answers as the Julian calendar it is: `plus/6` and `diff/3` step from 1 BC to AD 1, `valid_date?/3` accepts December of 1 BC and refuses year 0, and its eras, days of era and extended year are the Julian calendar's, on every day of 8 BC to AD 8. 2026-10-02, v1.4.0.
+
+* [x] **A calendar of weeks' `days_in_month/2` counts a week's seven days** — it follows the month field of its dates, their week (user, 2026-10-02), so `Date.days_in_month/1`, `Date.end_of_month/1` and every other `Date` function name a date the calendar has; a period of its pattern is `month/2`, and `months_in_year/1` stays 12. Breaking for a caller that passed a pattern month. 2026-10-02, v1.4.0.
+
+* [x] **`extended_year/3` counts a Julian year BC from 0** — 1 BC, year -1, is 0, as TR35 defines the extended year and ICU4C counts it, in `Calendrical.Julian`, its new-year variants and the composite calendars. The Buddhist, ROC, Chinese, Korean and Vietnamese calendars keep their own year, where ICU4C writes a Gregorian one (user, 2026-10-02). 2026-10-02, v1.4.0.
 
 * [x] **`interval/3` and `interval_stream/3` order dates by their days** — they took the earlier of their two dates from `Date.compare/2`, which orders two dates of one calendar by their fields and never asks the calendar, so in the Julian new-year calendars, where 1 January follows 31 December of the same year, a run across January was wrong. Localize's relative time, durations and parsed ranges order dates the same way, held to these calendars by `test/localize_periods_test.exs`. 2026-10-02, v1.4.0.
 

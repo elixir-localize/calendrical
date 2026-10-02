@@ -222,12 +222,12 @@ defmodule Calendrical.Format do
   def month(year, month, %Options{} = options) do
     %Options{calendar: calendar} = options
 
-    with %Date.Range{first: date} <- calendar.month(year, month) do
-      month(year, month, date, calendar.calendar_base(), options)
+    with %Date.Range{} = days <- calendar.month(year, month) do
+      month(year, month, days, calendar.calendar_base(), options)
     end
   end
 
-  defp month(year, month, date, :month, options) do
+  defp month(year, month, %Date.Range{first: date}, :month, options) do
     %Options{formatter: formatter} = options
     range = 0..5
 
@@ -236,15 +236,14 @@ defmodule Calendrical.Format do
     |> formatter.format_month(year, month, options)
   end
 
-  defp month(year, _month, date, :week, options) do
+  # A calendar of weeks' month is the weeks its pattern gives it, the days
+  # of its `month/2`: four or five weeks, and one more where a long year's
+  # last month takes the extra week. Its `days_in_month/2` counts the days
+  # of a week, the month field of its dates.
+  defp month(year, _month, %Date.Range{first: date, last: last}, :week, options) do
     %Options{calendar: calendar, formatter: formatter} = options
     month = Calendrical.month_of_year(date)
-
-    weeks_in_month =
-      date.year
-      |> calendar.days_in_month(month)
-      |> div(calendar.days_in_week())
-
+    weeks_in_month = div(Date.diff(last, date) + 1, calendar.days_in_week())
     range = 0..(weeks_in_month - 1)
 
     date

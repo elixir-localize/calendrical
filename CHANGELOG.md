@@ -30,6 +30,8 @@ The format is based on
 
 * The Julian new-year variants (`March1`, `March25`, `Sept1`, `Dec25`) take a date's era and year of era from its label year, so 24 March AD 1 is 1 BC in `March25`, where it was AD 1 and was written as the following year's 24 March.
 
+* A calendar of weeks' `days_in_month/2` and `days_in_month/1` count the days of the week its dates' month field holds, 7, where they counted a period of its pattern of weeks, 28 or 35, so `Date.days_in_month/1` and `Date.end_of_month/1` name a date the calendar has. A period's days are those of `month/2`.
+
 ### Added
 
 * `Calendrical.diff/3`, and a `diff/3` callback on every calendar, count the whole years, quarters, months, weeks or days from one date to another — the inverse of `plus/6`, negative backwards. The Hebrew and lunisolar calendars count months in one calculation, from the Metonic cycle and the new moons.
@@ -77,6 +79,10 @@ The format is based on
 * The Chinese, Korean, Vietnamese and Lunar Japanese calendars find a year's new year once per question and each new moon once, so `valid_date?/3`, `days_in_month/2`, `days_in_year/1`, `leap_year?/1`, `leap_month/1`, `new/3` and `lunar_month_of_year/2` ask for far fewer new moons — a quarter as many across a lunisolar holiday corpus. Results are unchanged.
 
 ### Fixed
+
+* `extended_year/3` counts a Julian year BC from 0 down, as TR35 defines the extended year, so `Calendrical.Julian.extended_year(-1, 6, 15)` is 0, where it was -1. The Julian new-year variants and the composite calendars answer the same.
+
+* `Calendrical.Reform.Sweden.Transitional` has no year 0, as the Julian calendar it is outside 1700 to 1712 has none: `plus/6` and `diff/3` step from 1 BC to AD 1, `valid_date?/3` accepts December of 1 BC, and its eras and days of era are the Julian calendar's.
 
 * `Calendrical.interval/3` and `interval_stream/3` order their two dates by the days their calendar counts, where `Date.compare/2` ordered them by their fields without asking it. In the Julian new-year calendars, where 1 January follows 31 December of the same year, 19 December to 15 January in `Calendrical.Julian.March25` is its 28 days, where it was 69 dates from one and 270 from the other.
 

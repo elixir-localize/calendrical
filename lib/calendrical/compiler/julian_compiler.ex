@@ -224,8 +224,14 @@ defmodule Calendrical.Julian.Compiler do
         year
       end
 
-      def extended_year(year, month, day) do
-        calendar_year(year, month, day)
+      # The extended year numbers the label years without the gap at year 0:
+      # 1 BC is 0 and 2 BC -1, as the plain Julian calendar counts them.
+      def extended_year(year, _month, _day) when year < 0 do
+        year + 1
+      end
+
+      def extended_year(year, _month, _day) do
+        year
       end
 
       def cyclic_year(year, month, day) do

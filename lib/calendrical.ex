@@ -454,7 +454,9 @@ defmodule Calendrical do
               Calendar.year() | date_error()
 
   @doc """
-  Returns a the extended year in a calendar year.
+  Returns the extended year of a date: one number for its year that runs on through every era of the calendar.
+
+  It is the year TR35's `u` format symbol writes. Where a calendar numbers its years on from one epoch it is the year itself, 0 and negative before the epoch. Where a calendar counts back from an era, as the Julian calendar's years BC do, the extended year runs on below the era's first year: 1 BC is 0 and 2 BC is -1.
 
   """
   @callback extended_year(year :: year(), month :: month(), day :: day()) ::
@@ -1776,30 +1778,28 @@ defmodule Calendrical do
   end
 
   @doc """
-  Returns the extended `year` number for
-  a `date`.
+  Returns the extended year of a `date`: one number for its year that runs on through every era of its calendar.
+
+  It is the year TR35's `u` format symbol writes, and is the calendar's own year in every calendar but those that count back from an era: the Julian calendar has no year 0, so its 1 BC, year -1, has the extended year 0.
 
   ### Arguments
 
-  * `date` is any `t:Calendar.date/0` or a map with one or
-    more of the fields `:year`, `:month`, `:day` and
-    optionally `:calendar`.
+  * `date` is any `t:Calendar.date/0` or a map with one or more of the fields `:year`, `:month`, `:day` and optionally `:calendar`.
 
   ### Returns
 
-  * the extended calendar year as an
-    integer.
+  * The extended year as an integer.
 
   ### Examples
 
       iex> Calendrical.extended_year(~D[2019-01-01])
       2019
 
-      iex> Calendrical.extended_year(Calendrical.first_day_of_year(2019, Calendrical.NRF))
-      2019
-
       iex> Calendrical.extended_year(Calendrical.last_day_of_year(2019, Calendrical.NRF))
       2019
+
+      iex> Calendrical.extended_year(~D[-0001-06-15 Calendrical.Julian])
+      0
 
   """
   @spec extended_year(date()) :: Calendar.year() | Calendrical.date_error()
@@ -4859,7 +4859,7 @@ defmodule Calendrical do
   @doc """
   Returns the number of days in the month of a date.
 
-  Delegates to `Date.days_in_month/1`.
+  Delegates to `Date.days_in_month/1`, which asks about the date's month field. In a calendar of weeks that field is the week, so the answer is its seven days; the days of a month of the calendar's pattern of weeks are those of its `month/2`.
 
   ### Arguments
 
@@ -4874,6 +4874,9 @@ defmodule Calendrical do
       iex> Calendrical.days_in_month(~D[2026-07-05])
       31
 
+      iex> Calendrical.days_in_month(~D[2026-W25-2 Calendrical.ISOWeek])
+      7
+
   """
   @spec days_in_month(date()) :: Calendar.day()
   defdelegate days_in_month(date), to: Date
@@ -4881,7 +4884,7 @@ defmodule Calendrical do
   @doc """
   Returns the number of months in the year of a date.
 
-  Delegates to `Date.months_in_year/1`.
+  Delegates to `Date.months_in_year/1`. A calendar of weeks has the twelve months of its pattern of weeks, though the month field of its dates is the week: the weeks in its year are `weeks_in_year/1`.
 
   ### Arguments
 

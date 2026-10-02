@@ -142,7 +142,7 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 |---|---|
 | `year_of_era/1` and `year_of_era/3` | Answers from the CLDR era data through `Calendrical.Era`. **Override** when the calendar's years do not follow CLDR's era boundaries (e.g. Ethiopic's Amete Alem years, or Julian's missing year 0). |
 | `calendar_year/3` | Returns the year unchanged. **Override** for calendars where the displayed year differs from the storage year (e.g. Japanese era years). |
-| `extended_year/3` | Returns the year unchanged. |
+| `extended_year/3` | Returns the year unchanged, one number for the year through every era. **Override** where the years do not run on through the eras: the Julian calendar has no year 0, so its year -1, 1 BC, is extended year 0. |
 | `related_gregorian_year/3` | Returns the Gregorian year in which the calendar year begins, the same for every date of the year. |
 | `cyclic_year/3` | Returns the year unchanged. **Override** for calendars with named year cycles: the lunisolar calendars return the year's place in the 60-year sexagenary cycle. |
 | `day_of_era/3` | Answers from the CLDR era data through `Calendrical.Era`. **Override** with `year_of_era/3`. |

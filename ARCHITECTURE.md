@@ -65,6 +65,6 @@ Two properties of this path to be aware of: module names come from `Module.conca
 
 * Multi-month arithmetic on week calendars is O(n): `Calendrical.Base.Week.plus/7` adds months one at a time because leap-week accounting across long years has no closed form in the current implementation. The limitation is commented at the site.
 
-* Week-53 handling in the week base is special-cased at each site that maps weeks to months or quarters (`month_of_year`, `month_in_quarter`, `quarter_of_year`, `days_in_month`, `maybe_extra_week_for_long_year`) rather than centralized.
+* Week-53 handling in the week base is special-cased at each site that maps weeks to months or quarters (`month_of_year`, `month_in_quarter`, `quarter_of_year`, `days_in_pattern_month`, `maybe_extra_week_for_long_year`) rather than centralized.
 
 * Compiled (month/week) calendars cannot override generated functions — configuration is their only extension point. Behaviour calendars are the opposite: everything is overridable. This asymmetry is intentional: a compiled calendar is a *parameterization*, a Behaviour calendar is an *implementation*.

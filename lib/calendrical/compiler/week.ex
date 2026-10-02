@@ -168,8 +168,7 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
-      Returns the extended year as displayed
-      on rendered calendars.
+      Returns the extended year, one number for the year through every era: the calendar year itself in this calendar.
 
       """
       @spec extended_year(
@@ -420,38 +419,55 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
-      Returns how many days there are in the given year-month.
+      Returns how many days there are in the given week of a year: seven.
+
+      A date of this calendar is a year, a week and a day of the week, so the week is its month field, and it is the week that `Date.days_in_month/1` and `Date.end_of_month/1` ask about: the last day of 2026-W25 is 2026-W25-7. The days of a month of the calendar's pattern of weeks (4-4-5 and its kin) are those of `month/2`.
+
+      ### Arguments
+
+      * `year` is any year.
+
+      * `week` is a week of that year.
+
+      ### Returns
+
+      * `7`, or
+
+      * `{:error, :invalid_date}` for a week the year does not have.
 
       """
-      @spec days_in_month(year :: Calendrical.year(), month :: Calendrical.month()) ::
+      @spec days_in_month(year :: Calendrical.year(), week :: Calendrical.week()) ::
               days ::
               Calendar.day()
-              | {:error, Exception.t()}
-              | {:ambiguous, Range.t()}
-              | {:ambiguous, [integer(), ...]}
+              | {:error, :invalid_date | Exception.t()}
 
       @impl true
-      def days_in_month(year, month) do
-        Week.days_in_month(year, month, __config__())
+      def days_in_month(year, week) do
+        Week.days_in_month(year, week, __config__())
       end
 
       @doc """
-      Returns how many days there are in the given month.
+      Returns how many days there are in the given week, whatever the year: seven.
 
-      If the days in month cannot be determined without
-      knowning the year and error tuple is returned.
+      ### Arguments
+
+      * `week` is a week of the year.
+
+      ### Returns
+
+      * `7`, or
+
+      * `{:error, :invalid_date}` for a week no year has.
 
       """
-      @spec days_in_month(month :: Calendrical.month()) ::
+      @spec days_in_month(week :: Calendrical.week()) ::
               days ::
               Calendar.day()
-              | {:error, Exception.t()}
-              | {:ambiguous, Range.t()}
-              | {:ambiguous, [integer(), ...]}
+              | {:error, :invalid_date | Exception.t()}
 
       @impl true
-      def days_in_month(month) do
-        Week.days_in_month(month, __config__())
+      def days_in_month(week) do
+        Week.days_in_month(week, __config__())
       end
 
       @doc """

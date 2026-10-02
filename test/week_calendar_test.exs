@@ -3,15 +3,55 @@ defmodule Calendrical.Week.Test do
   import Calendrical.Helper
   alias Calendrical.Test.Calendars
 
-  test "that days of the last month of a long year is 35 or 42" do
-    assert Calendrical.NRF.days_in_month(2012, 12) == 35
-    assert Calendrical.ISOWeek.days_in_month(2015, 12) == 35
+  # The last month of a calendar's pattern of weeks takes a long year's
+  # extra week: four weeks become five, or five six. A month's days are
+  # those of its `month/2`; `days_in_month/2` counts a week's (below).
+  test "that the last month of a long year is 35 or 42 days" do
+    assert Enum.count(Calendrical.NRF.month(2012, 12)) == 35
+    assert Enum.count(Calendrical.ISOWeek.month(2015, 12)) == 35
 
-    assert Calendrical.NRF.days_in_month(2013, 12) == 28
-    assert Calendrical.ISOWeek.days_in_month(2016, 12) == 28
+    assert Enum.count(Calendrical.NRF.month(2013, 12)) == 28
+    assert Enum.count(Calendrical.ISOWeek.month(2016, 12)) == 28
 
-    assert Calendars.Sunday.days_in_month(2012, 12) == 42
-    assert Calendars.Sunday.days_in_month(2013, 12) == 35
+    assert Enum.count(Calendars.Sunday.month(2012, 12)) == 42
+    assert Enum.count(Calendars.Sunday.month(2013, 12)) == 35
+  end
+
+  # A week date's month field is its week, and it is that field Elixir's
+  # `Date.days_in_month/1` and `Date.end_of_month/1` put to
+  # `days_in_month/2`: a week has seven days and ends on its seventh. 2026
+  # has 53 ISO weeks and 2025 has 52.
+  test "that a week has seven days, so Elixir's Date functions name its ends" do
+    for calendar <- [Calendrical.ISOWeek, Calendrical.NRF, Calendars.Sunday],
+        week <- [1, 2, 3, 12, 13, 25, 52] do
+      date = Date.new!(2026, week, 3, calendar)
+
+      assert calendar.days_in_month(2026, week) == 7, "#{inspect(calendar)} week #{week}"
+      assert Date.days_in_month(date) == 7
+      assert Calendrical.days_in_month(date) == 7
+      assert Date.beginning_of_month(date) == Date.new!(2026, week, 1, calendar)
+      assert Date.end_of_month(date) == Date.new!(2026, week, 7, calendar)
+      assert Date.end_of_month(date) == Date.end_of_week(date)
+    end
+
+    assert Calendrical.ISOWeek.days_in_month(2026, 53) == 7
+    assert Calendrical.ISOWeek.days_in_month(2025, 53) == {:error, :invalid_date}
+    assert Calendrical.ISOWeek.days_in_month(2026, 54) == {:error, :invalid_date}
+    assert Calendrical.ISOWeek.days_in_month(2026, 0) == {:error, :invalid_date}
+
+    assert {:error, %Calendrical.MissingFieldsError{}} =
+             Calendrical.ISOWeek.days_in_month(nil, 25)
+  end
+
+  # The twelve months of the pattern are still the calendar's months: the
+  # weeks of a year are its `weeks_in_year/1`.
+  test "that a year has the twelve months of its pattern" do
+    date = Date.new!(2026, 25, 3, Calendrical.ISOWeek)
+
+    assert Date.months_in_year(date) == 12
+    assert Calendrical.ISOWeek.months_in_year() == 12
+    assert Calendrical.ISOWeek.weeks_in_year(2026) == {53, 7}
+    assert Calendrical.ISOWeek.month_of_year(2026, 25, 3) == 6
   end
 
   # Day of week is always the ordinal day. And therefore for
@@ -129,14 +169,16 @@ defmodule Calendrical.Week.Test do
            }
   end
 
-  test "days in month without year" do
+  # Whatever the year, a week it can have has seven days.
+  test "days in a week without its year" do
     config = %Calendrical.Config{weeks_in_month: [4, 4, 5]}
 
-    assert Calendrical.Base.Week.days_in_month(1, config) == 28
-    assert Calendrical.Base.Week.days_in_month(2, config) == 28
-    assert Calendrical.Base.Week.days_in_month(3, config) == 35
-    assert Calendrical.Base.Week.days_in_month(4, config) == 28
+    for week <- [1, 2, 3, 12, 13, 52, 53] do
+      assert Calendrical.Base.Week.days_in_month(week, config) == 7
+    end
 
-    assert Calendrical.Base.Week.days_in_month(12, config) == {:ambiguous, [35, 42]}
+    assert Calendrical.Base.Week.days_in_month(54, config) == {:error, :invalid_date}
+    assert Calendrical.Base.Week.days_in_month(0, config) == {:error, :invalid_date}
+    assert Calendrical.ISOWeek.days_in_month(25) == 7
   end
 end
