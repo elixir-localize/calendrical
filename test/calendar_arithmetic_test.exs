@@ -116,18 +116,16 @@ defmodule Calendrical.CalendarArithmetic.Test do
 
   describe "calendars with a limited range" do
     test "a date outside the range is not valid rather than an exception" do
-      refute Calendrical.Persian.valid_date?(3000, 1, 1)
       refute Calendrical.Islamic.Observational.valid_date?(5000, 1, 1)
       refute Calendrical.Islamic.Rgsa.valid_date?(5000, 1, 1)
-      assert {:error, :invalid_date} = Date.new(3000, 1, 1, Calendrical.Persian)
       assert {:error, :invalid_date} = Date.new(5000, 1, 1, Calendrical.Islamic.Observational)
     end
 
-    test "the Persian range is Persian years 380 to 2378" do
-      assert Calendrical.Persian.valid_date?(380, 1, 1)
-      assert Calendrical.Persian.valid_date?(2378, 12, 29)
-      refute Calendrical.Persian.valid_date?(379, 12, 29)
-      refute Calendrical.Persian.valid_date?(2379, 1, 1)
+    test "the Persian calendar has dates outside its astronomical years" do
+      assert Calendrical.Persian.valid_date?(379, 12, 29)
+      assert Calendrical.Persian.valid_date?(2379, 1, 1)
+      assert Calendrical.Persian.valid_date?(3000, 1, 1)
+      assert {:ok, %Date{}} = Date.new(3000, 1, 1, Calendrical.Persian)
     end
   end
 

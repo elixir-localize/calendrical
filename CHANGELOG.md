@@ -90,6 +90,8 @@ The format is based on
 
 ### Fixed
 
+* `Calendrical.Persian` has dates outside Persian years 380 to 2378, where the equinox cannot be computed, by ICU's arithmetic Persian calendar (its 33-year cycle and corrections), which agrees with the equinox at both joins. Its callbacks and `Date.convert/2` raised `Calendrical.UnsupportedDateRangeError` there; years before 1 are numbered 0, -1, as in ICU.
+
 * `Calendrical.strftime/3` names the month and the day of the week from the date, as `Localize.Calendar.localize/3` does, where it named them by the date's fields: a calendar of weeks raised from week 13, Hebrew, Chinese leap and fiscal months were misnamed, and calendars whose weeks begin on another day than Monday named the wrong day.
 
 * A month calendar's `iso_week_of_year/3` gives the ISO 8601 week of the day its date names, where a fiscal calendar's date was read as a Gregorian one: `Calendrical.FiscalYear.US`'s first day of 2019, 1 October 2018, answered `{2019, 1}` and is `{2018, 40}`, and days whose fields are no Gregorian date raised `ArgumentError`.

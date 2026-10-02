@@ -4,8 +4,6 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Open
 
-* [ ] **The Persian calendar raises outside Gregorian 1001 to 3000** — `valid_date?/3` answers `false` there, so its date callbacks and Localize return errors for such a date, but `months_in_year/1` and `days_in_month/2` raise `Calendrical.UnsupportedDateRangeError`, and so does converting a date outside the range into it, so `Localize.Date.parse("0001-001", calendar: Calendrical.Persian)` raises as it does for the Umm al-Qura calendar (below). Answer those callbacks, or reject the year, without raising.
-
 * [ ] **A date before 1 AH raises in `Calendrical.Islamic.UmmAlQura`** — `naive_datetime_from_iso_days/1` raises `Calendrical.IslamicYearOutOfRangeError` (Hijri year nil), and the `Calendar` behaviour gives it no error to return, so `Date.convert/2` raises and so does `Localize.Date.parse("0500-03-15", calendar: Calendrical.Islamic.UmmAlQura)`. ICU4C's civil fallback (below) would answer it.
 
 * [ ] **A composite counts the days of a month its year does not have** — England's 1751 began on 25 March, and `days_in_month(1751, 1)` is 31, `days_in_month(1751, 2)` 28 and `months_in_year(1751)` 12: the answers of the calendar that had the year, for months it had no days of.
@@ -27,6 +25,8 @@ Calendrical's open work. Design documents live in `plans/`.
 * [ ] **`Calendrical.UnsupportedDateRangeError`'s `:range` is English prose** — the Persian calendar and the Islamic visibility calculations give it a phrase such as "dates covered by the installed JPL ephemeris", which is bound into the translated message untranslated. Carry the bounds as data and write them in the message.
 
 ## Done
+
+* [x] **The Persian calendar has dates outside Gregorian 1001 to 3000** — years outside Persian 380 to 2378 follow ICU's arithmetic Persian calendar (33-year cycle with ICU's corrections after 2378), which agrees with the equinox at both joins; nothing raises `UnsupportedDateRangeError` and years before 1 are numbered from 0. Held by `test/persian_arithmetic_test.exs` against ICU's test dates and leap rule. 2026-10-03, v1.4.0.
 
 * [x] **`Calendrical.strftime/3` answers errors and passes `Calendar.strftime/3`'s options through** — it raised on an invalid locale, format, option or value and dropped options such as `:preferred_date`; it now returns `{:ok, string}` or `{:error, exception}`, with `strftime!/3` for the string. 2026-10-03, v1.4.0.
 

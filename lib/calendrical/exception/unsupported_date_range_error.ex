@@ -4,9 +4,9 @@ defmodule Calendrical.UnsupportedDateRangeError do
   can compute.
 
   Astronomical calendars depend on underlying solar or lunar
-  computations that are only valid over a bounded span of years —
-  the vernal equinox calculation used by the Persian calendar, or
-  the ephemeris data used by the observational Islamic calendars.
+  computations that are only valid over a bounded span of years,
+  such as the ephemeris data used by the observational Islamic
+  calendars.
   Dates outside that span raise this error rather than crashing
   inside the underlying computation.
 

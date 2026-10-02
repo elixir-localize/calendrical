@@ -3,10 +3,12 @@ defmodule Calendrical.UnsupportedDateRangeTest do
   Regression tests for out-of-domain date handling in the
   astronomical calendars.
 
-  The Persian calendar depends on `Astro.equinox/2`, which is
-  accurate only for Gregorian years 1000 to 3000. The observational
+  The Persian calendar's equinox, from `Astro.equinox/2`, can be
+  computed only for Gregorian years 1000 to 3000, and its functions of
+  the equinox answer an error outside them; its dates outside them are
+  arithmetic (`test/persian_arithmetic_test.exs`). The observational
   Islamic calendars depend on the JPL ephemeris, which covers a
-  bounded span of years. Dates outside those domains must raise
+  bounded span of years. Dates outside that domain must raise
   `Calendrical.UnsupportedDateRangeError` (from conversion
   callbacks, which cannot return error tuples) or return tagged
   errors (from ordinary public functions) — never crash with
@@ -16,7 +18,7 @@ defmodule Calendrical.UnsupportedDateRangeTest do
 
   use ExUnit.Case, async: true
 
-  describe "Calendrical.Persian outside Gregorian years 1000..3000" do
+  describe "Calendrical.Persian's equinox outside Gregorian years 1000..3000" do
     test "new_year_gregorian/1 returns a tagged error" do
       assert {:error, :year_out_of_range} = Calendrical.Persian.new_year_gregorian(900)
       assert {:error, :year_out_of_range} = Calendrical.Persian.new_year_gregorian(3500)
@@ -30,38 +32,12 @@ defmodule Calendrical.UnsupportedDateRangeTest do
       assert {:error, :year_out_of_range} = Calendrical.Persian.year_end_gregorian(3000)
     end
 
-    test "date_to_iso_days/3 raises UnsupportedDateRangeError with the calendar and range" do
-      error =
-        assert_raise Calendrical.UnsupportedDateRangeError, fn ->
-          Calendrical.Persian.date_to_iso_days(300, 1, 1)
-        end
-
-      assert error.calendar == Calendrical.Persian
-      assert Exception.message(error) =~ "Calendrical.Persian"
-      assert Exception.message(error) =~ "1001"
-    end
-
-    test "date_from_iso_days/1 raises UnsupportedDateRangeError for an early date" do
-      iso_days = Date.to_gregorian_days(~D[0900-06-01])
-
-      assert_raise Calendrical.UnsupportedDateRangeError, fn ->
-        Calendrical.Persian.date_from_iso_days(iso_days)
-      end
-    end
-
-    test "Date.convert/2 raises UnsupportedDateRangeError instead of FunctionClauseError" do
-      assert_raise Calendrical.UnsupportedDateRangeError, fn ->
-        Date.convert(~D[0900-06-01], Calendrical.Persian)
-      end
-
-      assert_raise Calendrical.UnsupportedDateRangeError, fn ->
-        Date.convert(~D[3500-06-01], Calendrical.Persian)
-      end
-    end
-
-    test "Date.convert/2 still succeeds inside the range" do
+    test "Date.convert/2 answers inside and outside the range" do
       assert {:ok, %Date{calendar: Calendrical.Persian}} =
                Date.convert(~D[2026-07-05], Calendrical.Persian)
+
+      assert {:ok, %Date{calendar: Calendrical.Persian}} =
+               Date.convert(~D[0900-06-01], Calendrical.Persian)
     end
   end
 
