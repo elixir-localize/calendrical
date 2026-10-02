@@ -4,7 +4,7 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Open
 
-* [ ] **`cardinal_month/1` names a year-ending month calendar's months a month early** — `Base.Month.cardinal_month/2` takes `month_of_year` as the month a year begins in, but with `first_or_last: :last` it is the month the year ends in, so a month calendar configured that way names its first month for the month its year ends in. A calendar of weeks is unaffected since its months became ordinal ("M01" from CLDR's generic calendar), though `Calendrical.NRF`, whose period 1 is February, showed it until then.
+* [ ] **`:year` is reversed or raises in month and week calendars** — `year: :beginning` with the default `first_or_last: :first`, and `year: :ending` with `first_or_last: :last`, raise `FunctionClauseError` from `Calendrical.start_end_gregorian_years/2` on every date though `Calendrical.new/3` accepts them, and the other two pairings number a year the opposite way to the docs (`month_of_year: 10, year: :ending` calls October 2020 to September 2021 its 2020). A month calendar's `month_of_year` is always its first month whatever `first_or_last` or `begins_or_ends` say, so `cardinal_month/1` is right; check which fiscal calendars rely on the reversal before fixing it.
 
 * [ ] **`iso_week_of_year/3` reads a fiscal calendar's date as Gregorian** — the month compiler passes `Base.Month.iso_week_of_year/3` no config, so `Calendrical.Fiscal.US.iso_week_of_year(2019, 1, 1)`, 1 October 2018 and ISO week 2018-W40, answers `{2019, 1}`.
 
