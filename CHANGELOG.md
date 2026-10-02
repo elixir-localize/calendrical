@@ -88,6 +88,8 @@ The format is based on
 
 ### Fixed
 
+* `year: :beginning` and `year: :ending` number a month or week calendar's year by the Gregorian year it begins or ends in, where two of their four pairings with `:first_or_last` raised `FunctionClauseError` on every date and the other two numbered the year the other way. A month calendar's `:month_of_year` is its first month whatever `:first_or_last` says, so a January or December year no longer spans two years or ends before it begins.
+
 * A composite calendar's `year/1` runs from the first to the last of a year's days that has a date of its own, so England's 1155 is 1 January to 31 December, where it ended on 24 March, and a year whose two ends have no dates of their own gives `Date.range/2` no negative range and warning. A change of calendar dated before the base calendar's year -9999 takes effect after the base calendar, where the two changed places.
 
 * A composite calendar's `diff/3` compares the day `plus/6` reaches and brackets its count from the days between the two dates, where it read back the date written for that day and stepped from the difference of the years' numbers. `Calendrical.Reform.England.diff({1155, 6, 15}, {1155, 12, 20}, :months)` is 6, where it was 8, and a count across `Calendrical.Reform.Japan`'s 1873 change answers at once, where years took a minute and months did not answer in four.

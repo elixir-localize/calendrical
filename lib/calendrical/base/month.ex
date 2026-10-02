@@ -507,14 +507,14 @@ defmodule Calendrical.Base.Month do
 
   def first_gregorian_day_of_year(year, %Config{month_of_year: first_month} = config)
       when is_integer(year) and is_integer(first_month) do
-    case Calendrical.start_end_gregorian_years(year, config) do
+    case gregorian_years(year, config) do
       {beginning_year, _ending_year} when is_integer(beginning_year) ->
         iso_date_to_iso_days(beginning_year, first_month, 1)
     end
   end
 
   def last_gregorian_day_of_year(year, %Config{month_of_year: first_month} = config) do
-    {_, ending_year} = Calendrical.start_end_gregorian_years(year, config)
+    {_, ending_year} = gregorian_years(year, config)
     last_month = Math.amod(first_month - 1, ISO.months_in_year(ending_year))
     last_day = ISO.days_in_month(ending_year, last_month)
     ISO.date_to_iso_days(ending_year, last_month, last_day)
@@ -596,9 +596,16 @@ defmodule Calendrical.Base.Month do
   end
 
   defp slide(%Config{month_of_year: month} = config) do
-    {starts, _ends} = Calendrical.start_end_gregorian_years(@slide_probe_year, config)
+    {starts, _ends} = gregorian_years(@slide_probe_year, config)
     direction = if starts < @slide_probe_year, do: -1, else: +1
     month = Math.amod((month - 1) * direction, ISO.months_in_year(starts))
     if month == 12, do: 0, else: month * direction * -1
+  end
+
+  # The Gregorian years a calendar year begins and ends in. A month calendar's
+  # `month_of_year` is its first month whatever `first_or_last` says, since that
+  # option chooses a day of the week, which a month calendar does not use.
+  defp gregorian_years(year, %Config{} = config) do
+    Calendrical.start_end_gregorian_years(year, %{config | first_or_last: :first})
   end
 end

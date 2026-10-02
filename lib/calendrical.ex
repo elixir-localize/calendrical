@@ -4711,18 +4711,16 @@ defmodule Calendrical do
     {year, year + 1}
   end
 
-  ## Beginning years
+  ## A year numbered by the Gregorian year it begins in
   @doc false
-  def start_end_gregorian_years(year, %Config{first_or_last: :last, year: :beginning})
-      when is_integer(year) do
-    {year - 1, year}
+  def start_end_gregorian_years(year, %Config{year: :beginning}) when is_integer(year) do
+    {year, year + 1}
   end
 
-  ## Ending years
+  ## A year numbered by the Gregorian year it ends in
   @doc false
-  def start_end_gregorian_years(year, %Config{first_or_last: :first, year: :ending})
-      when is_integer(year) do
-    {year, year + 1}
+  def start_end_gregorian_years(year, %Config{year: :ending}) when is_integer(year) do
+    {year - 1, year}
   end
 
   @doc false

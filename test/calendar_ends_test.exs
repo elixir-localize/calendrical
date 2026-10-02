@@ -36,7 +36,7 @@ defmodule Calendrical.Ends.Test do
     config = %Calendrical.Config{
       first_or_last: :last,
       min_days_in_first_week: 7,
-      year: :beginning,
+      year: :ending,
       month_of_year: 7,
       day_of_week: 6
     }
@@ -97,7 +97,7 @@ defmodule Calendrical.Ends.Test do
       day_of_week: 6,
       min_days_in_first_week: 7,
       month_of_year: 7,
-      year: :beginning
+      year: :ending
     }
 
     for {year, date} <- days do

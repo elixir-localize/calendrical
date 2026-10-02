@@ -53,11 +53,11 @@ defmodule CoverageBasesTest do
 
   describe "Base.Month year_of_era across :year settings" do
     test ":ending uses the ending Gregorian year (Fiscal.AU)" do
-      assert Calendrical.Fiscal.AU.year_of_era(2019) == {2020, 1}
+      assert Calendrical.Fiscal.AU.year_of_era(2019) == {2019, 1}
     end
 
     test ":beginning uses the beginning Gregorian year" do
-      assert MonthBeginning.year_of_era(2019) == {2018, 1}
+      assert MonthBeginning.year_of_era(2019) == {2019, 1}
     end
 
     test ":majority with a start month in the first half (Fiscal.UK)" do
@@ -271,12 +271,12 @@ defmodule CoverageBasesTest do
 
   describe "Base.Week year_of_era across :year settings" do
     test ":ending uses the ending Gregorian year" do
-      assert WeekEnding.year_of_era(2019) == {2020, 1}
+      assert WeekEnding.year_of_era(2019) == {2019, 1}
     end
 
     test ":beginning uses the beginning Gregorian year" do
       config = %Config{year: :beginning, first_or_last: :last, month_of_year: 7}
-      assert Week.year_of_era(2019, config) == {2018, 1}
+      assert Week.year_of_era(2019, config) == {2019, 1}
     end
 
     test ":majority with a start month in the second half (CSCO)" do
