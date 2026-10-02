@@ -110,6 +110,14 @@ defmodule Calendrical.Composite do
   no label of their own; historians write them with both years
   ("10 March 1155/6").
 
+  A change from a year that begins before 1 January to the January
+  year does the same from the other side. A year reckoned from 1
+  September or 25 December takes the number of the January year it
+  ends in, so where it gives way on 1 January, as Russia's September
+  year did in 1700, its last months already carry the number the new
+  year keeps: those labels name the later days, and September to
+  December 1699 have none of their own.
+
   ## Eras
 
   The era of a date, and its year of the era, are those of the calendar
@@ -132,6 +140,13 @@ defmodule Calendrical.Composite do
   side of it name their eras from the same CLDR calendar and give the
   same era there. Where they do not, as with the Coptic and Julian
   calendars of Egypt above, each calendar's days of its era are its own.
+
+  The Islamic calendars are of that kind: each names its eras from a
+  CLDR calendar of its own, so a composite of two of them keeps each
+  one's count of the Hijri era. The counts agree but for
+  `Calendrical.Islamic.Tbla`, which begins the era a day before the
+  others. Where another Islamic calendar follows it a day of the era is
+  counted twice, and where it follows another one is left out.
 
   """
 

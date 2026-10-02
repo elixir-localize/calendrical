@@ -108,6 +108,24 @@ defmodule Calendrical.CompositeEraTest do
       base_calendar: Calendrical.Julian
   end
 
+  # Two Islamic calendars, each naming its eras from a CLDR calendar of its
+  # own: the tabular calendar of the astronomical epoch, which begins the
+  # Hijri era on 18 July 622 in CLDR's (Gregorian) dates, and the civil
+  # one, which begins it on 19 July.
+  defmodule TblaThenCivil do
+    @moduledoc false
+    use Calendrical.Composite,
+      calendars: [~D[1400-01-01 Calendrical.Islamic.Civil]],
+      base_calendar: Calendrical.Islamic.Tbla
+  end
+
+  defmodule CivilThenTbla do
+    @moduledoc false
+    use Calendrical.Composite,
+      calendars: [~D[1400-01-01 Calendrical.Islamic.Tbla]],
+      base_calendar: Calendrical.Islamic.Civil
+  end
+
   # Every territory's reform calendar, with the last Julian day and the
   # first Gregorian day of its reform.
   defp reforms do
@@ -380,6 +398,41 @@ defmodule Calendrical.CompositeEraTest do
                  {Date.diff(date, Date.new!(1, 1, 1, Calendrical.Julian)) + 1, 1},
                inspect(date)
       end
+    end
+
+    # Each Islamic calendar counts the Hijri era, CLDR's era 0 of each,
+    # from its own first day, and the two here begin it a day apart. Where
+    # the civil calendar follows the other, a day of the era is counted
+    # twice: two days on from a day of the earlier calendar the count is
+    # one more. Where it comes first, a day of the era is left out: a day
+    # on, the count is two more.
+    test "two Islamic calendars each count the Hijri era from their own first day" do
+      assert Calendrical.Islamic.Tbla.era_calendar_type() == :islamic_tbla
+      assert Calendrical.Islamic.Civil.era_calendar_type() == :islamic_civil
+
+      tabular = fn iso -> {Date.diff(iso, ~D[0622-07-18]) + 1, 0} end
+      civil = fn iso -> {Date.diff(iso, ~D[0622-07-19]) + 1, 0} end
+      day_of_era = fn iso, calendar -> Date.day_of_era(Date.convert!(iso, calendar)) end
+
+      change = Date.convert!(~D[1400-01-01 Calendrical.Islamic.Civil], Calendar.ISO)
+      before = Date.add(change, -2)
+
+      assert TblaThenCivil.calendar_for_date(Date.convert!(before, TblaThenCivil)) ==
+               Calendrical.Islamic.Tbla
+
+      assert day_of_era.(before, TblaThenCivil) == tabular.(before)
+      assert day_of_era.(change, TblaThenCivil) == civil.(change)
+      assert elem(civil.(change), 0) - elem(tabular.(before), 0) == 1
+
+      change = Date.convert!(~D[1400-01-01 Calendrical.Islamic.Tbla], Calendar.ISO)
+      before = Date.add(change, -1)
+
+      assert CivilThenTbla.calendar_for_date(Date.convert!(before, CivilThenTbla)) ==
+               Calendrical.Islamic.Civil
+
+      assert day_of_era.(before, CivilThenTbla) == civil.(before)
+      assert day_of_era.(change, CivilThenTbla) == tabular.(change)
+      assert elem(tabular.(change), 0) - elem(civil.(before), 0) == 2
     end
 
     # The Coptic calendar's one era is not the Julian calendar's, so each

@@ -106,13 +106,16 @@ defmodule Calendrical.CompositeArithmetic.Test do
                  ~D[1751-12-31 Calendrical.Reform.England]
                )
 
-      assert Russia.year(1699) ==
-               Date.range(~D[1699-09-01 Calendrical.Russia], ~D[1699-12-31 Calendrical.Russia])
+      # Russia's year reckoned from 1 March was cut short when the year
+      # reckoned from 1 September began, on 1 September 1492: March to
+      # August, 184 days.
+      assert Russia.year(1492) ==
+               Date.range(~D[1492-03-01 Calendrical.Russia], ~D[1492-08-31 Calendrical.Russia])
 
       assert {England.days_in_year(1750), England.days_in_year(1751), England.days_in_year(1752)} ==
                {365, 282, 355}
 
-      assert Russia.days_in_year(1699) == 122
+      assert Russia.days_in_year(1492) == 184
     end
 
     test "the day of the year counts the days that carry the year" do
@@ -124,6 +127,20 @@ defmodule Calendrical.CompositeArithmetic.Test do
     test "a year no segment labels has no days" do
       assert Japan.days_in_year(1500) == 0
       assert {:error, :invalid_date} = Japan.year(1500)
+    end
+
+    # A year has quarters where it begins on 1 January: not England's years
+    # reckoned from 25 March, nor Russia's from 1 March and from 1
+    # September, whose January is of the same number as the January year's.
+    test "a year that begins on another day than 1 January has no quarters" do
+      assert England.quarter(1700, 1) == {:error, :not_defined}
+      assert Russia.quarter(1400, 1) == {:error, :not_defined}
+      assert Russia.quarter(1600, 1) == {:error, :not_defined}
+      assert Russia.quadrimester(1600, 2) == {:error, :not_defined}
+      assert Russia.semester(1600, 2) == {:error, :not_defined}
+
+      assert Russia.quarter(1800, 1) ==
+               Date.range(~D[1800-01-01 Calendrical.Russia], ~D[1800-03-31 Calendrical.Russia])
     end
 
     test "a quarter runs across the dropped days" do

@@ -103,12 +103,12 @@ defmodule Calendrical.Composite.Config do
   end
 
   # Whether the calendar's years begin on 1 January, so its quarters are
-  # the months in label order. A Julian year-start variant beginning on
-  # another day labels January with the year before.
+  # the months in label order. A Julian year-start variant names the day
+  # its years begin on.
   defp january_year?(calendar, calendar), do: true
 
   defp january_year?(calendar, _civil) do
-    calendar.date_from_julian_date(2000, 1, 1) == {2000, 1, 1}
+    match?({_year, 1, 1}, calendar.first_day_of_year(2000))
   end
 
   defp civil_calendar(calendar) do

@@ -32,6 +32,8 @@ The format is based on
 
 * A calendar of weeks' `days_in_month/2` and `days_in_month/1` count the days of the week its dates' month field holds, 7, where they counted a period of its pattern of weeks, 28 or 35, so `Date.days_in_month/1` and `Date.end_of_month/1` name a date the calendar has. A period's days are those of `month/2`.
 
+* `Calendrical.Julian.Dec25` and `Calendrical.Julian.Sept1` number a year by the Julian year it ends in, as the Nativity style (C. R. Cheney, *A Handbook of Dates*) and the Byzantine year were reckoned: year 1100 begins on 25 December 1099 and on 1 September 1099, where each began a year later. `March1` and `March25` are unchanged, and a composite built on either changed calendar names its change of calendar in the new numbering.
+
 ### Added
 
 * `Calendrical.diff/3`, and a `diff/3` callback on every calendar, count the whole years, quarters, months, weeks or days from one date to another — the inverse of `plus/6`, negative backwards. The Hebrew and lunisolar calendars count months in one calculation, from the Metonic cycle and the new moons.
@@ -58,6 +60,8 @@ The format is based on
 
 * `ordinal_month_from_traditional/2` on the Chinese, Korean, Vietnamese and Lunar Japanese calendars returns the ordinal month of a traditional month (`{month, :leap}` included), and their `days_in_month/1` returns `{:ambiguous, 29..30}`.
 
+* `use Calendrical.Julian` takes a `:year` option, `:beginning`, `:ending` or `:majority`, the Julian year that gives a year its number, so `new_year_starting_month_and_day: {3, 25}, year: :ending` is the Pisan reckoning. The default is `:beginning`.
+
 ### Changed
 
 * Requires Localize 1.4 (CLDR 49), which implements the date, time, datetime and interval parsers and names months through the calendar's `month_of_year/3`, as the Hebrew month positions need.
@@ -79,6 +83,10 @@ The format is based on
 * The Chinese, Korean, Vietnamese and Lunar Japanese calendars find a year's new year once per question and each new moon once, so `valid_date?/3`, `days_in_month/2`, `days_in_year/1`, `leap_year?/1`, `leap_month/1`, `new/3` and `lunar_month_of_year/2` ask for far fewer new moons — a quarter as many across a lunisolar holiday corpus. Results are unchanged.
 
 ### Fixed
+
+* No year is numbered 0 in a Julian new-year calendar: `valid_date?/3` accepted the days of a year 0 that lie in the neighbouring Julian year, so `Date.new(0, 6, 15, Calendrical.Julian.Sept1)` was a date, and `month/2`, `quarter/2`, `quadrimester/2` and `semester/2` answered for one.
+
+* The docs of `Calendrical.new/3` and `Calendrical.calendar_from_territory/1` describe Calendrical as it is: `:year` is `:beginning`, `:ending` or `:majority`, `:weeks_in_month` defaults to `[4, 5, 4]` and `:min_days_in_first_week` to 1, and `Calendrical.Persian` needs no other library.
 
 * A composite calendar's `day_of_era/3` counts an era's days in one count through every change of calendar the era runs through, where each member calendar counted from its own first day: 14 September 1752 in `Calendrical.Reform.England` is day 639,799 of the common era, the day after 639,798, where it was 639,797. An era runs through a change where both calendars name their eras from the same CLDR calendar, and is counted on from its first day in the earlier calendar, or back from its last day in the later.
 

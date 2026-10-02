@@ -64,16 +64,18 @@ Both kinds use exactly the same `date_to_iso_days/3` and `date_from_iso_days/1` 
 
 ## Julian calendars
 
-These calendars use the proleptic Julian rule "every fourth year is a leap year" with no centurial exception. They share a single set of date-arithmetic primitives, but differ in **the day on which the year begins**, which affects how a Gregorian-style date corresponds to a Julian year.
+These calendars use the proleptic Julian rule "every fourth year is a leap year" with no centurial exception. They share a single set of date-arithmetic primitives, but differ in **the day on which the year begins**, and in which January year gives a year its number.
 
-| Calendar | Year start | Notes |
+| Calendar | Year 1100 begins on | Notes |
 |---|---|---|
-| `Calendrical.Julian` | January 1 | Astronomical / proleptic Julian. The default. |
-| `Calendrical.Julian.Jan1` | January 1 | Same as `Calendrical.Julian`. |
-| `Calendrical.Julian.March1` | March 1 | The "*Annunciation Style* (March 1)" historical convention used by the Byzantine Empire and parts of Russia. |
-| `Calendrical.Julian.March25` | March 25 | The "*Lady Day*" / *Annunciation Style (March 25)* used by England until 1751 and several other Western European countries. |
-| `Calendrical.Julian.Sept1` | September 1 | The Byzantine *Anno Mundi* style. |
-| `Calendrical.Julian.Dec25` | December 25 | The *Nativity Style* used in some medieval European chronicles. |
+| `Calendrical.Julian` | 1 January 1100 | Proleptic Julian. The default. |
+| `Calendrical.Julian.Jan1` | 1 January 1100 | Same as `Calendrical.Julian`. |
+| `Calendrical.Julian.March1` | 1 March 1100 | The *Venetian style* (*more veneto*). |
+| `Calendrical.Julian.March25` | 25 March 1100 | *Lady Day*, the *Annunciation style* of England until 1751 and of Florence. |
+| `Calendrical.Julian.Sept1` | 1 September 1099 | The Byzantine year. |
+| `Calendrical.Julian.Dec25` | 25 December 1099 | The *Nativity style* of medieval western Europe. |
+
+**The number of a year.** A year reckoned from 1 March or 25 March begins after 1 January of the same number, so its January and February, and March to the 24th, carry the number of the year before. A year reckoned from 1 September or 25 December begins before it, so its last months carry the number of the year to come: Christmas Day 1099 is the first day of 1100 in `Calendrical.Julian.Dec25`. C. R. Cheney's *A Handbook of Dates* sets out the reckonings from Christmas Day, the Annunciation and Venice's 1 March, and a Byzantine year of the world begins on 1 September, four months before the January year that is 5508 less. A variant of your own names its new-year day and the Julian year that numbers it: `use Calendrical.Julian, new_year_starting_month_and_day: {3, 25}, year: :ending` is the Pisan reckoning, a year ahead of Florence's.
 
 **Leap-year rule (all variants).** A Julian year `y` is a leap year when `rem(y, 4) == 0`. Note that this is the proleptic rule applied without the Gregorian centurial exception, so 1900 *is* a Julian leap year.
 

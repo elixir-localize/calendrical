@@ -5,12 +5,16 @@ defmodule Calendrical.Russia do
 
   ## Transitions
 
-  * **(base)** — Julian calendar with the year starting on March 1
-    (Byzantine *Annunciation Style*).
-  * **1492-09-01** — switch to a Julian calendar with the year
-    starting on September 1 (Byzantine *Anno Mundi*).
+  * **(base)** — Julian calendar with the year starting on March 1.
+
+  * **1 September 1492** — switch to a Julian calendar with the year
+    starting on September 1 (the Byzantine year). That year begins four
+    months before 1 January of the same number, so the day is 1
+    September 1493 in the calendar that takes effect on it.
+
   * **1700-01-01** — switch to a Julian calendar with the year
     starting on January 1 (Peter the Great's reform).
+
   * **1918-02-14** — switch to the proleptic Gregorian calendar
     (the Soviet Decree on the introduction of the Western European
     calendar). The thirteen days 1 February 1918 through 13 February
@@ -19,7 +23,7 @@ defmodule Calendrical.Russia do
   """
   use Calendrical.Composite,
     calendars: [
-      ~D[1492-09-01 Calendrical.Julian.Sept1],
+      ~D[1493-09-01 Calendrical.Julian.Sept1],
       ~D[1700-01-01 Calendrical.Julian.Jan1],
       ~D[1918-02-14 Calendrical.Gregorian]
     ],

@@ -628,6 +628,9 @@ defmodule Calendrical do
       iex> Calendrical.calendar_from_territory(:US)
       {:ok, Calendrical.US}
 
+      iex> Calendrical.calendar_from_territory(:IR)
+      {:ok, Calendrical.Persian}
+
       iex> {:error, %Localize.UnknownTerritoryError{}} = Calendrical.calendar_from_territory(:YY)
 
   ### Notes
@@ -638,21 +641,11 @@ defmodule Calendrical do
   a derivation of it will be returned for most
   territories.
 
-  Returning any other calendar module would require:
-
-  1. That another calendar is preferred over `:gregorian`
-     for a territory
-
-  2. That a calendar module is available to support
-     that calendar.
-
-  As an example, Iran (territory `:IR`) prefers the
-  `:persian` calendar. If the optional library
-  [ex_cldr_calendars_persian](https://hex.pm/packages/ex_cldr_calendars_persian)
-  is installed, the calendar module `Calendrical.Persian` will
-  be returned. If it is not installed, `Calendrical.Gregorian`
-  will be returned as `:gregorian` is the second preference
-  for `:IR`.
+  A territory that prefers another calendar is given
+  that calendar's module: Iran (territory `:IR`) prefers
+  the `:persian` calendar, so `Calendrical.Persian` is
+  returned, and Thailand (`:TH`) the `:buddhist`
+  calendar, so `Calendrical.Buddhist` is.
 
   """
   @spec calendar_from_territory(atom() | String.t()) ::
@@ -705,7 +698,7 @@ defmodule Calendrical do
   end
 
   @doc """
-  Creates a new proleptic gregrian calendar based upon the
+  Creates a new proleptic Gregorian calendar based upon the
   provided configuration.
 
   If a module exists with the `calendar_module` name then it
@@ -723,35 +716,26 @@ defmodule Calendrical do
   * `config` is a Keyword list defining the configuration
     of the calendar.
 
-  ### Returns
-
-  * `{:ok, module}` where `module` is the calendar module that
-    conforms to the `Calendar` and `Calendrical` behaviours. The
-    call is idempotent: if the module already exists it is
-    returned unchanged (it is not verified to be a calendar module
-    in that case).
-
-  ## Configuration options
+  ### Options
 
   The following options can be provided to create
   a new calendar.
 
   * `:weeks_in_month` defines the layout of
-    weeks in a quarter for a week- or month-
-    based calendar. The value must be one of
-    `[4, 4, 5]`, `[4,5,4]` or `[5,4,4]`.
-    The default is `[4,4,5]`. This option
-    is ignored for `:month` based calendars
-    that have the parameter `day_of_year: :first`.
+    weeks in a quarter of a `:week` calendar.
+    The value must be one of `[4, 4, 5]`,
+    `[4, 5, 4]` or `[5, 4, 4]`. The default is
+    `[4, 5, 4]`. A `:month` calendar does not
+    use it.
 
   * `:begins_or_ends` determines whether the calendar
     year begins or ends on the given `:day_of_week` and
     `:month_of_year`. The default is `:begins`.
 
   * `:first_or_last` determines whether the calendar
-    year starts (or ends) on the first, last or nearest
-    `:day-of_week` and `:month_of_year`. The default
-    is `:first`
+    year starts (or ends) on the `:first` or the `:last`
+    `:day_of_week` of `:month_of_year`. The default
+    is `:first`.
 
   * `:day_of_week` determines the day
     of the week on which this calendar begins
@@ -768,37 +752,57 @@ defmodule Calendrical do
     month of year in which this calendar begins
     or ends. The default is `1`.
 
-  * `:year` is used to determine which calendar
-    Gregogian year is applicable for a given
-    calendar date. The valid options are `:first`,
-    `:last` and `:majority`.  The default is
-    `:majority`.
+  * `:year` is used to determine which Gregorian
+    year gives a calendar year its number: the one
+    it begins in (`:beginning`), the one it ends in
+    (`:ending`) or the one most of it falls in
+    (`:majority`). The default is `:majority`.
 
   * `:min_days_in_first_week` is used to determine
     how many days of the `Calendrical.Gregorian` year must be in
     the first week of a calendar year. This is used
     when determining when the year starts for week-based
-    years.  The default is `4` which is consistent with
-    the [ISO Week calendar](https://en.wikipedia.org/wiki/ISO_week_date)
+    years. The default is `1`, or the `:locale`'s when one
+    is given; `4` is that of the
+    [ISO Week calendar](https://en.wikipedia.org/wiki/ISO_week_date).
+
+  * `:locale` is a locale whose week data gives the
+    defaults of `:day_of_week` and
+    `:min_days_in_first_week`. The default is `nil`.
+
+  * `:cldr_calendar_type` is the CLDR calendar that names
+    a `:month` calendar's months and eras, `:gregorian` or
+    `:japanese`. The default is `:gregorian`. A `:week`
+    calendar does not use it: its months are those of
+    CLDR's generic calendar.
+
+  ### Returns
+
+  * `{:ok, module}` where `module` is the calendar module that
+    conforms to the `Calendar` and `Calendrical` behaviours. The
+    call is idempotent: if the module already exists it is
+    returned unchanged (it is not verified to be a calendar module
+    in that case).
+
+  * `{:error, reason}` if the configuration is not valid.
 
   ### Examples
 
   Each calendar has a function `__config__/0` generated within
-  it and therefore the configuration of the included calendars
-  in `ex_cldr_calendars` provide insight into the behaviour
-  of the configuration parameters.
+  it, so the configuration of the calendars Calendrical includes
+  shows how the options behave.
 
   As an example here we define the [ISO Week calendar](https://en.wikipedia.org/wiki/ISO_week_date)
   calendar in full:
 
-  ```
+  ```elixir
   defmodule ISOWeek do
     use Calendrical.Base.Week,
       day_of_week: 1,              # Weeks begin or end on Monday
       month_of_year: 1,            # Years begin or end in January
       min_days_in_first_week: 4,   # 4 Calendrical.Gregorian days of the year must be in the first week
       begins_or_ends: :begins,     # The year *begins* on the `day_of_week` and `month_of_year`
-      first_or_last: :first,       # They year *begins* on the *first* `day_of_week` and `month_of_year`
+      first_or_last: :first,       # The year *begins* on the *first* `day_of_week` and `month_of_year`
       weeks_in_month: [4, 4, 5],   # The weeks are laid out as *months* in a `[4,4,5]` pattern
       year: :majority,             # Any given year is that in which the majority of Calendrical.Gregorian months fall
       locale: nil                  # No `locale` is used to aid configuration

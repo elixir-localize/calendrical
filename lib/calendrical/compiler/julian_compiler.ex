@@ -18,41 +18,83 @@ defmodule Calendrical.Julian.Compiler do
       @new_year_starting_month start_month
       @new_year_starting_day start_day
 
+      # The Julian year a year takes its number from: the one it begins in,
+      # the one it ends in, or the one most of it falls in, which is the
+      # first for a year that begins in January to June, as a month or week
+      # calendar's `:year` has it. A year that begins on 1 January begins
+      # and ends in the same Julian year.
+      year_numbering =
+        case {Keyword.get(options, :year, :beginning), start_month, start_day} do
+          {year, 1, 1} when year in [:beginning, :ending, :majority] ->
+            :beginning
+
+          {:majority, month, _day} when month <= 6 ->
+            :beginning
+
+          {:majority, _month, _day} ->
+            :ending
+
+          {year, _month, _day} when year in [:beginning, :ending] ->
+            year
+
+          {year, _month, _day} ->
+            raise ArgumentError,
+                  ":year must be either :beginning, :ending or :majority. Found #{inspect(year)}."
+        end
+
       @quarters_in_year 4
       @months_in_quarter 3
       @months_in_year Calendrical.Julian.months_in_year(0)
 
       @doc """
-      These dates belong to the prior Julian year
+      Whether a month and day come before the new-year day in their
+      Julian year.
 
       """
       defguard year_rollover(month, day)
                when month < @new_year_starting_month or
                       (month == @new_year_starting_month and day < @new_year_starting_day)
 
-      # Adjust the year to be a Jan 1st starting year and carry
-      # on
+      # A date keeps its Julian month and day, and the Julian year its day
+      # falls in follows from where the day stands against the new-year day.
+      # In a year numbered by the Julian year it begins in, the days before
+      # the new-year day are in the Julian year after: {2023, 2, 29} in
+      # March1 is 29 February 2024. In a year numbered by the Julian year it
+      # ends in, the days from the new-year day on are in the Julian year
+      # before: {801, 12, 25} in Dec25 is 25 December 800. Everything put to
+      # `Calendrical.Julian` takes its year from `julian_year/3`.
+      if year_numbering == :beginning do
+        defp julian_year(year, month, day) when year_rollover(month, day), do: next_year(year)
+        defp julian_year(year, _month, _day), do: year
 
-      def date_to_iso_days(year, month, day) when year_rollover(month, day) do
-        Calendrical.Julian.date_to_iso_days(next_year(year), month, day)
+        def date_from_julian_date(year, month, day) when year_rollover(month, day) do
+          {previous_year(year), month, day}
+        end
+
+        def date_from_julian_date(year, month, day) do
+          {year, month, day}
+        end
+      else
+        defp julian_year(year, month, day) when year_rollover(month, day), do: year
+        defp julian_year(year, _month, _day), do: previous_year(year)
+
+        def date_from_julian_date(year, month, day) when year_rollover(month, day) do
+          {year, month, day}
+        end
+
+        def date_from_julian_date(year, month, day) do
+          {next_year(year), month, day}
+        end
       end
 
       def date_to_iso_days(year, month, day) do
-        Calendrical.Julian.date_to_iso_days(year, month, day)
+        Calendrical.Julian.date_to_iso_days(julian_year(year, month, day), month, day)
       end
 
-      # Adjust the year to be this calendars starting year
+      # The Julian date of the day, under this calendar's year
       def date_from_iso_days(iso_days) do
         {year, month, day} = Calendrical.Julian.date_from_iso_days(iso_days)
         date_from_julian_date(year, month, day)
-      end
-
-      def date_from_julian_date(year, month, day) when year_rollover(month, day) do
-        {previous_year(year), month, day}
-      end
-
-      def date_from_julian_date(year, month, day) do
-        {year, month, day}
       end
 
       def naive_datetime_to_iso_days(year, month, day, hour, minute, second, microsecond) do
@@ -121,9 +163,10 @@ defmodule Calendrical.Julian.Compiler do
 
       # A date's month is its Julian month, so the days of `month` in label
       # `year` are those of that Julian month in the Julian year the label
-      # year's `month` falls in. The new-year month holds days 1..(start - 1)
-      # of the next Julian year and the rest of this one: its days run to this
-      # Julian year's month end.
+      # year's `month` falls in. The new-year month holds its days from the
+      # new-year day on, of the Julian year the year begins in, and its days
+      # before that of the Julian year after: its days run to the month end
+      # of the Julian year the year begins in.
       defdelegate days_in_month(month), to: Calendrical.Julian
 
       def days_in_month(year, month) do
@@ -157,7 +200,7 @@ defmodule Calendrical.Julian.Compiler do
       # `month/2` counts months from the start of the year: month 1 runs from
       # the new-year day to the end of its Julian month, and month 12 is long,
       # running on to the day before the next new year.
-      def month(_year, ordinal_month) when ordinal_month not in 1..@months_in_year do
+      def month(year, ordinal_month) when year == 0 or ordinal_month not in 1..@months_in_year do
         {:error, :invalid_date}
       end
 
@@ -273,25 +316,18 @@ defmodule Calendrical.Julian.Compiler do
         last_iso_day_of_year(year) - first_iso_day_of_year(year) + 1 == 366
       end
 
-      # Dates before the variant's new-year day carry the prior label
-      # year: their plain-Julian year is `year + 1`. Functions that
-      # delegate a `{year, month, day}` to `Calendrical.Julian` must
-      # normalize the label year first, otherwise a rollover date such
-      # as {2023, 2, 29} in the March1 variant reaches plain Julian as
-      # the (invalid) date 2023-02-29 instead of 2024-02-29.
-      defp julian_year(year, month, day) when year_rollover(month, day), do: next_year(year)
-      defp julian_year(year, _month, _day), do: year
-
-      # A label year is the Julian year its new-year day falls in, and the
-      # Julian calendar has no year 0: 1 BC (-1) is followed by AD 1.
+      # A label year is the Julian year it begins in, or the one it ends in,
+      # and the Julian calendar has no year 0: 1 BC (-1) is followed by AD 1.
       defp next_year(-1), do: 1
       defp next_year(year), do: year + 1
 
       defp previous_year(1), do: -1
       defp previous_year(year), do: year - 1
 
+      # No year is numbered 0, whichever Julian year a label year 0 would
+      # stand for.
       def valid_date?(year, month, day)
-          when is_integer(year) and is_integer(month) and is_integer(day) do
+          when is_integer(year) and year != 0 and is_integer(month) and is_integer(day) do
         Calendrical.Julian.valid_date?(julian_year(year, month, day), month, day)
       end
 
@@ -326,7 +362,8 @@ defmodule Calendrical.Julian.Compiler do
       end
 
       # The label year names the era: in March25, 1-24 March AD 1 carry
-      # the label 1 BC and belong to that era.
+      # the label 1 BC and belong to that era, and in Dec25, 25-31 December
+      # 1 BC carry the label AD 1.
       def year_of_era(year, _month, _day) do
         Calendrical.Julian.year_of_era(year)
       end

@@ -17,14 +17,45 @@ defmodule Calendrical.Julian do
   `Calendrical.Julian.Dec25` correspond to historical "year-style"
   conventions used in different periods and regions.
 
-  A variant date keeps its Julian month and day; only the year label
-  changes on the new-year day. A variant whose year starts part-way
-  through a month (`March25`, `Dec25`) therefore labels that month's
-  days before the new-year day with the prior year: in `March25`,
-  label 2024 holds 25–31 March 2024 and 1–24 March 2025. Functions
-  that keep the label year and change only the day, such as
-  `Date.beginning_of_month/1` and `Date.end_of_month/1`, step between
-  those two parts.
+  ## Options
+
+  * `:new_year_starting_month_and_day` is the `{month, day}` on which
+    the year begins. The default is `{1, 1}`.
+
+  * `:year` is the Julian year, reckoned from 1 January, that a year
+    takes its number from: `:beginning`, the one it begins in;
+    `:ending`, the one it ends in; or `:majority`, the one most of it
+    falls in, which is the first for a year that begins in January to
+    June, as for a calendar made by `Calendrical.new/3`. The default is
+    `:beginning`.
+
+  ## The number of a year
+
+  A year that begins on another day than 1 January lies across two
+  Julian years, and the historical styles differ in which of them gives
+  it its number. A year reckoned from 1 March or 25 March began after
+  1 January of the same number, and one reckoned from 1 September or
+  25 December began before it. C. R. Cheney's *A Handbook of Dates*
+  sets out the reckonings from Christmas Day, from the Annunciation
+  and from Venice's 1 March, and a Byzantine year of the world begins
+  on 1 September, four months before the January year that is 5508
+  less:
+
+  | Calendar | Year 1100 begins on | `:year` |
+  |---|---|---|
+  | `Calendrical.Julian.March1` | 1 March 1100 | `:beginning` |
+  | `Calendrical.Julian.March25` | 25 March 1100 | `:beginning` |
+  | `Calendrical.Julian.Sept1` | 1 September 1099 | `:ending` |
+  | `Calendrical.Julian.Dec25` | 25 December 1099 | `:ending` |
+
+  A variant date keeps its Julian month and day; only the year changes
+  on the new-year day. A variant whose year starts part-way through a
+  month (`March25`, `Dec25`) therefore holds two parts of that month
+  under one year: in `March25`, year 2024 holds 25–31 March 2024 and
+  1–24 March 2025, and in `Dec25`, year 2025 holds 25–31 December 2024
+  and 1–24 December 2025. Functions that keep the year and change only
+  the day, such as `Date.beginning_of_month/1` and
+  `Date.end_of_month/1`, step between those two parts.
 
   The module itself is also a fully-functional calendar that can be
   used directly (`~D[1500-03-15 Calendrical.Julian]`), in which case

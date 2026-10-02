@@ -4,13 +4,15 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Open
 
+* [ ] **`Calendrical.last_day_of_year/2` raises for most calendars** — it asks the calendar for `last_gregorian_day_of_year/1`, which only the month and week compilers define, so it raises `UndefinedFunctionError` for the Julian calendars, the Hebrew, Coptic, Persian, Islamic, lunisolar, Japanese and Buddhist calendars and every composite; and `first_day_of_year/2` answers month 1, day 1, which is not the first day of a year reckoned from another day (25 March in `Calendrical.Julian.March25`). Each calendar's `year/1` has both days.
+
 * [ ] **`cardinal_month/1` names a year-ending month calendar's months a month early** — `Base.Month.cardinal_month/2` takes `month_of_year` as the month a year begins in, but with `first_or_last: :last` it is the month the year ends in, so a month calendar configured that way names its first month for the month its year ends in. A calendar of weeks is unaffected since its months became ordinal ("M01" from CLDR's generic calendar), though `Calendrical.NRF`, whose period 1 is February, showed it until then.
 
 * [ ] **`iso_week_of_year/3` reads a fiscal calendar's date as Gregorian** — the month compiler passes `Base.Month.iso_week_of_year/3` no config, so `Calendrical.Fiscal.US.iso_week_of_year(2019, 1, 1)`, 1 October 2018 and ISO week 2018-W40, answers `{2019, 1}`.
 
 * [ ] **A composite calendar whose members differ in CLDR type** — every composite's `cldr_calendar_type/0` is `:gregorian`, so `Calendrical.Reform.Japan`'s lunisolar dates before 1873 take Gregorian month names ("February" for the second lunar month) and no leap-month pattern. Naming them from the calendar in effect needs Localize to ask for it, or such composites to be split: a decision to make.
 
-* [ ] **A composite of two Islamic calendars keeps each one's count of an era's days** — an era runs through a change of calendar only where both calendars take their eras from the same CLDR calendar (`era_calendar_type/0`), and each of the five Islamic calendars has its own, so next to another of them `Calendrical.Islamic.Tbla`, which begins the Hijri era a day earlier (CLDR's 18 July 622 against 19 July), counts a day of the era twice or leaves one out. CLDR gives all five the era codes `ah` and `bh`: decide whether a shared code makes one era, given that the Coptic and Ethiopic calendars both call a different era `am`.
+* [ ] **A composite finds a date's calendar by the order of its labels** — `calendar_for_date/3` compares a date's year, month and day with each change of calendar's, so where a calendar's year turns after the day it takes effect on, the rest of that year falls to the calendar before and is no date: January to August 1493 in the test calendar `Calendrical.Russia`, whose September year begins on 1 September 1492. Find the calendar by asking each whose days the label names, which leaves only the labels two stretches of days share (England's January to March 1155 and 1156, Russia's September to December 1700).
 
 * [ ] **Umm al-Qura years outside the official tables** — ICU4C 78.3 falls back to the civil calendar there, and `Calendrical.Islamic.UmmAlQura` begins some years a day earlier: 1 Muharram 1178 is 1764-06-30 here and 1764-07-01 in ICU (also 607, 717, 758 and 1261 AH). Find which fallback Calendrical uses and document or change it.
 
@@ -20,13 +22,17 @@ Calendrical's open work. Design documents live in `plans/`.
 
 * [ ] **Eras around 1 January AD 1 in `Calendrical.NRF`** — `day_of_era/3` takes the Gregorian date's era and `year_of_era/3` the calendar year's, so they disagree on NRF's fiscal year 0 days in AD 1.
 
-* [ ] **Which January year a `Calendrical.Julian.Dec25` or `Sept1` year is** — every new-year variant begins year N on its new-year day within January year N, so `Dec25`'s year 800 runs from 25 December 800 to 24 December 801 and 1 January 801 is `{800, 1, 1}`. That is the English reckoning from 25 March, but the Nativity style is usually described as beginning a week before 1 January of the same number (Christmas Day 800 the first day of 801), and the Byzantine year four months before: check against Cheney's *Handbook of Dates* and decide, since the composites' labels depend on it.
-
-* [ ] **Docs that still describe `ex_cldr_calendars`** — `Calendrical.new/3`'s examples point at "the included calendars in `ex_cldr_calendars`", in a code fence that names no language, and `calendar_from_territory/1` says `Calendrical.Persian` needs the optional `ex_cldr_calendars_persian`, where it is part of Calendrical.
+* [ ] **The Gettext backend does not use Localize's MF2 interpolator** — `Calendrical.Gettext` is `use Gettext.Backend, otp_app: :calendrical` with no `interpolation: Localize.Gettext.Interpolation`, and the messages of its thirteen exceptions are written with Gettext's `%{name}` placeholders. Give the backend the interpolator and write the messages, and their translations, in MessageFormat 2.
 
 * [ ] **Delegate `Calendrical.TimeZone.resolve/3` to Localize** — Localize now parses and resolves a zone in every form a locale writes (`Localize.DateTime.Timezone.parse_zone/2` and `resolve/3`) and no longer calls this module, which duplicates it with a table of abbreviations and resolves a fall-back hour to daylight time where ICU and Localize take standard.
 
 ## Done
+
+* [x] **`Julian.Dec25` and `Sept1` number a year by the Julian year it ends in** — as C. R. Cheney's *A Handbook of Dates* sets out the Nativity style, and as the Byzantine year of the world is counted (user, 2026-10-02): year 1100 begins on 25 December 1099 and on 1 September 1099, where each began a year later. `use Calendrical.Julian` takes `:year` (`:beginning`, the default, `:ending` or `:majority`), and no year is numbered 0 in any of them. Breaking. 2026-10-02, v1.4.0.
+
+* [x] **A composite of two Islamic calendars keeps each one's count of the era's days** — left as it is and documented (user, 2026-10-02): each Islamic calendar names its eras from its own CLDR calendar, and next to another `Calendrical.Islamic.Tbla`, which begins the Hijri era a day earlier, counts a day of the era twice or leaves one out. 2026-10-02, no change.
+
+* [x] **The docs of `Calendrical.new/3` and `calendar_from_territory/1` describe Calendrical** — they pointed at `ex_cldr_calendars` and an optional `ex_cldr_calendars_persian`, named `:first` and `:last` for `:year`, and gave defaults `:weeks_in_month` and `:min_days_in_first_week` do not have. 2026-10-02, v1.4.0.
 
 * [x] **A composite calendar counts an era's days in one count** — `day_of_era/3` gave the member calendar's own count, which stepped at every change of calendar an era runs through (back a day at each of the 34 Julian to Gregorian reforms, by 82 and 84 days at England's changes of new year's day); it counts on from the era's first day in the calendar in effect when the era began, or back from its last in the one in effect when it ended. 2026-10-02, v1.4.0.
 
