@@ -389,8 +389,11 @@ defmodule Calendrical.Composite.Compiler do
       # that calendar governs. The segments' labels only increase, so the
       # days of a year are consecutive — England's 1751 runs from Lady
       # Day, 25 March, and Russia's 1492, the last reckoned from 1 March,
-      # from 1 March to 31 August.
-      defp year_bounds(year) do
+      # from 1 March to 31 August. `Calendrical`'s functions of a year ask
+      # for these days: where two stretches of days carry the same dates,
+      # the dates `year/1` gives a year's first or last day name another.
+      @doc false
+      def year_bounds(year) do
         @segments
         |> Enum.flat_map(&segment_year_bounds(&1, year))
         |> Enum.reduce(nil, fn

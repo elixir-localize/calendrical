@@ -204,7 +204,6 @@ defmodule Calendrical.CompositeArithmetic.Test do
 
     test "every day of a transition year is in the week it numbers, and the weeks follow on" do
       for {calendar, year} <- [
-            {England, 1155},
             {England, 1751},
             {England, 1752},
             {Sweden, 1700},
@@ -235,6 +234,91 @@ defmodule Calendrical.CompositeArithmetic.Test do
         end)
 
         assert {:error, :invalid_date} = calendar.week(year, weeks + 1)
+      end
+    end
+
+    # England's 1155 ran from Saturday 1 January 1155 to Saturday 24 March
+    # 1156, 449 days, its year turning on 25 March from then on: a week of
+    # two days, 63 whole weeks and a week of six. The days from 1 January
+    # 1156 carry the dates of the year before them and have none of their
+    # own, so the weeks they make up are no ranges of dates.
+    test "a year that runs on into days with no dates of their own has the weeks of all its days" do
+      # 1 January 1155 and 24 March 1156, seven days on in the Gregorian
+      # calendar, are Saturdays.
+      assert Date.day_of_week(~D[1155-01-08]) == 6
+      assert Date.day_of_week(~D[1156-03-31]) == 6
+
+      assert England.weeks_in_year(1155) == {65, 6}
+
+      assert England.week(1155, 1) ==
+               Date.range(
+                 ~D[1155-01-01 Calendrical.Reform.England],
+                 ~D[1155-01-02 Calendrical.Reform.England]
+               )
+
+      assert England.week(1155, 13) ==
+               Date.range(
+                 ~D[1155-03-21 Calendrical.Reform.England],
+                 ~D[1155-03-27 Calendrical.Reform.England]
+               )
+
+      assert England.week(1155, 14) ==
+               Date.range(
+                 ~D[1155-03-28 Calendrical.Reform.England],
+                 ~D[1155-04-03 Calendrical.Reform.England]
+               )
+
+      # Monday 26 December 1155 to Sunday 1 January 1156: the week is cut to
+      # the days that have dates.
+      assert England.week_of_year(1155, 12, 31) == {1155, 53}
+
+      assert England.week(1155, 53) ==
+               Date.range(
+                 ~D[1155-12-26 Calendrical.Reform.England],
+                 ~D[1155-12-31 Calendrical.Reform.England]
+               )
+
+      for week <- 54..66 do
+        assert England.week(1155, week) == {:error, :invalid_date}, "week #{week}"
+      end
+
+      weeks = Enum.map(1..53, &England.week(1155, &1))
+
+      weeks
+      |> Enum.chunk_every(2, 1, :discard)
+      |> Enum.each(fn [earlier, later] -> assert Date.add(earlier.last, 1) == later.first end)
+
+      for {week, number} <- Enum.with_index(weeks, 1), day <- week do
+        assert England.week_of_year(day.year, day.month, day.day) == {1155, number}
+      end
+    end
+
+    # In the test calendar of Russia 1700 ran from Friday 1 September 1699,
+    # when the year reckoned from 1 September began as 1700, to Tuesday 31
+    # December 1700, 488 days: a week of three days, 69 whole weeks and a
+    # week of two. September to December 1699 carry the dates of the year
+    # after them and have none of their own; Monday 1 January 1700 is the
+    # year's day 123, the first day of its week 19.
+    test "a year that begins in days with no dates of their own numbers its weeks from them" do
+      # 1 September 1699 is ten days on in the Gregorian calendar, and 31
+      # December 1700 eleven.
+      assert Date.day_of_week(~D[1699-09-11]) == 5
+      assert Date.day_of_week(~D[1701-01-11]) == 2
+
+      assert Russia.weeks_in_year(1700) == {71, 2}
+      assert Russia.week_of_year(1700, 1, 1) == {1700, 19}
+      assert Russia.week_of_year(1700, 1, 7) == {1700, 19}
+      assert Russia.week_of_year(1700, 1, 8) == {1700, 20}
+      assert Russia.week_of_year(1700, 12, 31) == {1700, 71}
+
+      assert Russia.week(1700, 19) ==
+               Date.range(~D[1700-01-01 Calendrical.Russia], ~D[1700-01-07 Calendrical.Russia])
+
+      assert Russia.week(1700, 71) ==
+               Date.range(~D[1700-12-30 Calendrical.Russia], ~D[1700-12-31 Calendrical.Russia])
+
+      for week <- Enum.to_list(1..18) ++ [72] do
+        assert Russia.week(1700, week) == {:error, :invalid_date}, "week #{week}"
       end
     end
   end

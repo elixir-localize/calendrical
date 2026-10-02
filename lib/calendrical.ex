@@ -1255,30 +1255,26 @@ defmodule Calendrical do
           Date.t() | {:error, :invalid_date}
 
   def first_day_of_year(year, calendar) do
-    with %Date.Range{first: first} <- year_range(year, calendar) do
-      first
+    with {:ok, first, _last} <- year_days(year, calendar) do
+      date_at(first, calendar)
     end
   end
 
-  # The days of a calendar's year are those of its own `year/1`: a year
-  # need not begin on the first day of a first month, nor end in a twelfth.
-  # `Calendar.ISO` has no `year/1`, and its year is the Gregorian
-  # calendar's.
-  defp year_range(year, Calendar.ISO) do
-    with %Date.Range{first: first, last: last} <- year_range(year, Calendrical.Gregorian) do
-      Date.range(%{first | calendar: Calendar.ISO}, %{last | calendar: Calendar.ISO})
-    end
+  # The first and last days of a calendar's year, in ISO days: those of its
+  # own `year/1`, since a year need not begin on the first day of a first
+  # month, nor end in a twelfth. `Calendar.ISO` has no `year/1`, and its
+  # year is the Gregorian calendar's.
+  defp year_days(year, Calendar.ISO) do
+    year_days(year, Calendrical.Gregorian)
   end
 
-  defp year_range(year, calendar) when is_integer(year) do
-    case calendar.year(year) do
-      %Date.Range{} = range -> range
-      _no_such_year -> {:error, :invalid_date}
-    end
+  defp year_days(year, calendar) do
+    Calendrical.Base.Common.year_days(calendar, year)
   end
 
-  defp year_range(_year, _calendar) do
-    {:error, :invalid_date}
+  defp date_at(iso_days, calendar) do
+    {year, month, day} = calendar.date_from_iso_days(iso_days)
+    %Date{year: year, month: month, day: day, calendar: calendar}
   end
 
   @doc """
@@ -1346,8 +1342,8 @@ defmodule Calendrical do
           Date.t() | {:error, :invalid_date}
 
   def last_day_of_year(year, calendar) do
-    with %Date.Range{last: last} <- year_range(year, calendar) do
-      last
+    with {:ok, _first, last} <- year_days(year, calendar) do
+      date_at(last, calendar)
     end
   end
 
@@ -1450,14 +1446,9 @@ defmodule Calendrical do
   @spec first_gregorian_day_of_year(year(), calendar()) ::
           Date.t() | {:error, :invalid_date}
   def first_gregorian_day_of_year(year, calendar) do
-    with %Date.Range{first_in_iso_days: iso_days} <- year_range(year, calendar) do
-      gregorian_date(iso_days)
+    with {:ok, first, _last} <- year_days(year, calendar) do
+      date_at(first, Calendrical.Gregorian)
     end
-  end
-
-  defp gregorian_date(iso_days) do
-    {year, month, day} = Calendrical.Gregorian.date_from_iso_days(iso_days)
-    %Date{year: year, month: month, day: day, calendar: Calendrical.Gregorian}
   end
 
   @doc """
@@ -1528,8 +1519,8 @@ defmodule Calendrical do
   @spec last_gregorian_day_of_year(year(), calendar()) ::
           Date.t() | {:error, :invalid_date}
   def last_gregorian_day_of_year(year, calendar) do
-    with %Date.Range{last_in_iso_days: iso_days} <- year_range(year, calendar) do
-      gregorian_date(iso_days)
+    with {:ok, _first, last} <- year_days(year, calendar) do
+      date_at(last, Calendrical.Gregorian)
     end
   end
 
@@ -3630,7 +3621,7 @@ defmodule Calendrical do
         |> plus_unless_zero(calendar, :years, years)
         |> plus_unless_zero(calendar, :months, months)
 
-      shifts_months?(calendar) ->
+      Calendrical.Base.Common.composite?(calendar) ->
         # A composite calendar adds the years and months itself, in the
         # calendar in effect on the date: the first of a month is no date
         # of it where a change of calendar begins the month part of the
@@ -3663,10 +3654,6 @@ defmodule Calendrical do
 
   defp week_based?(calendar) do
     function_exported?(calendar, :calendar_base, 0) and calendar.calendar_base() == :week
-  end
-
-  defp shifts_months?(calendar) do
-    function_exported?(calendar, :shift_months, 5)
   end
 
   @doc false
@@ -4340,10 +4327,9 @@ defmodule Calendrical do
   # the calendar that is.
   def date_from_day_of_year(year, day_of_year, calendar)
       when is_integer(year) and is_integer(day_of_year) and day_of_year > 0 do
-    with %Date.Range{first: first, first_in_iso_days: first_days, last_in_iso_days: last_days} <-
-           year_range(year, calendar) do
-      if first_days + day_of_year - 1 <= last_days,
-        do: Date.add(first, day_of_year - 1),
+    with {:ok, first, last} <- year_days(year, calendar) do
+      if first + day_of_year - 1 <= last,
+        do: date_at(first + day_of_year - 1, calendar),
         else: {:error, :invalid_date}
     end
   end

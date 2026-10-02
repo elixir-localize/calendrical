@@ -86,6 +86,8 @@ The format is based on
 
 ### Fixed
 
+* A composite calendar's year that runs through days with no dates of their own, as England's 1155 runs on to 24 March 1156, is counted by its days: `weeks_in_year/1` is 65 weeks for its 449 days, where it was 13, `week/2` answers for each week that has dates, and `Calendrical.last_gregorian_day_of_year/2` and `date_from_day_of_year/3` reach its last day. The year's first and last days were taken from the dates of `year/1`, which name other days there.
+
 * `Calendrical.first_day_of_year/2`, `last_day_of_year/2`, `first_gregorian_day_of_year/2`, `last_gregorian_day_of_year/2` and `date_from_day_of_year/3` take a year's days from the calendar's own `year/1`, where `last_day_of_year/2` and the Gregorian-day functions raised `UndefinedFunctionError` in every calendar but the compiled month and week calendars and the first day was always month 1, day 1. They answer for `Calendar.ISO` too, and a year the calendar does not have is `{:error, :invalid_date}`.
 
 * A composite calendar reads a date in the calendar that has its year, where the calendar it falls in by the order of its year, month and day has no day of that year, so the first year of a calendar whose year turns after January has all its dates: with a September year taking effect on 1 September 1492, January to August 1493 were no dates. A date before year -9999 is the base calendar's, where `valid_date?/3`, `date_to_iso_days/3` and `days_in_month/2` raised `FunctionClauseError`.

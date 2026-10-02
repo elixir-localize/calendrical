@@ -91,13 +91,42 @@ defmodule Calendrical.Base.Common do
       first_day = first + max((week - 1) * @days_in_week - (offset - 1), 0)
       last_day = min(first + week * @days_in_week - offset, first + days_in_year - 1)
 
-      Date.range(date_from_iso_days(calendar, first_day), date_from_iso_days(calendar, last_day))
+      week_range(calendar, first_day, last_day)
     else
       _invalid -> {:error, :invalid_date}
     end
   end
 
   def week(_calendar, _year, _week), do: {:error, :invalid_date}
+
+  # The dates of a week, from its first day to its last. A day of a
+  # composite calendar can have no date of its own, its year, month and day
+  # naming another day: its week is cut to the days that have one, and is no
+  # range of dates where none has.
+  defp week_range(calendar, first_day, last_day) do
+    days =
+      if composite?(calendar),
+        do: Enum.filter(first_day..last_day, &date?(calendar, &1)),
+        else: [first_day, last_day]
+
+    case days do
+      [] ->
+        {:error, :invalid_date}
+
+      [first_day | _rest] ->
+        last_day = List.last(days)
+
+        Date.range(
+          date_from_iso_days(calendar, first_day),
+          date_from_iso_days(calendar, last_day)
+        )
+    end
+  end
+
+  defp date?(calendar, iso_days) do
+    {year, month, day} = calendar.date_from_iso_days(iso_days)
+    calendar.date_to_iso_days(year, month, day) == iso_days
+  end
 
   # The weeks of a month, numbered as `week_of_year/4` numbers the weeks of
   # a year: week 1 holds the month's first day and a week turns over on the
@@ -142,23 +171,55 @@ defmodule Calendrical.Base.Common do
   # The year's first day in ISO days, its length, and the position of its
   # first day within its (calendar-native) week, 1-based: 1 when the year
   # opens on the week's first day.
-  defp year_frame(calendar, year) when is_integer(year) do
-    case calendar.year(year) do
-      %Date.Range{first: first, last: last} ->
-        first_days = calendar.date_to_iso_days(first.year, first.month, first.day)
-        last_days = calendar.date_to_iso_days(last.year, last.month, last.day)
+  defp year_frame(calendar, year) do
+    case year_days(calendar, year) do
+      {:ok, first_days, last_days} ->
+        {:ok, first_days, last_days - first_days + 1, day_of_week_on(calendar, first_days)}
 
-        {first_dow, _first, _last} =
-          calendar.day_of_week(first.year, first.month, first.day, :default)
-
-        {:ok, first_days, last_days - first_days + 1, first_dow}
-
-      _invalid ->
+      {:error, :invalid_date} ->
         :error
     end
   end
 
-  defp year_frame(_calendar, _year), do: :error
+  # The first and last days of a calendar's year, in ISO days. They are
+  # those of its own `year/1`: a year need not begin on the first day of a
+  # first month, nor end in a twelfth. A composite calendar gives the days
+  # themselves, for where two stretches of its days carry the same dates the
+  # dates of a year's first or last day name another day.
+  def year_days(calendar, year) when is_integer(year) do
+    bounds = if composite?(calendar), do: calendar.year_bounds(year), else: calendar.year(year)
+
+    case bounds do
+      {first, last} when is_integer(first) and is_integer(last) ->
+        {:ok, first, last}
+
+      %Date.Range{first: first, last: last} ->
+        {:ok, calendar.date_to_iso_days(first.year, first.month, first.day),
+         calendar.date_to_iso_days(last.year, last.month, last.day)}
+
+      _no_such_year ->
+        {:error, :invalid_date}
+    end
+  end
+
+  def year_days(_calendar, _year), do: {:error, :invalid_date}
+
+  # A composite calendar answers for the days of its years, and for a shift
+  # of years and months, itself.
+  def composite?(calendar) do
+    Code.ensure_loaded?(calendar) and function_exported?(calendar, :year_bounds, 1)
+  end
+
+  # The day of the week of a day, as the calendar in effect on it numbers
+  # the days of the week.
+  defp day_of_week_on(calendar, iso_days) do
+    calendar =
+      if composite?(calendar), do: calendar.calendar_for_iso_days(iso_days), else: calendar
+
+    {year, month, day} = calendar.date_from_iso_days(iso_days)
+    {day_of_week, _first, _last} = calendar.day_of_week(year, month, day, :default)
+    day_of_week
+  end
 
   defp date_from_iso_days(calendar, iso_days) do
     {year, month, day} = calendar.date_from_iso_days(iso_days)

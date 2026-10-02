@@ -105,6 +105,14 @@ defmodule Calendrical.Composite do
       iex> Calendrical.Reform.England.valid_date?(1155, 2, 29)
       false
 
+  The days are days of the year all the same: England's 1155 has 449, and ends on 24 March 1156. `Calendrical.first_gregorian_day_of_year/2` and `Calendrical.last_gregorian_day_of_year/2` give a year's first and last days in the Gregorian calendar, where each has a date of its own:
+
+      iex> Calendrical.Reform.England.days_in_year(1155)
+      449
+
+      iex> Calendrical.last_gregorian_day_of_year(1155, Calendrical.Reform.England)
+      ~D[1156-03-31 Calendrical.Gregorian]
+
   A change from a year that begins before 1 January to the January year does the same from the other side. A year reckoned from 1 September or 25 December takes the number of the January year it ends in, so where it gives way on 1 January, as Russia's September year did in 1700, its last months already carry the number the new year keeps: those labels name the later days, and September to December 1699 have none of their own.
 
   ## Arithmetic across a transition

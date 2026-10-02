@@ -36,6 +36,8 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Done
 
+* [x] **A composite year that runs through days with no dates is counted by its days** — the first and last days of a year were taken from the dates of `year/1`, which name other days where two stretches of days carry the same dates: England's 1155, of 449 days, had 13 weeks and no day past its 83rd by number, and a year that begins in such days numbered its weeks from -33. `Calendrical.Base.Common.year_days/2` asks a composite for the days themselves. 2026-10-03, v1.4.0.
+
 * [x] **The first and last days of a year come from the calendar's `year/1`** — `first_day_of_year/2`, `last_day_of_year/2`, the two Gregorian-day functions and `date_from_day_of_year/3` answer in every calendar and for `Calendar.ISO`, where six function heads raised `UndefinedFunctionError` in 21 of 28 kinds of calendar, and three for `Calendar.ISO`, and the first day was always month 1, day 1. 2026-10-03, v1.4.0.
 
 * [x] **A composite reads a date in the calendar that has its year** — where the calendar a date falls in by the order of its year, month and day has no day of that year, so January to August 1493 are dates of `Calendrical.Russia`; of 88,583 days about the changes of 43 composites 1,206 did not read back and one does not (England's 29 February 1156, left with the February its year, month and day name). A date before year -9999 is the base calendar's, where it raised. 2026-10-03, v1.4.0.
