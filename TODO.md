@@ -4,8 +4,6 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Open
 
-* [ ] **A date before 1 AH raises in `Calendrical.Islamic.UmmAlQura`** — `naive_datetime_from_iso_days/1` raises `Calendrical.IslamicYearOutOfRangeError` (Hijri year nil), and the `Calendar` behaviour gives it no error to return, so `Date.convert/2` raises and so does `Localize.Date.parse("0500-03-15", calendar: Calendrical.Islamic.UmmAlQura)`. ICU4C's civil fallback (below) would answer it.
-
 * [ ] **A composite counts the days of a month its year does not have** — England's 1751 began on 25 March, and `days_in_month(1751, 1)` is 31, `days_in_month(1751, 2)` 28 and `months_in_year(1751)` 12: the answers of the calendar that had the year, for months it had no days of.
 
 * [ ] **Arithmetic into days that have no dates** — where a year's number does not change on 1 January two stretches of days carry the same year, month and day and the later has no dates (England's 1 January to 24 March 1156), so `Date.shift(~D[1155-12-15 Calendrical.Reform.England], month: 1)` answers `~D[1155-01-15 Calendrical.Reform.England]`, a day 334 days earlier. Answer the next day that has a date, 25 March 1156, or an error: a decision to make.
@@ -14,7 +12,7 @@ Calendrical's open work. Design documents live in `plans/`.
 
 * [ ] **A composite calendar whose members differ in CLDR type** — every composite's `cldr_calendar_type/0` is `:gregorian`, so `Calendrical.Reform.Japan`'s lunisolar dates before 1873 take Gregorian month names ("February" for the second lunar month) and no leap-month pattern. Naming them from the calendar in effect needs Localize to ask for it, or such composites to be split: a decision to make.
 
-* [ ] **Umm al-Qura years outside the official tables** — ICU4C 78.3 falls back to the civil calendar there, and `Calendrical.Islamic.UmmAlQura` begins some years a day earlier: 1 Muharram 1178 is 1764-06-30 here and 1764-07-01 in ICU (also 607, 717, 758 and 1261 AH). Find which fallback Calendrical uses and document or change it.
+* [ ] **Umm al-Qura years outside ICU's table** — ICU4C 78.3 tabulates 1300 to 1600 AH and is civil elsewhere; Calendrical tabulates KACST's 1 to 1500 AH and is civil elsewhere. Before 1300 KACST's table begins some years a day earlier than ICU's civil years (1 Muharram 1178 is 1764-06-30 here, 1764-07-01 in ICU; also 607, 717, 758 and 1261 AH), and 1501 to 1600 AH here are civil where ICU tabulates them. Decide whether to document the difference or follow ICU.
 
 * [ ] **Eras around 1 January AD 1 in `Calendrical.NRF`** — `day_of_era/3` takes the Gregorian date's era and `year_of_era/3` the calendar year's, so they disagree on NRF's fiscal year 0 days in AD 1.
 
@@ -25,6 +23,8 @@ Calendrical's open work. Design documents live in `plans/`.
 * [ ] **`Calendrical.UnsupportedDateRangeError`'s `:range` is English prose** — the Persian calendar and the Islamic visibility calculations give it a phrase such as "dates covered by the installed JPL ephemeris", which is bound into the translated message untranslated. Carry the bounds as data and write them in the message.
 
 ## Done
+
+* [x] **Umm al-Qura has dates outside KACST's tables** — before 1 AH and after 1500 AH its dates are `Calendrical.Islamic.Civil`'s, as ICU falls back to it, joined to the tables without a gap; nothing raises `IslamicYearOutOfRangeError` and the year before 1 AH is 0. Held by `test/islamic_umm_al_qura_civil_test.exs` against ICU's civil formulas. 2026-10-03, v1.4.0.
 
 * [x] **The Persian calendar has dates outside Gregorian 1001 to 3000** — years outside Persian 380 to 2378 follow ICU's arithmetic Persian calendar (33-year cycle with ICU's corrections after 2378), which agrees with the equinox at both joins; nothing raises `UnsupportedDateRangeError` and years before 1 are numbered from 0. Held by `test/persian_arithmetic_test.exs` against ICU's test dates and leap rule. 2026-10-03, v1.4.0.
 

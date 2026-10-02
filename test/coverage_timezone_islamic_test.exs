@@ -321,16 +321,18 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
       # Ramadan 1446 has 29 days in the Umm al-Qura tables.
       assert UmmAlQura.valid_date?(1446, 9, 29)
       refute UmmAlQura.valid_date?(1446, 9, 30)
-      refute UmmAlQura.valid_date?(0, 1, 1)
+      assert UmmAlQura.valid_date?(0, 1, 1)
       refute UmmAlQura.valid_date?(1446, 13, 1)
+      refute UmmAlQura.valid_date?(0, 13, 1)
     end
 
     test "leap_year?/1 identifies 355-day years" do
       assert Enum.filter(1440..1450, &UmmAlQura.leap_year?/1) == [1441, 1443, 1447, 1448]
     end
 
-    test "leap_year?/1 is false outside the data range" do
-      refute UmmAlQura.leap_year?(UmmAlQura.max_year() + 5)
+    test "leap_year?/1 follows the civil calendar outside the data range" do
+      assert UmmAlQura.leap_year?(UmmAlQura.max_year() + 5)
+      assert UmmAlQura.leap_year?(1505) == Calendrical.Islamic.Civil.leap_year?(1505)
     end
 
     test "days_in_month/2 returns 29 or 30 per the tables" do
@@ -338,10 +340,11 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
       assert UmmAlQura.days_in_month(UmmAlQura.max_year(), 12) == 30
     end
 
-    test "days_in_month/2 raises outside the data range" do
-      assert_raise Calendrical.IslamicYearOutOfRangeError, fn ->
-        UmmAlQura.days_in_month(9999, 1)
-      end
+    test "days_in_month/2 follows the civil calendar outside the data range" do
+      assert UmmAlQura.days_in_month(9999, 1) == 30
+
+      assert UmmAlQura.days_in_month(9999, 12) ==
+               Calendrical.Islamic.Civil.days_in_month(9999, 12)
     end
 
     test "days_in_year/1 returns 354 or 355" do
@@ -349,10 +352,8 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
       assert UmmAlQura.days_in_year(UmmAlQura.max_year()) == 354
     end
 
-    test "days_in_year/1 raises outside the data range" do
-      assert_raise Calendrical.IslamicYearOutOfRangeError, fn ->
-        UmmAlQura.days_in_year(9999)
-      end
+    test "days_in_year/1 follows the civil calendar outside the data range" do
+      assert UmmAlQura.days_in_year(9999) == Calendrical.Islamic.Civil.days_in_year(9999)
     end
 
     test "date_to_iso_days/3 and date_from_iso_days/1 round-trip" do
@@ -363,16 +364,11 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
                {1446, 9, 15}
     end
 
-    test "date_to_iso_days/3 raises outside the data range" do
-      assert_raise Calendrical.IslamicYearOutOfRangeError, fn ->
-        UmmAlQura.date_to_iso_days(9999, 1, 1)
-      end
-    end
+    test "date_to_iso_days/3 and date_from_iso_days/1 follow the civil calendar outside the data range" do
+      assert UmmAlQura.date_to_iso_days(9999, 1, 1) ==
+               Calendrical.Islamic.Civil.date_to_iso_days(9999, 1, 1)
 
-    test "date_from_iso_days/1 raises outside the data range" do
-      assert_raise Calendrical.IslamicYearOutOfRangeError, fn ->
-        UmmAlQura.date_from_iso_days(0)
-      end
+      assert UmmAlQura.date_from_iso_days(0) == Calendrical.Islamic.Civil.date_from_iso_days(0)
     end
 
     test "Umm al-Qura dates work through the Date API" do

@@ -21,10 +21,15 @@ defmodule Calendrical.Islamic.UmmAlQura do
   ## Coverage
 
   The tables cover **1 AH through 1500 AH** (19 July 622 CE through
-  16 November 2077 CE), the full range KACST publishes. Dates outside it
-  raise `Calendrical.IslamicYearOutOfRangeError` from `date_to_iso_days/3`
-  and `date_from_iso_days/1`. Run `mix calendrical.umm_al_qura.verify --kacst`
-  to compare the tables with KACST's current data.
+  16 November 2077 CE), the full range KACST publishes. Run
+  `mix calendrical.umm_al_qura.verify --kacst` to compare the tables with
+  KACST's current data.
+
+  Years before and after the tables are those of the arithmetic civil
+  calendar, `Calendrical.Islamic.Civil`, as ICU falls back to it outside
+  its own table. Civil 1 Muharram 1 AH and 1501 AH are the days the
+  tables begin and end on, so no year at either join is lengthened or
+  shortened. The year before 1 AH is year 0.
 
   Before 1.4.0 this calendar used R.H. van Gent's tables. Those are an
   astronomical reconstruction, reproduced by
@@ -51,7 +56,9 @@ defmodule Calendrical.Islamic.UmmAlQura do
     months_in_leap_year: 12,
     first_day_of_week: 7
 
-  @type year :: pos_integer()
+  alias Calendrical.Islamic.Civil
+
+  @type year :: integer()
   @type month :: 1..12
   @type day :: 1..30
 
@@ -145,8 +152,8 @@ defmodule Calendrical.Islamic.UmmAlQura do
 
   * `{:ok, date}` — an Umm al-Qura `t:Date.t/0`.
 
-  * `{:error, reason}` if the day-start option is invalid, the resulting date
-    lies outside the embedded reference data, or sunset cannot be computed.
+  * `{:error, reason}` if the day-start option is invalid or sunset cannot
+    be computed.
 
   ### Examples
 
@@ -193,7 +200,8 @@ defmodule Calendrical.Islamic.UmmAlQura do
   Hijri month according to the official Umm al-Qura tables.
 
   Returns `{:error, %Calendrical.IslamicYearOutOfRangeError{}}` if the
-  requested month falls outside the embedded data range.
+  requested month falls outside the embedded data range, where the
+  calendar's months are the civil calendar's.
 
   """
   @spec first_day_of_month(year, month) ::
@@ -221,9 +229,9 @@ defmodule Calendrical.Islamic.UmmAlQura do
   @doc """
   Determines if the given Umm al-Qura date is valid.
 
-  A date is valid if its `year` falls within the embedded reference
-  range, its `month` is in `1..12`, and its `day` is between 1 and the
-  number of days in that month according to the published tables.
+  A date is valid if its `month` is in `1..12` and its `day` is between
+  1 and the number of days in that month: by the published tables for
+  1 AH to 1500 AH, and by the civil calendar for other years.
   """
   @impl true
   def valid_date?(year, month, day)
@@ -231,6 +239,12 @@ defmodule Calendrical.Islamic.UmmAlQura do
              year >= @min_year and year <= @max_year and
              month in 1..12 and day in 1..30 do
     day <= days_in_month(year, month)
+  end
+
+  def valid_date?(year, month, day)
+      when is_integer(year) and is_integer(month) and is_integer(day) and
+             (year < @min_year or year > @max_year) do
+    Civil.valid_date?(year, month, day)
   end
 
   def valid_date?(_year, _month, _day), do: false
@@ -242,7 +256,9 @@ defmodule Calendrical.Islamic.UmmAlQura do
   def leap_year?(year) do
     case days_in_year_lookup(year) do
       {:ok, 355} -> true
-      _ -> false
+      {:ok, 354} -> false
+      :error when is_integer(year) -> Civil.leap_year?(year)
+      :error -> false
     end
   end
 
@@ -253,6 +269,7 @@ defmodule Calendrical.Islamic.UmmAlQura do
   def days_in_year(year) do
     case days_in_year_lookup(year) do
       {:ok, days} -> days
+      :error when is_integer(year) -> Civil.days_in_year(year)
       :error -> raise out_of_range_error(year)
     end
   end
@@ -327,23 +344,22 @@ defmodule Calendrical.Islamic.UmmAlQura do
   @doc """
   Returns the number of days in the given Hijri `year` and `month`.
   Months are 29 or 30 days as determined by the published Umm al-Qura
-  tables.
+  tables, or by the civil calendar outside them.
   """
   @impl true
   @spec days_in_month(year, month) :: 29..30
   def days_in_month(year, month) when month in 1..12 do
     case days_in_month_lookup(year, month) do
       {:ok, days} -> days
+      :error when is_integer(year) -> Civil.days_in_month(year, month)
       :error -> raise out_of_range_error(year)
     end
   end
 
   @doc """
   Returns the number of ISO days for the given Umm al-Qura
-  `year`, `month`, and `day`.
-
-  Raises `Calendrical.IslamicYearOutOfRangeError` if the date is
-  outside the embedded reference range.
+  `year`, `month`, and `day`, by the civil calendar outside the
+  published tables.
   """
   @spec date_to_iso_days(year, month, day) :: integer()
   def date_to_iso_days(year, month, day)
@@ -354,15 +370,12 @@ defmodule Calendrical.Islamic.UmmAlQura do
 
   def date_to_iso_days(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
-    raise out_of_range_error(year)
+    Civil.date_to_iso_days(year, month, day)
   end
 
   @doc """
   Returns the Umm al-Qura `{year, month, day}` for the given ISO day
-  number.
-
-  Raises `Calendrical.IslamicYearOutOfRangeError` if `iso_days` is
-  outside the embedded reference range.
+  number, by the civil calendar outside the published tables.
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}
   def date_from_iso_days(iso_days)
@@ -372,12 +385,8 @@ defmodule Calendrical.Islamic.UmmAlQura do
     {year, month, iso_days - first + 1}
   end
 
-  def date_from_iso_days(_iso_days) do
-    raise Calendrical.IslamicYearOutOfRangeError.exception(
-            year: nil,
-            min_year: @min_year,
-            max_year: @max_year
-          )
+  def date_from_iso_days(iso_days) when is_integer(iso_days) do
+    Civil.date_from_iso_days(iso_days)
   end
 
   # ── Internal helpers ──────────────────────────────────────────────────────

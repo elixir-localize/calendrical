@@ -149,8 +149,9 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
       assert {:error, :invalid_date} = Date.new(1446, 9, 30, UmmAlQura)
     end
 
-    test "Date.new/4 fails for years outside the embedded data" do
-      assert {:error, :invalid_date} = Date.new(9999, 1, 1, UmmAlQura)
+    test "Date.new/4 takes the civil calendar's dates outside the embedded data" do
+      assert {:ok, %Date{year: 9999}} = Date.new(9999, 1, 1, UmmAlQura)
+      assert {:error, :invalid_date} = Date.new(9999, 13, 1, UmmAlQura)
     end
 
     test "round-trips a recent Gregorian date" do
@@ -205,7 +206,7 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
       assert {:error, %Calendrical.IslamicYearOutOfRangeError{year: 0}} =
                UmmAlQura.first_day_of_month(0, 1)
 
-      assert {:error, :invalid_date} = Date.new(0, 1, 1, UmmAlQura)
+      assert {:ok, %Date{year: 0}} = Date.new(0, 1, 1, UmmAlQura)
     end
 
     test "first_day_of_month/2 returns an error for invalid months" do
@@ -216,16 +217,9 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
                UmmAlQura.first_day_of_month(1446, 13)
     end
 
-    test "date_to_iso_days raises for years outside the embedded data" do
-      assert_raise Calendrical.IslamicYearOutOfRangeError, fn ->
-        UmmAlQura.date_to_iso_days(9999, 1, 1)
-      end
-    end
-
-    test "date_from_iso_days raises for ISO days outside the embedded range" do
-      assert_raise Calendrical.IslamicYearOutOfRangeError, fn ->
-        UmmAlQura.date_from_iso_days(0)
-      end
+    test "date_to_iso_days and date_from_iso_days answer outside the embedded data" do
+      assert UmmAlQura.date_from_iso_days(UmmAlQura.date_to_iso_days(9999, 1, 1)) == {9999, 1, 1}
+      assert UmmAlQura.date_to_iso_days(UmmAlQura.date_from_iso_days(0) |> elem(0), 1, 1) <= 0
     end
   end
 
@@ -354,9 +348,9 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
       assert {:error, {:invalid_day_start, :bogus}} =
                UmmAlQura.date_at(~U[2025-03-01 12:00:00Z], day_start: :bogus)
 
-      # Outside the embedded reference data.
-      # After 30 Dhu al-Hijja 1500 AH (16 November 2077), the end of the tables.
-      assert {:error, _} = UmmAlQura.date_at(~U[2100-01-01 12:00:00Z])
+      # After 30 Dhu al-Hijja 1500 AH (16 November 2077), the end of the
+      # tables, the date is the civil calendar's.
+      assert {:ok, %Date{year: 1523}} = UmmAlQura.date_at(~U[2100-01-01 12:00:00Z])
     end
   end
 end
