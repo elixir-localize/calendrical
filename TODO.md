@@ -4,8 +4,6 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Open
 
-* [ ] **A composite's `diff/3` across days that have no dates, and across a change of year numbers** — `Calendrical.Base.Common.diff/5` reads back the date `plus/6` reaches, and a day with no date of its own reads back as an earlier day, so `Calendrical.Reform.England.diff({1155, 6, 15}, {1155, 12, 20}, :months)` is 8, where it is 6. Its first guess is the difference of the years' numbers, corrected a step at a time, so across `Calendrical.Reform.Japan`'s change from year 1228 to 1873 a count of years takes a minute and a count of months more than four, and `Localize.Duration.new/2` and relative time between two such dates do not answer in a minute.
-
 * [ ] **`cardinal_month/1` names a year-ending month calendar's months a month early** — `Base.Month.cardinal_month/2` takes `month_of_year` as the month a year begins in, but with `first_or_last: :last` it is the month the year ends in, so a month calendar configured that way names its first month for the month its year ends in. A calendar of weeks is unaffected since its months became ordinal ("M01" from CLDR's generic calendar), though `Calendrical.NRF`, whose period 1 is February, showed it until then.
 
 * [ ] **`iso_week_of_year/3` reads a fiscal calendar's date as Gregorian** — the month compiler passes `Base.Month.iso_week_of_year/3` no config, so `Calendrical.Fiscal.US.iso_week_of_year(2019, 1, 1)`, 1 October 2018 and ISO week 2018-W40, answers `{2019, 1}`.
@@ -35,6 +33,8 @@ Calendrical's open work. Design documents live in `plans/`.
 * [ ] **`Calendrical.LunarJapanese` reads the first day of year -10001 back as year -10002** — `date_from_iso_days(date_to_iso_days(-10001, 1, 1))` is `{-10002, 1, 1}`, far outside the years its astronomy is good for; found where a composite's base calendar was given no first day.
 
 ## Done
+
+* [x] **A composite's `diff/3` compares the day `plus/6` reaches** — it read back the date written for that day, which names another day where a day has no date of its own, and stepped to its count from the difference of the years' numbers: `Calendrical.Reform.England.diff({1155, 6, 15}, {1155, 12, 20}, :months)` was 8 and is 6, and across `Calendrical.Reform.Japan`'s change from 1228 to 1873 a count of years took a minute and of months did not answer in four, where both answer at once, as `Localize.Duration.new/2` between two such dates does. 2026-10-03, v1.4.0.
 
 * [x] **A composite year that runs through days with no dates is counted by its days** — the first and last days of a year were taken from the dates of `year/1`, which name other days where two stretches of days carry the same dates: England's 1155, of 449 days, had 13 weeks and no day past its 83rd by number, and a year that begins in such days numbered its weeks from -33. `Calendrical.Base.Common.year_days/2` asks a composite for the days themselves. 2026-10-03, v1.4.0.
 

@@ -864,7 +864,7 @@ defmodule Calendrical.Composite.Compiler do
       """
       @impl true
       def diff(from, to, date_part) do
-        Calendrical.Base.Common.diff(__MODULE__, from, to, date_part)
+        Calendrical.Composite.Diff.diff(__MODULE__, from, to, date_part)
       end
 
       @doc """
@@ -922,14 +922,23 @@ defmodule Calendrical.Composite.Compiler do
           {new_year, new_month, new_day}
         else
           months = Calendrical.Composite.Shift.months(calendar, year, month, duration)
-          shift_across_segments(year, month, day, months)
+          date_from_iso_days(reach_across_segments(year, month, day, months))
         end
       end
 
+      defp shift_by(year, month, day, date_part, increment) do
+        date_from_iso_days(reach(year, month, day, date_part, increment))
+      end
+
+      # The day a count of years or months reaches from a date, in ISO days.
       # Within the segment of the calendar in effect the calendar's own
       # arithmetic is the answer. Otherwise the months are walked across
       # the segments, a year being as many of them as that calendar counts.
-      defp shift_by(year, month, day, date_part, increment) do
+      # `plus/6` writes the day as a date; `Calendrical.Composite.Diff`
+      # compares it as a day, since the date of a day with none of its own
+      # names another day.
+      @doc false
+      def reach(year, month, day, date_part, increment) do
         calendar = calendar_for_date(year, month, day)
 
         {new_year, new_month, new_day} =
@@ -937,14 +946,14 @@ defmodule Calendrical.Composite.Compiler do
 
         if calendar_for_date(new_year, new_month, new_day) == calendar and
              valid_date?(new_year, new_month, new_day) do
-          {new_year, new_month, new_day}
+          calendar.date_to_iso_days(new_year, new_month, new_day)
         else
           months = Calendrical.Composite.Shift.months(calendar, year, month, date_part, increment)
-          shift_across_segments(year, month, day, months)
+          reach_across_segments(year, month, day, months)
         end
       end
 
-      defp shift_across_segments(year, month, day, months) do
+      defp reach_across_segments(year, month, day, months) do
         index = segment_index(date_to_iso_days(year, month, day))
         segment = Enum.at(@segments, index)
         {civil_year, civil_month, _day} = to_civil(segment, year, month, day)
@@ -1003,23 +1012,24 @@ defmodule Calendrical.Composite.Compiler do
           else: months_between(civil, from, to, low, middle)
       end
 
-      # The day of a civil month, in the segment the walk ended in or a
-      # neighbour sharing the month; failing that, the month's next day
-      # that exists, or its last. Where a year-start transition gives two
-      # stretches of days the same labels (England's January to March
-      # 1155 and 1156) no label names the later stretch alone, and the
-      # day is then the one the segment's own calendar names.
+      # The day of a civil month, in ISO days: in the segment the walk
+      # ended in or a neighbour sharing the month; failing that, the
+      # month's next day that exists, or its last. Where a year-start
+      # transition gives two stretches of days the same labels (England's
+      # January to March 1155 and 1156) no label names the later stretch
+      # alone, and the day is then the one the segment's own calendar
+      # names.
       defp resolve_day(index, civil_month, day) do
         segments = sharing_segments(index, civil_month)
 
-        Enum.find_value(day..31//1, &civil_date(segments, civil_month, &1)) ||
-          Enum.find_value((day - 1)..1//-1, &civil_date(segments, civil_month, &1)) ||
-          segment_date(Enum.at(@segments, index), civil_month, day)
+        Enum.find_value(day..31//1, &civil_day(segments, civil_month, &1)) ||
+          Enum.find_value((day - 1)..1//-1, &civil_day(segments, civil_month, &1)) ||
+          segment_day(Enum.at(@segments, index), civil_month, day)
       end
 
-      defp segment_date(%{civil: civil}, {civil_year, civil_month}, day) do
+      defp segment_day(%{civil: civil}, {civil_year, civil_month}, day) do
         day = min(day, civil.days_in_month(civil_year, civil_month))
-        date_from_iso_days(civil.date_to_iso_days(civil_year, civil_month, day))
+        civil.date_to_iso_days(civil_year, civil_month, day)
       end
 
       defp sharing_segments(index, civil_month) do
@@ -1029,12 +1039,12 @@ defmodule Calendrical.Composite.Compiler do
         [segment | before ++ later]
       end
 
-      defp civil_date(segments, {civil_year, civil_month}, day) do
+      defp civil_day(segments, {civil_year, civil_month}, day) do
         Enum.find_value(segments, fn %{calendar: calendar} = segment ->
           {year, month, day} = from_civil(segment, civil_year, civil_month, day)
 
           if calendar_for_date(year, month, day) == calendar and valid_date?(year, month, day),
-            do: {year, month, day}
+            do: calendar.date_to_iso_days(year, month, day)
         end)
       end
 

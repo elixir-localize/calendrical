@@ -86,6 +86,8 @@ The format is based on
 
 ### Fixed
 
+* A composite calendar's `diff/3` compares the day `plus/6` reaches and brackets its count from the days between the two dates, where it read back the date written for that day and stepped from the difference of the years' numbers. `Calendrical.Reform.England.diff({1155, 6, 15}, {1155, 12, 20}, :months)` is 6, where it was 8, and a count across `Calendrical.Reform.Japan`'s 1873 change answers at once, where years took a minute and months did not answer in four.
+
 * A composite calendar's year that runs through days with no dates of their own, as England's 1155 runs on to 24 March 1156, is counted by its days: `weeks_in_year/1` is 65 weeks for its 449 days, where it was 13, `week/2` answers for each week that has dates, and `Calendrical.last_gregorian_day_of_year/2` and `date_from_day_of_year/3` reach its last day. The year's first and last days were taken from the dates of `year/1`, which name other days there.
 
 * `Calendrical.first_day_of_year/2`, `last_day_of_year/2`, `first_gregorian_day_of_year/2`, `last_gregorian_day_of_year/2` and `date_from_day_of_year/3` take a year's days from the calendar's own `year/1`, where `last_day_of_year/2` and the Gregorian-day functions raised `UndefinedFunctionError` in every calendar but the compiled month and week calendars and the first day was always month 1, day 1. They answer for `Calendar.ISO` too, and a year the calendar does not have is `{:error, :invalid_date}`.
