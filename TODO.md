@@ -14,13 +14,21 @@ Calendrical's open work. Design documents live in `plans/`.
 
 * [ ] **A date before 1 AH raises in `Calendrical.Islamic.UmmAlQura`** — `naive_datetime_from_iso_days/1` raises `Calendrical.IslamicYearOutOfRangeError` (Hijri year nil), and the `Calendar` behaviour gives it no error to return, so `Date.convert/2` raises and so does `Localize.Date.parse("0500-03-15", calendar: Calendrical.Islamic.UmmAlQura)`. ICU4C's civil fallback (above) would answer it.
 
-* [ ] **The Persian calendar raises outside Gregorian 1001 to 3000** — `valid_date?/3` answers `false` there, so its date callbacks and Localize return errors for such a date, but `months_in_year/1` and `days_in_month/2` raise `Calendrical.UnsupportedDateRangeError`. Answer those callbacks, or reject the year, without raising.
+* [ ] **The Persian calendar raises outside Gregorian 1001 to 3000** — `valid_date?/3` answers `false` there, so its date callbacks and Localize return errors for such a date, but `months_in_year/1` and `days_in_month/2` raise `Calendrical.UnsupportedDateRangeError`, and so does converting a date outside the range into it, so `Localize.Date.parse("0001-001", calendar: Calendrical.Persian)` raises as it does for the Umm al-Qura calendar (above). Answer those callbacks, or reject the year, without raising.
 
 * [ ] **Eras around 1 January AD 1 in `Calendrical.NRF` and `Calendrical.Reform.Sweden.Transitional`** — `day_of_era/3` takes the Gregorian date's era and `year_of_era/3` the calendar year's, so they disagree on NRF's fiscal year 0 days in AD 1 and on the Swedish calendar's first days of AD 1, which are Gregorian 1 BC.
+
+* [ ] **`Calendrical.Reform.Sweden.Transitional` before AD 1** — its `plus/6` reaches a year 0 it does not have (`plus(-2, 6, 3, :years, 2)` is `{0, 6, 3}`), its `diff/3` counts two years from 3 June 2 BC to 3 June 1 BC, and `valid_date?(-1, 12, 8)` is false for a date `Date.convert/2` gives it (ISO 0000-12-06), so Localize's relative time there is wrong or an error (6,069 of 24,720 checks by days). Outside 1700 to 1712 the calendar is the Julian calendar and could pass these to it.
+
+* [ ] **A calendar of weeks' `days_in_month/2` counts a period, not the month field** — `Calendrical.ISOWeek.days_in_month(2026, 25)` is 28, the days of a four-week period, though a week date's month field is its week, so `Date.days_in_month(~D[2026-W25-2 Calendrical.ISOWeek])` is 28 and `Date.end_of_month/1` gives 2026-W25-28, which is no date of the calendar. Elixir's `Date` functions read the month field: answer seven there, or decide what the two should mean in a calendar of weeks.
+
+* [ ] **`extended_year/3` of a year BC in the Julian calendars** — TR35's extended year counts 1 BCE as year 0, but `Calendrical.Julian.extended_year(-1, 1, 1)` is -1, the calendar year as given, as it is in the new-year variants. Localize's `u` does not ask for it yet (Localize's `TODO.md`).
 
 * [ ] **Delegate `Calendrical.TimeZone.resolve/3` to Localize** — Localize now parses and resolves a zone in every form a locale writes (`Localize.DateTime.Timezone.parse_zone/2` and `resolve/3`) and no longer calls this module, which duplicates it with a table of abbreviations and resolves a fall-back hour to daylight time where ICU and Localize take standard.
 
 ## Done
+
+* [x] **`interval/3` and `interval_stream/3` order dates by their days** — they took the earlier of their two dates from `Date.compare/2`, which orders two dates of one calendar by their fields and never asks the calendar, so in the Julian new-year calendars, where 1 January follows 31 December of the same year, a run across January was wrong. Localize's relative time, durations and parsed ranges order dates the same way, held to these calendars by `test/localize_periods_test.exs`. 2026-10-02, v1.4.0.
 
 * [x] **The parse callbacks answer every text, and a week date reads back** — `parse_date/1`, `parse_naive_datetime/1` and `parse_utc_datetime/1` answer malformed text with `{:error, :invalid_format}` in every calendar (11,648 malformed inputs across 32 calendars), where letters raised `ArgumentError`, a negative year is checked as itself, and a calendar of weeks writes "0004-W09-7" for year 4. Asserted by the contract test. 2026-10-02, v1.4.0.
 

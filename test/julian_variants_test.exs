@@ -230,4 +230,77 @@ defmodule Calendrical.JulianVariantsTest do
       end
     end
   end
+
+  # A variant's date keeps its Julian month and day under the label of the
+  # year its day falls in, so its fields are not in the order of its days: 1
+  # January follows 31 December of the same label year. `Date.compare/2`
+  # orders two dates of one calendar by their fields and never asks the
+  # calendar, so dates are ordered by their days (`Date.diff/2`). The ranges
+  # below cross January and each variant's new-year day; the days expected
+  # are the ISO days between the two, in the variant.
+  describe "dates are ordered by their days, not their fields" do
+    @ranges [
+      {~D[2023-01-01], ~D[2023-01-28]},
+      {~D[2023-12-20], ~D[2024-01-20]},
+      {~D[2024-03-01], ~D[2024-04-15]},
+      {~D[2024-08-25], ~D[2024-09-20]}
+    ]
+
+    test "the year's last day in December is the day before 1 January of the same year" do
+      december = Date.new!(2022, 12, 31, Calendrical.Julian.March25)
+      january = Date.new!(2022, 1, 1, Calendrical.Julian.March25)
+
+      assert Date.diff(january, december) == 1
+      assert Calendrical.interval(december, january, :days) == [december, january]
+      assert Calendrical.interval(january, december, :days) == [january, december]
+    end
+
+    test "interval/3 runs from the earlier day to the later, and back" do
+      for variant <- @variants, {from_iso, to_iso} <- @ranges do
+        from = Date.convert!(from_iso, variant)
+        to = Date.convert!(to_iso, variant)
+        days = for iso <- Date.range(from_iso, to_iso), do: Date.convert!(iso, variant)
+
+        assert Calendrical.interval(from, to, :days) == days,
+               "#{inspect(from)} to #{inspect(to)}"
+
+        assert Calendrical.interval(to, from, :days) == Enum.reverse(days),
+               "#{inspect(to)} to #{inspect(from)}"
+      end
+    end
+
+    test "interval_stream/3 runs from the earlier day to the later, and back" do
+      for variant <- @variants, {from_iso, to_iso} <- @ranges do
+        from = Date.convert!(from_iso, variant)
+        to = Date.convert!(to_iso, variant)
+        days = for iso <- Date.range(from_iso, to_iso), do: Date.convert!(iso, variant)
+
+        assert Enum.to_list(Calendrical.interval_stream(from, to, :days)) == days,
+               "#{inspect(from)} to #{inspect(to)}"
+
+        assert Enum.to_list(Calendrical.interval_stream(to, from, :days)) == Enum.reverse(days),
+               "#{inspect(to)} to #{inspect(from)}"
+      end
+    end
+
+    test "an interval of months is the plain Julian calendar's, relabelled" do
+      plain =
+        Calendrical.interval(
+          Date.convert!(~D[2023-10-10], Calendrical.Julian),
+          Date.convert!(~D[2024-05-10], Calendrical.Julian),
+          :months
+        )
+
+      assert length(plain) == 8
+
+      for variant <- @variants do
+        from = Date.convert!(~D[2023-10-10], variant)
+        to = Date.convert!(~D[2024-05-10], variant)
+
+        assert Calendrical.interval(from, to, :months) ==
+                 Enum.map(plain, &Date.convert!(&1, variant)),
+               inspect(variant)
+      end
+    end
+  end
 end

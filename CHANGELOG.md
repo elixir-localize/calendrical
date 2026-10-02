@@ -78,6 +78,8 @@ The format is based on
 
 ### Fixed
 
+* `Calendrical.interval/3` and `interval_stream/3` order their two dates by the days their calendar counts, where `Date.compare/2` ordered them by their fields without asking it. In the Julian new-year calendars, where 1 January follows 31 December of the same year, 19 December to 15 January in `Calendrical.Julian.March25` is its 28 days, where it was 69 dates from one and 270 from the other.
+
 * Every calendar's `parse_date/1`, `parse_naive_datetime/1` and `parse_utc_datetime/1` answer text that is no date with `{:error, :invalid_format}`, as `Calendar.ISO` does, where a field of letters raised `ArgumentError` and a malformed time or offset returned `:error` or the text. A negative year's date is checked in that year, so "-0003-13-06" is no Coptic date.
 
 * A calendar of weeks writes its year with four digits at least, as `Calendar.ISO` does, so a week date before year 1000 reads back: "0004-W09-7", where it wrote "4-W09-7".

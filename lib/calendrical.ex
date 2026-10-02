@@ -3782,7 +3782,7 @@ defmodule Calendrical do
   end
 
   def interval(date_from, date_to, precision) when precision in @valid_precision do
-    if Date.compare(date_from, date_to) == :lt do
+    if compare_days(date_from, date_to) == :lt do
       calculate_interval(date_from, date_from, date_to, precision, 1)
     else
       calculate_interval(date_to, date_to, date_from, precision, 1)
@@ -3791,12 +3791,26 @@ defmodule Calendrical do
   end
 
   defp calculate_interval(date_origin, date_from, date_to, precision, iteration) do
-    if Date.compare(date_from, date_to) in [:lt, :eq] do
+    if compare_days(date_from, date_to) in [:lt, :eq] do
       {shift_unit, multiplier} = precision_to_shift(precision)
       next_date = Date.shift(date_origin, [{shift_unit, iteration * multiplier}])
       [date_from | calculate_interval(date_origin, next_date, date_to, precision, iteration + 1)]
     else
       []
+    end
+  end
+
+  # Which of two dates is the earlier day, by the days their calendars count
+  # (`Date.diff/2`). `Date.compare/2` orders two dates of one calendar by
+  # their fields and never asks the calendar, and the fields are not in the
+  # order of the days where a year turns after its first month: in
+  # `Calendrical.Julian.March25`, 1 January follows 31 December of the same
+  # year.
+  defp compare_days(date, other) do
+    case Date.diff(date, other) do
+      0 -> :eq
+      days when days < 0 -> :lt
+      _days -> :gt
     end
   end
 
@@ -3982,7 +3996,7 @@ defmodule Calendrical do
   end
 
   def interval_stream(date_from, date_to, precision) do
-    if Date.compare(date_from, date_to) == :gt do
+    if compare_days(date_from, date_to) == :gt do
       interval_stream_backward(date_from, date_to, precision)
     else
       interval_stream_forward(date_from, date_to, precision)
@@ -3999,7 +4013,7 @@ defmodule Calendrical do
         {shift_unit, multiplier} = precision_to_shift(precision)
         next_date = Date.shift(date_from, [{shift_unit, iteration * multiplier}])
 
-        if Date.compare(next_date, date_to) == :gt do
+        if compare_days(next_date, date_to) == :gt do
           {:halt, next_date}
         else
           {[next_date], {date_from, date_to, precision, iteration + 1}}
@@ -4019,7 +4033,7 @@ defmodule Calendrical do
         {shift_unit, multiplier} = precision_to_shift(precision)
         next_date = Date.shift(date_from, [{shift_unit, -(iteration * multiplier)}])
 
-        if Date.compare(next_date, date_to) == :lt do
+        if compare_days(next_date, date_to) == :lt do
           {:halt, next_date}
         else
           {[next_date], {date_from, date_to, precision, iteration + 1}}
