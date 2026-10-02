@@ -60,9 +60,9 @@ defmodule Calendrical.CalendarCreationTest do
     end
 
     # Calendars that do not make a calendar are an error for the process
-    # that gave them, and the server goes on to create the next.
+    # that gave them, and the next calendar is created.
     test "answers with the error of calendars that do not make a calendar" do
-      assert {:error, %UndefinedFunctionError{module: NotACalendar}} =
+      assert {:error, %Calendrical.InvalidCalendarModuleError{module: NotACalendar}} =
                Calendrical.Composite.new(Creation.NoCalendar,
                  calendars: [%{year: 1700, month: 3, day: 1, calendar: NotACalendar}]
                )
@@ -84,6 +84,30 @@ defmodule Calendrical.CalendarCreationTest do
 
       assert Calendrical.Composite.new(Calendrical.Gregorian, calendars: [:nope]) ==
                {:module_already_exists, Calendrical.Gregorian}
+    end
+  end
+
+  # Contents that do not compile are an error for the process that gave
+  # them, and the server goes on to create the next module.
+  describe "Calendrical.Compiler.create_module/3" do
+    test "answers with what the contents raise, and creates the next module" do
+      env = Macro.Env.location(__ENV__)
+
+      assert {:error, %RuntimeError{message: "not compiled"}} =
+               Calendrical.Compiler.create_module(
+                 Creation.Uncompiled,
+                 quote(do: raise("not compiled")),
+                 env
+               )
+
+      refute Code.ensure_loaded?(Creation.Uncompiled)
+
+      assert {:ok, Creation.Compiled} =
+               Calendrical.Compiler.create_module(
+                 Creation.Compiled,
+                 quote(do: @compiled(true)),
+                 env
+               )
     end
   end
 

@@ -12,8 +12,6 @@ Calendrical's open work. Design documents live in `plans/`.
 
 * [ ] **Arithmetic into days that have no dates** — where a year's number does not change on 1 January two stretches of days carry the same year, month and day and the later has no dates (England's 1 January to 24 March 1156), so `Date.shift(~D[1155-12-15 Calendrical.Reform.England], month: 1)` answers `~D[1155-01-15 Calendrical.Reform.England]`, a day 334 days earlier. Answer the next day that has a date, 25 March 1156, or an error: a decision to make.
 
-* [ ] **A composite accepts changes of calendar it cannot keep** — `Calendrical.Composite.new/2` and `use Calendrical.Composite` take a change on a day its calendar does not have (`%{year: 1700, month: 13, day: 1}` in `Calendrical.Gregorian`), a calendar that numbers its years above the next one's first (Hebrew, then Gregorian from 1900: every Hebrew year from 1900 on reads as a Gregorian one), and two year styles in a row whose year has two stretches of days, where `year/1` makes `Date.range/2` infer a negative range and warn. Validate the changes, or document what a composite can hold.
-
 * [ ] **A composite counts the days of a month its year does not have** — England's 1751 began on 25 March, and `days_in_month(1751, 1)` is 31, `days_in_month(1751, 2)` 28 and `months_in_year(1751)` 12: the answers of the calendar that had the year, for months it had no days of.
 
 * [ ] **Umm al-Qura years outside the official tables** — ICU4C 78.3 falls back to the civil calendar there, and `Calendrical.Islamic.UmmAlQura` begins some years a day earlier: 1 Muharram 1178 is 1764-06-30 here and 1764-07-01 in ICU (also 607, 717, 758 and 1261 AH). Find which fallback Calendrical uses and document or change it.
@@ -33,6 +31,8 @@ Calendrical's open work. Design documents live in `plans/`.
 * [ ] **`Calendrical.LunarJapanese` reads the first day of year -10001 back as year -10002** — `date_from_iso_days(date_to_iso_days(-10001, 1, 1))` is `{-10002, 1, 1}`, far outside the years its astronomy is good for; found where a composite's base calendar was given no first day.
 
 ## Done
+
+* [x] **A composite refuses changes of calendar it cannot keep** — a change on a day its calendar does not have, a calendar that is no calendar module, a composite or a calendar of weeks, two changes on one day, and a calendar numbering its first year before the last of the one before (Hebrew, then Gregorian from 1900) are errors, documented in `Calendrical.Composite`; `year/1` runs between the year's days that have dates of their own, never backwards. 2026-10-03, v1.4.0.
 
 * [x] **A composite's `diff/3` compares the day `plus/6` reaches** — it read back the date written for that day, which names another day where a day has no date of its own, and stepped to its count from the difference of the years' numbers: `Calendrical.Reform.England.diff({1155, 6, 15}, {1155, 12, 20}, :months)` was 8 and is 6, and across `Calendrical.Reform.Japan`'s change from 1228 to 1873 a count of years took a minute and of months did not answer in four, where both answer at once, as `Localize.Duration.new/2` between two such dates does. 2026-10-03, v1.4.0.
 

@@ -219,7 +219,7 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
     end
 
     test "extract_options/1 raises on entries that are not dates" do
-      assert_raise ArgumentError, ~r/Unknown date found/, fn ->
+      assert_raise ArgumentError, ~r/:calendars must be dates/, fn ->
         Config.extract_options(calendars: [:not_a_date])
       end
     end

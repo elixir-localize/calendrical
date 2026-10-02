@@ -41,6 +41,8 @@ Read the `:calendars` list as "on this day, switch to this calendar":
 * from 1751‑03‑25 — Julian with the year starting on 1 January;
 * from 1752‑09‑14 — the proleptic Gregorian calendar.
 
+Each marker must be a date its calendar has, and each must fall on a day of its own. The calendars are calendar modules of months, `Calendar.ISO` among them as `Calendrical.Gregorian`, and neither a calendar of weeks nor another composite calendar. No calendar may number its first year before the last year of the calendar before it, since the dates of a year carrying two calendars' numbers could name only one of its days; a year's number may stay the same, as England's 1155 does. `use Calendrical.Composite` raises for a configuration it cannot keep, and `Calendrical.Composite.new/2` returns `{:error, reason}`.
+
 ## "Missing" days
 
 When a territory adopts the Gregorian calendar it skips the days by which the

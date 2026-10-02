@@ -390,8 +390,9 @@ defmodule Calendrical.Composite.Compiler do
       # days of a year are consecutive — England's 1751 runs from Lady
       # Day, 25 March, and Russia's 1492, the last reckoned from 1 March,
       # from 1 March to 31 August. `Calendrical`'s functions of a year ask
-      # for these days: where two stretches of days carry the same dates,
-      # the dates `year/1` gives a year's first or last day name another.
+      # for these days: where two stretches of days carry the same dates
+      # one has none of its own, and `year/1` runs between the dates of the
+      # other.
       @doc false
       def year_bounds(year) do
         @segments
@@ -509,14 +510,23 @@ defmodule Calendrical.Composite.Compiler do
       def days_in_week, do: 7
 
       @doc """
-      Returns a `Date.Range` representing a given year: every day that
-      carries the year, from whichever day it begins on.
+      Returns a `Date.Range` representing a given year: from the first
+      to the last of its days that has a date of its own, from whichever
+      day it begins on.
+
+      Where a change of the day a year begins on gives two stretches of a
+      year's days the same dates, one of them has no dates of its own and
+      the range runs between the dates of the other: England's 1155 is 1
+      January to 31 December, although its days ran on to 24 March 1156.
+      `days_in_year/1` counts every day of the year.
 
       """
       @impl true
       def year(year) do
-        case year_bounds(year) do
-          {first, last} -> Date.range(date_at(first), date_at(last))
+        with {first, last} <- year_bounds(year),
+             {first, last} <- Calendrical.Base.Common.dated_days(__MODULE__, first, last) do
+          Date.range(date_at(first), date_at(last))
+        else
           nil -> {:error, :invalid_date}
         end
       end

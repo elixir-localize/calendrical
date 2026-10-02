@@ -29,6 +29,20 @@ defmodule Calendrical.Composite do
 
   The `:base_calendar` option indicates the calendar in use before any of the configured transitions. It defaults to `Calendrical.Julian`, and it has no first day: every day before the first transition is a date of it.
 
+  ## What a composite calendar can hold
+
+  Each transition is a date of the calendar that takes effect on it, and each takes effect on a day of its own. Every calendar is a calendar module of months, `Calendar.ISO` among them as `Calendrical.Gregorian`: a calendar of weeks cannot be one, nor can another composite calendar, since a composite counts months through a transition.
+
+  A calendar must not number its first year before the last year of the calendar before it. The Hebrew calendar followed by the Gregorian from 1900 would give the Gregorian years from 1900 the numbers of Hebrew years from 1900 to 5660, and the dates of those years could name only one of their days. A year's number may stay the same through a transition, as it does where the day a year begins on changes (see below).
+
+  `use Calendrical.Composite` raises for a configuration it cannot keep, and `new/2` returns `{:error, reason}`:
+
+      iex> Calendrical.Composite.new(MyApp.HebrewThenGregorian,
+      ...>   calendars: [~D[1900-01-01 Calendrical.Gregorian]],
+      ...>   base_calendar: Calendrical.Hebrew
+      ...> )
+      {:error, :years_must_not_go_back}
+
   ## Julian to Gregorian transition
 
   One of the principal uses of this calendar is to define a calendar
@@ -105,13 +119,16 @@ defmodule Calendrical.Composite do
       iex> Calendrical.Reform.England.valid_date?(1155, 2, 29)
       false
 
-  The days are days of the year all the same: England's 1155 has 449, and ends on 24 March 1156. `Calendrical.first_gregorian_day_of_year/2` and `Calendrical.last_gregorian_day_of_year/2` give a year's first and last days in the Gregorian calendar, where each has a date of its own:
+  The days are days of the year all the same: England's 1155 has 449, and ends on 24 March 1156. `Calendrical.first_gregorian_day_of_year/2` and `Calendrical.last_gregorian_day_of_year/2` give a year's first and last days in the Gregorian calendar, where each has a date of its own. The year's range of dates runs between the dates that have days of their own:
 
       iex> Calendrical.Reform.England.days_in_year(1155)
       449
 
       iex> Calendrical.last_gregorian_day_of_year(1155, Calendrical.Reform.England)
       ~D[1156-03-31 Calendrical.Gregorian]
+
+      iex> Calendrical.Reform.England.year(1155)
+      Date.range(~D[1155-01-01 Calendrical.Reform.England], ~D[1155-12-31 Calendrical.Reform.England])
 
   A change from a year that begins before 1 January to the January year does the same from the other side. A year reckoned from 1 September or 25 December takes the number of the January year it ends in, so where it gives way on 1 January, as Russia's September year did in 1700, its last months already carry the number the new year keeps: those labels name the later days, and September to December 1699 have none of their own.
 
@@ -164,6 +181,20 @@ defmodule Calendrical.Composite do
 
   alias Calendrical.Composite.Config
 
+  @typedoc """
+  The reason `new/2` cannot create a composite calendar.
+
+  """
+  @type error_reason ::
+          :no_calendars_configured
+          | :must_be_a_list_of_dates
+          | :invalid_date
+          | :must_not_be_composite_calendars
+          | :must_not_be_week_calendars
+          | :must_take_effect_on_different_days
+          | :years_must_not_go_back
+          | Exception.t()
+
   defmacro __using__(options \\ []) do
     quote bind_quoted: [options: options] do
       require Calendrical.Composite.Compiler
@@ -201,7 +232,7 @@ defmodule Calendrical.Composite do
 
   * `{:module_already_exists, calendar_module}` if a module with the same name already exists. Of the processes that create the same calendar at the same moment, one creates it and the others are answered this.
 
-  * `{:error, reason}` if the calendar cannot be created, where `reason` is `:no_calendars_configured`, `:must_be_a_list_of_dates`, or the exception raised by `:calendars` that do not make a calendar.
+  * `{:error, reason}` if the calendar cannot be created, where `reason` is `:no_calendars_configured`, `:must_be_a_list_of_dates`, `:invalid_date` for a date its calendar does not have, a `Calendrical.InvalidCalendarModuleError` for a calendar that is no calendar module, `:must_not_be_composite_calendars`, `:must_not_be_week_calendars`, `:must_take_effect_on_different_days`, `:years_must_not_go_back` (see "What a composite calendar can hold" above), or the exception a calendar raises for a date it does not reach.
 
   ### Examples
 
@@ -213,7 +244,7 @@ defmodule Calendrical.Composite do
   @spec new(module(), Keyword.t()) ::
           {:ok, Calendrical.calendar()}
           | {:module_already_exists, module()}
-          | {:error, :must_be_a_list_of_dates | :no_calendars_configured | Exception.t()}
+          | {:error, error_reason()}
   def new(calendar_module, options) when is_atom(calendar_module) and is_list(options) do
     if Code.ensure_loaded?(calendar_module) do
       {:module_already_exists, calendar_module}

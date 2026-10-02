@@ -106,20 +106,29 @@ defmodule Calendrical.Base.Common do
   defp week_range(calendar, first_day, last_day) do
     days =
       if composite?(calendar),
-        do: Enum.filter(first_day..last_day, &date?(calendar, &1)),
-        else: [first_day, last_day]
+        do: dated_days(calendar, first_day, last_day),
+        else: {first_day, last_day}
 
     case days do
-      [] ->
-        {:error, :invalid_date}
-
-      [first_day | _rest] ->
-        last_day = List.last(days)
-
+      {first_day, last_day} ->
         Date.range(
           date_from_iso_days(calendar, first_day),
           date_from_iso_days(calendar, last_day)
         )
+
+      nil ->
+        {:error, :invalid_date}
+    end
+  end
+
+  # The first and the last of the days from `first_day` to `last_day` that
+  # have a date of their own, one that names the day itself, or nil where
+  # none has. They are the days a range of dates can run between: the date
+  # of any other day names a day somewhere else.
+  def dated_days(calendar, first_day, last_day) do
+    with first_day when is_integer(first_day) <-
+           Enum.find(first_day..last_day//1, &date?(calendar, &1)) do
+      {first_day, Enum.find(last_day..first_day//-1, &date?(calendar, &1))}
     end
   end
 

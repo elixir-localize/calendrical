@@ -34,6 +34,8 @@ The format is based on
 
 * `Calendrical.Julian.Dec25` and `Calendrical.Julian.Sept1` number a year by the Julian year it ends in, as the Nativity style (C. R. Cheney, *A Handbook of Dates*) and the Byzantine year were reckoned: year 1100 begins on 25 December 1099 and on 1 September 1099, where each began a year later. `March1` and `March25` are unchanged, and a composite built on either changed calendar names its change of calendar in the new numbering.
 
+* `Calendrical.Composite.new/2` and `use Calendrical.Composite` refuse a configuration a composite cannot keep: a change on a day its calendar does not have, a calendar that is no calendar module (now `Calendrical.InvalidCalendarModuleError`, where it was `UndefinedFunctionError`), a composite or a calendar of weeks as a calendar, two changes on one day, or a calendar numbering its first year before the last year of the calendar before it, as the Hebrew calendar followed by the Gregorian from 1900 would. `new/2` returns `{:error, reason}` and `use` raises, where such a configuration made a calendar whose dates named the wrong days.
+
 ### Added
 
 * `Calendrical.diff/3`, and a `diff/3` callback on every calendar, count the whole years, quarters, months, weeks or days from one date to another — the inverse of `plus/6`, negative backwards. The Hebrew and lunisolar calendars count months in one calculation, from the Metonic cycle and the new moons.
@@ -85,6 +87,8 @@ The format is based on
 * `Calendrical.Gettext` interpolates with `Localize.Gettext.Interpolation`, and the exception messages are written in MessageFormat 2 with `{$name}` placeholders, extracted to `priv/gettext/calendrical.pot`. The messages read as they did.
 
 ### Fixed
+
+* A composite calendar's `year/1` runs from the first to the last of a year's days that has a date of its own, so England's 1155 is 1 January to 31 December, where it ended on 24 March, and a year whose two ends have no dates of their own gives `Date.range/2` no negative range and warning. A change of calendar dated before the base calendar's year -9999 takes effect after the base calendar, where the two changed places.
 
 * A composite calendar's `diff/3` compares the day `plus/6` reaches and brackets its count from the days between the two dates, where it read back the date written for that day and stepped from the difference of the years' numbers. `Calendrical.Reform.England.diff({1155, 6, 15}, {1155, 12, 20}, :months)` is 6, where it was 8, and a count across `Calendrical.Reform.Japan`'s 1873 change answers at once, where years took a minute and months did not answer in four.
 
