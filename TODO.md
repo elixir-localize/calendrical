@@ -4,8 +4,6 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Open
 
-* [ ] **`Calendrical.strftime/3` raises for `%B` and `%b` in a calendar of weeks** — its dates' month field holds a week, which has no name, and what the lookup answers makes `Calendar.strftime/3` raise `ArgumentError`. Write the period's CLDR generic name ("M06"), or the week.
-
 * [ ] **The Persian calendar raises outside Gregorian 1001 to 3000** — `valid_date?/3` answers `false` there, so its date callbacks and Localize return errors for such a date, but `months_in_year/1` and `days_in_month/2` raise `Calendrical.UnsupportedDateRangeError`, and so does converting a date outside the range into it, so `Localize.Date.parse("0001-001", calendar: Calendrical.Persian)` raises as it does for the Umm al-Qura calendar (below). Answer those callbacks, or reject the year, without raising.
 
 * [ ] **A date before 1 AH raises in `Calendrical.Islamic.UmmAlQura`** — `naive_datetime_from_iso_days/1` raises `Calendrical.IslamicYearOutOfRangeError` (Hijri year nil), and the `Calendar` behaviour gives it no error to return, so `Date.convert/2` raises and so does `Localize.Date.parse("0500-03-15", calendar: Calendrical.Islamic.UmmAlQura)`. ICU4C's civil fallback (below) would answer it.
@@ -29,6 +27,8 @@ Calendrical's open work. Design documents live in `plans/`.
 * [ ] **`Calendrical.UnsupportedDateRangeError`'s `:range` is English prose** — the Persian calendar and the Islamic visibility calculations give it a phrase such as "dates covered by the installed JPL ephemeris", which is bound into the translated message untranslated. Carry the bounds as data and write them in the message.
 
 ## Done
+
+* [x] **`Calendrical.strftime/3` names the month and the day from the date** — it named them by the date's fields, so a calendar of weeks raised from week 13 and named a week as a month, Hebrew, Chinese leap and fiscal months were misnamed, and every calendar whose weeks begin on another day than Monday named the wrong day (1 January 2019 "Wednesday" in Hebrew). It now asks `Localize.Calendar.localize/3`; `strftime_options!/1` documents that it names by the field numbers. Held by `test/strftime_test.exs`. 2026-10-03, v1.4.0.
 
 * [x] **`iso_week_of_year/3` gives the ISO week of the day a fiscal calendar's date names** — `Calendrical.Base.Month` read the date's fields as a Gregorian date, so the five fiscal month calendars gave the wrong week (`Calendrical.FiscalYear.US.iso_week_of_year(2019, 1, 1)`, 1 October 2018, was `{2019, 1}` and is `{2018, 40}`) and raised `ArgumentError` where the fields name no Gregorian day. Held for 22 calendars over every day of 2018 to 2020 against `:calendar.iso_week_number/1` by `test/iso_week_of_year_test.exs`. 2026-10-03, v1.4.0.
 

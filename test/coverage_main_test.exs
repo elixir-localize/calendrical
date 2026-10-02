@@ -274,8 +274,8 @@ defmodule Calendrical.CoverageMainTest do
       assert Calendrical.strftime(~D[2026-07-05], "%d/%m/%Y") == "05/07/2026"
     end
 
-    test "strftime localizes a week calendar date" do
-      assert Calendrical.strftime(~D[2025-01-26 Calendrical.IL], "%a", locale: :he) == "יום ב׳"
+    test "strftime names the day of a calendar whose weeks begin on Sunday" do
+      assert Calendrical.strftime(~D[2025-01-26 Calendrical.IL], "%a", locale: :he) == "יום א׳"
     end
 
     test "strftime_options! returns localization callback options" do

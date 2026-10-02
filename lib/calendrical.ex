@@ -1068,13 +1068,23 @@ defmodule Calendrical do
   to ease formatting for localized calendars. Localized strings will
   be automatically injected as options to `Calendar.strftime/3`.
 
+  The month and the day of the week are named from the date, as
+  `Localize.Calendar.localize/3` names them, not from its fields: a
+  Hebrew month by its year, a Chinese leap month as a leap month, a
+  fiscal calendar's month by the month of the year it is, a calendar of
+  weeks' week by the month it falls in, and the day by the day it is,
+  whichever day the calendar's weeks begin on.
+
   See `Calendar.strftime/3` for details of formatting strings and
   other options.
 
   Examples:
 
       iex> Calendrical.strftime(~D[2025-01-26 Calendrical.IL], "%a", locale: :he)
-      "יום ב׳"
+      "יום א׳"
+
+      iex> Calendrical.strftime(Date.new!(5779, 7, 1, Calendrical.Hebrew), "%A %B", locale: :en)
+      "Friday Adar II"
 
   """
   @spec strftime(any_date_time(), String.t(), Keyword.t()) :: String.t()
@@ -1082,8 +1092,36 @@ defmodule Calendrical do
     calendar = Map.get(date_or_time_or_datetime, :calendar)
     options = Keyword.merge(options, calendar: calendar)
     strftime_options = strftime_options!(options)
+    locale = Keyword.get(options, :locale, Localize.get_locale())
+
+    strftime_options =
+      Keyword.merge(strftime_options, date_names(date_or_time_or_datetime, locale))
 
     Calendar.strftime(date_or_time_or_datetime, format, strftime_options)
+  end
+
+  # `Calendar.strftime/3` passes the name callbacks the month field and the
+  # calendar's own day of the week, which name a month or a day only where
+  # they are the CLDR month and the ISO day. The date names them itself.
+  defp date_names(%{year: year, month: month, day: day} = date, locale)
+       when is_integer(year) and is_integer(month) and is_integer(day) do
+    [
+      month_names: fn _month -> date_name!(date, :month, locale, :wide) end,
+      abbreviated_month_names: fn _month -> date_name!(date, :month, locale, :abbreviated) end,
+      day_of_week_names: fn _day -> date_name!(date, :day_of_week, locale, :wide) end,
+      abbreviated_day_of_week_names: fn _day ->
+        date_name!(date, :day_of_week, locale, :abbreviated)
+      end
+    ]
+  end
+
+  defp date_names(_time, _locale), do: []
+
+  defp date_name!(date, part, locale, style) do
+    case Localize.Calendar.localize(date, part, locale: locale, style: style) do
+      {:ok, name} -> name
+      {:error, exception} -> raise exception
+    end
   end
 
   @doc """
@@ -1092,6 +1130,14 @@ defmodule Calendrical do
 
   `strftime_options!` returns a keyword list than can be used as
   options to return localised names for days, months and am/pm.
+
+  `Calendar.strftime/3` passes the name callbacks the month field and
+  the calendar's own number for the day of the week, so these options
+  name them by those numbers. That is right for a calendar whose month
+  field is the CLDR month and whose weeks begin on Monday, and wrong
+  for the Hebrew and lunisolar calendars, fiscal and week calendars,
+  and calendars whose weeks begin on another day. `strftime/3` names
+  the month and the day from the date and is right for every calendar.
 
   ## Arguments
 
@@ -1118,9 +1164,9 @@ defmodule Calendrical do
 
   ## Typical usage
 
-      iex> Calendar.strftime(~D[2025-01-26 Calendrical.IL], "%a",
-      ...>   Calendrical.strftime_options!(calendar: Calendrical.IL, locale: "en"))
-      "Mon"
+      iex> Calendar.strftime(~D[2025-01-26], "%a",
+      ...>   Calendrical.strftime_options!(locale: "en"))
+      "Sun"
 
   """
   @spec strftime_options!(Keyword.t()) :: Keyword.t()
