@@ -412,7 +412,9 @@ The composite calendar:
 
 * Round-trips correctly: `Date.shift(~D[1752-09-02 MyApp.England], day: 1)` returns `~D[1752-09-14 MyApp.England]`.
 
-You can chain any number of transitions and combine any pair of calendars. See `lib/calendrical/calendars/england.ex` and `lib/calendrical/calendars/russia.ex` for two pre-built examples.
+* Counts the days of an era in one count through a transition, though each calendar begins the era on its own day: `Date.day_of_era/1` is `{639798, 1}` on 2 September 1752 and `{639799, 1}` on 14 September, the next day.
+
+You can chain any number of transitions and combine any pair of calendars. See `Calendrical.Reform.England`, `Calendrical.Reform.Sweden` and `Calendrical.Reform.Japan` for three pre-built examples.
 
 ## Sharing logic across related calendars
 

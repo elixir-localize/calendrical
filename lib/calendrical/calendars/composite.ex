@@ -110,6 +110,29 @@ defmodule Calendrical.Composite do
   no label of their own; historians write them with both years
   ("10 March 1155/6").
 
+  ## Eras
+
+  The era of a date, and its year of the era, are those of the calendar
+  in effect on the date. The days of an era are one count through every
+  change of calendar the era runs through: from the era's first day, as
+  the calendar in effect when it began counts them, or, for an era
+  counted back from its last day as the years before the common era
+  are, as the calendar in effect when it ended counts them. So the day
+  after 2 September 1752 in England is the next day of the common era,
+  although the Gregorian calendar begins that era two days after the
+  Julian calendar does:
+
+      iex> Calendrical.Reform.England.day_of_era(1752, 9, 2)
+      {639798, 1}
+
+      iex> Calendrical.Reform.England.day_of_era(1752, 9, 14)
+      {639799, 1}
+
+  An era runs through a change of calendar when the calendars either
+  side of it name their eras from the same CLDR calendar and give the
+  same era there. Where they do not, as with the Coptic and Julian
+  calendars of Egypt above, each calendar's days of its era are its own.
+
   """
 
   alias Calendrical.Composite.Config

@@ -11,7 +11,7 @@ defmodule Calendrical.Composite.Compiler do
     segments = options |> Calendrical.Composite.Config.segments() |> Macro.escape()
     transition_months = Calendrical.Composite.Config.transition_months(options)
 
-    Module.put_attribute(env.module, :calendar_config, config)
+    Module.put_attribute(env.module, :calendar_config, options)
 
     quote location: :keep,
           bind_quoted: [
@@ -110,6 +110,18 @@ defmodule Calendrical.Composite.Compiler do
         date
         |> Date.convert!(__MODULE__)
         |> calendar_for_date()
+      end
+
+      # The place among `@segments` of the segment a date is in, found as
+      # `calendar_for_date/3` finds its calendar, without converting the
+      # date: a calendar can appear in more than one segment.
+      for {{_iso_days, y, m, d, _calendar}, index} <- Enum.reverse(Enum.with_index(config)) do
+        defp segment_for_date(year, month, day)
+             when year > unquote(y) or
+                    (year >= unquote(y) and month > unquote(m)) or
+                    (year >= unquote(y) and month >= unquote(m) and day >= unquote(d)) do
+          unquote(index)
+        end
       end
 
       @doc """
@@ -280,11 +292,18 @@ defmodule Calendrical.Composite.Compiler do
       @doc """
       Calculates the day and era for the given date.
 
+      The era is the one the calendar in effect on the date gives, and
+      its days are counted in one count through every change of calendar
+      the era runs through: that of the calendar in effect where the era
+      begins, or where it ends for an era whose days are counted back from
+      its last. So the day after 2 September 1752 in England, 14
+      September, is the next day of the era.
+
       """
       @impl true
       def day_of_era(year, month, day) do
-        calendar = calendar_for_date(year, month, day)
-        calendar.day_of_era(year, month, day)
+        index = segment_for_date(year, month, day)
+        Calendrical.Composite.Era.day_of_era(@segments, index, year, month, day)
       end
 
       @doc """

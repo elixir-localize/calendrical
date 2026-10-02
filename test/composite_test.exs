@@ -39,4 +39,35 @@ defmodule Calendrical.CompositeTest do
                Calendrical.Composite.new(Calendrical.Russia, calendars: [~D[1900-01-01]])
     end
   end
+
+  describe "a composite calendar's configuration" do
+    # Julian 25 March 1155 is 1 April in the Gregorian calendar, seven days
+    # on, and Julian 25 March 1751 is 5 April, eleven days on.
+    test "is its changes of calendar: the first day of each, and its calendar" do
+      assert [
+               {_first, -9999, 1, 1, Calendrical.Julian},
+               {lady_day, 1155, 3, 25, Calendrical.Julian.March25},
+               {january, 1751, 3, 25, Calendrical.Julian.Jan1},
+               {gregorian, 1752, 9, 14, Calendrical.Gregorian}
+             ] = Calendrical.Reform.England.__config__()
+
+      assert lady_day == Date.to_gregorian_days(~D[1155-04-01])
+      assert january == Date.to_gregorian_days(~D[1751-04-05])
+      assert gregorian == Date.to_gregorian_days(~D[1752-09-14])
+    end
+
+    test "is the same in a calendar created at runtime" do
+      {:ok, calendar} =
+        Calendrical.Composite.new(MyTest.Composite.Configured,
+          calendars: [~D[1700-03-01 Calendrical.Gregorian]]
+        )
+
+      assert [
+               {_first, -9999, 1, 1, Calendrical.Julian},
+               {gregorian, 1700, 3, 1, Calendrical.Gregorian}
+             ] = calendar.__config__()
+
+      assert gregorian == Date.to_gregorian_days(~D[1700-03-01])
+    end
+  end
 end

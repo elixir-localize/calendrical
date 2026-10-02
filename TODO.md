@@ -10,6 +10,8 @@ Calendrical's open work. Design documents live in `plans/`.
 
 * [ ] **A composite calendar whose members differ in CLDR type** — every composite's `cldr_calendar_type/0` is `:gregorian`, so `Calendrical.Reform.Japan`'s lunisolar dates before 1873 take Gregorian month names ("February" for the second lunar month) and no leap-month pattern. Naming them from the calendar in effect needs Localize to ask for it, or such composites to be split: a decision to make.
 
+* [ ] **A composite of two Islamic calendars keeps each one's count of an era's days** — an era runs through a change of calendar only where both calendars take their eras from the same CLDR calendar (`era_calendar_type/0`), and each of the five Islamic calendars has its own, so next to another of them `Calendrical.Islamic.Tbla`, which begins the Hijri era a day earlier (CLDR's 18 July 622 against 19 July), counts a day of the era twice or leaves one out. CLDR gives all five the era codes `ah` and `bh`: decide whether a shared code makes one era, given that the Coptic and Ethiopic calendars both call a different era `am`.
+
 * [ ] **Umm al-Qura years outside the official tables** — ICU4C 78.3 falls back to the civil calendar there, and `Calendrical.Islamic.UmmAlQura` begins some years a day earlier: 1 Muharram 1178 is 1764-06-30 here and 1764-07-01 in ICU (also 607, 717, 758 and 1261 AH). Find which fallback Calendrical uses and document or change it.
 
 * [ ] **A date before 1 AH raises in `Calendrical.Islamic.UmmAlQura`** — `naive_datetime_from_iso_days/1` raises `Calendrical.IslamicYearOutOfRangeError` (Hijri year nil), and the `Calendar` behaviour gives it no error to return, so `Date.convert/2` raises and so does `Localize.Date.parse("0500-03-15", calendar: Calendrical.Islamic.UmmAlQura)`. ICU4C's civil fallback (above) would answer it.
@@ -18,11 +20,15 @@ Calendrical's open work. Design documents live in `plans/`.
 
 * [ ] **Eras around 1 January AD 1 in `Calendrical.NRF`** — `day_of_era/3` takes the Gregorian date's era and `year_of_era/3` the calendar year's, so they disagree on NRF's fiscal year 0 days in AD 1.
 
-* [ ] **A composite calendar's `day_of_era/3` steps back where its calendar changes** — it is the member calendar's answer, counted from that member's own first day, and the Julian and Gregorian calendars' first days are two days apart: in `Calendrical.Reform.England` 2 September 1752 is day 639,798 and the next day, 14 September, is 639,797, the number 1 September has. Count a composite's days of the era from one day, its base calendar's.
+* [ ] **Which January year a `Calendrical.Julian.Dec25` or `Sept1` year is** — every new-year variant begins year N on its new-year day within January year N, so `Dec25`'s year 800 runs from 25 December 800 to 24 December 801 and 1 January 801 is `{800, 1, 1}`. That is the English reckoning from 25 March, but the Nativity style is usually described as beginning a week before 1 January of the same number (Christmas Day 800 the first day of 801), and the Byzantine year four months before: check against Cheney's *Handbook of Dates* and decide, since the composites' labels depend on it.
+
+* [ ] **Docs that still describe `ex_cldr_calendars`** — `Calendrical.new/3`'s examples point at "the included calendars in `ex_cldr_calendars`", in a code fence that names no language, and `calendar_from_territory/1` says `Calendrical.Persian` needs the optional `ex_cldr_calendars_persian`, where it is part of Calendrical.
 
 * [ ] **Delegate `Calendrical.TimeZone.resolve/3` to Localize** — Localize now parses and resolves a zone in every form a locale writes (`Localize.DateTime.Timezone.parse_zone/2` and `resolve/3`) and no longer calls this module, which duplicates it with a table of abbreviations and resolves a fall-back hour to daylight time where ICU and Localize take standard.
 
 ## Done
+
+* [x] **A composite calendar counts an era's days in one count** — `day_of_era/3` gave the member calendar's own count, which stepped at every change of calendar an era runs through (back a day at each of the 34 Julian to Gregorian reforms, by 82 and 84 days at England's changes of new year's day); it counts on from the era's first day in the calendar in effect when the era began, or back from its last in the one in effect when it ended. 2026-10-02, v1.4.0.
 
 * [x] **`Calendrical.Reform.Sweden.Transitional` has no year 0** — outside 1700 to 1712 it answers as the Julian calendar it is: `plus/6` and `diff/3` step from 1 BC to AD 1, `valid_date?/3` accepts December of 1 BC and refuses year 0, and its eras, days of era and extended year are the Julian calendar's, on every day of 8 BC to AD 8. 2026-10-02, v1.4.0.
 

@@ -80,6 +80,10 @@ The format is based on
 
 ### Fixed
 
+* A composite calendar's `day_of_era/3` counts an era's days in one count through every change of calendar the era runs through, where each member calendar counted from its own first day: 14 September 1752 in `Calendrical.Reform.England` is day 639,799 of the common era, the day after 639,798, where it was 639,797. An era runs through a change where both calendars name their eras from the same CLDR calendar, and is counted on from its first day in the earlier calendar, or back from its last day in the later.
+
+* A composite calendar's `__config__/0` returns its changes of calendar as `{iso_days, year, month, day, calendar}` tuples, where it returned them quoted.
+
 * `extended_year/3` counts a Julian year BC from 0 down, as TR35 defines the extended year, so `Calendrical.Julian.extended_year(-1, 6, 15)` is 0, where it was -1. The Julian new-year variants and the composite calendars answer the same.
 
 * `Calendrical.Reform.Sweden.Transitional` has no year 0, as the Julian calendar it is outside 1700 to 1712 has none: `plus/6` and `diff/3` step from 1 BC to AD 1, `valid_date?/3` accepts December of 1 BC, and its eras and days of era are the Julian calendar's.
