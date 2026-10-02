@@ -10,6 +10,10 @@ defmodule Calendrical.Formatter.InvalidOptionError do
 
   """
 
+  use Localize.Message.Sigils,
+    backend: Calendrical.Gettext,
+    sigils: [domain: "calendrical", context: "option"]
+
   defexception [:option, :value]
 
   @impl true
@@ -19,13 +23,9 @@ defmodule Calendrical.Formatter.InvalidOptionError do
 
   @impl true
   def message(%__MODULE__{option: option, value: value}) do
-    Gettext.dpgettext(
-      Calendrical.Gettext,
-      "calendrical",
-      "option",
-      "Invalid option or option value. Found option %{option} with value %{value}",
-      option: inspect(option),
-      value: inspect(value)
-    )
+    option = inspect(option)
+    value = inspect(value)
+
+    ~t"Invalid option or option value. Found option #{option} with value #{value}"
   end
 end

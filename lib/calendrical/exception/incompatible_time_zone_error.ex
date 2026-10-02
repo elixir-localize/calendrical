@@ -10,6 +10,10 @@ defmodule Calendrical.IncompatibleTimeZoneError do
 
   """
 
+  use Localize.Message.Sigils,
+    backend: Calendrical.Gettext,
+    sigils: [domain: "calendrical", context: "date"]
+
   defexception [:from, :to]
 
   @impl true
@@ -19,13 +23,9 @@ defmodule Calendrical.IncompatibleTimeZoneError do
 
   @impl true
   def message(%__MODULE__{from: from, to: to}) do
-    Gettext.dpgettext(
-      Calendrical.Gettext,
-      "calendrical",
-      "date",
-      "The two values must be in the same time zone. Found %{from} and %{to}",
-      from: inspect(from),
-      to: inspect(to)
-    )
+    from = inspect(from)
+    to = inspect(to)
+
+    ~t"The two values must be in the same time zone. Found #{from} and #{to}"
   end
 end

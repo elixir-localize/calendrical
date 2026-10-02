@@ -82,7 +82,21 @@ The format is based on
 
 * The Chinese, Korean, Vietnamese and Lunar Japanese calendars find a year's new year once per question and each new moon once, so `valid_date?/3`, `days_in_month/2`, `days_in_year/1`, `leap_year?/1`, `leap_month/1`, `new/3` and `lunar_month_of_year/2` ask for far fewer new moons — a quarter as many across a lunisolar holiday corpus. Results are unchanged.
 
+* `Calendrical.Gettext` interpolates with `Localize.Gettext.Interpolation`, and the exception messages are written in MessageFormat 2 with `{$name}` placeholders, extracted to `priv/gettext/calendrical.pot`. The messages read as they did.
+
 ### Fixed
+
+* `Calendrical.first_day_of_year/2`, `last_day_of_year/2`, `first_gregorian_day_of_year/2`, `last_gregorian_day_of_year/2` and `date_from_day_of_year/3` take a year's days from the calendar's own `year/1`, where `last_day_of_year/2` and the Gregorian-day functions raised `UndefinedFunctionError` in every calendar but the compiled month and week calendars and the first day was always month 1, day 1. They answer for `Calendar.ISO` too, and a year the calendar does not have is `{:error, :invalid_date}`.
+
+* A composite calendar reads a date in the calendar that has its year, where the calendar it falls in by the order of its year, month and day has no day of that year, so the first year of a calendar whose year turns after January has all its dates: with a September year taking effect on 1 September 1492, January to August 1493 were no dates. A date before year -9999 is the base calendar's, where `valid_date?/3`, `date_to_iso_days/3` and `days_in_month/2` raised `FunctionClauseError`.
+
+* `Date.shift/2` and `NaiveDateTime.shift/2` by years and months in a composite calendar add them in the calendar in effect on the date and count the months on across a change of calendar, as `plus/6` does, where they measured a year from the first of the month, which is no date where a change begins a month part of the way through: 25 March 1751 in `Calendrical.Reform.England` and one month was 25 April 1752. A shift by years across the 1873 change in `Calendrical.Reform.Japan` answers at once, where it did not in four minutes.
+
+* A year added to a date of a composite calendar across a change of calendar is as many months as the calendar in effect on the date counts, thirteen in the Coptic calendar and through a lunisolar calendar's leap month, where `plus/6` walked twelve. A year on from 22 November 1872 in `Calendrical.Reform.Japan`, the 22nd of its tenth lunisolar month, is 22 November 1873, where it was 22 October.
+
+* `Calendrical.Composite.new/2` and `Calendrical.Reform.calendar_for/1` create a calendar in the `Calendrical.Compiler` server, as `Calendrical.new/3` does, so of the processes creating the same calendar at once one creates it and the others find it, where all but one raised `CompileError`. `:calendars` that do not compile to a calendar return `{:error, exception}`, where they raised.
+
+* An exception's `message/1` is written whatever its fields hold: `Calendrical.MissingFieldsError` with `:fields` a list of names or `nil`, and `Calendrical.UnsupportedDateRangeError` with a `:range` that is not text, raised inside `Exception.message/1`.
 
 * No year is numbered 0 in a Julian new-year calendar: `valid_date?/3` accepted the days of a year 0 that lie in the neighbouring Julian year, so `Date.new(0, 6, 15, Calendrical.Julian.Sept1)` was a date, and `month/2`, `quarter/2`, `quadrimester/2` and `semester/2` answered for one.
 

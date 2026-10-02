@@ -9,6 +9,10 @@ defmodule Calendrical.Formatter.InvalidDateError do
 
   """
 
+  use Localize.Message.Sigils,
+    backend: Calendrical.Gettext,
+    sigils: [domain: "calendrical", context: "format"]
+
   defexception [:date]
 
   @impl true
@@ -18,12 +22,8 @@ defmodule Calendrical.Formatter.InvalidDateError do
 
   @impl true
   def message(%__MODULE__{date: date}) do
-    Gettext.dpgettext(
-      Calendrical.Gettext,
-      "calendrical",
-      "format",
-      "Invalid date %{date}",
-      date: inspect(date)
-    )
+    date = inspect(date)
+
+    ~t"Invalid date #{date}"
   end
 end

@@ -10,6 +10,10 @@ defmodule Calendrical.InvalidTypeError do
 
   """
 
+  use Localize.Message.Sigils,
+    backend: Calendrical.Gettext,
+    sigils: [domain: "calendrical", context: "format"]
+
   defexception [:type, :valid_types]
 
   @impl true
@@ -19,13 +23,9 @@ defmodule Calendrical.InvalidTypeError do
 
   @impl true
   def message(%__MODULE__{type: type, valid_types: valid_types}) do
-    Gettext.dpgettext(
-      Calendrical.Gettext,
-      "calendrical",
-      "format",
-      "The date format type %{type} is not known. Valid format types are %{valid_types}",
-      type: inspect(type),
-      valid_types: inspect(valid_types)
-    )
+    type = inspect(type)
+    valid_types = inspect(valid_types)
+
+    ~t"The date format type #{type} is not known. Valid format types are #{valid_types}"
   end
 end

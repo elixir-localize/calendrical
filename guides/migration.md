@@ -119,7 +119,7 @@ Calendrical's exceptions have been completely restructured:
 
 * **One file per exception** in `lib/calendrical/exception/`, mirroring the layout used by Localize.
 * **Semantic struct fields** instead of a single opaque `:message` string. Callers can now pattern-match on the exception's data fields.
-* **`gettext`-based messages** so error text can be translated. The backend is `Calendrical.Gettext` and messages are in the `"calendrical"` domain with contexts `"calendar"`, `"date"`, `"format"`, and `"option"`.
+* **`gettext`-based messages** so error text can be translated. The backend is `Calendrical.Gettext`, and the messages are written in MessageFormat 2 (`{$name}` placeholders, interpolated by `Localize.Gettext.Interpolation`) in the `"calendrical"` domain, with the contexts `"calendar"`, `"date"`, `"format"`, `"option"` and `"style"`. The template is `priv/gettext/calendrical.pot`.
 * **All names end with `Error`** for consistency with the Localize convention.
 
 | Old | New | Fields |

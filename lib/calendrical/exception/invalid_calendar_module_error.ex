@@ -9,6 +9,10 @@ defmodule Calendrical.InvalidCalendarModuleError do
 
   """
 
+  use Localize.Message.Sigils,
+    backend: Calendrical.Gettext,
+    sigils: [domain: "calendrical", context: "calendar"]
+
   defexception [:module]
 
   @impl true
@@ -18,12 +22,8 @@ defmodule Calendrical.InvalidCalendarModuleError do
 
   @impl true
   def message(%__MODULE__{module: module}) do
-    Gettext.dpgettext(
-      Calendrical.Gettext,
-      "calendrical",
-      "calendar",
-      "%{module} is not a calendar module.",
-      module: inspect(module)
-    )
+    module = inspect(module)
+
+    ~t"#{module} is not a calendar module."
   end
 end

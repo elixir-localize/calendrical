@@ -10,6 +10,10 @@ defmodule Calendrical.InvalidStyleError do
 
   """
 
+  use Localize.Message.Sigils,
+    backend: Calendrical.Gettext,
+    sigils: [domain: "calendrical", context: "style"]
+
   defexception [:style, :valid_styles]
 
   @impl true
@@ -19,13 +23,9 @@ defmodule Calendrical.InvalidStyleError do
 
   @impl true
   def message(%__MODULE__{style: style, valid_styles: valid_styles}) do
-    Gettext.dpgettext(
-      Calendrical.Gettext,
-      "calendrical",
-      "style",
-      "The date style %{style} is not known. Valid styles are %{valid_styles}",
-      style: inspect(style),
-      valid_styles: inspect(valid_styles)
-    )
+    style = inspect(style)
+    valid_styles = inspect(valid_styles)
+
+    ~t"The date style #{style} is not known. Valid styles are #{valid_styles}"
   end
 end

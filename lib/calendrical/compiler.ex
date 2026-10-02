@@ -4,9 +4,9 @@ defmodule Calendrical.Compiler do
   use GenServer
   alias Calendrical.Config
 
-  # Creating a calendar macro-expands the full month/week compiler
-  # quote block, which can take well over the 5-second GenServer
-  # default on a cold or loaded system.
+  # Creating a calendar macro-expands the full month, week or composite
+  # compiler quote block, which can take well over the 5-second
+  # GenServer default on a cold or loaded system.
   @compile_timeout :timer.seconds(30)
 
   def start_link(state) do
@@ -34,12 +34,20 @@ defmodule Calendrical.Compiler do
               unquote(Macro.escape(config))
         end
 
-      GenServer.call(
-        __MODULE__,
-        {:compile, calendar_module, contents, Macro.Env.location(__ENV__)},
-        @compile_timeout
-      )
+      case create_module(calendar_module, contents, Macro.Env.location(__ENV__)) do
+        {:module_already_exists, module} -> {:ok, module}
+        other -> other
+      end
     end
+  end
+
+  # Creates `module` from its quoted `contents`, in this server. Returns
+  # `{:ok, module}` when it is created, `{:module_already_exists, module}`
+  # when it is loaded already, as it is for the later of two callers
+  # creating the same module at once, and `{:error, exception}` when it
+  # does not compile.
+  def create_module(module, contents, env) do
+    GenServer.call(__MODULE__, {:compile, module, contents, env}, @compile_timeout)
   end
 
   ## Callbacks
@@ -58,7 +66,7 @@ defmodule Calendrical.Compiler do
   @impl true
   def handle_call({:compile, module, contents, env}, _from, state) do
     if Code.ensure_loaded?(module) do
-      {:reply, {:ok, module}, state}
+      {:reply, {:module_already_exists, module}, state}
     else
       try do
         {:module, ^module, _binary, :ok} = Module.create(module, contents, env)

@@ -9,6 +9,10 @@ defmodule Calendrical.Formatter.UnknownFormatterError do
 
   """
 
+  use Localize.Message.Sigils,
+    backend: Calendrical.Gettext,
+    sigils: [domain: "calendrical", context: "format"]
+
   defexception [:formatter]
 
   @impl true
@@ -18,12 +22,8 @@ defmodule Calendrical.Formatter.UnknownFormatterError do
 
   @impl true
   def message(%__MODULE__{formatter: formatter}) do
-    Gettext.dpgettext(
-      Calendrical.Gettext,
-      "calendrical",
-      "format",
-      "Invalid formatter %{formatter}",
-      formatter: inspect(formatter)
-    )
+    formatter = inspect(formatter)
+
+    ~t"Invalid formatter #{formatter}"
   end
 end

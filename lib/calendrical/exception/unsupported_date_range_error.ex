@@ -20,6 +20,10 @@ defmodule Calendrical.UnsupportedDateRangeError do
 
   """
 
+  use Localize.Message.Sigils,
+    backend: Calendrical.Gettext,
+    sigils: [domain: "calendrical", context: "date"]
+
   defexception [:calendar, :value, :range]
 
   @impl true
@@ -29,25 +33,22 @@ defmodule Calendrical.UnsupportedDateRangeError do
 
   @impl true
   def message(%__MODULE__{calendar: nil, value: value, range: range}) do
-    Gettext.dpgettext(
-      Calendrical.Gettext,
-      "calendrical",
-      "date",
-      "The date %{value} is outside the supported range of %{range}",
-      range: to_string(range),
-      value: inspect(value)
-    )
+    value = inspect(value)
+    range = description(range)
+
+    ~t"The date #{value} is outside the supported range of #{range}"
   end
 
   def message(%__MODULE__{calendar: calendar, value: value, range: range}) do
-    Gettext.dpgettext(
-      Calendrical.Gettext,
-      "calendrical",
-      "date",
-      "The %{calendar} calendar supports dates in %{range}. Found %{value}",
-      calendar: inspect(calendar),
-      range: to_string(range),
-      value: inspect(value)
-    )
+    calendar = inspect(calendar)
+    value = inspect(value)
+    range = description(range)
+
+    ~t"The #{calendar} calendar supports dates in #{range}. Found #{value}"
   end
+
+  # The range is described in words. Whatever else an exception was built
+  # with is shown as it is: a message is no place to raise.
+  defp description(range) when is_binary(range), do: range
+  defp description(range), do: inspect(range)
 end

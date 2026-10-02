@@ -27,9 +27,7 @@ defmodule Calendrical.Composite do
   end
   ```
 
-  The `:base_calendar` option indicates the calendar in use before
-  any of the configured transitions. It defaults to
-  `Calendrical.Julian`.
+  The `:base_calendar` option indicates the calendar in use before any of the configured transitions. It defaults to `Calendrical.Julian`, and it has no first day: every day before the first transition is a date of it.
 
   ## Julian to Gregorian transition
 
@@ -89,13 +87,29 @@ defmodule Calendrical.Composite do
       iex> Calendrical.Reform.England.days_in_year(1751)
       282
 
+  ## Years that begin on another day
+
+  A calendar need not begin its years on 1 January: `Calendrical.Julian.March25` begins them on 25 March and `Calendrical.Julian.Sept1` on 1 September, and its year then holds months that come before the month it begins in.
+
+  A date's year, month and day are read in the calendar they fall in among the transitions, taken in order: the calendar of the last transition they are not before. Where that calendar has no day of the date's year, they are read in the calendar that has. A year reckoned from 1 September that takes effect on 1 September 1492 begins its year 1493 on that day, and the January to August that follow are dates of that year, although they come before September in the order of the months:
+
+      iex> {:ok, muscovy} =
+      ...>   Calendrical.Composite.new(MyApp.Muscovy,
+      ...>     calendars: [~D[1493-09-01 Calendrical.Julian.Sept1]]
+      ...>   )
+      iex> Date.new!(1493, 1, 15, muscovy) |> Date.convert!(Calendrical.Julian)
+      ~D[1493-01-15 Calendrical.Julian]
+
+  A change to a year that begins later — England's move to Lady Day, 25 March, in 1155 — numbers the days from 1 January to 24 March of the following year with the year that already named the same days a year earlier. Those labels name the earlier days, and the later ones have no label of their own; historians write them with both years ("10 March 1155/6"). A leap day among them has none either: 29 February 1156 would be 29 February 1155, a day the February those labels name does not have.
+
+      iex> Calendrical.Reform.England.valid_date?(1155, 2, 29)
+      false
+
+  A change from a year that begins before 1 January to the January year does the same from the other side. A year reckoned from 1 September or 25 December takes the number of the January year it ends in, so where it gives way on 1 January, as Russia's September year did in 1700, its last months already carry the number the new year keeps: those labels name the later days, and September to December 1699 have none of their own.
+
   ## Arithmetic across a transition
 
-  Years, quarters and months are added in the calendar in effect on the
-  date. When the result falls under another calendar the months are
-  counted on through each calendar's own months, from January however a
-  year-start style numbers its years, and a day the resulting month does
-  not have becomes the month's next day that exists, or its last day:
+  Years, quarters and months are added in the calendar in effect on the date, a year being as many months as that calendar counts. When the result falls under another calendar the months are counted on through each calendar's own months, from January however a year-start style numbers its years, and a day the resulting month does not have becomes the month's next day that exists, or its last day:
 
       iex> Date.shift(~D[1752-08-20 Calendrical.Reform.England], month: 1)
       ~D[1752-09-20 Calendrical.Reform.England]
@@ -103,20 +117,10 @@ defmodule Calendrical.Composite do
       iex> Date.shift(~D[1752-08-05 Calendrical.Reform.England], month: 1)
       ~D[1752-09-14 Calendrical.Reform.England]
 
-  A change to a year that begins later — England's move to Lady Day,
-  25 March, in 1155 — numbers the days from 1 January to 24 March of the
-  following year with the year that already named the same days a year
-  earlier. Those labels name the earlier days, and the later ones have
-  no label of their own; historians write them with both years
-  ("10 March 1155/6").
+  A change of calendar can begin a month part of the way through it, as England's year 1751 began on 25 March. A month before that day is 25 February, in the year the calendar before it numbered 1750:
 
-  A change from a year that begins before 1 January to the January
-  year does the same from the other side. A year reckoned from 1
-  September or 25 December takes the number of the January year it
-  ends in, so where it gives way on 1 January, as Russia's September
-  year did in 1700, its last months already carry the number the new
-  year keeps: those labels name the later days, and September to
-  December 1699 have none of their own.
+      iex> Date.shift(~D[1751-03-25 Calendrical.Reform.England], month: -1)
+      ~D[1750-02-25 Calendrical.Reform.England]
 
   ## Eras
 
@@ -187,8 +191,9 @@ defmodule Calendrical.Composite do
 
   * `{:ok, module}` if the calendar is successfully created, or
 
-  * `{:module_already_exists, calendar_module}` if a module with
-    the same name already exists.
+  * `{:module_already_exists, calendar_module}` if a module with the same name already exists. Of the processes that create the same calendar at the same moment, one creates it and the others are answered this.
+
+  * `{:error, reason}` if the calendar cannot be created, where `reason` is `:no_calendars_configured`, `:must_be_a_list_of_dates`, or the exception raised by `:calendars` that do not make a calendar.
 
   ### Examples
 
@@ -200,7 +205,7 @@ defmodule Calendrical.Composite do
   @spec new(module(), Keyword.t()) ::
           {:ok, Calendrical.calendar()}
           | {:module_already_exists, module()}
-          | {:error, :must_be_a_list_of_dates | :no_calendars_configured}
+          | {:error, :must_be_a_list_of_dates | :no_calendars_configured | Exception.t()}
   def new(calendar_module, options) when is_atom(calendar_module) and is_list(options) do
     if Code.ensure_loaded?(calendar_module) do
       {:module_already_exists, calendar_module}
@@ -209,6 +214,10 @@ defmodule Calendrical.Composite do
     end
   end
 
+  # The module is created in the `Calendrical.Compiler` server, as every
+  # calendar created at runtime is, one at a time: of the processes that
+  # create the same calendar at once, one creates it and the others find
+  # it loaded.
   defp create_calendar(calendar_module, config) do
     with {:ok, config} <- Config.validate_options(config) do
       contents =
@@ -217,10 +226,11 @@ defmodule Calendrical.Composite do
               unquote(Macro.escape(config))
         end
 
-      {:module, module, _, :ok} =
-        Module.create(calendar_module, contents, Macro.Env.location(__ENV__))
-
-      {:ok, module}
+      Calendrical.Compiler.create_module(
+        calendar_module,
+        contents,
+        Macro.Env.location(__ENV__)
+      )
     end
   end
 end

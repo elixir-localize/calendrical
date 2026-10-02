@@ -78,6 +78,8 @@ iex> Date.shift(~D[1751-12-31 CompositeCalendar.England], day: 1)
 ~D[1752-01-01 CompositeCalendar.England]
 ```
 
+A year that begins after January holds months that come before the month it begins in, and a date in them is read in the calendar whose days carry its year, so the first year of a calendar that takes effect part of the way through its months has all of its dates. Where two days carry the same year, month and day, as 10 March does in England's 1155 and again in 1156, the date names one of them: `Calendrical.Composite` says which.
+
 ## Multiple transitions — and a 30 February
 
 Sweden has the most unusual history in Europe, and `Calendrical.Reform.Sweden`

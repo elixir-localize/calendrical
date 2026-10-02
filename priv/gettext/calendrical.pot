@@ -1,0 +1,96 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/calendrical/exception/islamic_year_out_of_range_error.ex:36
+#, elixir-autogen, icu-format
+msgctxt "calendar"
+msgid "Hijri year {$year} is outside the supported Umm al-Qura range {$min_year}..{$max_year}"
+msgstr ""
+
+#: lib/calendrical/exception/incompatible_calendar_error.ex:29
+#, elixir-autogen, icu-format
+msgctxt "calendar"
+msgid "The two values must be in the same calendar. Found {$from} and {$to}"
+msgstr ""
+
+#: lib/calendrical/exception/invalid_calendar_module_error.ex:27
+#, elixir-autogen, icu-format
+msgctxt "calendar"
+msgid "{$module} is not a calendar module."
+msgstr ""
+
+#: lib/calendrical/exception/unsupported_date_range_error.ex:39
+#, elixir-autogen, icu-format
+msgctxt "date"
+msgid "The date {$value} is outside the supported range of {$range}"
+msgstr ""
+
+#: lib/calendrical/exception/incompatible_time_zone_error.ex:29
+#, elixir-autogen, icu-format
+msgctxt "date"
+msgid "The two values must be in the same time zone. Found {$from} and {$to}"
+msgstr ""
+
+#: lib/calendrical/exception/invalid_date_order_error.ex:29
+#, elixir-autogen, icu-format
+msgctxt "date"
+msgid "The values must be ordered from earlier to later. Found {$from} and {$to}"
+msgstr ""
+
+#: lib/calendrical/exception/unsupported_date_range_error.ex:47
+#, elixir-autogen, icu-format
+msgctxt "date"
+msgid "The {$calendar} calendar supports dates in {$range}. Found {$value}"
+msgstr ""
+
+#: lib/calendrical/exception/missing_fields_error.ex:34
+#, elixir-autogen, icu-format
+msgctxt "date"
+msgid "{$function} requires at least {$required}. Found {$found}"
+msgstr ""
+
+#: lib/calendrical/exception/invalid_date_error.ex:27
+#, elixir-autogen, icu-format
+msgctxt "format"
+msgid "Invalid date {$date}"
+msgstr ""
+
+#: lib/calendrical/exception/unknown_formatter_error.ex:27
+#, elixir-autogen, icu-format
+msgctxt "format"
+msgid "Invalid formatter {$formatter}"
+msgstr ""
+
+#: lib/calendrical/exception/invalid_type_error.ex:29
+#, elixir-autogen, icu-format
+msgctxt "format"
+msgid "The date format type {$type} is not known. Valid format types are {$valid_types}"
+msgstr ""
+
+#: lib/calendrical/exception/invalid_part_error.ex:29
+#, elixir-autogen, icu-format
+msgctxt "format"
+msgid "The date part {$part} is not known. Valid date parts are {$valid_parts}"
+msgstr ""
+
+#: lib/calendrical/exception/invalid_option_error.ex:29
+#, elixir-autogen, icu-format
+msgctxt "option"
+msgid "Invalid option or option value. Found option {$option} with value {$value}"
+msgstr ""
+
+#: lib/calendrical/exception/invalid_style_error.ex:29
+#, elixir-autogen, icu-format
+msgctxt "style"
+msgid "The date style {$style} is not known. Valid styles are {$valid_styles}"
+msgstr ""

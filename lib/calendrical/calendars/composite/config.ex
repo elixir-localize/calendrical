@@ -74,7 +74,8 @@ defmodule Calendrical.Composite.Config do
   # carry, and their first and last months in the calendar's civil
   # numbering. A Julian year-start variant counts its months as the
   # Julian calendar does, from January, whatever its labels say; any
-  # other calendar counts its own. The first segment is open-ended before.
+  # other calendar counts its own. The first segment is open-ended before:
+  # the base calendar has no first day.
   def segments(config) do
     ends =
       config
@@ -89,7 +90,7 @@ defmodule Calendrical.Composite.Config do
       first? = index > 0
 
       %{
-        first: first,
+        first: if(first?, do: first),
         last: last,
         calendar: calendar,
         civil: civil,

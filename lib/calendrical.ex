@@ -1247,14 +1247,38 @@ defmodule Calendrical do
       iex> Calendrical.first_day_of_year(2019, Calendrical.NRF)
       %Date{calendar: Calendrical.NRF, day: 1, month: 1, year: 2019}
 
+      iex> Calendrical.first_day_of_year(1700, Calendrical.Julian.March25)
+      ~D[1700-03-25 Calendrical.Julian.March25]
+
   """
   @spec first_day_of_year(year :: year(), calendar :: calendar()) ::
           Date.t() | {:error, :invalid_date}
 
   def first_day_of_year(year, calendar) do
-    with {:ok, date} <- Date.new(year, 1, 1, calendar) do
-      date
+    with %Date.Range{first: first} <- year_range(year, calendar) do
+      first
     end
+  end
+
+  # The days of a calendar's year are those of its own `year/1`: a year
+  # need not begin on the first day of a first month, nor end in a twelfth.
+  # `Calendar.ISO` has no `year/1`, and its year is the Gregorian
+  # calendar's.
+  defp year_range(year, Calendar.ISO) do
+    with %Date.Range{first: first, last: last} <- year_range(year, Calendrical.Gregorian) do
+      Date.range(%{first | calendar: Calendar.ISO}, %{last | calendar: Calendar.ISO})
+    end
+  end
+
+  defp year_range(year, calendar) when is_integer(year) do
+    case calendar.year(year) do
+      %Date.Range{} = range -> range
+      _no_such_year -> {:error, :invalid_date}
+    end
+  end
+
+  defp year_range(_year, _calendar) do
+    {:error, :invalid_date}
   end
 
   @doc """
@@ -1314,24 +1338,16 @@ defmodule Calendrical do
       iex> Calendrical.last_day_of_year(2019, Calendrical.NRF)
       %Date{calendar: Calendrical.NRF, day: 7, month: 52, year: 2019}
 
+      iex> Calendrical.last_day_of_year(5786, Calendrical.Hebrew)
+      ~D[5786-12-29 Calendrical.Hebrew]
+
   """
-  @spec last_day_of_year(year :: year(), calendar :: calendar()) :: Date.t()
-
-  def last_day_of_year(year, Calendar.ISO) do
-    last_month = Calendar.ISO.months_in_year(year)
-    last_day = Calendar.ISO.days_in_month(year, last_month)
-
-    with {:ok, date} <- Date.new(year, last_month, last_day) do
-      date
-    end
-  end
+  @spec last_day_of_year(year :: year(), calendar :: calendar()) ::
+          Date.t() | {:error, :invalid_date}
 
   def last_day_of_year(year, calendar) do
-    iso_days = calendar.last_gregorian_day_of_year(year)
-
-    with {year, month, day} <- calendar.date_from_iso_days(iso_days),
-         {:ok, date} <- Date.new(year, month, day, calendar) do
-      date
+    with %Date.Range{last: last} <- year_range(year, calendar) do
+      last
     end
   end
 
@@ -1355,7 +1371,7 @@ defmodule Calendrical do
       ~D[2019-12-31]
 
   """
-  @spec last_day_of_year(date :: date()) :: Date.t()
+  @spec last_day_of_year(date :: date()) :: Date.t() | {:error, :invalid_date}
 
   def last_day_of_year(%Date{year: year, calendar: calendar}) do
     last_day_of_year(year, calendar)
@@ -1367,7 +1383,7 @@ defmodule Calendrical do
   end
 
   @doc """
-  Returns the gregorian date of the first day of of a `year`
+  Returns the gregorian date of the first day of a `year`
   for a `calendar`.
 
   ### Arguments
@@ -1427,22 +1443,25 @@ defmodule Calendrical do
       iex> Calendrical.first_gregorian_day_of_year(2019, Calendrical.NRF)
       %Date{calendar: Calendrical.Gregorian, day: 3, month: 2, year: 2019}
 
+      iex> Calendrical.first_gregorian_day_of_year(5786, Calendrical.Hebrew)
+      ~D[2025-09-23 Calendrical.Gregorian]
+
   """
   @spec first_gregorian_day_of_year(year(), calendar()) ::
           Date.t() | {:error, :invalid_date}
   def first_gregorian_day_of_year(year, calendar) do
-    {year, month, day} =
-      year
-      |> calendar.first_gregorian_day_of_year()
-      |> Calendrical.Gregorian.date_from_iso_days()
-
-    with {:ok, date} <- Date.new(year, month, day, Calendrical.Gregorian) do
-      date
+    with %Date.Range{first_in_iso_days: iso_days} <- year_range(year, calendar) do
+      gregorian_date(iso_days)
     end
   end
 
+  defp gregorian_date(iso_days) do
+    {year, month, day} = Calendrical.Gregorian.date_from_iso_days(iso_days)
+    %Date{year: year, month: month, day: day, calendar: Calendrical.Gregorian}
+  end
+
   @doc """
-  Returns the gregorian date of the first day of a `year`
+  Returns the gregorian date of the last day of a `year`
   for a `calendar`.
 
   ### Arguments
@@ -1502,17 +1521,15 @@ defmodule Calendrical do
       iex> Calendrical.last_gregorian_day_of_year(2019, Calendrical.NRF)
       %Date{calendar: Calendrical.Gregorian, day: 1, month: 2, year: 2020}
 
+      iex> Calendrical.last_gregorian_day_of_year(5786, Calendrical.Hebrew)
+      ~D[2026-09-11 Calendrical.Gregorian]
+
   """
   @spec last_gregorian_day_of_year(year(), calendar()) ::
           Date.t() | {:error, :invalid_date}
-  def last_gregorian_day_of_year(year, calendar) when is_integer(year) do
-    {year, month, day} =
-      year
-      |> calendar.last_gregorian_day_of_year()
-      |> Calendrical.Gregorian.date_from_iso_days()
-
-    with {:ok, date} <- Date.new(year, month, day, Calendrical.Gregorian) do
-      date
+  def last_gregorian_day_of_year(year, calendar) do
+    with %Date.Range{last_in_iso_days: iso_days} <- year_range(year, calendar) do
+      gregorian_date(iso_days)
     end
   end
 
@@ -3605,22 +3622,31 @@ defmodule Calendrical do
   defp shift_months(date, _calendar, 0, 0), do: date
 
   defp shift_months({year, month, day}, calendar, years, months) do
-    if week_based?(calendar) do
-      # A calendar of weeks keeps its week in the new year and shifts by
-      # months from the week and day of the month, placing the day once.
-      {year, month, day}
-      |> plus_unless_zero(calendar, :years, years)
-      |> plus_unless_zero(calendar, :months, months)
-    else
-      # The years move the month by a whole number of months, measured from
-      # the first of the month, which every month has: twelve a year, or the
-      # months of the years crossed where a lunisolar month keeps its name.
-      # The date is shifted by those months and the months asked for in one
-      # step, so the calendar brings the day into the month reached once, as
-      # its `plus/6` does for a shorter month or a reform's missing days.
-      {year_on, month_on, _first} = plus_unless_zero({year, month, 1}, calendar, :years, years)
-      months = calendar.diff({year, month, 1}, {year_on, month_on, 1}, :months) + months
-      plus_unless_zero({year, month, day}, calendar, :months, months)
+    cond do
+      week_based?(calendar) ->
+        # A calendar of weeks keeps its week in the new year and shifts by
+        # months from the week and day of the month, placing the day once.
+        {year, month, day}
+        |> plus_unless_zero(calendar, :years, years)
+        |> plus_unless_zero(calendar, :months, months)
+
+      shifts_months?(calendar) ->
+        # A composite calendar adds the years and months itself, in the
+        # calendar in effect on the date: the first of a month is no date
+        # of it where a change of calendar begins the month part of the
+        # way through.
+        calendar.shift_months(year, month, day, years, months)
+
+      true ->
+        # The years move the month by a whole number of months, measured from
+        # the first of the month, which every month has: twelve a year, or the
+        # months of the years crossed where a lunisolar month keeps its name.
+        # The date is shifted by those months and the months asked for in one
+        # step, so the calendar brings the day into the month reached once, as
+        # its `plus/6` does for a shorter month.
+        {year_on, month_on, _first} = plus_unless_zero({year, month, 1}, calendar, :years, years)
+        months = calendar.diff({year, month, 1}, {year_on, month_on, 1}, :months) + months
+        plus_unless_zero({year, month, day}, calendar, :months, months)
     end
   end
 
@@ -3637,6 +3663,10 @@ defmodule Calendrical do
 
   defp week_based?(calendar) do
     function_exported?(calendar, :calendar_base, 0) and calendar.calendar_base() == :week
+  end
+
+  defp shifts_months?(calendar) do
+    function_exported?(calendar, :shift_months, 5)
   end
 
   @doc false
@@ -4298,26 +4328,23 @@ defmodule Calendrical do
       iex> Calendrical.date_from_day_of_year(2019, 366)
       {:error, :invalid_date}
 
+      iex> Calendrical.date_from_day_of_year(1700, 1, Calendrical.Julian.March25)
+      ~D[1700-03-25 Calendrical.Julian.March25]
+
   """
   @spec date_from_day_of_year(Calendar.year(), pos_integer(), calendar()) ::
           Date.t() | {:error, :invalid_date}
   def date_from_day_of_year(year, day_of_year, calendar \\ Calendrical.Gregorian)
 
+  # The days of a year are counted from its first day, whichever day of
+  # the calendar that is.
   def date_from_day_of_year(year, day_of_year, calendar)
       when is_integer(year) and is_integer(day_of_year) and day_of_year > 0 do
-    iso_days = calendar.date_to_iso_days(year, 1, 1) + day_of_year - 1
-
-    if day_of_year <= calendar.days_in_year(year) do
-      {year, month, day} = calendar.date_from_iso_days(iso_days)
-
-      # The field values are in `calendar`, so the struct must carry
-      # that calendar — omitting it built a struct mislabelled as
-      # Calendar.ISO.
-      with {:ok, date} <- Date.new(year, month, day, calendar) do
-        date
-      end
-    else
-      {:error, :invalid_date}
+    with %Date.Range{first: first, first_in_iso_days: first_days, last_in_iso_days: last_days} <-
+           year_range(year, calendar) do
+      if first_days + day_of_year - 1 <= last_days,
+        do: Date.add(first, day_of_year - 1),
+        else: {:error, :invalid_date}
     end
   end
 

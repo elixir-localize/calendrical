@@ -14,6 +14,10 @@ defmodule Calendrical.MissingFieldsError do
 
   """
 
+  use Localize.Message.Sigils,
+    backend: Calendrical.Gettext,
+    sigils: [domain: "calendrical", context: "date"]
+
   defexception [:function, :fields]
 
   @impl true
@@ -23,17 +27,42 @@ defmodule Calendrical.MissingFieldsError do
 
   @impl true
   def message(%__MODULE__{function: function, fields: fields}) do
-    required = fields |> Keyword.keys() |> Enum.join(", ")
-    found = Enum.map_join(fields, ", ", fn {k, v} -> "#{k}: #{inspect(v)}" end)
+    function = name(function)
+    required = required(fields)
+    found = found(fields)
 
-    Gettext.dpgettext(
-      Calendrical.Gettext,
-      "calendrical",
-      "date",
-      "%{function} requires at least %{required}. Found %{found}",
-      function: function,
-      required: required,
-      found: found
-    )
+    ~t"#{function} requires at least #{required}. Found #{found}"
   end
+
+  # The fields are a keyword list of the fields the function needs and
+  # the value a date had for each. Whatever else an exception was built
+  # with is shown as it is: a message is no place to raise.
+  defp required(fields) do
+    each(fields, fn
+      {field, _value} when is_atom(field) -> Atom.to_string(field)
+      other -> inspect(other)
+    end)
+  end
+
+  defp found(fields) do
+    each(fields, fn
+      {field, value} when is_atom(field) -> "#{field}: #{inspect(value)}"
+      other -> inspect(other)
+    end)
+  end
+
+  defp each(fields, entry) when is_list(fields) do
+    if List.improper?(fields),
+      do: inspect(fields),
+      else: Enum.map_join(fields, ", ", entry)
+  end
+
+  defp each(fields, _entry), do: inspect(fields)
+
+  defp name(function) when is_binary(function), do: function
+
+  defp name(function) when is_atom(function) and not is_nil(function),
+    do: Atom.to_string(function)
+
+  defp name(function), do: inspect(function)
 end

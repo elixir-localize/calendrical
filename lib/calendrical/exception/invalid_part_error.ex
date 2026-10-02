@@ -10,6 +10,10 @@ defmodule Calendrical.InvalidPartError do
 
   """
 
+  use Localize.Message.Sigils,
+    backend: Calendrical.Gettext,
+    sigils: [domain: "calendrical", context: "format"]
+
   defexception [:part, :valid_parts]
 
   @impl true
@@ -19,13 +23,9 @@ defmodule Calendrical.InvalidPartError do
 
   @impl true
   def message(%__MODULE__{part: part, valid_parts: valid_parts}) do
-    Gettext.dpgettext(
-      Calendrical.Gettext,
-      "calendrical",
-      "format",
-      "The date part %{part} is not known. Valid date parts are %{valid_parts}",
-      part: inspect(part),
-      valid_parts: inspect(valid_parts)
-    )
+    part = inspect(part)
+    valid_parts = inspect(valid_parts)
+
+    ~t"The date part #{part} is not known. Valid date parts are #{valid_parts}"
   end
 end

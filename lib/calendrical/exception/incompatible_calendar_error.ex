@@ -10,6 +10,10 @@ defmodule Calendrical.IncompatibleCalendarError do
 
   """
 
+  use Localize.Message.Sigils,
+    backend: Calendrical.Gettext,
+    sigils: [domain: "calendrical", context: "calendar"]
+
   defexception [:from, :to]
 
   @impl true
@@ -19,13 +23,9 @@ defmodule Calendrical.IncompatibleCalendarError do
 
   @impl true
   def message(%__MODULE__{from: from, to: to}) do
-    Gettext.dpgettext(
-      Calendrical.Gettext,
-      "calendrical",
-      "calendar",
-      "The two values must be in the same calendar. Found %{from} and %{to}",
-      from: inspect(from),
-      to: inspect(to)
-    )
+    from = inspect(from)
+    to = inspect(to)
+
+    ~t"The two values must be in the same calendar. Found #{from} and #{to}"
   end
 end

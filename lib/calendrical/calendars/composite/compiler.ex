@@ -16,7 +16,6 @@ defmodule Calendrical.Composite.Compiler do
     quote location: :keep,
           bind_quoted: [
             config: config,
-            reverse: Enum.reverse(config),
             segments: segments,
             transition_months: transition_months
           ] do
@@ -32,6 +31,7 @@ defmodule Calendrical.Composite.Compiler do
       # The member calendars' segments of the time line, in order, and
       # the months a transition cuts short or splits.
       @segments segments
+      @segment_calendars segments |> Enum.map(& &1.calendar) |> List.to_tuple()
       @transition_months transition_months
 
       import Localize.Macros
@@ -86,6 +86,57 @@ defmodule Calendrical.Composite.Compiler do
         __MODULE__
       end
 
+      # The place among `@segments` of the segment a date is read in. A
+      # date falls, by the order of its year, month and day, in the segment
+      # of the last change of calendar whose first day's it is not before,
+      # and it is read there when that segment has days of its year: its
+      # years begin with that of its first day, so only its last is asked.
+      # Where the segment has no day of the year,
+      # `Calendrical.Composite.Label` finds the segment that has. The base
+      # calendar has no first day.
+      for {{{_iso_days, y, m, d, _calendar}, %{last_year: last_year}}, index} <-
+            config |> Enum.zip(segments) |> Enum.with_index() |> Enum.drop(1) |> Enum.reverse() do
+        if last_year do
+          defp segment_for_date(year, month, day)
+               when year <= unquote(last_year) and
+                      (year > unquote(y) or
+                         (year >= unquote(y) and month > unquote(m)) or
+                         (year >= unquote(y) and month >= unquote(m) and day >= unquote(d))) do
+            unquote(index)
+          end
+
+          defp segment_for_date(year, month, day)
+               when year > unquote(y) or
+                      (year >= unquote(y) and month > unquote(m)) or
+                      (year >= unquote(y) and month >= unquote(m) and day >= unquote(d)) do
+            Calendrical.Composite.Label.segment(@segments, unquote(index), year, month, day)
+          end
+        else
+          defp segment_for_date(year, month, day)
+               when year > unquote(y) or
+                      (year >= unquote(y) and month > unquote(m)) or
+                      (year >= unquote(y) and month >= unquote(m) and day >= unquote(d)) do
+            unquote(index)
+          end
+        end
+      end
+
+      @base_last_year hd(segments).last_year
+
+      defp segment_for_date(year, _month, _day) when year <= @base_last_year, do: 0
+
+      defp segment_for_date(year, month, day) do
+        Calendrical.Composite.Label.segment(@segments, 0, year, month, day)
+      end
+
+      # The place among `@segments` of the segment a day is in.
+      for {{iso_days, _y, _m, _d, _calendar}, index} <-
+            config |> Enum.with_index() |> Enum.drop(1) |> Enum.reverse() do
+        defp segment_index(iso_days) when iso_days >= unquote(iso_days), do: unquote(index)
+      end
+
+      defp segment_index(_iso_days), do: 0
+
       @doc """
       Identify the base calendar for a given date.
 
@@ -93,13 +144,8 @@ defmodule Calendrical.Composite.Compiler do
       date based upon the configuration.
 
       """
-      for {_iso_days, y, m, d, calendar} <- reverse do
-        def calendar_for_date(year, month, day)
-            when year > unquote(y) or
-                   (year >= unquote(y) and month > unquote(m)) or
-                   (year >= unquote(y) and month >= unquote(m) and day >= unquote(d)) do
-          unquote(calendar)
-        end
+      def calendar_for_date(year, month, day) do
+        elem(@segment_calendars, segment_for_date(year, month, day))
       end
 
       def calendar_for_date(%{year: year, month: month, day: day, calendar: __MODULE__}) do
@@ -112,26 +158,12 @@ defmodule Calendrical.Composite.Compiler do
         |> calendar_for_date()
       end
 
-      # The place among `@segments` of the segment a date is in, found as
-      # `calendar_for_date/3` finds its calendar, without converting the
-      # date: a calendar can appear in more than one segment.
-      for {{_iso_days, y, m, d, _calendar}, index} <- Enum.reverse(Enum.with_index(config)) do
-        defp segment_for_date(year, month, day)
-             when year > unquote(y) or
-                    (year >= unquote(y) and month > unquote(m)) or
-                    (year >= unquote(y) and month >= unquote(m) and day >= unquote(d)) do
-          unquote(index)
-        end
-      end
-
       @doc """
       Identify the base calendar for a given iso_days.
 
       """
-      for {iso_days, _y, _m, _d, calendar} <- reverse do
-        def calendar_for_iso_days(iso_days) when iso_days >= unquote(iso_days) do
-          unquote(calendar)
-        end
+      def calendar_for_iso_days(iso_days) do
+        elem(@segment_calendars, segment_index(iso_days))
       end
 
       @doc """
@@ -141,14 +173,11 @@ defmodule Calendrical.Composite.Compiler do
       @impl true
       def valid_date?(year, month, day)
           when is_integer(year) and is_integer(month) and is_integer(day) do
-        calendar = calendar_for_date(year, month, day)
+        index = segment_for_date(year, month, day)
+        calendar = elem(@segment_calendars, index)
 
-        if calendar.valid_date?(year, month, day) do
-          iso_days = date_to_iso_days(year, month, day)
-          calendar_for_iso_days(iso_days) == calendar
-        else
-          false
-        end
+        calendar.valid_date?(year, month, day) and
+          segment_index(calendar.date_to_iso_days(year, month, day)) == index
       end
 
       def valid_date?(_year, _month, _day), do: false
@@ -381,7 +410,7 @@ defmodule Calendrical.Composite.Compiler do
       defp segment_year_bounds(%{calendar: calendar, first: first, last: last}, year) do
         case calendar.year(year) do
           %Date.Range{first_in_iso_days: year_first, last_in_iso_days: year_last} ->
-            year_first = max(year_first, first)
+            year_first = if first, do: max(year_first, first), else: year_first
             year_last = if last, do: min(year_last, last), else: year_last
             if year_first <= year_last, do: [{year_first, year_last}], else: []
 
@@ -667,13 +696,8 @@ defmodule Calendrical.Composite.Compiler do
       given `year-month-day`.
 
       """
-      for {_iso_days, y, m, d, calendar} <- reverse do
-        def date_to_iso_days(year, month, day)
-            when year > unquote(y) or
-                   (year >= unquote(y) and month > unquote(m)) or
-                   (year >= unquote(y) and month >= unquote(m) and day >= unquote(d)) do
-          unquote(calendar).date_to_iso_days(year, month, day)
-        end
+      def date_to_iso_days(year, month, day) do
+        calendar_for_date(year, month, day).date_to_iso_days(year, month, day)
       end
 
       def date_to_iso_days(%{year: year, month: month, day: day, calendar: __MODULE__}) do
@@ -691,10 +715,8 @@ defmodule Calendrical.Composite.Compiler do
       `iso_days`.
 
       """
-      for {transition_iso_days, _year, _month, _day, calendar} <- reverse do
-        def date_from_iso_days(iso_days) when iso_days >= unquote(transition_iso_days) do
-          unquote(calendar).date_from_iso_days(iso_days)
-        end
+      def date_from_iso_days(iso_days) do
+        calendar_for_iso_days(iso_days).date_from_iso_days(iso_days)
       end
 
       @doc """
@@ -798,7 +820,8 @@ defmodule Calendrical.Composite.Compiler do
       `year-month-day`, always returning a date of this calendar.
 
       Years, quarters and months are added in the calendar in effect on
-      the date. When the result falls under another calendar the months
+      the date, a year being as many months as that calendar counts.
+      When the result falls under another calendar the months
       are counted on through each calendar's own months, so one month
       after 20 August 1752 in England is 20 September 1752. A day the
       resulting month does not have becomes the month's next day that
@@ -842,8 +865,8 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
-      Shifts a date by the given duration: years, then months, then
-      weeks and days, as `plus/6` adds them.
+      Shifts a date by the given duration: the years and months
+      together, as `plus/6` adds months, and then the weeks and days.
 
       """
       @impl true
@@ -875,9 +898,34 @@ defmodule Calendrical.Composite.Compiler do
         |> date_from_iso_days()
       end
 
+      # Years and months added together, the day brought into the month
+      # reached once, for `Calendrical.shift_date/5`: the answer of the
+      # calendar in effect on the date while the date reached is under it
+      # too, and otherwise the months walked across the segments, as many
+      # as that calendar counts (`Calendrical.Composite.Shift`). The
+      # first of the month in this calendar is no reference here, as it is
+      # for other calendars: a change of calendar can begin a month part
+      # of the way through (England's March 1751 begins on the 25th), and
+      # a year reckoned from 25 March has its 1 March eleven months after
+      # its 25 March.
+      @doc false
+      def shift_months(year, month, day, years, months) do
+        calendar = calendar_for_date(year, month, day)
+        duration = Duration.new!(year: years, month: months)
+        {new_year, new_month, new_day} = calendar.shift_date(year, month, day, duration)
+
+        if calendar_for_date(new_year, new_month, new_day) == calendar and
+             valid_date?(new_year, new_month, new_day) do
+          {new_year, new_month, new_day}
+        else
+          months = Calendrical.Composite.Shift.months(calendar, year, month, duration)
+          shift_across_segments(year, month, day, months)
+        end
+      end
+
       # Within the segment of the calendar in effect the calendar's own
       # arithmetic is the answer. Otherwise the months are walked across
-      # the segments, a year being twelve of them.
+      # the segments, a year being as many of them as that calendar counts.
       defp shift_by(year, month, day, date_part, increment) do
         calendar = calendar_for_date(year, month, day)
 
@@ -888,7 +936,7 @@ defmodule Calendrical.Composite.Compiler do
              valid_date?(new_year, new_month, new_day) do
           {new_year, new_month, new_day}
         else
-          months = if date_part == :years, do: increment * 12, else: increment
+          months = Calendrical.Composite.Shift.months(calendar, year, month, date_part, increment)
           shift_across_segments(year, month, day, months)
         end
       end
@@ -899,10 +947,6 @@ defmodule Calendrical.Composite.Compiler do
         {civil_year, civil_month, _day} = to_civil(segment, year, month, day)
         {index, civil_month} = walk_months(index, {civil_year, civil_month}, months)
         resolve_day(index, civil_month, day)
-      end
-
-      defp segment_index(iso_days) do
-        Enum.count(@segments, &(&1.first <= iso_days)) - 1
       end
 
       # A month is walked in the civil numbering of its segment's
