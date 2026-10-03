@@ -40,7 +40,7 @@ defmodule Mix.Tasks.Calendrical.UmmAlQura.VerifyTest do
       Verify.run([])
 
       assert output() =~
-               "Embedded tables: 18000 months, 1/01 to 1500/12 (0622-07-19 to 2077-11-16), all checks pass"
+               "Embedded tables: 19200 months, 1/01 to 1600/12 (0622-07-19 to 2174-11-25), all checks pass"
     end
   end
 
@@ -125,8 +125,8 @@ defmodule Mix.Tasks.Calendrical.UmmAlQura.VerifyTest do
     end
 
     test "rejects data that starts outside the embedded tables" do
-      json = ~s([{"year":1501,"months":[29,30,29,30,29,30,29,30,29,30,29,30]}])
-      assert_raise Mix.Error, ~r/starts in 1501 AH/, fn -> Verify.kacst_months(json) end
+      json = ~s([{"year":1601,"months":[29,30,29,30,29,30,29,30,29,30,29,30]}])
+      assert_raise Mix.Error, ~r/starts in 1601 AH/, fn -> Verify.kacst_months(json) end
     end
   end
 

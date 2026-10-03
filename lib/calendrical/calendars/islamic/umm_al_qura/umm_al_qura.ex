@@ -14,22 +14,30 @@ defmodule Calendrical.Islamic.UmmAlQura do
 
   This module embeds the official month lengths published by KACST,
   compiled from `priv/umm_al_qura_month_lengths.csv` into one bit per
-  month. Converting an Umm al-Qura date to the Gregorian calendar is an
+  month, and ICU's for the century after them, from
+  `priv/umm_al_qura_icu_month_lengths.csv`. Converting an Umm al-Qura date to the Gregorian calendar is an
   O(1) lookup, and the reverse a binary search over the years, with no
   floating-point arithmetic at runtime.
 
   ## Coverage
 
-  The tables cover **1 AH through 1500 AH** (19 July 622 CE through
-  16 November 2077 CE), the full range KACST publishes. Run
-  `mix calendrical.umm_al_qura.verify --kacst` to compare the tables with
-  KACST's current data.
+  The tables cover **1 AH through 1600 AH** (19 July 622 CE through
+  25 November 2174 CE): KACST's published month lengths for 1 to 1500 AH,
+  the full range it publishes, and ICU4C's for 1501 to 1600 AH (from
+  `islamcal.cpp`, under the Unicode License), which take up from KACST's
+  without a gap. Run `mix calendrical.umm_al_qura.verify --kacst` to
+  compare the tables with KACST's current data.
 
   Years before and after the tables are those of the arithmetic civil
   calendar, `Calendrical.Islamic.Civil`, as ICU falls back to it outside
-  its own table. Civil 1 Muharram 1 AH and 1501 AH are the days the
+  its own table. Civil 1 Muharram 1 AH and 1601 AH are the days the
   tables begin and end on, so no year at either join is lengthened or
   shortened. The year before 1 AH is year 0.
+
+  From 1300 AH this calendar is ICU's day for day. Before 1300 AH ICU
+  has no table and takes the civil calendar's months, where this one
+  keeps KACST's published months: 8,567 of the 15,588 months of 1 to
+  1299 AH begin on another day, most of them a day earlier here.
 
   Before 1.4.0 this calendar used R.H. van Gent's tables. Those are an
   astronomical reconstruction, reproduced by
@@ -62,20 +70,19 @@ defmodule Calendrical.Islamic.UmmAlQura do
   @type month :: 1..12
   @type day :: 1..30
 
-  # The official month lengths published by KACST, one row per Hijri year
-  # from 1 AH: `year,days_in_month_1,...,days_in_month_12`.
+  # The month lengths, one row per Hijri year from 1 AH:
+  # `year,days_in_month_1,...,days_in_month_12`. KACST's published ones for
+  # 1 to 1500 AH, then ICU4C's for 1501 to 1600 AH.
   @month_lengths_file "./priv/umm_al_qura_month_lengths.csv"
+  @icu_month_lengths_file "./priv/umm_al_qura_icu_month_lengths.csv"
   @external_resource @month_lengths_file
+  @external_resource @icu_month_lengths_file
 
-  [_header | rows] =
-    @month_lengths_file
-    |> File.read!()
-    |> String.split(~r/\r?\n/, trim: true)
-
-  @month_lengths Enum.map(rows, fn row ->
-                   [year | lengths] = row |> String.split(",") |> Enum.map(&String.to_integer/1)
-                   {year, lengths}
-                 end)
+  @month_lengths (for file <- [@month_lengths_file, @icu_month_lengths_file],
+                      row <- file |> File.read!() |> String.split(~r/\r?\n/, trim: true) |> tl() do
+                    [year | lengths] = row |> String.split(",") |> Enum.map(&String.to_integer/1)
+                    {year, lengths}
+                  end)
 
   # A malformed data file must fail the build rather than encode a wrong
   # month length: the years must run consecutively from 1 AH, each with
@@ -83,7 +90,7 @@ defmodule Calendrical.Islamic.UmmAlQura do
   for {{year, lengths}, expected_year} <- Enum.with_index(@month_lengths, 1),
       year != expected_year or length(lengths) != 12 or
         not Enum.all?(lengths, &(&1 in 29..30)) do
-    raise "#{@month_lengths_file}: invalid row for year #{year}: #{inspect(lengths)}"
+    raise "Umm al-Qura month lengths: invalid row for year #{year}: #{inspect(lengths)}"
   end
 
   @min_year @month_lengths |> List.first() |> elem(0)
@@ -178,7 +185,7 @@ defmodule Calendrical.Islamic.UmmAlQura do
   end
 
   @doc """
-  Returns the first Hijri year covered by the embedded KACST Umm al-Qura
+  Returns the first Hijri year covered by the embedded Umm al-Qura
   tables.
   """
   # The literal bound of the shipped table; dialyzer keeps this spec
@@ -187,12 +194,12 @@ defmodule Calendrical.Islamic.UmmAlQura do
   def min_year, do: @min_year
 
   @doc """
-  Returns the last Hijri year covered by the embedded KACST Umm al-Qura
-  tables.
+  Returns the last Hijri year covered by the embedded Umm al-Qura
+  tables: KACST's to 1500 AH, then ICU's.
   """
   # The literal bound of the shipped reference table; dialyzer
   # keeps this spec synchronized with the data.
-  @spec max_year() :: 1500
+  @spec max_year() :: 1600
   def max_year, do: @max_year
 
   @doc """

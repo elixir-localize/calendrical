@@ -61,9 +61,9 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
   end
 
   describe "range" do
-    test "covers 1 AH through 1500 AH" do
+    test "covers 1 AH through 1600 AH" do
       assert UmmAlQura.min_year() == 1
-      assert UmmAlQura.max_year() == 1500
+      assert UmmAlQura.max_year() == 1600
     end
 
     test "1 Muharram 1 AH is the epoch, 19 July 622" do

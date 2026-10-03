@@ -24,7 +24,7 @@ defmodule Calendrical.Islamic.UmmAlQuraCivilTest do
   defp leap_year?(year), do: Integer.mod(14 + 11 * year, 30) < 11
 
   test "the years outside the tables are ICU's civil years" do
-    for year <- Enum.concat(-1000..0, 1501..2500) do
+    for year <- Enum.concat(-1000..0, 1601..2500) do
       assert UmmAlQura.leap_year?(year) == leap_year?(year), "year #{year}"
       assert UmmAlQura.days_in_year(year) == year_start(year + 1) - year_start(year)
 
@@ -38,14 +38,34 @@ defmodule Calendrical.Islamic.UmmAlQuraCivilTest do
   test "the tables begin and end where the civil calendar's years do" do
     assert UmmAlQura.date_to_iso_days(1, 1, 1) == year_start(1)
     assert Date.from_gregorian_days(year_start(1)) == ~D[0622-07-19]
-    assert Date.from_gregorian_days(year_start(1501) - 1) == ~D[2077-11-16]
+    assert Date.from_gregorian_days(year_start(1601) - 1) == ~D[2174-11-25]
 
-    assert UmmAlQura.date_to_iso_days(1500, 12, UmmAlQura.days_in_month(1500, 12)) + 1 ==
-             year_start(1501)
+    assert UmmAlQura.date_to_iso_days(1600, 12, UmmAlQura.days_in_month(1600, 12)) + 1 ==
+             year_start(1601)
+  end
+
+  # ICU's table years, by its own year-start formula (a linear estimate and
+  # a correction per year, `IslamicUmalquraCalendar::yearStart`), apart from
+  # the month lengths the calendar is built from.
+  test "1501 to 1600 AH begin where ICU's table begins them" do
+    for {year, first_day} <- [
+          {1501, ~D[2077-11-17]},
+          {1503, ~D[2079-10-26]},
+          {1507, ~D[2083-09-14]},
+          {1550, ~D[2125-06-03]},
+          {1599, ~D[2172-12-17]},
+          {1600, ~D[2173-12-07]}
+        ] do
+      assert Date.from_gregorian_days(UmmAlQura.date_to_iso_days(year, 1, 1)) == first_day
+    end
   end
 
   test "every day across both joins follows the day before" do
-    for {first, last} <- [{~D[0620-01-01], ~D[0625-12-31]}, {~D[2075-01-01], ~D[2080-12-31]}] do
+    for {first, last} <- [
+          {~D[0620-01-01], ~D[0625-12-31]},
+          {~D[2075-01-01], ~D[2080-12-31]},
+          {~D[2172-01-01], ~D[2177-12-31]}
+        ] do
       days = Date.to_gregorian_days(first)..Date.to_gregorian_days(last)
 
       days
@@ -78,8 +98,8 @@ defmodule Calendrical.Islamic.UmmAlQuraCivilTest do
     assert {:error, %Calendrical.IslamicYearOutOfRangeError{year: 0}} =
              UmmAlQura.first_day_of_month(0, 1)
 
-    assert {:error, %Calendrical.IslamicYearOutOfRangeError{year: 1501}} =
-             UmmAlQura.first_day_of_month(1501, 1)
+    assert {:error, %Calendrical.IslamicYearOutOfRangeError{year: 1601}} =
+             UmmAlQura.first_day_of_month(1601, 1)
   end
 
   defp next_date({year, month, day}) do

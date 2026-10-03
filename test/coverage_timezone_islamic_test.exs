@@ -305,9 +305,9 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
   # ── Islamic.UmmAlQura — reference-data paths ─────────────────────
 
   describe "UmmAlQura reference data" do
-    test "embedded data covers 1..1500 AH" do
+    test "embedded data covers 1..1600 AH" do
       assert UmmAlQura.min_year() == 1
-      assert UmmAlQura.max_year() == 1500
+      assert UmmAlQura.max_year() == 1600
     end
 
     test "first_day_of_month/2 returns the published Gregorian date" do
@@ -316,11 +316,11 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
 
     test "first_day_of_month/2 rejects out-of-range years" do
       assert {:error, %Calendrical.IslamicYearOutOfRangeError{} = error} =
-               UmmAlQura.first_day_of_month(1501, 1)
+               UmmAlQura.first_day_of_month(1601, 1)
 
-      assert error.year == 1501
+      assert error.year == 1601
       assert error.min_year == 1
-      assert error.max_year == 1500
+      assert error.max_year == 1600
     end
 
     test "first_day_of_month/2 rejects invalid months" do
@@ -342,8 +342,8 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
     end
 
     test "leap_year?/1 follows the civil calendar outside the data range" do
-      assert UmmAlQura.leap_year?(UmmAlQura.max_year() + 5)
-      assert UmmAlQura.leap_year?(1505) == Calendrical.Islamic.Civil.leap_year?(1505)
+      assert UmmAlQura.leap_year?(UmmAlQura.max_year() + 3)
+      assert UmmAlQura.leap_year?(1605) == Calendrical.Islamic.Civil.leap_year?(1605)
     end
 
     test "days_in_month/2 returns 29 or 30 per the tables" do

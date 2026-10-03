@@ -4,9 +4,11 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Open
 
-* [ ] **Umm al-Qura years outside ICU's table** — ICU4C 78.3 tabulates 1300 to 1600 AH and is civil elsewhere; Calendrical tabulates KACST's 1 to 1500 AH and is civil elsewhere. Before 1300 KACST's table begins some years a day earlier than ICU's civil years (1 Muharram 1178 is 1764-06-30 here, 1764-07-01 in ICU; also 607, 717, 758 and 1261 AH), and 1501 to 1600 AH here are civil where ICU tabulates them. Decide whether to document the difference or follow ICU.
+* [ ] **Review `Calendrical.Islamic.UmmAlQura.Astronomical` against ICU and KACST** — it is consistently a day early, never late: 209 of 600 months of 1451 to 1500 AH begin a day before KACST's published months, and 92 of 287 of 1501 to 1530 AH a day before ICU's table. A one-sided difference that large points at its rule or its sunset and moonset conventions rather than at boundary cases (user, 2026-10-03). It also stops at 1524 AH with the bundled ephemeris.
 
 ## Done
+
+* [x] **Umm al-Qura follows ICU's table after KACST's** — 1501 to 1600 AH are ICU4C's months (`priv/umm_al_qura_icu_month_lengths.csv`), where they were civil (430 of 1,200 months began on another day); with KACST's 1 to 1500 AH, which match ICU's table exactly from 1300, the calendar is ICU's from 1300 AH on, and before 1300 keeps KACST's months, documented (user, 2026-10-03). 2026-10-03, v1.4.0.
 
 * [x] **`Calendrical.UnsupportedDateRangeError` carries its range as data** — the Islamic visibility calculations give `range: :jpl_ephemeris`, written as a whole translated sentence, where an English phrase was bound into the message; Astro reports no ephemeris bounds, so the text names the source (user, 2026-10-03). 2026-10-03, v1.4.0.
 

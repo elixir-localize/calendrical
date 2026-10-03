@@ -74,6 +74,8 @@ The format is based on
 
 ### Changed
 
+* `Calendrical.Islamic.UmmAlQura` takes ICU4C's months for 1501 to 1600 AH after KACST's for 1 to 1500 AH, where it used the civil calendar, so it matches ICU from 1300 AH on; before 1300 it keeps KACST's months, documented.
+
 * `Calendrical.UnsupportedDateRangeError`'s `:range` is data, `:jpl_ephemeris` from the Islamic visibility calculations, written as a whole translated sentence, where an English phrase was bound untranslated into the message.
 
 * Requires Localize 1.4 (CLDR 49), which implements the date, time, datetime and interval parsers and names months through the calendar's `month_of_year/3`, as the Hebrew month positions need.
