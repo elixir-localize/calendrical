@@ -27,7 +27,9 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
     If either condition fails, the current month is extended to 30 days.
 
   Years before 1392 AH are not supported because no reliable astronomical
-  rule has been established for that period.
+  rule has been established for that period. After them the calendar
+  reaches as far as the installed JPL ephemeris: to about 1524 AH with the
+  ephemeris Astro bundles, and about 1575 AH with the full one.
 
   ## Accuracy
 
@@ -49,18 +51,46 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
 
   This module is tested against van Gent's tables
   (`Calendrical.Islamic.UmmAlQura.ReferenceData`), which apply the same
-  rules. They are not KACST's official calendar: from 1451 AH KACST's
-  published table starts 209 months one day later than the rule computed
-  here. For the official Saudi calendar use `Calendrical.Islamic.UmmAlQura`,
-  which is built from KACST's month lengths.
+  rules.
+
+  ## Against KACST's table and ICU
+
+  For the official Saudi calendar use `Calendrical.Islamic.UmmAlQura`,
+  which is built from KACST's published month lengths and, after 1500 AH,
+  ICU's. This calendar computes the published rule; the tables follow it
+  only so far.
+
+  * **To 1450 AH the rule is KACST's.** 335 of the 336 months of 1423 to
+    1450 AH begin on the day KACST's table begins them.
+
+  * **From 1451 AH the tables begin a third of months a day later.** 209 of
+    the 600 months of 1451 to 1500 AH begin a day after this calendar's, and
+    so do 92 of the 287 months of 1501 to 1524 AH in ICU's table, which is
+    the same data. Never a day earlier.
+
+  * **They are the months whose moon barely sets after the sun.** On the
+    29th each of those months meets the rule, but its moon sets less than
+    about 20 minutes after the sun; the months the tables begin as this
+    calendar does have a median of 35 minutes.
+
+  We think the reason is that the tables' months from 1451 AH, which begins
+  in 2029 CE, are KACST's projections rather than announced dates, and are
+  computed by a stricter procedure than the published rule. That procedure
+  is not documented: it is not a crescent-visibility criterion (Yallop's
+  and Odeh's separate the months only far below any of their zones), not
+  another site (Riyadh fits worse than Mecca), and not a difference of rise
+  and set conventions, which is a minute or two. ICU and the JDK carry
+  KACST's table without a rule of their own, so they do not explain it
+  either. Until KACST's criterion is known, this calendar keeps the
+  published rule.
 
   ## Reference
 
-  - R.H. van Gent, "The Umm al-Qura Calendar of Saudi Arabia",
-    https://webspace.science.uu.nl/~gent0113/islam/ummalqura_rules.htm
-  - hijridate (dralshehri), which ships van Gent's tables,
-    https://github.com/dralshehri/hijri-converter
-  - Dershowitz & Reingold, *Calendrical Calculations* (4th ed.), Chapter 6
+  * [R. H. van Gent, "The Umm al-Qura Calendar of Saudi Arabia"](https://webspace.science.uu.nl/~gent0113/islam/ummalqura_rules.htm).
+
+  * [hijridate (dralshehri)](https://github.com/dralshehri/hijri-converter), which ships van Gent's tables.
+
+  * Dershowitz & Reingold, *Calendrical Calculations* (4th ed.), Chapter 6.
 
   """
 

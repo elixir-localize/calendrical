@@ -130,7 +130,7 @@ The Islamic family is the only CLDR-supported lunar calendar family. All five va
 | `Calendrical.Islamic.Civil` | `:islamic_civil` | **Tabular**, *civil* (Friday) epoch | Friday 16 July 622 Julian = 19 July 622 proleptic Gregorian | Standard arithmetic Hijri calendar. 30-year cycle with 11 leap years (Type II *Kūshyār*: 2, 5, 7, 10, 13, 16, 18, 21, 24, 26, 29). |
 | `Calendrical.Islamic.Tbla` | `:islamic_tbla` | **Tabular**, *astronomical* (Thursday) epoch | Thursday 15 July 622 Julian = 18 July 622 proleptic Gregorian | Same algorithm as `Civil` but the epoch is one day earlier. *TBLA* = "tabular based on lunar astronomy". |
 | `Calendrical.Islamic.UmmAlQura` | `:islamic_umalqura` | **Precomputed table** of KACST's official month lengths | 1 Muharram 1 AH = 19 July 622 | The official Saudi civil calendar. The table covers 1 AH–1600 AH (622–2174 CE), KACST's months to 1500 AH and ICU's after; other years are those of `Calendrical.Islamic.Civil`, as in ICU. From 1300 AH it is ICU's day for day. `mix calendrical.umm_al_qura.verify --kacst` compares the table with KACST's current data. |
-| `Calendrical.Islamic.UmmAlQura.Astronomical` | (alternative for `:islamic_umalqura`) | **Astronomical** (sunset/moonset at Mecca) using the Umm al-Qura rules documented by R.H. van Gent | (notional) | Computes the rule from astronomy on demand and reproduces van Gent's tables. From 1451 AH it starts 209 months one day earlier than KACST's official table, so use `UmmAlQura` for official dates; this is a research / validation tool. |
+| `Calendrical.Islamic.UmmAlQura.Astronomical` | (alternative for `:islamic_umalqura`) | **Astronomical** (sunset/moonset at Mecca) using the Umm al-Qura rules documented by R.H. van Gent | (notional) | Computes the published rule from astronomy, from 1392 AH to the end of the installed ephemeris. It matches KACST's table through 1450 AH; from 1451 AH KACST's projected months, and ICU's which carry them, begin a third of months a day later, always where the moon sets less than about 20 minutes after the sun, by a criterion KACST has not published. Use `UmmAlQura` for official dates. |
 | `Calendrical.Islamic.Observational` | `:islamic` | **Astronomical** (crescent visibility at Cairo) using `Astro.new_visible_crescent/3` (Odeh 2006) | (notional) | The "generic" CLDR `:islamic` calendar. Implements `phasis-on-or-before` from Reingold but uses the modern Odeh visibility model rather than Shaukat. |
 | `Calendrical.Islamic.Rgsa` | `:islamic_rgsa` | **Astronomical** (crescent visibility at Mecca) | (notional) | The Saudi *religious sighting* calendar. Same algorithm as `Observational` but observed at al-Masjid al-Ḥarām. May diverge from `UmmAlQura` in months where the astronomical prediction does not match the KACST table. |
 
@@ -151,7 +151,7 @@ All Islamic calendars share the same 12-month layout:
 | 11 | Dhuʻl-Qiʻdah | 30 |
 | 12 | Dhuʻl-Hijjah | 29 / 30 (leap) |
 
-In the observational and Umm al-Qura variants, individual months may be 29 or 30 days based on actual lunar visibility, so the table above only describes `Civil` and `Tbla`.
+In the other variants a month is 29 or 30 days as its calendar decides it: by predicted crescent visibility in `Observational` and `Rgsa`, by the Umm al-Qura rule in `UmmAlQura.Astronomical`, and by KACST's and ICU's tables in `UmmAlQura`. The table above describes only `Civil` and `Tbla`.
 
 **Worked example.**
 

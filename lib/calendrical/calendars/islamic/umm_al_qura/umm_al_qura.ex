@@ -42,7 +42,10 @@ defmodule Calendrical.Islamic.UmmAlQura do
   Before 1.4.0 this calendar used R.H. van Gent's tables. Those are an
   astronomical reconstruction, reproduced by
   `Calendrical.Islamic.UmmAlQura.Astronomical`, and differ from KACST's
-  official table in 695 months between 1356 and 1500 AH.
+  official table in 695 months between 1356 and 1500 AH. The published
+  rule they apply is KACST's through 1450 AH; from 1451 AH KACST's
+  projected months begin a third of months a day later, as
+  `Calendrical.Islamic.UmmAlQura.Astronomical` explains.
 
   Days begin at midnight by default. `date_at/2` maps an absolute instant to
   the Hijri date under a chosen day-start convention — midnight, an 18:00
