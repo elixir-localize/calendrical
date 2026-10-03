@@ -70,7 +70,7 @@ defmodule Calendrical.CompositeLabelTest do
       |> Enum.flat_map(&((&1 - days_about_a_change)..(&1 + days_about_a_change)))
       |> Enum.uniq()
 
-    labels = Map.new(days, &{&1, calendar.date_from_iso_days(&1)})
+    labels = Map.new(days, &{&1, calendar.calendar_for_iso_days(&1).date_from_iso_days(&1)})
     days_with = labels |> Map.values() |> Enum.frequencies()
 
     for iso_days <- Enum.sort(days),
@@ -200,21 +200,27 @@ defmodule Calendrical.CompositeLabelTest do
   describe "a year, month and day that two days have" do
     # England's year turned on 25 March from 1155: the days of January to
     # 24 March 1156 carry the year 1155, as those of 1155 do, and the year,
-    # month and day name the earlier.
+    # month and day name the earlier. The later have no date of their own
+    # and are written as the first day after them that has one, 25 March
+    # 1156 (user, 2026-10-03).
     test "name the day of the calendar they fall in by their order" do
       assert Date.convert!(~D[1155-01-15 Calendrical.Reform.England], Calendrical.Julian) ==
                ~D[1155-01-15 Calendrical.Julian]
 
-      assert Date.convert!(~D[1156-01-15 Calendrical.Julian], England) ==
+      assert Date.convert!(~D[1155-01-15 Calendrical.Julian], England) ==
                ~D[1155-01-15 Calendrical.Reform.England]
 
+      assert Date.convert!(~D[1156-01-15 Calendrical.Julian], England) ==
+               ~D[1156-03-25 Calendrical.Reform.England]
+
       # Russia's September to December 1699 carry the year 1700, which the
-      # year reckoned from 1 January kept: they name the later.
+      # year reckoned from 1 January kept: they name the later, and the
+      # earlier are written as 1 January 1700.
       assert Date.convert!(~D[1700-09-01 Calendrical.Russia], Calendrical.Julian) ==
                ~D[1700-09-01 Calendrical.Julian]
 
       assert Date.convert!(~D[1699-09-01 Calendrical.Julian], Russia) ==
-               ~D[1700-09-01 Calendrical.Russia]
+               ~D[1700-01-01 Calendrical.Russia]
     end
 
     test "leave the month they are read in whole" do

@@ -34,6 +34,12 @@ defmodule Calendrical.Composite.Compiler do
       @segment_calendars segments |> Enum.map(& &1.calendar) |> List.to_tuple()
       @transition_months transition_months
 
+      # The first day of each member calendar after the base calendar.
+      # Only a day within two years of one can be a day whose date names
+      # another day.
+      @change_days segments |> Enum.map(& &1.first) |> Enum.reject(&is_nil/1)
+      @change_reach 800
+
       import Localize.Macros
 
       @doc false
@@ -753,9 +759,29 @@ defmodule Calendrical.Composite.Compiler do
       Returns `{year, month, day}` calculated from the number of
       `iso_days`.
 
+      A day whose date is another day's, where two stretches of days carry
+      the same dates, has no date of its own and is written as the first
+      later day that has one, as a shift into the days a reform took out
+      reaches the day after them: England's 1 January to 24 March 1156,
+      whose dates are 1155's, are written as 25 March 1156.
+
       """
       def date_from_iso_days(iso_days) do
-        calendar_for_iso_days(iso_days).date_from_iso_days(iso_days)
+        date = calendar_for_iso_days(iso_days).date_from_iso_days(iso_days)
+
+        if near_change?(iso_days),
+          do: own_date(date, iso_days),
+          else: date
+      end
+
+      defp own_date({year, month, day} = date, iso_days) do
+        if date_to_iso_days(year, month, day) == iso_days,
+          do: date,
+          else: date_from_iso_days(iso_days + 1)
+      end
+
+      defp near_change?(iso_days) do
+        Enum.any?(@change_days, &(abs(iso_days - &1) <= @change_reach))
       end
 
       @doc """

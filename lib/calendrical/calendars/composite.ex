@@ -132,6 +132,17 @@ defmodule Calendrical.Composite do
 
   A change from a year that begins before 1 January to the January year does the same from the other side. A year reckoned from 1 September or 25 December takes the number of the January year it ends in, so where it gives way on 1 January, as Russia's September year did in 1700, its last months already carry the number the new year keeps: those labels name the later days, and September to December 1699 have none of their own.
 
+  A shift or a conversion that reaches a day with no date of its own answers the first later day that has one, as a shift into the days a reform took out answers the day after them:
+
+      iex> Date.shift(~D[1155-12-15 Calendrical.Reform.England], month: 1)
+      ~D[1156-03-25 Calendrical.Reform.England]
+
+      iex> Date.convert!(~D[1156-01-15 Calendrical.Julian], Calendrical.Reform.England)
+      ~D[1156-03-25 Calendrical.Reform.England]
+
+      iex> Date.shift(~D[1752-08-05 Calendrical.Reform.England], month: 1)
+      ~D[1752-09-14 Calendrical.Reform.England]
+
   ## Arithmetic across a transition
 
   Years, quarters and months are added in the calendar in effect on the date, a year being as many months as that calendar counts. When the result falls under another calendar the months are counted on through each calendar's own months, from January however a year-start style numbers its years, and a day the resulting month does not have becomes the month's next day that exists, or its last day:

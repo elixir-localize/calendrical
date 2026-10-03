@@ -4,8 +4,6 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Open
 
-* [ ] **Arithmetic into days that have no dates** — where a year's number does not change on 1 January two stretches of days carry the same year, month and day and the later has no dates (England's 1 January to 24 March 1156), so `Date.shift(~D[1155-12-15 Calendrical.Reform.England], month: 1)` answers `~D[1155-01-15 Calendrical.Reform.England]`, a day 334 days earlier. Answer the next day that has a date, 25 March 1156, or an error: a decision to make.
-
 * [ ] **Delegate `Calendrical.TimeZone.resolve/3` to Localize** — Localize now parses and resolves a zone in every form a locale writes (`Localize.DateTime.Timezone.parse_zone/2` and `resolve/3`) and no longer calls this module, which duplicates it with a table of abbreviations and resolves a fall-back hour to daylight time where ICU and Localize take standard.
 
 * [ ] **A composite calendar whose members differ in CLDR type** — every composite's `cldr_calendar_type/0` is `:gregorian`, so `Calendrical.Reform.Japan`'s lunisolar dates before 1873 take Gregorian month names ("February" for the second lunar month) and no leap-month pattern. Naming them from the calendar in effect needs Localize to ask for it, or such composites to be split: a decision to make.
@@ -21,6 +19,8 @@ Calendrical's open work. Design documents live in `plans/`.
 * [ ] **`Calendrical.UnsupportedDateRangeError`'s `:range` is English prose** — the Persian calendar and the Islamic visibility calculations give it a phrase such as "dates covered by the installed JPL ephemeris", which is bound into the translated message untranslated. Carry the bounds as data and write them in the message.
 
 ## Done
+
+* [x] **A day with no date of its own is written as the next day that has one** — a shift or conversion into England's 1 January to 24 March 1156 or Russia's September to December 1699 answered the shared date, which names a day a year away (`Date.shift(~D[1155-12-15 Calendrical.Reform.England], month: 1)` was 1155-01-15); it answers the first later dated day, as a shift into a reform's gap does (user, 2026-10-03). Held by `test/composite_dateless_days_test.exs` for every composite. 2026-10-03, v1.4.0.
 
 * [x] **A composite counts only the days a month has** — `days_in_month/2` is 0 for a month no day carries and `months_in_year/1` the last month with days, 0 for a year with none: England's 1751, Russia's 1492 and Japan's 1229 to 1872 answered the member calendar's months. Held by `test/composite_month_days_test.exs`. 2026-10-03, v1.4.0.
 

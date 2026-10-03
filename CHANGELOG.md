@@ -90,6 +90,8 @@ The format is based on
 
 ### Fixed
 
+* A composite calendar writes a day with no date of its own as the first later day that has one, as it does for the days a reform took out: England's 1 January to 24 March 1156 and Russia's September to December 1699, reached by `Date.shift/2` or `Date.convert/2`, answered a date naming the day a year away.
+
 * A composite calendar's `days_in_month/2` is `0` for a month no day carries (England's January 1751), and `months_in_year/1` the number of the year's last month with days, `0` for a year with none (Japan's 1229 to 1872); both answered the member calendar's count.
 
 * `Calendrical.Islamic.UmmAlQura` has dates before 1 AH and after 1500 AH, outside KACST's tables, by `Calendrical.Islamic.Civil`, as ICU falls back to it; the civil years join the tables without a gap. Its callbacks and `Date.convert/2` raised `Calendrical.IslamicYearOutOfRangeError` there.
