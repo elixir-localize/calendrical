@@ -32,6 +32,19 @@ defmodule Calendrical.Composite.Compiler do
       # the months a transition cuts short or splits.
       @segments segments
       @segment_calendars segments |> Enum.map(& &1.calendar) |> List.to_tuple()
+
+      @member_calendars config |> Enum.map(&elem(&1, 4)) |> Enum.uniq()
+
+      # The CLDR calendar that names the months and days where no date is
+      # given, as in parsing: the one the member calendars share, and
+      # otherwise the last member's, the calendar in effect today.
+      @cldr_calendar_type (case Enum.uniq(Enum.map(@member_calendars, & &1.cldr_calendar_type())) do
+                             [cldr_calendar_type] ->
+                               cldr_calendar_type
+
+                             _cldr_calendar_types ->
+                               config |> List.last() |> elem(4) |> then(& &1.cldr_calendar_type())
+                           end)
       @transition_months transition_months
 
       # The first day of each member calendar after the base calendar.
@@ -56,15 +69,27 @@ defmodule Calendrical.Composite.Compiler do
       def calendar_base, do: :month
 
       @doc """
-      Defines the CLDR calendar type for this calendar.
-
-      This type is used in support of `Calendrical.localize/3`.
+      Returns the CLDR calendar type whose data names the calendar's
+      months and days where no date is given: the type the member
+      calendars share, and otherwise the last member's. A date's own is
+      `cldr_calendar_type/3`'s.
 
       """
       @impl true
-      def cldr_calendar_type, do: :gregorian
+      def cldr_calendar_type, do: @cldr_calendar_type
 
-      @member_calendars config |> Enum.map(&elem(&1, 4)) |> Enum.uniq()
+      @doc """
+      Returns the CLDR calendar type whose data names the months and
+      days of the given date: that of the calendar in effect on it.
+
+      """
+      @impl Calendrical
+      def cldr_calendar_type(year, month, day)
+          when is_integer(year) and is_integer(month) and is_integer(day) do
+        calendar_for_date(year, month, day).cldr_calendar_type()
+      end
+
+      def cldr_calendar_type(_year, _month, _day), do: @cldr_calendar_type
 
       # The CLDR calendar whose era names the member calendars share:
       # `Calendrical.Reform.Japan`'s lunisolar and Gregorian members both
@@ -315,13 +340,13 @@ defmodule Calendrical.Composite.Compiler do
 
       """
       @impl true
-      def week_of_month(year, month, day) when {year, month} in @transition_months do
-        Calendrical.Base.Common.week_of_month(__MODULE__, year, month, day)
-      end
-
       def week_of_month(year, month, day) do
-        calendar = calendar_for_date(year, month, day)
-        calendar.week_of_month(year, month, day)
+        if transition_month?(year, month) do
+          Calendrical.Base.Common.week_of_month(__MODULE__, year, month, day)
+        else
+          calendar = calendar_for_date(year, month, day)
+          calendar.week_of_month(year, month, day)
+        end
       end
 
       @doc """
@@ -483,14 +508,17 @@ defmodule Calendrical.Composite.Compiler do
 
       """
       @impl true
-      def days_in_month(year, month) when {year, month} in @transition_months do
-        Enum.count(1..31, &valid_date?(year, month, &1))
-      end
-
       def days_in_month(year, month) do
-        if valid_date?(year, month, 1),
-          do: calendar_for_date(year, month, 1).days_in_month(year, month),
-          else: 0
+        cond do
+          transition_month?(year, month) ->
+            Enum.count(1..31, &valid_date?(year, month, &1))
+
+          valid_date?(year, month, 1) ->
+            calendar_for_date(year, month, 1).days_in_month(year, month)
+
+          true ->
+            0
+        end
       end
 
       @doc """
@@ -656,13 +684,19 @@ defmodule Calendrical.Composite.Compiler do
         end
       end
 
-      defp first_day_of_month(year, month) when {year, month} in @transition_months do
-        Enum.find(1..31, &valid_date?(year, month, &1))
+      defp first_day_of_month(year, month) do
+        cond do
+          transition_month?(year, month) -> Enum.find(1..31, &valid_date?(year, month, &1))
+          valid_date?(year, month, 1) -> 1
+          true -> nil
+        end
       end
 
-      defp first_day_of_month(year, month) do
-        if valid_date?(year, month, 1), do: 1
-      end
+      # A month a change of calendar cuts short or splits, whose days are
+      # counted one by one. A runtime test rather than a guard, since a
+      # composite of its base calendar alone has none and a guard over an
+      # empty list never succeeds.
+      defp transition_month?(year, month), do: Enum.member?(@transition_months, {year, month})
 
       # The last day of the run of days labelled `year` and `month` that
       # starts at `iso_days`: the month's last day, unless the month is

@@ -6,8 +6,6 @@ Calendrical's open work. Design documents live in `plans/`.
 
 * [ ] **Delegate `Calendrical.TimeZone.resolve/3` to Localize** — Localize now parses and resolves a zone in every form a locale writes (`Localize.DateTime.Timezone.parse_zone/2` and `resolve/3`) and no longer calls this module, which duplicates it with a table of abbreviations and resolves a fall-back hour to daylight time where ICU and Localize take standard.
 
-* [ ] **A composite calendar whose members differ in CLDR type** — every composite's `cldr_calendar_type/0` is `:gregorian`, so `Calendrical.Reform.Japan`'s lunisolar dates before 1873 take Gregorian month names ("February" for the second lunar month) and no leap-month pattern. Naming them from the calendar in effect needs Localize to ask for it, or such composites to be split: a decision to make.
-
 * [ ] **Umm al-Qura years outside ICU's table** — ICU4C 78.3 tabulates 1300 to 1600 AH and is civil elsewhere; Calendrical tabulates KACST's 1 to 1500 AH and is civil elsewhere. Before 1300 KACST's table begins some years a day earlier than ICU's civil years (1 Muharram 1178 is 1764-06-30 here, 1764-07-01 in ICU; also 607, 717, 758 and 1261 AH), and 1501 to 1600 AH here are civil where ICU tabulates them. Decide whether to document the difference or follow ICU.
 
 * [ ] **Eras around 1 January AD 1 in `Calendrical.NRF`** — `day_of_era/3` takes the Gregorian date's era and `year_of_era/3` the calendar year's, so they disagree on NRF's fiscal year 0 days in AD 1.
@@ -19,6 +17,8 @@ Calendrical's open work. Design documents live in `plans/`.
 * [ ] **`Calendrical.UnsupportedDateRangeError`'s `:range` is English prose** — the Persian calendar and the Islamic visibility calculations give it a phrase such as "dates covered by the installed JPL ephemeris", which is bound into the translated message untranslated. Carry the bounds as data and write them in the message.
 
 ## Done
+
+* [x] **A composite names a date from the CLDR calendar in effect on it** — every composite's `cldr_calendar_type/0` was `:gregorian`; it is the members' shared type or the last member's, and the new optional `cldr_calendar_type/3`, which Localize asks for a date, answers with the member in effect (user, 2026-10-03), so `Calendrical.Reform.Japan` writes 1872 as the Chinese calendar does and 1873 as the Japanese. Needs Localize's `Localize.Calendar.date_calendar_type/1`. Held by `test/composite_cldr_type_test.exs`. 2026-10-03, v1.4.0.
 
 * [x] **A day with no date of its own is written as the next day that has one** — a shift or conversion into England's 1 January to 24 March 1156 or Russia's September to December 1699 answered the shared date, which names a day a year away (`Date.shift(~D[1155-12-15 Calendrical.Reform.England], month: 1)` was 1155-01-15); it answers the first later dated day, as a shift into a reform's gap does (user, 2026-10-03). Held by `test/composite_dateless_days_test.exs` for every composite. 2026-10-03, v1.4.0.
 

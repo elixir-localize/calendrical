@@ -423,6 +423,23 @@ defmodule Calendrical do
   @optional_callbacks months_in_year: 0
 
   @doc """
+  Returns the CLDR calendar type whose data names the months and days
+  of the given date.
+
+  A calendar whose dates take their names from more than one CLDR
+  calendar defines it: a composite calendar answers with the calendar
+  in effect on the date, so `Calendrical.Reform.Japan` names its
+  lunisolar months before 1873 from the Chinese CLDR calendar and its
+  months after from the Japanese one. Localize and `Calendrical.localize/3`
+  ask it where a calendar defines it, and `cldr_calendar_type/0`
+  otherwise.
+
+  """
+  @callback cldr_calendar_type(Calendar.year(), Calendar.month(), Calendar.day()) :: atom()
+
+  @optional_callbacks cldr_calendar_type: 3
+
+  @doc """
   Returns the CLDR calendar type that names the calendar's eras.
 
   It is `cldr_calendar_type/0` unless the calendar takes its era names
@@ -3349,8 +3366,7 @@ defmodule Calendrical do
   end
 
   def localize(datetime, :cyclic_year, type, style, locale, _options) do
-    calendar = Map.get(datetime, :calendar, @default_calendar)
-    calendar_type = calendar.cldr_calendar_type()
+    calendar_type = date_calendar_type(datetime)
 
     case cyclic_year(datetime) do
       {:error, reason} ->
@@ -3376,7 +3392,7 @@ defmodule Calendrical do
 
   @doc false
   def localize(datetime, :quarter, type, style, locale, _options) do
-    calendar_type = datetime.calendar.cldr_calendar_type()
+    calendar_type = date_calendar_type(datetime)
 
     case quarter_of_year(datetime) do
       {:error, reason} ->
@@ -3390,8 +3406,7 @@ defmodule Calendrical do
 
   @doc false
   def localize(datetime, :month, :numeric, _style, locale, _options) do
-    calendar = Map.get(datetime, :calendar, @default_calendar)
-    calendar_type = calendar.cldr_calendar_type()
+    calendar_type = date_calendar_type(datetime)
 
     case month_of_year(datetime) do
       month when is_number(month) ->
@@ -3416,12 +3431,13 @@ defmodule Calendrical do
 
   def localize(datetime, :month, type, style, locale, _options) do
     calendar = Map.get(datetime, :calendar, @default_calendar)
-    calendar_type = calendar.cldr_calendar_type()
 
     datetime =
       datetime
       |> Map.put_new(:year, Date.utc_today().year)
       |> Map.put_new(:calendar, calendar)
+
+    calendar_type = date_calendar_type(datetime)
 
     case month_of_year(datetime) do
       month when is_number(month) ->
@@ -3469,8 +3485,7 @@ defmodule Calendrical do
   @doc false
   def localize(datetime, :day_of_week, type, style, locale, _options)
       when is_full_date(datetime) do
-    calendar = Map.get(datetime, :calendar, @default_calendar)
-    calendar_type = calendar.cldr_calendar_type()
+    calendar_type = date_calendar_type(datetime)
 
     day = iso_day_of_week(datetime)
     days_data = unwrap!(Localize.Calendar.days(locale, calendar_type))
@@ -3487,7 +3502,7 @@ defmodule Calendrical do
       day_of_week = day_of_week(date)
       cardinal_day_of_week = iso_day_of_week(date)
 
-      days_data = unwrap!(Localize.Calendar.days(locale, date.calendar.cldr_calendar_type()))
+      days_data = unwrap!(Localize.Calendar.days(locale, date_calendar_type(date)))
 
       day_name =
         get_in(days_data, [type, style, cardinal_day_of_week])
@@ -3498,8 +3513,7 @@ defmodule Calendrical do
 
   @doc false
   def localize(%{hour: hour} = time, :day_period, type, style, locale, options) do
-    calendar = Map.get(time, :calendar, @default_calendar)
-    calendar_type = calendar.cldr_calendar_type()
+    calendar_type = date_calendar_type(time)
 
     am_pm = am_pm(hour)
     preference = options[:day_period]
@@ -3517,6 +3531,33 @@ defmodule Calendrical do
     day_periods_data = unwrap!(Localize.Calendar.day_periods(locale, calendar_type))
     get_in(day_periods_data, [type, style, day_period])
   end
+
+  # The CLDR calendar whose data names a date's months, days and periods: the
+  # calendar's `cldr_calendar_type/3` for the date where it has one (a
+  # composite answers with the calendar in effect on the date), and otherwise
+  # its `cldr_calendar_type/0`. A date without its month or day is taken on
+  # the first.
+  defp date_calendar_type(datetime) do
+    calendar = Map.get(datetime, :calendar, @default_calendar)
+
+    case datetime do
+      %{year: year} when is_integer(year) ->
+        if Code.ensure_loaded?(calendar) and function_exported?(calendar, :cldr_calendar_type, 3),
+          do:
+            calendar.cldr_calendar_type(
+              year,
+              integer_or_first(Map.get(datetime, :month)),
+              integer_or_first(Map.get(datetime, :day))
+            ),
+          else: calendar.cldr_calendar_type()
+
+      _no_year ->
+        calendar.cldr_calendar_type()
+    end
+  end
+
+  defp integer_or_first(value) when is_integer(value), do: value
+  defp integer_or_first(_value), do: 1
 
   # The seven days of the week that holds `date`, in its calendar's week
   # order. A calendar week cut short at the start or end of its year still

@@ -90,6 +90,10 @@ The format is based on
 
 ### Fixed
 
+* A composite calendar of its base calendar alone (`calendars: []`) compiles without the type checker's "this guard will never succeed" warnings.
+
+* A composite calendar names a date's months and days from the CLDR calendar of the member in effect, through the new optional callback `cldr_calendar_type/3`, and its own `cldr_calendar_type/0` is its members' shared type or the last member's, where it was always `:gregorian`: `Calendrical.Reform.Japan` wrote the lunisolar second month as "February" and dropped the Meiji era after 1873.
+
 * A composite calendar writes a day with no date of its own as the first later day that has one, as it does for the days a reform took out: England's 1 January to 24 March 1156 and Russia's September to December 1699, reached by `Date.shift/2` or `Date.convert/2`, answered a date naming the day a year away.
 
 * A composite calendar's `days_in_month/2` is `0` for a month no day carries (England's January 1751), and `months_in_year/1` the number of the year's last month with days, `0` for a year with none (Japan's 1229 to 1872); both answered the member calendar's count.
