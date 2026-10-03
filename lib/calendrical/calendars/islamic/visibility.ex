@@ -180,6 +180,6 @@ defmodule Calendrical.Islamic.Visibility do
   defp unsupported!(date) do
     raise Calendrical.UnsupportedDateRangeError,
       value: date,
-      range: "dates covered by the installed JPL ephemeris"
+      range: :jpl_ephemeris
   end
 end

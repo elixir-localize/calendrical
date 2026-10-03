@@ -29,7 +29,7 @@ msgctxt "calendar"
 msgid "{$module} is not a calendar module."
 msgstr ""
 
-#: lib/calendrical/exception/unsupported_date_range_error.ex:39
+#: lib/calendrical/exception/unsupported_date_range_error.ex:55
 #, elixir-autogen, icu-format
 msgctxt "date"
 msgid "The date {$value} is outside the supported range of {$range}"
@@ -47,7 +47,7 @@ msgctxt "date"
 msgid "The values must be ordered from earlier to later. Found {$from} and {$to}"
 msgstr ""
 
-#: lib/calendrical/exception/unsupported_date_range_error.ex:47
+#: lib/calendrical/exception/unsupported_date_range_error.ex:63
 #, elixir-autogen, icu-format
 msgctxt "date"
 msgid "The {$calendar} calendar supports dates in {$range}. Found {$value}"
@@ -93,4 +93,16 @@ msgstr ""
 #, elixir-autogen, icu-format
 msgctxt "style"
 msgid "The date style {$style} is not known. Valid styles are {$valid_styles}"
+msgstr ""
+
+#: lib/calendrical/exception/unsupported_date_range_error.ex:41
+#, elixir-autogen, icu-format
+msgctxt "date"
+msgid "The date {$value} is outside the dates the installed JPL ephemeris covers"
+msgstr ""
+
+#: lib/calendrical/exception/unsupported_date_range_error.ex:48
+#, elixir-autogen, icu-format
+msgctxt "date"
+msgid "The {$calendar} calendar supports only the dates the installed JPL ephemeris covers. Found {$value}"
 msgstr ""

@@ -54,11 +54,21 @@ defmodule Calendrical.ExceptionMessageTest do
      ], "date", "The {$calendar} calendar supports dates in {$range}. Found {$value}",
      "The Calendrical.Persian calendar supports dates in Gregorian years 1001 to 3000. " <>
        "Found ~D[0900-06-01]"},
-    {Calendrical.UnsupportedDateRangeError,
-     [value: ~D[0500-06-01], range: "dates covered by the installed JPL ephemeris"], "date",
+    {Calendrical.UnsupportedDateRangeError, [value: ~D[0500-06-01], range: 1..1500], "date",
      "The date {$value} is outside the supported range of {$range}",
-     "The date ~D[0500-06-01] is outside the supported range of " <>
-       "dates covered by the installed JPL ephemeris"},
+     "The date ~D[0500-06-01] is outside the supported range of 1..1500"},
+    {Calendrical.UnsupportedDateRangeError, [value: ~D[0500-06-01], range: :jpl_ephemeris],
+     "date", "The date {$value} is outside the dates the installed JPL ephemeris covers",
+     "The date ~D[0500-06-01] is outside the dates the installed JPL ephemeris covers"},
+    {Calendrical.UnsupportedDateRangeError,
+     [
+       calendar: Calendrical.Islamic.Observational,
+       value: ~D[0500-06-01],
+       range: :jpl_ephemeris
+     ], "date",
+     "The {$calendar} calendar supports only the dates the installed JPL ephemeris covers. Found {$value}",
+     "The Calendrical.Islamic.Observational calendar supports only the dates the installed " <>
+       "JPL ephemeris covers. Found ~D[0500-06-01]"},
     {Calendrical.Formatter.InvalidDateError, [date: "not a date"], "format",
      "Invalid date {$date}", "Invalid date \"not a date\""},
     {Calendrical.Formatter.InvalidOptionError, [option: :bogus, value: 42], "option",

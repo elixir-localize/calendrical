@@ -6,9 +6,9 @@ Calendrical's open work. Design documents live in `plans/`.
 
 * [ ] **Umm al-Qura years outside ICU's table** — ICU4C 78.3 tabulates 1300 to 1600 AH and is civil elsewhere; Calendrical tabulates KACST's 1 to 1500 AH and is civil elsewhere. Before 1300 KACST's table begins some years a day earlier than ICU's civil years (1 Muharram 1178 is 1764-06-30 here, 1764-07-01 in ICU; also 607, 717, 758 and 1261 AH), and 1501 to 1600 AH here are civil where ICU tabulates them. Decide whether to document the difference or follow ICU.
 
-* [ ] **`Calendrical.UnsupportedDateRangeError`'s `:range` is English prose** — the Persian calendar and the Islamic visibility calculations give it a phrase such as "dates covered by the installed JPL ephemeris", which is bound into the translated message untranslated. Carry the bounds as data and write them in the message.
-
 ## Done
+
+* [x] **`Calendrical.UnsupportedDateRangeError` carries its range as data** — the Islamic visibility calculations give `range: :jpl_ephemeris`, written as a whole translated sentence, where an English phrase was bound into the message; Astro reports no ephemeris bounds, so the text names the source (user, 2026-10-03). 2026-10-03, v1.4.0.
 
 * [x] **`:begins_or_ends` must agree with `:first_or_last`** — no code read it; it now names the same choice for a calendar of weeks, a mismatched pair is an error and an omitted one follows `:first_or_last`, and a month calendar uses neither (user, 2026-10-03). Breaking. Held by `test/begins_or_ends_test.exs`. 2026-10-03, v1.4.0.
 

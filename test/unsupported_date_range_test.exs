@@ -50,9 +50,12 @@ defmodule Calendrical.UnsupportedDateRangeTest do
   if Version.match?(astro_version, ">= 2.3.3") do
     describe "Calendrical.Islamic.Observational outside the ephemeris range" do
       test "Date.convert/2 raises UnsupportedDateRangeError instead of MatchError" do
-        assert_raise Calendrical.UnsupportedDateRangeError, fn ->
-          Date.convert(~D[0500-06-01], Calendrical.Islamic.Observational)
-        end
+        error =
+          assert_raise Calendrical.UnsupportedDateRangeError, fn ->
+            Date.convert(~D[0500-06-01], Calendrical.Islamic.Observational)
+          end
+
+        assert error.range == :jpl_ephemeris
       end
 
       test "Date.convert/2 still succeeds inside the ephemeris range" do
@@ -76,16 +79,15 @@ defmodule Calendrical.UnsupportedDateRangeTest do
                  "Gregorian years 1001 to 3000. Found ~D[0900-06-01]"
     end
 
-    test "message/1 without a calendar names the value and range" do
+    test "message/1 without a calendar names the value and what bounds it" do
       error =
         Calendrical.UnsupportedDateRangeError.exception(
           value: ~D[0500-06-01],
-          range: "dates covered by the installed JPL ephemeris"
+          range: :jpl_ephemeris
         )
 
       assert Exception.message(error) ==
-               "The date ~D[0500-06-01] is outside the supported range of " <>
-                 "dates covered by the installed JPL ephemeris"
+               "The date ~D[0500-06-01] is outside the dates the installed JPL ephemeris covers"
     end
   end
 end

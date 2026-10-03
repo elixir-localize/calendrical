@@ -74,6 +74,8 @@ The format is based on
 
 ### Changed
 
+* `Calendrical.UnsupportedDateRangeError`'s `:range` is data, `:jpl_ephemeris` from the Islamic visibility calculations, written as a whole translated sentence, where an English phrase was bound untranslated into the message.
+
 * Requires Localize 1.4 (CLDR 49), which implements the date, time, datetime and interval parsers and names months through the calendar's `month_of_year/3`, as the Hebrew month positions need.
 
 * Japanese era boundaries before Meiji are the proleptic Gregorian dates Localize now publishes, read as they are instead of converted from CLDR's lunisolar values, and `Calendrical.LunarJapanese` counts an era's years from the lunar year of its proclamation.
