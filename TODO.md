@@ -4,7 +4,7 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Open
 
-* [ ] **Review `Calendrical.Islamic.UmmAlQura.Astronomical` against ICU and KACST** — it is consistently a day early, never late: 209 of 600 months of 1451 to 1500 AH begin a day before KACST's published months, and 92 of 287 of 1501 to 1530 AH a day before ICU's table. A one-sided difference that large points at its rule or its sunset and moonset conventions rather than at boundary cases (user, 2026-10-03). It also stops at 1524 AH with the bundled ephemeris.
+* [ ] **Decide the astronomical Umm al-Qura rule after 1450 AH** — reviewed: it is KACST's rule to 1450 AH (335 of 336 months), and from 1451 AH KACST's projected table and ICU's follow a stricter one, moonset at least 19.5 minutes after sunset or a moon at least 18 hours old (598 of 600 and 287 of 287 months). It is not a crescent-visibility criterion (Yallop and Odeh fail), and ICU carries KACST's table without a rule; find the criterion behind KACST's projected months before choosing. Analysis in [plans/umm-al-qura-astronomical.md](plans/umm-al-qura-astronomical.md).
 
 ## Done
 
