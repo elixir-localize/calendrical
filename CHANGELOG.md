@@ -90,6 +90,8 @@ The format is based on
 
 ### Fixed
 
+* A composite calendar's `days_in_month/2` is `0` for a month no day carries (England's January 1751), and `months_in_year/1` the number of the year's last month with days, `0` for a year with none (Japan's 1229 to 1872); both answered the member calendar's count.
+
 * `Calendrical.Islamic.UmmAlQura` has dates before 1 AH and after 1500 AH, outside KACST's tables, by `Calendrical.Islamic.Civil`, as ICU falls back to it; the civil years join the tables without a gap. Its callbacks and `Date.convert/2` raised `Calendrical.IslamicYearOutOfRangeError` there.
 
 * `Calendrical.Persian` has dates outside Persian years 380 to 2378, where the equinox cannot be computed, by ICU's arithmetic Persian calendar (its 33-year cycle and corrections), which agrees with the equinox at both joins. Its callbacks and `Date.convert/2` raised `Calendrical.UnsupportedDateRangeError` there; years before 1 are numbered 0, -1, as in ICU.

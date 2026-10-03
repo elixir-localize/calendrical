@@ -471,7 +471,9 @@ defmodule Calendrical.Composite.Compiler do
 
       A month a transition cuts short, or splits between two calendars,
       counts only the days that carry its label: England's September
-      1752 has 19 days (1 and 2, then 14 to 30).
+      1752 has 19 days (1 and 2, then 14 to 30). A month no day carries
+      has none: England's January and February 1751, since its 1751 began
+      on 25 March.
 
       """
       @impl true
@@ -480,17 +482,41 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       def days_in_month(year, month) do
-        calendar_for_date(year, month, 1).days_in_month(year, month)
+        if valid_date?(year, month, 1),
+          do: calendar_for_date(year, month, 1).days_in_month(year, month),
+          else: 0
       end
 
       @doc """
-      Returns the number of months in the given year, as the calendar
-      in effect at the start of the year counts them.
+      Returns the number of the last month of the given year that has
+      days, which is the number of months in a year a transition does not
+      cut short.
+
+      England's 1751, which began on 25 March, has months 3 to 12 and
+      answers 12; Russia's 1492, which ended on 31 August, answers 8. A
+      year no day carries answers `0`.
 
       """
       @impl true
       def months_in_year(year) do
-        calendar_for_date(year, 1, 1).months_in_year(year)
+        year
+        |> year_calendars()
+        |> Enum.map(& &1.months_in_year(year))
+        |> Enum.max(fn -> 0 end)
+        |> last_month_with_days(year)
+      end
+
+      # The member calendars that label some day of `year`.
+      defp year_calendars(year) do
+        for segment <- @segments, segment_year_bounds(segment, year) != [], do: segment.calendar
+      end
+
+      defp last_month_with_days(0, _year), do: 0
+
+      defp last_month_with_days(month, year) do
+        if days_in_month(year, month) > 0,
+          do: month,
+          else: last_month_with_days(month - 1, year)
       end
 
       @doc """

@@ -4,8 +4,6 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Open
 
-* [ ] **A composite counts the days of a month its year does not have** — England's 1751 began on 25 March, and `days_in_month(1751, 1)` is 31, `days_in_month(1751, 2)` 28 and `months_in_year(1751)` 12: the answers of the calendar that had the year, for months it had no days of.
-
 * [ ] **Arithmetic into days that have no dates** — where a year's number does not change on 1 January two stretches of days carry the same year, month and day and the later has no dates (England's 1 January to 24 March 1156), so `Date.shift(~D[1155-12-15 Calendrical.Reform.England], month: 1)` answers `~D[1155-01-15 Calendrical.Reform.England]`, a day 334 days earlier. Answer the next day that has a date, 25 March 1156, or an error: a decision to make.
 
 * [ ] **Delegate `Calendrical.TimeZone.resolve/3` to Localize** — Localize now parses and resolves a zone in every form a locale writes (`Localize.DateTime.Timezone.parse_zone/2` and `resolve/3`) and no longer calls this module, which duplicates it with a table of abbreviations and resolves a fall-back hour to daylight time where ICU and Localize take standard.
@@ -23,6 +21,8 @@ Calendrical's open work. Design documents live in `plans/`.
 * [ ] **`Calendrical.UnsupportedDateRangeError`'s `:range` is English prose** — the Persian calendar and the Islamic visibility calculations give it a phrase such as "dates covered by the installed JPL ephemeris", which is bound into the translated message untranslated. Carry the bounds as data and write them in the message.
 
 ## Done
+
+* [x] **A composite counts only the days a month has** — `days_in_month/2` is 0 for a month no day carries and `months_in_year/1` the last month with days, 0 for a year with none: England's 1751, Russia's 1492 and Japan's 1229 to 1872 answered the member calendar's months. Held by `test/composite_month_days_test.exs`. 2026-10-03, v1.4.0.
 
 * [x] **Umm al-Qura has dates outside KACST's tables** — before 1 AH and after 1500 AH its dates are `Calendrical.Islamic.Civil`'s, as ICU falls back to it, joined to the tables without a gap; nothing raises `IslamicYearOutOfRangeError` and the year before 1 AH is 0. Held by `test/islamic_umm_al_qura_civil_test.exs` against ICU's civil formulas. 2026-10-03, v1.4.0.
 
