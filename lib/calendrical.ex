@@ -1420,8 +1420,18 @@ defmodule Calendrical do
     Calendrical.Base.Common.year_days(calendar, year)
   end
 
+  # A day of a year as the calendar wrote it. In a composite calendar that
+  # is the date the calendar in effect on the day gives it, even where the
+  # date is another day's: England wrote 24 March 1156, the last day of its
+  # 1155, as 24 March 1155. A shift or conversion that reaches such a day
+  # answers the next day that has a date of its own instead.
   defp date_at(iso_days, calendar) do
-    {year, month, day} = calendar.date_from_iso_days(iso_days)
+    writing =
+      if Calendrical.Base.Common.composite?(calendar),
+        do: calendar.calendar_for_iso_days(iso_days),
+        else: calendar
+
+    {year, month, day} = writing.date_from_iso_days(iso_days)
     %Date{year: year, month: month, day: day, calendar: calendar}
   end
 
