@@ -1749,8 +1749,10 @@ defmodule Calendrical do
 
   ### Returns
 
-  * a the days since the start of the era and
-    the era of the year as a tuple.
+  * The day of the era, counted from its first day, and the era of the
+    date's calendar year, as a tuple. A calendar whose year 1 begins on
+    another day than 1 January AD 1 counts era 1 from the day it does:
+    NRF's year 1 began 34 days into AD 1.
 
   ### Examples
 
@@ -1758,10 +1760,10 @@ defmodule Calendrical do
       {737060, 1}
 
       iex> Calendrical.day_of_era(Calendrical.first_day_of_year(2019, Calendrical.NRF))
-      {737093, 1}
+      {737059, 1}
 
       iex> Calendrical.day_of_era(Calendrical.last_day_of_year(2019, Calendrical.NRF))
-      {737456, 1}
+      {737422, 1}
 
   """
   @spec day_of_era(date()) :: {Calendar.day(), Calendar.era()} | Calendrical.date_error()

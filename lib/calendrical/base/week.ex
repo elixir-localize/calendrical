@@ -110,11 +110,15 @@ defmodule Calendrical.Base.Week do
     {:error, missing_date_error("week_of_month", year, week, day)}
   end
 
+  # The era is the calendar year's, as `year_of_era/3` gives it: era 1
+  # counts from the first day of calendar year 1 and era 0 back from the
+  # last day of calendar year 0, as `Calendar.ISO` counts its days.
   def day_of_era(year, week, day, config) when is_date(year, week, day) do
-    with {:ok, date} <- Date.new(year, week, day, config.calendar) do
-      {:ok, %{year: year, month: month, day: day}} = Date.convert(date, Calendar.ISO)
-      Calendar.ISO.day_of_era(year, month, day)
-    end
+    iso_days = date_to_iso_days(year, week, day, config)
+
+    if year >= 1,
+      do: {iso_days - first_gregorian_day_of_year(1, config) + 1, 1},
+      else: {last_gregorian_day_of_year(0, config) - iso_days + 1, 0}
   end
 
   def day_of_era(year, week, day, _config) do

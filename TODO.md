@@ -6,8 +6,6 @@ Calendrical's open work. Design documents live in `plans/`.
 
 * [ ] **Umm al-Qura years outside ICU's table** — ICU4C 78.3 tabulates 1300 to 1600 AH and is civil elsewhere; Calendrical tabulates KACST's 1 to 1500 AH and is civil elsewhere. Before 1300 KACST's table begins some years a day earlier than ICU's civil years (1 Muharram 1178 is 1764-06-30 here, 1764-07-01 in ICU; also 607, 717, 758 and 1261 AH), and 1501 to 1600 AH here are civil where ICU tabulates them. Decide whether to document the difference or follow ICU.
 
-* [ ] **Eras around 1 January AD 1 in `Calendrical.NRF`** — `day_of_era/3` takes the Gregorian date's era and `year_of_era/3` the calendar year's, so they disagree on NRF's fiscal year 0 days in AD 1.
-
 * [ ] **`Calendrical.LunarJapanese` reads the first day of year -10001 back as year -10002** — `date_from_iso_days(date_to_iso_days(-10001, 1, 1))` is `{-10002, 1, 1}`, far outside the years its astronomy is good for; found where a composite's base calendar was given no first day.
 
 * [ ] **`:begins_or_ends` is documented but has no effect** — `Calendrical.new/3` documents it as choosing whether the year begins or ends on `:day_of_week` of `:month_of_year`, and `Calendrical.Config` stores it, but no code reads it: a week calendar's `first_or_last: :last` is what makes `:month_of_year` the month a year ends in. Implement it or remove it.
@@ -15,6 +13,8 @@ Calendrical's open work. Design documents live in `plans/`.
 * [ ] **`Calendrical.UnsupportedDateRangeError`'s `:range` is English prose** — the Persian calendar and the Islamic visibility calculations give it a phrase such as "dates covered by the installed JPL ephemeris", which is bound into the translated message untranslated. Carry the bounds as data and write them in the message.
 
 ## Done
+
+* [x] **A month or week calendar's day of the era follows its calendar year's era** — `day_of_era/3` took the Gregorian date's era where `year_of_era/3` took the calendar year's, so NRF's year 0 days in AD 1 (34) and the fiscal years' (90 to 184) disagreed; era 1 now counts from calendar year 1's first day and era 0 back from year 0's last. Breaking for the count. Held by `test/day_of_era_test.exs`. 2026-10-03, v1.4.0.
 
 * [x] **`Calendrical.TimeZone.resolve/3` delegates to Localize** — its own resolver, with a table of abbreviations read in every locale and a repeated hour read in daylight time, is replaced by `Localize.DateTime.Timezone.resolve/3`, which reads the locale's CLDR names and reads a repeated hour in standard time, as ICU does. Breaking. 2026-10-03, v1.4.0.
 

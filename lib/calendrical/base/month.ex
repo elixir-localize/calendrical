@@ -200,9 +200,17 @@ defmodule Calendrical.Base.Month do
       Integer.mod(Calendrical.iso_days_to_day_of_week(iso_days) - first_day, @days_in_week)
   end
 
+  # The era is the calendar year's, as `year_of_era/3` gives it: era 1
+  # counts from the first day of calendar year 1 and era 0 back from the
+  # last day of calendar year 0, as `Calendar.ISO` counts its days. A year
+  # that begins on 1 January counts as `Calendar.ISO` does; a fiscal year
+  # 0 that runs into AD 1 keeps its days in era 0.
   def day_of_era(year, month, day, config) when is_date(year, month, day) do
-    {year, month, day} = date_to_iso_date(year, month, day, config)
-    Calendar.ISO.day_of_era(year, month, day)
+    iso_days = date_to_iso_days(year, month, day, config)
+
+    if year >= 1,
+      do: {iso_days - first_gregorian_day_of_year(1, config) + 1, 1},
+      else: {last_gregorian_day_of_year(0, config) - iso_days + 1, 0}
   end
 
   def day_of_era(year, month, day, _config) do

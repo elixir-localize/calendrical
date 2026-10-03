@@ -10,6 +10,8 @@ The format is based on
 
 ### Breaking changes
 
+* A month or week calendar's `day_of_era/3` gives a date its calendar year's era, as `year_of_era/3` does, and counts era 1 from the first day of calendar year 1: a fiscal year 0 running into AD 1 kept the Gregorian era, and NRF's days now count 34 fewer.
+
 * `Calendrical.TimeZone.resolve/3` is `Localize.DateTime.Timezone.resolve/3`: errors are exceptions where they were atoms, abbreviations resolve only in a locale whose CLDR data writes them (JST in `ja`, BST in `en-GB`), a fixed offset is labelled with the offset, and a repeated hour is read in standard time.
 
 * `Calendrical.strftime/3` returns `{:ok, string}` or `{:error, exception}` where it raised on an invalid locale, format, option or value; `Calendrical.strftime!/3` returns the string. It now passes `Calendar.strftime/3`'s own options, such as `:preferred_date`, through instead of dropping them.
