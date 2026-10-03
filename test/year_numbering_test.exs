@@ -40,6 +40,10 @@ defmodule Calendrical.YearNumberingTest do
     {gregorian_year(first + 6), gregorian_year(last - 6)}
   end
 
+  # The Gregorian year that `:year` numbers the calendar year by.
+  defp named_year(:beginning, beginning, _ending), do: beginning
+  defp named_year(:ending, _beginning, ending), do: ending
+
   for kind <- [Month, Week],
       first_or_last <- [:first, :last],
       year_option <- [:beginning, :ending] do
@@ -50,7 +54,7 @@ defmodule Calendrical.YearNumberingTest do
       for month <- 1..12, year <- @years do
         config = config(month, unquote(first_or_last), year_option)
         {beginning, ending} = beginning_and_ending(kind, year, config)
-        named = if year_option == :beginning, do: beginning, else: ending
+        named = named_year(year_option, beginning, ending)
         context = "month_of_year #{month}, year #{year}"
 
         assert kind.last_gregorian_day_of_year(year, config) + 1 ==
