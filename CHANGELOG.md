@@ -10,6 +10,8 @@ The format is based on
 
 ### Breaking changes
 
+* A calendar of weeks refuses `:begins_or_ends` paired against `:first_or_last` (`:begins` with `:last`, `:ends` with `:first`), which was accepted and ignored; left out, `:begins_or_ends` follows `:first_or_last`.
+
 * A month or week calendar's `day_of_era/3` gives a date its calendar year's era, as `year_of_era/3` does, and counts era 1 from the first day of calendar year 1: a fiscal year 0 running into AD 1 kept the Gregorian era, and NRF's days now count 34 fewer.
 
 * `Calendrical.TimeZone.resolve/3` is `Localize.DateTime.Timezone.resolve/3`: errors are exceptions where they were atoms, abbreviations resolve only in a locale whose CLDR data writes them (JST in `ja`, BST in `en-GB`), a fixed offset is labelled with the offset, and a repeated hour is read in standard time.
@@ -93,6 +95,8 @@ The format is based on
 * `Calendrical.Gettext` interpolates with `Localize.Gettext.Interpolation`, and the exception messages are written in MessageFormat 2 with `{$name}` placeholders, extracted to `priv/gettext/calendrical.pot`. The messages read as they did.
 
 ### Fixed
+
+* A lunisolar calendar reads a day's year as the year its new year begins, as `date_to_iso_days/3` places it: `Calendrical.LunarJapanese`, whose epoch is 165 days into its year 1, read the first day of year -10001 as year -10002.
 
 * A composite calendar of its base calendar alone (`calendars: []`) compiles without the type checker's "this guard will never succeed" warnings.
 

@@ -71,9 +71,16 @@ defmodule Calendrical.Config do
       year: Keyword.get(options, :year, :majority),
       month_of_year: Keyword.get(options, :month_of_year, 1),
       first_or_last: Keyword.get(options, :first_or_last, :first),
-      begins_or_ends: Keyword.get(options, :begins_or_ends, :begins),
+      begins_or_ends: Keyword.get(options, :begins_or_ends, begins_or_ends(options)),
       weeks_in_month: Keyword.get(options, :weeks_in_month, [4, 5, 4])
     }
+  end
+
+  # `:begins_or_ends` names the choice `:first_or_last` makes, and follows
+  # it when it is not given: a year that ends on the last day of the week of
+  # its month, or begins on the first.
+  defp begins_or_ends(options) do
+    if Keyword.get(options, :first_or_last) == :last, do: :ends, else: :begins
   end
 
   @doc false
@@ -132,6 +139,7 @@ defmodule Calendrical.Config do
              config.begins_or_ends in [:begins, :ends],
              begins_or_ends_error(config.begins_or_ends)
            ),
+         :ok <- validate_anchor(config, calendar_type),
          :ok <-
            assert(
              config.weeks_in_month in @valid_weeks_in_month,
@@ -223,6 +231,22 @@ defmodule Calendrical.Config do
 
   defp begins_or_ends_error(begins_or_ends) do
     ":begins_or_ends must be :begins or :ends. Found #{inspect(begins_or_ends)}."
+  end
+
+  # A calendar of weeks begins its year on the first `:day_of_week` of its
+  # month or ends it on the last: `:begins_or_ends` and `:first_or_last`
+  # must name the same one. A month calendar uses neither.
+  defp validate_anchor(%{begins_or_ends: :begins, first_or_last: :last}, :week),
+    do: {:error, anchor_error(:begins, :first, :last)}
+
+  defp validate_anchor(%{begins_or_ends: :ends, first_or_last: :first}, :week),
+    do: {:error, anchor_error(:ends, :last, :first)}
+
+  defp validate_anchor(_config, _calendar_type), do: :ok
+
+  defp anchor_error(begins_or_ends, needed, found) do
+    ":begins_or_ends #{inspect(begins_or_ends)} needs first_or_last: #{inspect(needed)}. " <>
+      "Found #{inspect(found)}."
   end
 
   defp weeks_in_month_error(weeks_in_month) do

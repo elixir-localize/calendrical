@@ -745,14 +745,17 @@ defmodule Calendrical do
     `[4, 5, 4]`. A `:month` calendar does not
     use it.
 
-  * `:begins_or_ends` determines whether the calendar
-    year begins or ends on the given `:day_of_week` and
-    `:month_of_year`. The default is `:begins`.
+  * `:first_or_last` determines whether a `:week`
+    calendar's year begins on the `:first` or ends on
+    the `:last` `:day_of_week` of `:month_of_year`. The
+    default is `:first`. A `:month` calendar does not
+    use it: its year begins in `:month_of_year`.
 
-  * `:first_or_last` determines whether the calendar
-    year starts (or ends) on the `:first` or the `:last`
-    `:day_of_week` of `:month_of_year`. The default
-    is `:first`.
+  * `:begins_or_ends` names the same choice, `:begins`
+    with `first_or_last: :first` and `:ends` with
+    `first_or_last: :last`; any other pairing is an
+    error. The default follows `:first_or_last`. A
+    `:month` calendar does not use it.
 
   * `:day_of_week` determines the day
     of the week on which this calendar begins

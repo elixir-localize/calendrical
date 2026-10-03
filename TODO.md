@@ -6,13 +6,13 @@ Calendrical's open work. Design documents live in `plans/`.
 
 * [ ] **Umm al-Qura years outside ICU's table** — ICU4C 78.3 tabulates 1300 to 1600 AH and is civil elsewhere; Calendrical tabulates KACST's 1 to 1500 AH and is civil elsewhere. Before 1300 KACST's table begins some years a day earlier than ICU's civil years (1 Muharram 1178 is 1764-06-30 here, 1764-07-01 in ICU; also 607, 717, 758 and 1261 AH), and 1501 to 1600 AH here are civil where ICU tabulates them. Decide whether to document the difference or follow ICU.
 
-* [ ] **`Calendrical.LunarJapanese` reads the first day of year -10001 back as year -10002** — `date_from_iso_days(date_to_iso_days(-10001, 1, 1))` is `{-10002, 1, 1}`, far outside the years its astronomy is good for; found where a composite's base calendar was given no first day.
-
-* [ ] **`:begins_or_ends` is documented but has no effect** — `Calendrical.new/3` documents it as choosing whether the year begins or ends on `:day_of_week` of `:month_of_year`, and `Calendrical.Config` stores it, but no code reads it: a week calendar's `first_or_last: :last` is what makes `:month_of_year` the month a year ends in. Implement it or remove it.
-
 * [ ] **`Calendrical.UnsupportedDateRangeError`'s `:range` is English prose** — the Persian calendar and the Islamic visibility calculations give it a phrase such as "dates covered by the installed JPL ephemeris", which is bound into the translated message untranslated. Carry the bounds as data and write them in the message.
 
 ## Done
+
+* [x] **`:begins_or_ends` must agree with `:first_or_last`** — no code read it; it now names the same choice for a calendar of weeks, a mismatched pair is an error and an omitted one follows `:first_or_last`, and a month calendar uses neither (user, 2026-10-03). Breaking. Held by `test/begins_or_ends_test.exs`. 2026-10-03, v1.4.0.
+
+* [x] **A lunisolar day reads back in the year its new year begins** — the year was counted in mean years from the epoch, which is 165 days into `Calendrical.LunarJapanese`'s year 1, so its first day of year -10001 read back as -10002; it is now the inverse of `mid_year/3`'s placing of years. Held by `test/lunisolar_year_round_trip_test.exs`. 2026-10-03, v1.4.0.
 
 * [x] **A month or week calendar's day of the era follows its calendar year's era** — `day_of_era/3` took the Gregorian date's era where `year_of_era/3` took the calendar year's, so NRF's year 0 days in AD 1 (34) and the fiscal years' (90 to 184) disagreed; era 1 now counts from calendar year 1's first day and era 0 back from year 0's last. Breaking for the count. Held by `test/day_of_era_test.exs`. 2026-10-03, v1.4.0.
 
