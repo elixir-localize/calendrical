@@ -516,10 +516,7 @@ defmodule Calendrical.Lunisolar do
   def cyclical_date_from_iso_days(iso_days, epoch, location_fun) do
     new_year = new_year_on_or_before(iso_days, location_fun)
     start_of_month = new_moon_before(iso_days + 1, location_fun)
-
-    elapsed_years =
-      ((new_year - epoch) / Time.mean_tropical_year() + 1)
-      |> round()
+    elapsed_years = year_beginning_on(new_year, epoch)
 
     month =
       ((start_of_month - new_year) / Time.mean_synodic_month() + 1)
@@ -827,6 +824,19 @@ defmodule Calendrical.Lunisolar do
   # epoch in late July or August it duplicated or skipped years.
   # Snapping to the nearest mean mid-lunar-year keeps the year the
   # estimate points into while staying months clear of either new year.
+  # The year that begins on `new_year`, as `mid_year/3` places years: the
+  # one whose mean middle is the first of its points on or after the new
+  # year. Counting mean years from the epoch instead puts every year of a
+  # calendar whose epoch is not its first new year near a half (the
+  # lunisolar Japanese calendar's epoch, 20 July 645, is 165 days after its
+  # year 1 began), and the drift of new years from the mean over millennia
+  # then tips a year into the one before.
+  defp year_beginning_on(new_year, epoch) do
+    year = Time.mean_tropical_year()
+    first_year_point = round((epoch - @mean_mid_lunar_year) / year + 1 / 2)
+    ceil((new_year - @mean_mid_lunar_year) / year) - first_year_point + 1
+  end
+
   defp mid_year(cycle, cyclic_year, epoch) do
     estimate =
       epoch +
