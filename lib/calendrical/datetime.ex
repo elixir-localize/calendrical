@@ -3,8 +3,8 @@ defmodule Calendrical.DateTime do
   Locale-aware datetime parsing for Calendrical's calendars.
 
   Parsing is implemented by Localize: `parse/2` delegates to
-  `Localize.DateTime.parse/2`. Named time zones are resolved through
-  `Calendrical.TimeZone`.
+  `Localize.DateTime.parse/2`, which resolves the time zones it reads
+  itself.
 
   When the caller doesn't know in advance whether the input is a
   date, time, datetime, or range, use `Calendrical.parse/2`.

@@ -7,7 +7,7 @@ Calendrical provides locale-aware parsers for user-typed date and time strings. 
 * `Calendrical.DateTime.parse/2`
 * `Calendrical.Date.parse_range/2`
 
-Parsing is implemented by Localize, and each of these functions delegates to its Localize counterpart — `Localize.DateTime.Parser.parse/2`, `Localize.Date.parse/2`, `Localize.Time.parse/2`, `Localize.DateTime.parse/2` and `Localize.Interval.parse/2` — so the two give identical results and errors. Calendrical supplies the calendar modules the results are returned in, and `Calendrical.TimeZone` for named time zones.
+Parsing is implemented by Localize, and each of these functions delegates to its Localize counterpart — `Localize.DateTime.Parser.parse/2`, `Localize.Date.parse/2`, `Localize.Time.parse/2`, `Localize.DateTime.parse/2` and `Localize.Interval.parse/2` — so the two give identical results and errors. Calendrical supplies the calendar modules the results are returned in; Localize resolves the time zones it reads, and `Calendrical.TimeZone.resolve/3` is the same resolver.
 
 This guide describes what each parser accepts, how Calendrical compares to Elixir's stdlib parsers, and what to expect for common wire formats.
 

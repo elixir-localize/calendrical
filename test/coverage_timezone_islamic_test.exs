@@ -22,7 +22,7 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
 
   describe "TimeZone.resolve/3 with common abbreviations" do
     test "PST keeps its own offset in July, when Los Angeles keeps PDT" do
-      assert {:ok, %DateTime{zone_abbr: "PST"} = dt} = TimeZone.resolve("PST", @july)
+      assert {:ok, %DateTime{zone_abbr: "-08:00"} = dt} = TimeZone.resolve("PST", @july)
       assert dt.utc_offset + dt.std_offset == -8 * 3600
     end
 
@@ -40,21 +40,31 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
       assert dt.utc_offset + dt.std_offset == -8 * 3600
     end
 
-    test "JST resolves to Asia/Tokyo at +09:00" do
+    # An abbreviation is read in a locale whose CLDR data writes it: `ja`
+    # writes JST, and `en` does not.
+    test "JST resolves to Asia/Tokyo at +09:00 where the locale writes it" do
       assert {:ok, %DateTime{time_zone: "Asia/Tokyo", zone_abbr: "JST"} = dt} =
-               TimeZone.resolve("JST", @july)
+               TimeZone.resolve("JST", @july, locale: :ja)
 
       assert dt.utc_offset == 9 * 3600
+
+      assert {:error, %Localize.UnknownTimezoneError{}} =
+               TimeZone.resolve("JST", @july, locale: :en)
     end
 
-    test "IST resolves to Asia/Kolkata at +05:30" do
-      assert {:ok, %DateTime{time_zone: "Asia/Kolkata"} = dt} = TimeZone.resolve("IST", @july)
-      assert dt.utc_offset == 5 * 3600 + 30 * 60
+    test "IST is India's time in en-IN and Ireland's in en-IE" do
+      assert {:ok, %DateTime{utc_offset: 19_800}} =
+               TimeZone.resolve("IST", @july, locale: :"en-IN")
+
+      assert {:ok, %DateTime{time_zone: "Europe/Dublin"} = dt} =
+               TimeZone.resolve("IST", @july, locale: :"en-IE")
+
+      assert dt.utc_offset + dt.std_offset == 3600
     end
 
-    test "BST resolves to Europe/London" do
+    test "BST resolves to Europe/London in en-GB" do
       assert {:ok, %DateTime{time_zone: "Europe/London", zone_abbr: "BST"} = dt} =
-               TimeZone.resolve("BST", @july)
+               TimeZone.resolve("BST", @july, locale: :"en-GB")
 
       assert dt.utc_offset + dt.std_offset == 3600
     end
@@ -63,12 +73,16 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
       assert {:ok, %DateTime{time_zone: "America/New_York"}} = TimeZone.resolve("EST", @january)
     end
 
-    test "CET resolves to Europe/Berlin" do
-      assert {:ok, %DateTime{time_zone: "Europe/Berlin"}} = TimeZone.resolve("CET", @january)
+    # CET is also an IANA zone, which the time zone database links to a
+    # city of the zone; its offset is Central European Time's.
+    test "CET resolves to Central European Time" do
+      assert {:ok, %DateTime{utc_offset: 3600, std_offset: 0, zone_abbr: "CET"}} =
+               TimeZone.resolve("CET", @january)
     end
 
-    test "NZST resolves to Pacific/Auckland" do
-      assert {:ok, %DateTime{time_zone: "Pacific/Auckland"}} = TimeZone.resolve("NZST", @july)
+    test "NZST resolves to Pacific/Auckland in en-NZ" do
+      assert {:ok, %DateTime{time_zone: "Pacific/Auckland", zone_abbr: "NZST"}} =
+               TimeZone.resolve("NZST", @july, locale: :"en-NZ")
     end
   end
 
@@ -97,7 +111,7 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
     end
 
     test "UTC+banana is an invalid GMT offset" do
-      assert {:error, :invalid_gmt_offset} = TimeZone.resolve("UTC+banana", @july)
+      assert {:error, %Localize.UnknownTimezoneError{}} = TimeZone.resolve("UTC+banana", @july)
     end
   end
 
@@ -105,7 +119,7 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
 
   describe "TimeZone.resolve/3 with ISO 8601 offsets" do
     test "Z resolves to UTC" do
-      assert {:ok, %DateTime{utc_offset: 0, time_zone: "UTC", zone_abbr: "UTC"}} =
+      assert {:ok, %DateTime{utc_offset: 0, std_offset: 0, time_zone: "Etc/UTC"}} =
                TimeZone.resolve("Z", @july)
     end
 
@@ -135,26 +149,23 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
     end
 
     test "single-digit offset +5 is invalid" do
-      assert {:error, :invalid_offset} = TimeZone.resolve("+5", @july)
+      assert {:error, %Localize.UnknownTimezoneError{}} = TimeZone.resolve("+5", @july)
     end
 
     test "non-numeric offset +ab is invalid" do
-      assert {:error, :invalid_offset} = TimeZone.resolve("+ab", @july)
+      assert {:error, %Localize.UnknownTimezoneError{}} = TimeZone.resolve("+ab", @july)
     end
 
     test "minutes greater than 59 are rejected" do
-      assert {:error, :invalid_offset} = TimeZone.resolve("+05:99", @july)
-      assert {:error, :invalid_offset} = TimeZone.resolve("+15:00", @july)
+      assert {:error, %Localize.UnknownTimezoneError{}} = TimeZone.resolve("+05:99", @july)
+      assert {:error, %Localize.UnknownTimezoneError{}} = TimeZone.resolve("+15:00", @july)
     end
   end
 
   # ── TimeZone — CLDR locale-name path ─────────────────────────────
 
   describe "TimeZone.resolve/3 with CLDR locale names" do
-    # These exercise resolve_locale_name/3, lookup_cldr_zone_name/2,
-    # find_zone_id/2, find_in_branch/3 and name_matches?/2. CLDR ids
-    # are lowercased in the data; resolve/3 canonicalizes them against
-    # the tz database's zone list.
+    # CLDR's names of zones and metazones, read in the locale asked for.
 
     test "a CLDR long daylight name resolves" do
       assert {:ok, %DateTime{time_zone: "Europe/London"}} =
@@ -176,13 +187,13 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
                TimeZone.resolve("europe/london", @july)
     end
 
-    test "an unknown locale falls back cleanly" do
-      assert {:error, :unresolvable_zone} =
+    test "an unknown locale is an error" do
+      assert {:error, %Localize.InvalidLocaleError{}} =
                TimeZone.resolve("Coordinated Universal Time", @july, locale: :zz)
     end
 
     test "a name that matches no CLDR entry is unresolvable" do
-      assert {:error, :unresolvable_zone} =
+      assert {:error, %Localize.UnknownTimezoneError{}} =
                TimeZone.resolve("Middle Earth Time", @july, locale: :fr)
     end
   end

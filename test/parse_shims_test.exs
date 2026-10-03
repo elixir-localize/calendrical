@@ -4,7 +4,7 @@ defmodule Calendrical.ParseShimsTest do
   # Calendrical's parse functions delegate to Localize, which owns the
   # parsers and tests them. These checks cover only what the shims add:
   # each reaches its Localize function, a Calendrical calendar module
-  # passes through, a named zone resolves through `Calendrical.TimeZone`,
+  # passes through, a named zone resolves,
   # and bad input is an error rather than a raise.
 
   doctest Calendrical.Date
@@ -31,7 +31,7 @@ defmodule Calendrical.ParseShimsTest do
              {:ok, ~D[5785-07-15 Calendrical.Hebrew]}
   end
 
-  test "a named zone resolves through Calendrical.TimeZone" do
+  test "a named zone resolves" do
     assert {:ok, %DateTime{time_zone: "America/New_York", zone_abbr: "EDT"}} =
              Calendrical.DateTime.parse("May 23, 2026, 2:30 PM America/New_York", locale: :en)
   end
