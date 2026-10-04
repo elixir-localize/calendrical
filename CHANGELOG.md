@@ -102,6 +102,8 @@ The format is based on
 
 ### Fixed
 
+* The Julian calendars answer with no year as the Gregorian does: `days_in_month(2)` is `{:ambiguous, 28..29}`, where it was the undeclared `{:error, :unresolved}`, a month they lack is `{:error, :undefined}`, where it was 31, and `months_in_year/0` is 12. A composite's `months_in_year/0` is `{:error, :undefined}`, and the `days_in_month/1` callback admits `{:error, exception}`.
+
 * `days_in_month/1` answers for a month with no year in every calendar built on `Calendrical.Behaviour`: the month's length where every year has it (`Calendrical.Coptic.days_in_month(1)` is `30`) and `{:ambiguous, range}` where it varies (`{:ambiguous, 5..6}` for month 13), where each was `{:error, :undefined}`.
 
 * A lunisolar calendar reads a day's year as the year its new year begins, as `date_to_iso_days/3` places it: `Calendrical.LunarJapanese`, whose epoch is 165 days into its year 1, read the first day of year -10001 as year -10002.

@@ -991,10 +991,9 @@ defmodule Calendrical.Julian do
   end
 
   @doc """
-  Returns the number of days in the given month.
+  Returns the number of days in the given month, whatever its year.
 
-  Because February's length depends on whether the year is a leap
-  year, this arity-1 form returns `{:error, :unresolved}` for month 2.
+  February has 29 days in a leap year and 28 otherwise.
 
   ### Arguments
 
@@ -1002,7 +1001,11 @@ defmodule Calendrical.Julian do
 
   ### Returns
 
-  * An integer day count, or `{:error, :unresolved}` for February.
+  * The number of days, where the month has as many in every year.
+
+  * `{:ambiguous, 28..29}` for February.
+
+  * `{:error, :undefined}` for any other value.
 
   ### Examples
 
@@ -1010,18 +1013,35 @@ defmodule Calendrical.Julian do
       30
 
       iex> Calendrical.Julian.days_in_month(2)
-      {:error, :unresolved}
+      {:ambiguous, 28..29}
+
+      iex> Calendrical.Julian.days_in_month(13)
+      {:error, :undefined}
 
   """
-  @spec days_in_month(month) :: Calendar.day() | {:error, :unresolved}
+  @spec days_in_month(term()) :: 30..31 | {:ambiguous, Range.t()} | {:error, :undefined}
   @impl true
-  def days_in_month(month) do
-    case month do
-      2 -> {:error, :unresolved}
-      month when month in @months_with_30_days -> 30
-      _other -> 31
-    end
-  end
+  def days_in_month(2), do: {:ambiguous, 28..29}
+  def days_in_month(month) when month in @months_with_30_days, do: 30
+  def days_in_month(month) when month in @months_with_31_days, do: 31
+  def days_in_month(_month), do: {:error, :undefined}
+
+  @doc """
+  Returns the number of months in a year, whatever the year.
+
+  ### Returns
+
+  * The integer `12`.
+
+  ### Examples
+
+      iex> Calendrical.Julian.months_in_year()
+      12
+
+  """
+  @spec months_in_year() :: 12
+  @impl true
+  def months_in_year, do: 12
 
   @doc """
   Returns the number of days in a Julian week.

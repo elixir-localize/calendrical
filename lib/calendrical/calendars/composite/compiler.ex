@@ -564,6 +564,17 @@ defmodule Calendrical.Composite.Compiler do
       def days_in_month(_month), do: {:error, :undefined}
 
       @doc """
+      Returns the number of months in a year.
+
+      Composite calendars cannot answer this without a year, since a
+      year a change of calendar cuts short has fewer, so it is
+      `{:error, :undefined}`.
+
+      """
+      @impl true
+      def months_in_year, do: {:error, :undefined}
+
+      @doc """
       Returns the number of days in a week.
 
       """

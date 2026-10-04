@@ -365,7 +365,9 @@ defmodule Calendrical.JulianVariantsTest do
 
     test "days_in_month/1 is the Julian month's length" do
       assert Calendrical.Julian.March25.days_in_month(1) == 31
-      assert Calendrical.Julian.March25.days_in_month(2) == {:error, :unresolved}
+      assert Calendrical.Julian.March25.days_in_month(2) == {:ambiguous, 28..29}
+      assert Calendrical.Julian.March25.days_in_month(13) == {:error, :undefined}
+      assert Calendrical.Julian.March25.months_in_year() == 12
     end
   end
 

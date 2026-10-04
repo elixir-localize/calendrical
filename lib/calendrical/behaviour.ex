@@ -733,7 +733,9 @@ defmodule Calendrical.Behaviour do
 
       """
       @spec days_in_month(Calendar.month()) ::
-              Calendar.day() | {:ambiguous, Range.t() | [pos_integer()]} | {:error, :undefined}
+              Calendar.day()
+              | {:ambiguous, Range.t() | [pos_integer()]}
+              | {:error, :undefined | Exception.t()}
       @impl true
 
       def days_in_month(month) do

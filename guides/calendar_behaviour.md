@@ -165,6 +165,7 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 |---|---|
 | `periods_in_year/1` | Delegates to `months_in_year/1`. |
 | `months_in_year/1` | Returns `months_in_leap_year` or `months_in_ordinary_year` based on `leap_year?/1`. |
+| `months_in_year/0` | Returns `months_in_ordinary_year` when it equals `months_in_leap_year`, and `{:ambiguous, range}` when a leap year has another month. Optional: a composite calendar answers `{:error, :undefined}`. |
 | `weeks_in_year/1` | Returns `{weeks, days_in_last_week}` for the weeks `week_of_year/3` counts. |
 | `days_in_year/1` | Computes `date_to_iso_days(year + 1, 1, 1) - date_to_iso_days(year, 1, 1)`. **Override** for an explicit constant when known. |
 | `days_in_month/1` | Returns `{:error, :undefined}`. **Override** with the month's length where it has as many days in every year, and `{:ambiguous, range}` where its length depends on the year, as every built-in calendar does. |

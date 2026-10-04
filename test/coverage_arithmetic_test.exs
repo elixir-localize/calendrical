@@ -284,10 +284,10 @@ defmodule CoverageArithmeticTest do
       assert Julian.day_of_year(2024, 3, 1) == 61
     end
 
-    test "days_in_month/1 resolves all months except February" do
+    test "days_in_month/1 is February's two lengths and every other month's one" do
       assert Enum.map(1..12, &Julian.days_in_month/1) == [
                31,
-               {:error, :unresolved},
+               {:ambiguous, 28..29},
                31,
                30,
                31,

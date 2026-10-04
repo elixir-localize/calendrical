@@ -371,6 +371,7 @@ defmodule Calendrical.Julian.Compiler do
       def week(year, week), do: Calendrical.Base.Common.week(__MODULE__, year, week)
       def weeks_in_year(year), do: Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
       defdelegate months_in_year(year), to: Calendrical.Julian
+      defdelegate months_in_year(), to: Calendrical.Julian
       defdelegate periods_in_year(year), to: Calendrical.Julian
       # Parsing must validate against this variant's own year labeling
       # (a leap day can be valid here in a different label year than in

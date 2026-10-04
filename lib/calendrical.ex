@@ -381,11 +381,19 @@ defmodule Calendrical do
   @callback days_in_year(year :: year()) :: pos_integer() | {:error, Exception.t()}
 
   @doc """
-  Returns the number of days in a month (withoout a year).
+  Returns the number of days in a month (without a year).
+
+  Returns an integer when the month has as many days in every year,
+  `{:ambiguous, range}` when its length depends on the year,
+  `{:error, :undefined}` for a month the calendar does not have or
+  cannot answer for, and `{:error, exception}` for a value that is not
+  a month.
 
   """
   @callback days_in_month(month :: month()) ::
-              Calendar.day() | {:ambiguous, Range.t() | [pos_integer()]} | {:error, :undefined}
+              Calendar.day()
+              | {:ambiguous, Range.t() | [pos_integer()]}
+              | {:error, :undefined | Exception.t()}
 
   @doc """
   Returns the dates in this calendar, of a given `month` and `day`, that

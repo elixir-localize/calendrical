@@ -31,7 +31,13 @@ defmodule Calendrical.DaysInMonthWithoutYearTest do
     {Calendrical.Islamic.UmmAlQura, 1300..1600},
     {Calendrical.Islamic.Observational, 1440..1450},
     {Calendrical.Islamic.Rgsa, 1440..1450},
-    {Calendrical.Reform.Sweden.Transitional, 1690..1720}
+    {Calendrical.Reform.Sweden.Transitional, 1690..1720},
+    {Calendrical.Julian, 1900..2200},
+    {Calendrical.Julian.Jan1, 1900..2200},
+    {Calendrical.Julian.March1, 1900..2200},
+    {Calendrical.Julian.March25, 1900..2200},
+    {Calendrical.Julian.Sept1, 1900..2200},
+    {Calendrical.Julian.Dec25, 1900..2200}
   ]
 
   for {calendar, years} <- @calendars do
@@ -70,11 +76,53 @@ defmodule Calendrical.DaysInMonthWithoutYearTest do
   end
 
   test "a month the calendar does not have is undefined" do
-    for {calendar, _years} <- @calendars,
-        calendar != Calendrical.Gregorian,
-        month <- [0, -1, 14, 100, nil, "1", 1.0, :january] do
+    for {calendar, _years} <- @calendars, month <- [0, -1, 14, 100] do
       assert calendar.days_in_month(month) == {:error, :undefined},
              "#{inspect(calendar)} #{inspect(month)}"
+    end
+  end
+
+  # The callback answers a value that is not a month with `{:error, :undefined}`
+  # or `{:error, exception}`: the month calendars name the missing year.
+  test "a value that is not a month is an error" do
+    for {calendar, _years} <- @calendars, month <- [nil, "1", 1.0, :january] do
+      assert {:error, reason} = calendar.days_in_month(month)
+
+      assert reason == :undefined or is_exception(reason),
+             "#{inspect(calendar)} #{inspect(month)}"
+    end
+  end
+
+  describe "months_in_year/0" do
+    test "the Julian calendars have twelve months, as the Gregorian has" do
+      for calendar <- [
+            Calendrical.Julian,
+            Calendrical.Julian.Jan1,
+            Calendrical.Julian.March1,
+            Calendrical.Julian.March25,
+            Calendrical.Julian.Sept1,
+            Calendrical.Julian.Dec25
+          ] do
+        assert calendar.months_in_year() == Calendrical.Gregorian.months_in_year()
+        assert calendar.months_in_year() == 12
+      end
+    end
+
+    test "every calendar answers, a composite that it cannot" do
+      for {calendar, years} <- @calendars do
+        counts = for year <- years, uniq: true, do: calendar.months_in_year(year)
+
+        expected =
+          case Enum.sort(counts) do
+            [months] -> months
+            several -> {:ambiguous, List.first(several)..List.last(several)}
+          end
+
+        assert calendar.months_in_year() == expected, inspect(calendar)
+      end
+
+      assert Calendrical.Reform.England.months_in_year() == {:error, :undefined}
+      assert Calendrical.Reform.England.days_in_month(2) == {:error, :undefined}
     end
   end
 end

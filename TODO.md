@@ -4,11 +4,11 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Open
 
-* [ ] **The Julian calendars answer with no year unlike the Gregorian** — `Calendrical.Julian.days_in_month(2)` is `{:error, :unresolved}`, a value the `days_in_month/1` callback does not declare (an integer, `{:ambiguous, range}` or `{:error, :undefined}`), where `Calendrical.Gregorian.days_in_month(2)` is `{:ambiguous, 28..29}`; and `months_in_year/0` is not defined, though every Julian year has twelve months, where `Calendrical.Gregorian.months_in_year()` is `12`. `Jan1`, `March1`, `March25`, `Sept1` and `Dec25` answer the same, and `test/julian_variants_test.exs` and `test/coverage_arithmetic_test.exs` pin `:unresolved`. `months_in_year/0` is an optional callback, so its absence breaks no contract, but a caller has to treat the Julian calendars apart. Found from Tempo, 2026-10-04, at `ad5ff77`.
-
 * [ ] **Decide the astronomical Umm al-Qura rule after 1450 AH** — reviewed: it is KACST's rule to 1450 AH (335 of 336 months), and from 1451 AH KACST's projected table and ICU's follow a stricter one, moonset at least 19.5 minutes after sunset or a moon at least 18 hours old (598 of 600 and 287 of 287 months). It is not a crescent-visibility criterion (Yallop and Odeh fail), and ICU carries KACST's table without a rule; find the criterion behind KACST's projected months before choosing. Analysis in [plans/umm-al-qura-astronomical.md](plans/umm-al-qura-astronomical.md).
 
 ## Done
+
+* [x] **The Julian calendars answer with no year as the Gregorian does** — `days_in_month(2)` is `{:ambiguous, 28..29}`, a month they do not have is `{:error, :undefined}` (13 answered 31), and `months_in_year/0` is 12, in `Calendrical.Julian` and its five new-year variants; a composite's `months_in_year/0` is `{:error, :undefined}`, and the `days_in_month/1` callback admits `{:error, exception}` (user, 2026-10-04). Found from Tempo. 2026-10-04, v1.4.0.
 
 * [x] **`days_in_month/1` answers with no year in every calendar** — the fifteen calendars built on `Calendrical.Behaviour` that kept its `{:error, :undefined}` default, and `Calendrical.Reform.Sweden.Transitional`, answer the month's length or `{:ambiguous, range}`, checked for every month against `days_in_month/2` over a span of years by `test/days_in_month_without_year_test.exs`. Found from Tempo. 2026-10-04, v1.4.0.
 
