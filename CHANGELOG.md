@@ -74,6 +74,8 @@ The format is based on
 
 ### Changed
 
+* The package's licenses are `Apache-2.0` and `Unicode-3.0`: the Umm al-Qura months for 1501 to 1600 AH are derived from ICU, whose notice is in `LICENSE-UNICODE.md`.
+
 * `Calendrical.Islamic.UmmAlQura` takes ICU4C's months for 1501 to 1600 AH after KACST's for 1 to 1500 AH, where it used the civil calendar, so it matches ICU from 1300 AH on; before 1300 it keeps KACST's months, documented.
 
 * `Calendrical.UnsupportedDateRangeError`'s `:range` is data, `:jpl_ephemeris` from the Islamic visibility calculations, written as a whole translated sentence, where an English phrase was bound untranslated into the message.

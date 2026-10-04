@@ -209,5 +209,5 @@ Full API documentation is available on [HexDocs](https://hexdocs.pm/calendrical)
 
 ## License
 
-Apache License 2.0. See the [LICENSE](https://hexdocs.pm/calendrical/license.html) file for details.
+Apache License 2.0. See the [LICENSE](https://hexdocs.pm/calendrical/license.html) file for details. The Umm al-Qura month lengths for 1501 to 1600 AH are derived from ICU and are under the [Unicode License V3](https://hexdocs.pm/calendrical/license-unicode.html).
 

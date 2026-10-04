@@ -71,7 +71,7 @@ defmodule Calendrical.MixProject do
   def package do
     [
       maintainers: ["Kip Cole"],
-      licenses: ["Apache-2.0"],
+      licenses: ["Apache-2.0", "Unicode-3.0"],
       links: links(),
       files: [
         "lib",
@@ -104,6 +104,7 @@ defmodule Calendrical.MixProject do
         [
           "README.md",
           "LICENSE.md",
+          "LICENSE-UNICODE.md",
           "CHANGELOG.md"
         ] ++ Path.wildcard("guides/*.md"),
       formatters: ["html", "markdown"],
