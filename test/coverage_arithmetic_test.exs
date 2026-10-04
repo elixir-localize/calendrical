@@ -97,9 +97,10 @@ defmodule CoverageArithmeticTest do
       assert Coptic.days_in_month(1743, 13) == 6
     end
 
-    test "days_in_month/1 is undefined for these calendars" do
-      assert Ethiopic.days_in_month(5) == {:error, :undefined}
-      assert Coptic.days_in_month(13) == {:error, :undefined}
+    test "days_in_month/1 is the month's length where every year has it" do
+      assert Ethiopic.days_in_month(5) == 30
+      assert Coptic.days_in_month(13) == {:ambiguous, 5..6}
+      assert Coptic.days_in_month(14) == {:error, :undefined}
     end
 
     test "valid_date? false branches" do

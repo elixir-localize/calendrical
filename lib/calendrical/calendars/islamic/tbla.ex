@@ -236,4 +236,39 @@ defmodule Calendrical.Islamic.Tbla do
   def date_from_iso_days(iso_days) do
     Tabular.date_from_iso_days(iso_days, epoch())
   end
+
+  @doc """
+  Returns the number of days in the given month, whatever its year.
+
+  Odd months have 30 days and even months 29; the twelfth has 30 in a leap year.
+
+  ### Arguments
+
+  * `month` is a month number, 1..12.
+
+  ### Returns
+
+  * The number of days, where the month has as many in every year.
+
+  * `{:ambiguous, range}` where the month's length depends on the year.
+
+  * `{:error, :undefined}` for any other value.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Tbla.days_in_month(1)
+      30
+
+      iex> Calendrical.Islamic.Tbla.days_in_month(2)
+      29
+
+      iex> Calendrical.Islamic.Tbla.days_in_month(12)
+      {:ambiguous, 29..30}
+
+  """
+  @impl true
+  def days_in_month(12), do: {:ambiguous, 29..30}
+  def days_in_month(month) when month in [1, 3, 5, 7, 9, 11], do: 30
+  def days_in_month(month) when month in [2, 4, 6, 8, 10], do: 29
+  def days_in_month(_month), do: {:error, :undefined}
 end

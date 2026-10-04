@@ -723,14 +723,17 @@ defmodule Calendrical.Behaviour do
       end
 
       @doc """
-      Returns how many days there are in the given month.
+      Returns how many days there are in the given month, whatever its
+      year.
 
-      Must be implemented in derived calendars because
-      we cannot know what the calendar format is.
+      The default is `{:error, :undefined}`, since the behaviour cannot
+      know a month's length without a year. A calendar overrides it with
+      the number of days where the month has as many in every year, and
+      `{:ambiguous, range}` where its length depends on the year.
 
       """
       @spec days_in_month(Calendar.month()) ::
-              Calendar.month() | {:ambiguous, Range.t() | [pos_integer()]} | {:error, :undefined}
+              Calendar.day() | {:ambiguous, Range.t() | [pos_integer()]} | {:error, :undefined}
       @impl true
 
       def days_in_month(month) do

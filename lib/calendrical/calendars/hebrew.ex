@@ -1092,4 +1092,42 @@ defmodule Calendrical.Hebrew do
       find_month(year, offset - days, month + 1, year_length)
     end
   end
+
+  @doc """
+  Returns the number of days in the given month, whatever its year.
+
+  Months are numbered from Tishri, and a leap year's added month takes the sixth place, so only Tishri (1), Tevet (4), Shevat (5) and a leap year's Elul (13) have one length in every year: the place of every other month is another month's in a leap year, or its length varies with the year's.
+
+  ### Arguments
+
+  * `month` is an ordinal month number, 1..13.
+
+  ### Returns
+
+  * The number of days, where the month has as many in every year.
+
+  * `{:ambiguous, range}` where the month's length depends on the year.
+
+  * `{:error, :undefined}` for any other value.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.days_in_month(1)
+      30
+
+      iex> Calendrical.Hebrew.days_in_month(4)
+      29
+
+      iex> Calendrical.Hebrew.days_in_month(6)
+      {:ambiguous, 29..30}
+
+      iex> Calendrical.Hebrew.days_in_month(13)
+      29
+
+  """
+  @impl true
+  def days_in_month(month) when month in [1, 5], do: 30
+  def days_in_month(month) when month in [4, 13], do: 29
+  def days_in_month(month) when month in 1..13, do: {:ambiguous, 29..30}
+  def days_in_month(_month), do: {:error, :undefined}
 end

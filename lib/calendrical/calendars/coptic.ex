@@ -465,4 +465,35 @@ defmodule Calendrical.Coptic do
   def date_from_iso_days(iso_days) do
     Egyptian.date_from_iso_days(iso_days, epoch())
   end
+
+  @doc """
+  Returns the number of days in the given month, whatever its year.
+
+  Twelve months have 30 days; the thirteenth has 6 in a leap year and 5 otherwise.
+
+  ### Arguments
+
+  * `month` is a month number, 1..13.
+
+  ### Returns
+
+  * The number of days, where the month has as many in every year.
+
+  * `{:ambiguous, range}` where the month's length depends on the year.
+
+  * `{:error, :undefined}` for any other value.
+
+  ### Examples
+
+      iex> Calendrical.Coptic.days_in_month(1)
+      30
+
+      iex> Calendrical.Coptic.days_in_month(13)
+      {:ambiguous, 5..6}
+
+  """
+  @impl true
+  def days_in_month(month) when month in 1..12, do: 30
+  def days_in_month(13), do: {:ambiguous, 5..6}
+  def days_in_month(_month), do: {:error, :undefined}
 end

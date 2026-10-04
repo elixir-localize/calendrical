@@ -407,4 +407,29 @@ defmodule Calendrical.Islamic.Rgsa do
     months_elapsed = (year - 1) * 12 + (month - 1)
     epoch() + floor((months_elapsed + 0.5) * @mean_synodic_month)
   end
+
+  @doc """
+  Returns the number of days in the given month, whatever its year.
+
+  Every month has 29 or 30 days, as the crescent is first seen.
+
+  ### Arguments
+
+  * `month` is a month number, 1..12.
+
+  ### Returns
+
+  * `{:ambiguous, 29..30}` for months 1..12.
+
+  * `{:error, :undefined}` for any other value.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Rgsa.days_in_month(9)
+      {:ambiguous, 29..30}
+
+  """
+  @impl true
+  def days_in_month(month) when month in 1..12, do: {:ambiguous, 29..30}
+  def days_in_month(_month), do: {:error, :undefined}
 end

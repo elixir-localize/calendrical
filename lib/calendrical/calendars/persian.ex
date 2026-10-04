@@ -394,4 +394,39 @@ defmodule Calendrical.Persian do
     correction = if MapSet.member?(@arithmetic_common_years, year - 1), do: 1, else: 0
     @arithmetic_epoch + 365 * (year - 1) + Integer.floor_div(8 * year + 21, 33) - correction
   end
+
+  @doc """
+  Returns the number of days in the given month, whatever its year.
+
+  The first six months have 31 days and the next five 30; the last, Esfand, has 30 in a leap year and 29 otherwise.
+
+  ### Arguments
+
+  * `month` is a month number, 1..12.
+
+  ### Returns
+
+  * The number of days, where the month has as many in every year.
+
+  * `{:ambiguous, range}` where the month's length depends on the year.
+
+  * `{:error, :undefined}` for any other value.
+
+  ### Examples
+
+      iex> Calendrical.Persian.days_in_month(1)
+      31
+
+      iex> Calendrical.Persian.days_in_month(7)
+      30
+
+      iex> Calendrical.Persian.days_in_month(12)
+      {:ambiguous, 29..30}
+
+  """
+  @impl true
+  def days_in_month(month) when month in 1..6, do: 31
+  def days_in_month(month) when month in 7..11, do: 30
+  def days_in_month(12), do: {:ambiguous, 29..30}
+  def days_in_month(_month), do: {:error, :undefined}
 end

@@ -426,4 +426,36 @@ defmodule Calendrical.Reform.Sweden.Transitional do
   defp skip_year_zero(year, from_year) when year >= 0 and from_year < 0, do: year + 1
   defp skip_year_zero(year, from_year) when year <= 0 and from_year > 0, do: year - 1
   defp skip_year_zero(year, _from_year), do: year
+
+  @doc """
+  Returns the number of days in the given month, whatever its year.
+
+  Its months are the Julian calendar's, but for February, which had 28 days in 1700, 30 in 1712, and 28 or 29 in the years between and outside them.
+
+  ### Arguments
+
+  * `month` is a month number, 1..12.
+
+  ### Returns
+
+  * The number of days, where the month has as many in every year.
+
+  * `{:ambiguous, range}` where the month's length depends on the year.
+
+  * `{:error, :undefined}` for any other value.
+
+  ### Examples
+
+      iex> Calendrical.Reform.Sweden.Transitional.days_in_month(1)
+      31
+
+      iex> Calendrical.Reform.Sweden.Transitional.days_in_month(2)
+      {:ambiguous, 28..30}
+
+  """
+  @impl true
+  def days_in_month(2), do: {:ambiguous, 28..30}
+  def days_in_month(month) when month in [4, 6, 9, 11], do: 30
+  def days_in_month(month) when month in 1..12, do: 31
+  def days_in_month(_month), do: {:error, :undefined}
 end

@@ -167,7 +167,7 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 | `months_in_year/1` | Returns `months_in_leap_year` or `months_in_ordinary_year` based on `leap_year?/1`. |
 | `weeks_in_year/1` | Returns `{weeks, days_in_last_week}` for the weeks `week_of_year/3` counts. |
 | `days_in_year/1` | Computes `date_to_iso_days(year + 1, 1, 1) - date_to_iso_days(year, 1, 1)`. **Override** for an explicit constant when known. |
-| `days_in_month/1` | Returns `{:error, :undefined}`. **Override** if the month length is independent of the year. |
+| `days_in_month/1` | Returns `{:error, :undefined}`. **Override** with the month's length where it has as many days in every year, and `{:ambiguous, range}` where its length depends on the year, as every built-in calendar does. |
 | `days_in_month/2` | Computes the difference between the start of the month and the start of the next month. **Override** for any non-trivial calendar (this is one of the most commonly overridden callbacks). |
 | `leap_year?/1` | **Not provided by default.** Every calendar must define its own `leap_year?/1`. |
 

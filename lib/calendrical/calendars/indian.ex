@@ -368,4 +368,39 @@ defmodule Calendrical.Indian do
       end
     end)
   end
+
+  @doc """
+  Returns the number of days in the given month, whatever its year.
+
+  The first month, Chaitra, has 31 days in a leap year and 30 otherwise; the next five have 31 and the last six 30.
+
+  ### Arguments
+
+  * `month` is a month number, 1..12.
+
+  ### Returns
+
+  * The number of days, where the month has as many in every year.
+
+  * `{:ambiguous, range}` where the month's length depends on the year.
+
+  * `{:error, :undefined}` for any other value.
+
+  ### Examples
+
+      iex> Calendrical.Indian.days_in_month(1)
+      {:ambiguous, 30..31}
+
+      iex> Calendrical.Indian.days_in_month(2)
+      31
+
+      iex> Calendrical.Indian.days_in_month(12)
+      30
+
+  """
+  @impl true
+  def days_in_month(1), do: {:ambiguous, 30..31}
+  def days_in_month(month) when month in 2..6, do: 31
+  def days_in_month(month) when month in 7..12, do: 30
+  def days_in_month(_month), do: {:error, :undefined}
 end
