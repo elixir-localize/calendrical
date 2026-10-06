@@ -680,20 +680,29 @@ defmodule Calendrical do
   end
 
   @doc """
-  Return the calendar module for a locale.
+  Returns the calendar module for a locale.
+
+  A locale's `-u-ca-<name>` extension names a CLDR calendar, and its
+  calendar module is the one `calendar_from_cldr_calendar_type/1` gives
+  that name, refined by the locale where its territory says more than the
+  name: `gregory` is the territory's Gregorian calendar, with its weeks,
+  and `chinese` in Vietnam is `Calendrical.Vietnamese`. A locale with no
+  `-u-ca-` takes the calendar its territory prefers. This is the mapping
+  from a language tag's calendar to a calendar module: Localize does not
+  depend on Calendrical, so it is Calendrical's to give.
 
   ### Arguments
 
-  * `locale` is any locale or locale name validated
-    by `Localize.validate_locale/1`.  The default is
-    `Localize.get_locale()` which returns the locale
-    set for the current process.
+  * `locale` is a locale identifier atom, string, or a
+    `t:Localize.LanguageTag.t/0`.
 
   ### Returns
 
-  * `{:ok, calendar_module}` or
+  * `{:ok, calendar_module}`, or
 
-  * `{:error, exception}` where `exception` is an exception struct
+  * `{:error, exception}` if the locale is not valid. A `-u-ca-` name
+    that is not a CLDR calendar's, such as an identifier of
+    `additional_calendars/0`, is not valid in a locale.
 
   ### Examples
 
@@ -709,6 +718,15 @@ defmodule Calendrical do
       iex> Calendrical.calendar_from_locale("fa-IR-u-ca-gregory")
       {:ok, Calendrical.IR}
 
+      iex> Calendrical.calendar_from_locale("en-u-ca-hebrew")
+      {:ok, Calendrical.Hebrew}
+
+      iex> Calendrical.calendar_from_locale("vi-u-ca-chinese")
+      {:ok, Calendrical.Vietnamese}
+
+      iex> {:error, %Localize.InvalidLocaleError{}} =
+      ...>   Calendrical.calendar_from_locale("en-u-ca-julian")
+
   """
   @spec calendar_from_locale(LanguageTag.t() | String.t() | atom()) ::
           {:ok, calendar()} | {:error, Exception.t()}
@@ -720,6 +738,10 @@ defmodule Calendrical do
     with {:ok, locale} <- Localize.validate_locale(locale) do
       Calendrical.Preference.calendar_from_locale(locale)
     end
+  end
+
+  def calendar_from_locale(other) do
+    {:error, Localize.InvalidLocaleError.exception(locale_id: other)}
   end
 
   @doc """
@@ -4734,6 +4756,11 @@ defmodule Calendrical do
   CLDR lookup — every calendar Calendrical implements that no CLDR type
   reaches, such as `:vietnamese` and `:julian_march25` (`"julian-march25"`),
   and `:iso8601`, the Gregorian calendar with ISO 8601's week rules.
+
+  This is the one table of names. A name has no territory, so `:gregorian`
+  is `Calendrical.Gregorian` and `:chinese` is `Calendrical.Chinese`; a
+  locale that names them in its `-u-ca-` extension has a territory, and
+  `calendar_from_locale/1` refines those two by it.
 
   ### Arguments
 

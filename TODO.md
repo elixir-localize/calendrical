@@ -2,11 +2,13 @@
 
 Calendrical's open work. Design documents live in `plans/`.
 
-## Open
+## Deferred
 
-* [ ] **Decide the astronomical Umm al-Qura rule after 1450 AH** — reviewed: it is KACST's rule to 1450 AH (335 of 336 months), and from 1451 AH KACST's projected table and ICU's follow a stricter one, moonset at least 19.5 minutes after sunset or a moon at least 18 hours old (598 of 600 and 287 of 287 months). It is not a crescent-visibility criterion (Yallop and Odeh fail), and ICU carries KACST's table without a rule; find the criterion behind KACST's projected months before choosing. Analysis in [plans/umm-al-qura-astronomical.md](plans/umm-al-qura-astronomical.md).
+* [ ] **Decide the astronomical Umm al-Qura rule after 1450 AH** — reviewed: it is KACST's rule to 1450 AH (335 of 336 months), and from 1451 AH KACST's projected table and ICU's follow a stricter one, moonset at least 19.5 minutes after sunset or a moon at least 18 hours old (598 of 600 and 287 of 287 months). It is not a crescent-visibility criterion (Yallop and Odeh fail), and ICU carries KACST's table without a rule; deferred (user, 2026-10-06) until the criterion behind KACST's projected months is found. Analysis in [plans/umm-al-qura-astronomical.md](plans/umm-al-qura-astronomical.md).
 
 ## Done
+
+* [x] **A locale's `-u-ca-<name>` maps to its Calendrical calendar** — `calendar_from_locale/1` gives the module `calendar_from_cldr_calendar_type/1` gives the name, the one table, refined by the locale where its territory says more: `gregory` is the territory's Gregorian calendar and `chinese` in Vietnam is `Calendrical.Vietnamese` (user, 2026-10-06). A value that is no locale is an error, where it raised. Held for every CLDR calendar by `test/u_ca_calendar_test.exs`. 2026-10-06, v1.4.0.
 
 * [x] **The Julian calendars answer with no year as the Gregorian does** — `days_in_month(2)` is `{:ambiguous, 28..29}`, a month they do not have is `{:error, :undefined}` (13 answered 31), and `months_in_year/0` is 12, in `Calendrical.Julian` and its five new-year variants; a composite's `months_in_year/0` is `{:error, :undefined}`, and the `days_in_month/1` callback admits `{:error, exception}` (user, 2026-10-04). Found from Tempo. 2026-10-04, v1.4.0.
 

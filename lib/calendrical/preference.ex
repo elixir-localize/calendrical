@@ -18,6 +18,27 @@ defmodule Calendrical.Preference do
     calendar module. Honours the `-u-ca-` BCP 47 calendar extension and the
     `-u-fw-` first-day-of-week extension when present.
 
+  ## The calendar a `-u-ca-` extension names
+
+  A language tag's `-u-ca-<name>` names a CLDR calendar, and the module it
+  means is `Calendrical.calendar_from_cldr_calendar_type/1`'s for that
+  name, refined by the locale in the two cases where its territory says
+  more than the name does:
+
+  * **`gregory`** — the territory's Gregorian calendar, with its first day
+    of the week and the days its first week must hold, so `en-GB` and
+    `en-GB-u-ca-gregory` name one calendar, `Calendrical.GB`.
+
+  * **`chinese` in Vietnam** — `Calendrical.Vietnamese`, the same lunisolar
+    calendar reckoned at Hanoi's meridian.
+
+  A name alone has no territory, so `calendar_from_cldr_calendar_type/1`
+  answers `Calendrical.Gregorian` and `Calendrical.Chinese` for those. A
+  language tag carries only CLDR's calendar names: the identifiers of
+  `Calendrical.additional_calendars/0`, such as `julian`, are not valid in
+  one, and are named to `calendar_from_cldr_calendar_type/1` or in an IXDTF
+  suffix.
+
   In every case, if no calendar in the preference list is available, the
   module falls back to `Calendrical.Gregorian` (the default calendar), which
   is always present.
@@ -262,22 +283,19 @@ defmodule Calendrical.Preference do
     {:error, Localize.InvalidLocaleError.exception(locale_id: other)}
   end
 
+  # The calendar a `-u-ca-` name means is the one the name alone means
+  # (`Calendrical.calendar_from_cldr_calendar_type/1`, the one table of
+  # names). An explicit request for the default (gregorian) calendar still
+  # resolves through the territory, so its week conventions (first day,
+  # minimum days) apply, and so does a name with no calendar loaded.
   defp calendar_from_locale_type(locale, calendar) do
-    calendar_module = Map.get(calendar_modules(), calendar)
+    default_calendar = Calendrical.default_calendar()
 
-    cond do
-      # An explicit request for the default (gregorian) calendar
-      # still resolves through the territory, so localized week
-      # conventions (first day, minimum days) apply.
-      calendar_module == Calendrical.default_calendar() ->
-        with {:ok, territory} <- territory_from(locale) do
-          calendar_from_territory(territory, calendar)
-        end
-
-      calendar_module && Code.ensure_loaded?(calendar_module) ->
+    case Calendrical.calendar_from_cldr_calendar_type(calendar) do
+      {:ok, calendar_module} when calendar_module != default_calendar ->
         {:ok, calendar_module}
 
-      true ->
+      _default_or_unknown ->
         with {:ok, territory} <- territory_from(locale) do
           calendar_from_territory(territory, calendar)
         end
@@ -330,10 +348,10 @@ defmodule Calendrical.Preference do
     end
   end
 
-  # CLDR's `iso8601` is the Gregorian calendar with ISO 8601's week rules,
-  # `Calendrical.ISO`, as the IXDTF identifier `[u-ca=iso8601]` resolves in
-  # `Calendrical.additional_calendars/0`; `Calendrical.ISOWeek` is the ISO
-  # week-date calendar (`iso-week`).
+  # The module of each CLDR calendar type. `iso8601`, the Gregorian
+  # calendar with ISO 8601's week rules, is in
+  # `Calendrical.additional_calendars/0` with the other names CLDR's types
+  # do not reach, and is not repeated here.
   @calendar_modules @known_calendars
                     |> Enum.map(fn c ->
                       {c,
@@ -341,7 +359,6 @@ defmodule Calendrical.Preference do
                     end)
                     |> Map.new()
                     |> Map.merge(@calendar_module_overrides)
-                    |> Map.put(:iso8601, Calendrical.ISO)
 
   @doc false
   def calendar_modules do
@@ -354,7 +371,7 @@ defmodule Calendrical.Preference do
   end
 
   def calendar_module(:iso8601) do
-    Calendrical.ISO
+    Map.fetch!(Calendrical.additional_calendars(), :iso8601)
   end
 
   def calendar_module(other) do

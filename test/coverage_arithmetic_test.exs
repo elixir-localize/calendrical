@@ -540,7 +540,7 @@ defmodule CoverageArithmeticTest do
       modules = Preference.calendar_modules()
 
       assert modules[:gregorian] == Calendrical.Gregorian
-      assert modules[:iso8601] == Calendrical.ISO
+      refute Map.has_key?(modules, :iso8601)
       assert modules[:islamic] == Calendrical.Islamic.Observational
       assert modules[:islamic_civil] == Calendrical.Islamic.Civil
       assert modules[:islamic_umalqura] == Calendrical.Islamic.UmmAlQura

@@ -102,6 +102,8 @@ The format is based on
 
 ### Fixed
 
+* `Calendrical.calendar_from_locale/1` maps a locale's `-u-ca-<name>` through `calendar_from_cldr_calendar_type/1`, the one table of names, refining `gregory` to the territory's Gregorian calendar and `chinese` in Vietnam to `Calendrical.Vietnamese`; a value that is no locale is `{:error, exception}`, where it raised `FunctionClauseError`.
+
 * The Julian calendars answer with no year as the Gregorian does: `days_in_month(2)` is `{:ambiguous, 28..29}`, where it was the undeclared `{:error, :unresolved}`, a month they lack is `{:error, :undefined}`, where it was 31, and `months_in_year/0` is 12. A composite's `months_in_year/0` is `{:error, :undefined}`, and the `days_in_month/1` callback admits `{:error, exception}`.
 
 * `days_in_month/1` answers for a month with no year in every calendar built on `Calendrical.Behaviour`: the month's length where every year has it (`Calendrical.Coptic.days_in_month(1)` is `30`) and `{:ambiguous, range}` where it varies (`{:ambiguous, 5..6}` for month 13), where each was `{:error, :undefined}`.
