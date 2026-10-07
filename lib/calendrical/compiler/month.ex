@@ -53,6 +53,17 @@ defmodule Calendrical.Compiler.Month do
       end
 
       @doc """
+      Returns the calendar module of this calendar's family whose CLDR
+      calendar type is the one given.
+
+      Localize asks a calendar for the calendars of its family: a CLDR
+      calendar type names no module of its own, and a locale's `-u-ca-`
+      names a type rather than a calendar.
+
+      """
+      defdelegate calendar_from_cldr_calendar_type(calendar_type), to: Calendrical
+
+      @doc """
       Returns the CLDR calendar type that names the calendar's
       eras: its `cldr_calendar_type/0`.
 

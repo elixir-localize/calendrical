@@ -55,6 +55,17 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
+      Returns the calendar module of this calendar's family whose CLDR
+      calendar type is the one given.
+
+      Localize asks a calendar for the calendars of its family: a CLDR
+      calendar type names no module of its own, and a locale's `-u-ca-`
+      names a type rather than a calendar.
+
+      """
+      defdelegate calendar_from_cldr_calendar_type(calendar_type), to: Calendrical
+
+      @doc """
       Returns the CLDR calendar type that names the calendar's eras: `:gregorian`.
 
       A calendar of weeks counts its years as the Gregorian calendar does, and CLDR's generic calendar leaves its eras unnamed ("ERA0", "ERA1"), so its eras take the Gregorian calendar's names.

@@ -46,6 +46,8 @@ The format is based on
 
 ### Added
 
+* Every calendar answers `calendar_from_cldr_calendar_type/1` with the calendar module of its family whose CLDR calendar type is the one given. Localize asks it to write a date in the calendar a locale's `-u-ca-` names, a type naming no module of its own.
+
 * A composite calendar names its member calendars with `parsing_calendars/0`, the base calendar first and the rest in the order they take effect. A date written with a member's formats then reads back: `Calendrical.Reform.Japan`'s "Mo5 11, 1872" is read in its lunisolar member, where the formats of its own CLDR type do not read it.
 
 * `Calendrical.diff/3`, and a `diff/3` callback on every calendar, count the whole years, quarters, months, weeks or days from one date to another — the inverse of `plus/6`, negative backwards. The Hebrew and lunisolar calendars count months in one calculation, from the Metonic cycle and the new moons.
