@@ -46,7 +46,7 @@ The format is based on
 
 ### Added
 
-* Every calendar answers `calendar_from_cldr_calendar_type/1` with the calendar module of its family whose CLDR calendar type is the one given. Localize asks it to write a date in the calendar a locale's `-u-ca-` names, a type naming no module of its own.
+* Every calendar answers `calendar_from_cldr_calendar_type/1` with the calendar module of its family whose CLDR calendar type is the one given, and Calendrical registers itself through `Localize.Calendar.register_provider/1` as its application starts. Localize writes a date in the calendar a locale's `-u-ca-` names, which a `Calendar.ISO` value has no family of its own to supply: `en-u-ca-hebrew` writes 2026-05-16 as "29 Iyar 5786".
 
 * A composite calendar names its member calendars with `parsing_calendars/0`, the base calendar first and the rest in the order they take effect. A date written with a member's formats then reads back: `Calendrical.Reform.Japan`'s "Mo5 11, 1872" is read in its lunisolar member, where the formats of its own CLDR type do not read it.
 
