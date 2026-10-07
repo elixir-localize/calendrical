@@ -46,6 +46,8 @@ The format is based on
 
 ### Added
 
+* A composite calendar names its member calendars with `parsing_calendars/0`, the base calendar first and the rest in the order they take effect. A date written with a member's formats then reads back: `Calendrical.Reform.Japan`'s "Mo5 11, 1872" is read in its lunisolar member, where the formats of its own CLDR type do not read it.
+
 * `Calendrical.diff/3`, and a `diff/3` callback on every calendar, count the whole years, quarters, months, weeks or days from one date to another — the inverse of `plus/6`, negative backwards. The Hebrew and lunisolar calendars count months in one calculation, from the Metonic cycle and the new moons.
 
 * `calendar_from_cldr_calendar_type/1` and `additional_calendars/0` give every calendar Calendrical implements an IXDTF `[u-ca=…]` identifier where no CLDR type reaches it: `iso8601` (`Calendrical.ISO`, the Gregorian calendar with ISO 8601's week rules), `iso-week`, `vietnamese`, `lunar-japanese`, `nrf`, the Julian year-start variants (`julian-march25`…) and the reform calendars (`reform-england`…), beside `julian`.

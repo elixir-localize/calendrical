@@ -79,6 +79,24 @@ defmodule Calendrical.Composite.Compiler do
       def cldr_calendar_type, do: @cldr_calendar_type
 
       @doc """
+      Returns the calendars a date of this calendar may be read in: its
+      member calendars, the base calendar first and the rest in the
+      order they take effect.
+
+      A composite writes a date with the formats of the calendar in
+      effect on it, which `cldr_calendar_type/3` answers. A date before
+      the first change is therefore written as the base calendar writes
+      it, which the formats of `cldr_calendar_type/0` do not read back:
+      `Calendrical.Reform.Japan` writes 1872-06-16 as its lunisolar
+      member does, "Mo5 11, 1872" at `en`'s medium format, where its
+      own type is the Japanese calendar's. Naming the members lets a reader take the date in each
+      in turn and convert the one it finds.
+
+      """
+      @spec parsing_calendars() :: [Calendrical.calendar(), ...]
+      def parsing_calendars, do: @member_calendars
+
+      @doc """
       Returns the CLDR calendar type whose data names the months and
       days of the given date: that of the calendar in effect on it.
 
