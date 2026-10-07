@@ -156,9 +156,12 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
       assert {:error, %Localize.UnknownTimezoneError{}} = TimeZone.resolve("+ab", @july)
     end
 
-    test "minutes greater than 59 are rejected" do
+    # ISO 8601 reaches an offset of 23:59:59, wider than any IANA zone's
+    # ±14:00, so an hour past 23 is refused where `+15:00` is read.
+    test "offsets outside ISO 8601's range are rejected" do
       assert {:error, %Localize.UnknownTimezoneError{}} = TimeZone.resolve("+05:99", @july)
-      assert {:error, %Localize.UnknownTimezoneError{}} = TimeZone.resolve("+15:00", @july)
+      assert {:error, %Localize.UnknownTimezoneError{}} = TimeZone.resolve("+24:00", @july)
+      assert {:ok, %DateTime{utc_offset: 54_000}} = TimeZone.resolve("+15:00", @july)
     end
   end
 

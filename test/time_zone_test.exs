@@ -45,7 +45,7 @@ defmodule Calendrical.TimeZoneTest do
     # clause and raise `FunctionClauseError` — a raise out of a public
     # function, on ordinary caller input.
     test "a GMT-prefixed string that is not an offset returns an error rather than raising" do
-      for zone <- ["GMTfoo", "GMT:", "GMT+", "GMT-", "UTCfoo", "UTC:", "UTfoo", "UTC0"] do
+      for zone <- ["GMTfoo", "GMT:", "GMT+", "GMT-", "UTCfoo", "UTC:", "UTfoo"] do
         assert {:error, %Localize.UnknownTimezoneError{}} =
                  Calendrical.TimeZone.resolve(zone, @naive)
       end
@@ -77,10 +77,12 @@ defmodule Calendrical.TimeZoneTest do
       assert {:ok, %DateTime{utc_offset: 3600}} = Calendrical.TimeZone.resolve("GMT+1.00", @naive)
     end
 
-    # `GMT0`, `GMT+0` and `GMT-0` are IANA's names of UTC. `UTC0` is no
-    # zone a locale writes, and is refused above.
+    # `GMT0`, `GMT+0` and `GMT-0` are IANA's names of UTC, and `UTC0` is the
+    # same offset written after the literal: TR35 reads the number of a
+    # localized GMT format with "+, -, or nothing" before it, so an unsigned
+    # number after the literal is an offset east and no hours of it is UTC.
     test "resolves the zero-offset GMT spellings" do
-      for zone <- ["GMT0", "GMT+0", "GMT-0", "GMT+00:00"] do
+      for zone <- ["GMT0", "GMT+0", "GMT-0", "GMT+00:00", "UTC0"] do
         assert {:ok, %DateTime{utc_offset: 0}} = Calendrical.TimeZone.resolve(zone, @naive)
       end
     end
@@ -90,12 +92,17 @@ defmodule Calendrical.TimeZoneTest do
                Calendrical.TimeZone.resolve("+5", @naive)
     end
 
+    # ISO 8601 reaches an offset of 23:59:59, wider than the ±14:00 any
+    # IANA zone keeps, so `+15:00` is read where an hour past 23 is not.
     test "out-of-range offsets are rejected" do
       assert {:error, %Localize.UnknownTimezoneError{}} =
-               Calendrical.TimeZone.resolve("+15:00", @naive)
+               Calendrical.TimeZone.resolve("+24:00", @naive)
 
       assert {:error, %Localize.UnknownTimezoneError{}} =
                Calendrical.TimeZone.resolve("+05:75", @naive)
+
+      assert {:ok, %DateTime{utc_offset: 54_000}} =
+               Calendrical.TimeZone.resolve("+15:00", @naive)
     end
 
     test "resolves an IANA zone name" do
@@ -149,20 +156,20 @@ defmodule Calendrical.TimeZoneTest do
   describe "resolve/3 standard and daylight names" do
     test "a standard name keeps its own offset when the zone keeps daylight time" do
       assert {:ok, datetime} = Calendrical.TimeZone.resolve("EST", @naive)
-      assert time_and_label(datetime) == {"2026-07-05 12:00:00-05:00", "-05:00"}
+      assert time_and_label(datetime) == {"2026-07-05 12:00:00-05:00 -05:00 -05:00", "-05:00"}
 
       assert {:ok, datetime} = Calendrical.TimeZone.resolve("Eastern Standard Time", @naive)
-      assert time_and_label(datetime) == {"2026-07-05 12:00:00-05:00", "-05:00"}
+      assert time_and_label(datetime) == {"2026-07-05 12:00:00-05:00 -05:00 -05:00", "-05:00"}
     end
 
     test "a daylight name keeps its own offset when the zone keeps standard time" do
       assert {:ok, datetime} = Calendrical.TimeZone.resolve("EDT", @winter)
-      assert time_and_label(datetime) == {"2026-01-05 12:00:00-04:00", "-04:00"}
+      assert time_and_label(datetime) == {"2026-01-05 12:00:00-04:00 -04:00 -04:00", "-04:00"}
 
       assert {:ok, datetime} =
                Calendrical.TimeZone.resolve("Mitteleuropäische Sommerzeit", @winter, locale: :de)
 
-      assert time_and_label(datetime) == {"2026-01-05 12:00:00+02:00", "+02:00"}
+      assert time_and_label(datetime) == {"2026-01-05 12:00:00+02:00 +02:00 +02:00", "+02:00"}
     end
 
     test "is the zone's own time when the zone keeps it" do
@@ -188,7 +195,7 @@ defmodule Calendrical.TimeZoneTest do
 
     test "keeps the wall clock given in a spring-forward gap" do
       assert {:ok, datetime} = Calendrical.TimeZone.resolve("EST", ~N[2026-03-08 02:30:00])
-      assert time_and_label(datetime) == {"2026-03-08 02:30:00-05:00", "-05:00"}
+      assert time_and_label(datetime) == {"2026-03-08 02:30:00-05:00 -05:00 -05:00", "-05:00"}
     end
 
     # 1:30 on 1 November 2026 happened twice in New York, first in daylight
@@ -205,7 +212,7 @@ defmodule Calendrical.TimeZoneTest do
       # The time zone database may write Europe/Dublin's winter as a
       # negative saving; Irish Standard Time is its summer time.
       assert {:ok, datetime} = Calendrical.TimeZone.resolve("Irish Standard Time", @winter)
-      assert time_and_label(datetime) == {"2026-01-05 12:00:00+01:00", "+01:00"}
+      assert time_and_label(datetime) == {"2026-01-05 12:00:00+01:00 +01:00 +01:00", "+01:00"}
 
       assert {:ok, %DateTime{time_zone: "Europe/Dublin", zone_abbr: "IST"}} =
                Calendrical.TimeZone.resolve("Irish Standard Time", @naive)
@@ -216,7 +223,10 @@ defmodule Calendrical.TimeZoneTest do
     assert Calendrical.TimeZone.tz_database() == Tz.TimeZoneDatabase
   end
 
-  # The wall clock with its offset, and the label a fixed offset
-  # carries in place of a zone.
+  # The wall clock with its offset, and the label a fixed offset carries in
+  # place of a zone. A fixed offset's zone is the offset itself, as Localize
+  # reads one, and its abbreviation is that same string, so `to_string/1`
+  # writes the offset, then the abbreviation and the zone after it, the shape
+  # `Calendar.ISO` gives every zone that is not UTC.
   defp time_and_label(datetime), do: {to_string(datetime), datetime.zone_abbr}
 end

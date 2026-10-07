@@ -79,7 +79,7 @@ defmodule Calendrical.DateTime do
 
       iex> {:ok, map} = Calendrical.DateTime.parse("May 5, 11:30 AM GMT+5", locale: :en, as: :map)
       iex> Map.take(map, [:hour, :time_zone, :utc_offset])
-      %{hour: 11, time_zone: "Etc/UTC", utc_offset: 18000}
+      %{hour: 11, time_zone: "+05:00", utc_offset: 18000}
 
   """
   @spec parse(String.t(), Keyword.t()) ::
