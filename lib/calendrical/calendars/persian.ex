@@ -220,6 +220,7 @@ defmodule Calendrical.Persian do
 
   """
   @spec date_to_iso_days(Calendar.year(), Calendar.month(), Calendar.day()) :: integer()
+  @impl true
   def date_to_iso_days(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     new_year(year) - 1 + if(month <= 7, do: 31 * (month - 1), else: 30 * (month - 1) + 6) + day
@@ -249,6 +250,7 @@ defmodule Calendrical.Persian do
   """
   @spec date_from_iso_days(integer()) ::
           {Calendar.year(), Calendar.month(), Calendar.day()}
+  @impl true
   def date_from_iso_days(iso_days) when is_integer(iso_days) do
     {year, new_year} = year_and_new_year(iso_days)
     day_of_year = iso_days - new_year

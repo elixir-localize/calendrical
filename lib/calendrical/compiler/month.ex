@@ -61,6 +61,7 @@ defmodule Calendrical.Compiler.Month do
       names a type rather than a calendar.
 
       """
+      @impl Calendrical
       defdelegate calendar_from_cldr_calendar_type(calendar_type), to: Calendrical
 
       @doc """
@@ -395,7 +396,6 @@ defmodule Calendrical.Compiler.Month do
 
       """
       @spec periods_in_year(year :: Calendrical.year()) :: Calendar.month()
-      @impl true
       def periods_in_year(year) do
         months_in_year(year)
       end
@@ -461,7 +461,7 @@ defmodule Calendrical.Compiler.Month do
 
       @impl true
       def dates_in_gregorian_year(gregorian_year, month, day) do
-        Calendrical.dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
+        Calendrical.generic_dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
       end
 
       @doc """
@@ -504,6 +504,7 @@ defmodule Calendrical.Compiler.Month do
       Returns the number days in a week.
 
       """
+      @impl true
       def days_in_week do
         Month.days_in_week()
       end
@@ -533,7 +534,6 @@ defmodule Calendrical.Compiler.Month do
       a given quadrimester (third) of a year.
 
       """
-      @impl true
       def quadrimester(year, quadrimester) do
         Calendrical.Period.date_range(__MODULE__, year, quadrimester, 4)
       end
@@ -543,7 +543,6 @@ defmodule Calendrical.Compiler.Month do
       a given semester (half) of a year.
 
       """
-      @impl true
       def semester(year, semester) do
         Calendrical.Period.date_range(__MODULE__, year, semester, 6)
       end
@@ -720,6 +719,7 @@ defmodule Calendrical.Compiler.Month do
       epoch for a given `year-month-day`
 
       """
+      @impl true
       def date_to_iso_days(year, month, day) do
         Month.date_to_iso_days(year, month, day, __config__())
       end
@@ -729,6 +729,7 @@ defmodule Calendrical.Compiler.Month do
       the number of `iso_days`.
 
       """
+      @impl true
       def date_from_iso_days(iso_days) do
         Month.date_from_iso_days(iso_days, __config__())
       end

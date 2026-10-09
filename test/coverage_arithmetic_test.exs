@@ -436,6 +436,35 @@ defmodule CoverageArithmeticTest do
   end
 
   describe "Interval constructors from a date" do
+    # `day/3` counts through the year's own range, so it answers for
+    # every calendar family, not only the compilers' calendars.
+    test "day/3 is the year's nth day in every calendar family" do
+      for calendar <- [
+            Calendrical.Gregorian,
+            Calendrical.ISOWeek,
+            Calendrical.NRF,
+            Calendrical.Julian,
+            Calendrical.Julian.March25,
+            Calendrical.Hebrew,
+            Calendrical.Coptic,
+            Calendrical.Reform.England
+          ],
+          year <- [1750, 2026] do
+        year = if calendar == Calendrical.Hebrew, do: year + 3760, else: year
+        %Date.Range{first: first, last: last} = calendar.year(year)
+        days_in_year = calendar.days_in_year(year)
+
+        assert Interval.day(year, 1, calendar) == Date.range(first, first),
+               "#{inspect(calendar)} #{year} day 1"
+
+        assert Interval.day(year, days_in_year, calendar) == Date.range(last, last),
+               "#{inspect(calendar)} #{year} last day"
+
+        assert Interval.day(year, days_in_year + 1, calendar) == {:error, :invalid_date}
+        assert Interval.day(year, 0, calendar) == {:error, :invalid_date}
+      end
+    end
+
     test "year/1 with a Calendar.ISO date coerces back to Calendar.ISO" do
       assert Interval.year(~D[2025-06-15]) == Date.range(~D[2025-01-01], ~D[2025-12-31])
     end

@@ -52,6 +52,7 @@ defmodule Calendrical.Reform.Sweden.Transitional do
   """
   @spec date_to_iso_days(Calendar.year(), Calendar.month(), Calendar.day()) ::
           Calendrical.iso_day_number()
+  @impl true
   def date_to_iso_days(year, month, day) do
     Calendrical.Julian.date_to_iso_days(year, month, day) + offset(year, month, day)
   end
@@ -93,13 +94,16 @@ defmodule Calendrical.Reform.Sweden.Transitional do
   """
   @spec date_from_iso_days(Calendrical.iso_day_number()) ::
           {Calendar.year(), Calendar.month(), Calendar.day()}
+  @impl true
   def date_from_iso_days(@february_30_1712), do: {1712, 2, 30}
 
+  @impl true
   def date_from_iso_days(iso_days)
       when iso_days >= @first_ahead_day and iso_days < @february_30_1712 do
     Calendrical.Julian.date_from_iso_days(iso_days + 1)
   end
 
+  @impl true
   def date_from_iso_days(iso_days) do
     Calendrical.Julian.date_from_iso_days(iso_days)
   end

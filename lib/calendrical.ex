@@ -29,6 +29,68 @@ defmodule Calendrical do
     enables a more straight forware comparison with
     same-period-last-year financial performance.
 
+  ## The Calendrical behaviour
+
+  A Calendrical calendar implements Elixir's `Calendar` behaviour and
+  this module's callbacks beside it. `use Calendrical.Behaviour`
+  implements every one with a default, asking only for
+  `c:date_to_iso_days/3` and `c:date_from_iso_days/1`, and the
+  compilers (`Calendrical.new/3`, `use Calendrical.Julian`,
+  `use Calendrical.Composite`) implement them all. The required
+  callbacks, by what they answer:
+
+  * **Identity** — `c:cldr_calendar_type/0`, `c:era_calendar_type/0`,
+    `c:calendar_base/0` and `c:parsing_calendar/0` say which CLDR
+    calendar names the dates and the eras, whether the calendar is one
+    of months or of weeks, and which calendar its written dates are
+    read in.
+
+  * **The notions of a year** — `c:calendar_year/3`,
+    `c:extended_year/3`, `c:related_gregorian_year/3` and
+    `c:cyclic_year/3` are the year numbers TR35's `y`, `u`, `r` and
+    `U` write.
+
+  * **Months** — `c:month_of_year/3` is a date's month of the year and
+    `c:cardinal_month/1` names the CLDR month it stands for, so the two
+    compose: a fiscal year beginning in July names its month 1 July.
+    `c:cardinal_day/3` (optional) names the day where a calendar
+    renumbers them.
+
+  * **Weeks** — `c:week_of_year/3`, `c:iso_week_of_year/3`,
+    `c:week_of_month/3` and `c:days_in_week/0`.
+
+  * **Geometry** — `c:days_in_month/1`, `c:days_in_year/1`,
+    `c:weeks_in_year/1`, `c:dates_in_gregorian_year/3` and the ranges
+    `c:year/1`, `c:quarter/2`, `c:month/2` and `c:week/2`.
+
+  * **Arithmetic** — `c:plus/6`, `c:diff/3` and the day-count pair
+    `c:date_to_iso_days/3` and `c:date_from_iso_days/1` that every
+    conversion runs through.
+
+  The optional callbacks are those a calendar answers only where the
+  question arises: a year-less month count (`c:months_in_year/0`,
+  `c:months_in_leap_year/0`), a per-date CLDR type
+  (`c:cldr_calendar_type/3`), the calendars a composite's dates are
+  written in (`c:parsing_calendars/0`), the family resolver
+  (`c:calendar_from_cldr_calendar_type/1`), a renumbered day
+  (`c:cardinal_day/3`) and the traditional months of a lunisolar
+  calendar (`c:lunar_month_of_year/2`,
+  `c:ordinal_month_from_traditional/2`, `c:leap_month/1`,
+  `c:traditional_leap_month/1`).
+
+  Localize validates a calendar against the callbacks it asks —
+  identity, the year notions, months, weeks and arithmetic — before
+  answering for it, and Tempo calls the geometry and the day-count
+  pair unprobed, so the required set is the external contract: a
+  calendar implementing the behaviour by hand must implement them
+  all.
+  Functions a composite or a compiled calendar exports beyond the
+  behaviour — `year_bounds/1`, `calendar_for_iso_days/1`,
+  `shift_months/5`, `reach/5`, `__config__/0` and the compilers'
+  `first_gregorian_day_of_year/1` among them — are Calendrical's
+  internal protocol, not for external dispatch, and may change between
+  minor versions.
+
   """
 
   alias Calendrical.Compiler
@@ -390,12 +452,11 @@ defmodule Calendrical do
   @callback calendar_base() :: :week | :month
 
   @doc """
-  Returns the number of periods (which are
-  months in a month calendar and weeks in a
-  week calendar) in a year
+  Returns the number of days in a week: 7 in every calendar
+  Calendrical builds.
 
   """
-  @callback periods_in_year(year :: year()) :: week() | Calendar.month()
+  @callback days_in_week() :: Calendar.day_of_week()
 
   @doc """
   Returns the number of weeks in a year.
@@ -459,6 +520,18 @@ defmodule Calendrical do
   # compiler and those using the behaviour default implement it; others
   # may not, so callers must tolerate its absence.
   @optional_callbacks months_in_year: 0
+
+  @doc """
+  Returns the number of months in a leap year (without a year).
+
+  A calendar whose leap year holds more months than its ordinary year
+  answers the leap year's count: 13 in the Hebrew calendar. Callers
+  fall back to `months_in_year/1` where it is absent.
+
+  """
+  @callback months_in_leap_year() :: Calendar.month()
+
+  @optional_callbacks months_in_leap_year: 0
 
   @doc """
   Returns the traditional lunisolar month at a position in a year.
@@ -527,6 +600,21 @@ defmodule Calendrical do
   @optional_callbacks cldr_calendar_type: 3
 
   @doc """
+  Returns the calendar module for a CLDR calendar type, as a locale's
+  `-u-ca-` names one.
+
+  Every calendar Calendrical builds delegates to
+  `Calendrical.calendar_from_cldr_calendar_type/1`, which answers for
+  the whole family, so Localize can resolve a locale's calendar from
+  the calendar module a value already carries.
+
+  """
+  @callback calendar_from_cldr_calendar_type(calendar_type :: atom() | String.t()) ::
+              {:ok, module()} | {:error, Exception.t()}
+
+  @optional_callbacks calendar_from_cldr_calendar_type: 1
+
+  @doc """
   Returns the CLDR calendar type that names the calendar's eras.
 
   It is `cldr_calendar_type/0` unless the calendar takes its era names
@@ -549,6 +637,19 @@ defmodule Calendrical do
 
   """
   @callback parsing_calendar() :: module()
+
+  @doc """
+  Returns the calendars a date written for this calendar may be
+  written in, for a reader to try in turn.
+
+  A composite calendar names its member calendars, since a date of a
+  past segment is written as that member writes it. A calendar whose
+  dates are its own notation alone need not implement it.
+
+  """
+  @callback parsing_calendars() :: [module(), ...]
+
+  @optional_callbacks parsing_calendars: 0
 
   @doc """
   Returns a the year in a calendar year.
@@ -594,22 +695,6 @@ defmodule Calendrical do
 
   """
   @callback quarter(year :: year(), quarter :: Calendrical.quarter()) ::
-              Date.Range.t() | {:error, :not_defined} | date_error()
-
-  @doc """
-  Returns a date range representing the days in a
-  given quadrimester (third) of a calendar year.
-
-  """
-  @callback quadrimester(year :: year(), quadrimester :: Calendrical.quadrimester()) ::
-              Date.Range.t() | {:error, :not_defined} | date_error()
-
-  @doc """
-  Returns a date range representing the days in a
-  given semester (half) of a calendar year.
-
-  """
-  @callback semester(year :: year(), semester :: Calendrical.semester()) ::
               Date.Range.t() | {:error, :not_defined} | date_error()
 
   @doc """
@@ -660,6 +745,25 @@ defmodule Calendrical do
               to :: {year(), month() | week(), day()},
               date_part :: :years | :quarters | :months | :weeks | :days
             ) :: integer()
+
+  @doc """
+  Returns the ISO day number of a date of this calendar: the count of
+  days from Calendrical's epoch that `date_from_iso_days/1` reverses.
+
+  Every calendar's arithmetic runs through this pair, and `use
+  Calendrical.Behaviour` refuses to compile a calendar without them.
+
+  """
+  @callback date_to_iso_days(year :: year(), month :: month(), day :: day()) ::
+              iso_day_number()
+
+  @doc """
+  Returns the date of this calendar that falls on an ISO day number:
+  the reverse of `date_to_iso_days/3`.
+
+  """
+  @callback date_from_iso_days(iso_day_number :: iso_day_number()) ::
+              {Calendar.year(), Calendar.month(), Calendar.day()}
 
   @days [1, 2, 3, 4, 5, 6, 7]
   @days_in_a_week Enum.count(@days)
@@ -2659,9 +2763,9 @@ defmodule Calendrical do
   Returns the dates in `calendar`, of the given `month` and `day`, that fall
   within the given Gregorian year.
 
-  This is the per-calendar `calendar.dates_in_gregorian_year/3` callback with
-  the calendar module supplied explicitly; use this arity when the calendar
-  is chosen at runtime.
+  This dispatches the calendar's own `dates_in_gregorian_year/3`, so a
+  calendar that overrides the default implementation answers here too; use
+  this arity when the calendar is chosen at runtime.
 
   ### Arguments
 
@@ -2691,6 +2795,15 @@ defmodule Calendrical do
   @spec dates_in_gregorian_year(module(), Calendar.year(), Calendar.month(), Calendar.day()) ::
           [Date.t()]
   def dates_in_gregorian_year(calendar, gregorian_year, month, day) do
+    calendar.dates_in_gregorian_year(gregorian_year, month, day)
+  end
+
+  @doc false
+  # The default reckoning behind the `dates_in_gregorian_year/3` callback,
+  # which every implementation delegates to unless it overrides the
+  # callback: never dispatched back through the calendar, so an override
+  # can call it too.
+  def generic_dates_in_gregorian_year(calendar, gregorian_year, month, day) do
     g_start = Calendrical.Gregorian.date_to_iso_days(gregorian_year, 1, 1)
     g_end = Calendrical.Gregorian.date_to_iso_days(gregorian_year + 1, 1, 1) - 1
     {start_year, _month, _day} = calendar.date_from_iso_days(g_start)

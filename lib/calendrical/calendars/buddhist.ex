@@ -252,6 +252,7 @@ defmodule Calendrical.Buddhist do
 
   """
   @spec date_to_iso_days(year, month, day) :: integer()
+  @impl true
   def date_to_iso_days(year, month, day) do
     Calendrical.Gregorian.date_to_iso_days(gregorian_year(year), month, day)
   end
@@ -276,6 +277,7 @@ defmodule Calendrical.Buddhist do
 
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}
+  @impl true
   def date_from_iso_days(iso_days) do
     {greg_year, month, day} = Calendrical.Gregorian.date_from_iso_days(iso_days)
     {buddhist_year(greg_year), month, day}

@@ -26,10 +26,12 @@ defmodule Calendrical.Behaviour do
         @impl true
         def leap_year?(year), do: rem(year, 4) == 0
 
+        @impl true
         def date_to_iso_days(year, month, day) do
           # ... calendar-specific calculation
         end
 
+        @impl true
         def date_from_iso_days(iso_days) do
           # ... calendar-specific calculation
         end
@@ -248,6 +250,7 @@ defmodule Calendrical.Behaviour do
       names a type rather than a calendar.
 
       """
+      @impl Calendrical
       defdelegate calendar_from_cldr_calendar_type(calendar_type), to: Calendrical
 
       @doc """
@@ -306,6 +309,7 @@ defmodule Calendrical.Behaviour do
       Returns the number of months in a leap year.
 
       """
+      @impl Calendrical
       def months_in_leap_year do
         @months_in_leap_year
       end
@@ -621,7 +625,6 @@ defmodule Calendrical.Behaviour do
       week-based calendars.
 
       """
-      @impl true
 
       def periods_in_year(year) do
         months_in_year(year)
@@ -708,7 +711,7 @@ defmodule Calendrical.Behaviour do
               [Date.t()]
       @impl true
       def dates_in_gregorian_year(gregorian_year, month, day) do
-        Calendrical.dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
+        Calendrical.generic_dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
       end
 
       @doc """
@@ -757,6 +760,7 @@ defmodule Calendrical.Behaviour do
       Returns the number days in a a week.
 
       """
+      @impl true
       def days_in_week do
         @days_in_week
       end
@@ -801,7 +805,6 @@ defmodule Calendrical.Behaviour do
       months, placed as `quarter/2` places them.
 
       """
-      @impl true
 
       def quadrimester(year, quadrimester) do
         Calendrical.Period.date_range(__MODULE__, year, quadrimester, 4)
@@ -813,7 +816,6 @@ defmodule Calendrical.Behaviour do
       months, placed as `quarter/2` places them.
 
       """
-      @impl true
 
       def semester(year, semester) do
         Calendrical.Period.date_range(__MODULE__, year, semester, 6)

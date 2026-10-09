@@ -1,6 +1,6 @@
 # Plan: Tempo TODO items and callback-surface review
 
-Status: Part 1 implemented 2026-10-09 (items 1-5 in the working tree; item 6 handed to Localize's TODO). Part 2, the callback-surface restructure, and the Tempo hand-offs of Phase D remain open. Written 2026-10-09 against `81c022a`.
+Status: implemented. Part 1 (items 1-5, item 6 handed to Localize) shipped 2026-10-09/10; Part 2, the callback-surface restructure, implemented 2026-10-10. The Tempo hand-backs of Phase D were already fixed in Tempo or recorded in its TODO on 2026-10-10. Written 2026-10-09 against `81c022a`.
 
 This plan covers the six Open items Tempo logged in [TODO.md](../TODO.md) and a review of the Calendrical behaviour's 28 `@callback`s. The review is grounded in a three-consumer dispatch survey: every call Tempo makes into a calendar module, every call Localize makes (probes, direct calls, and its `ask/5` dispatcher), and every polymorphic dispatch inside Calendrical's own `lib/`. Conformance with the Elixir `Calendar` behaviour is a firm requirement throughout.
 

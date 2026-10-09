@@ -94,6 +94,7 @@ defmodule Calendrical.Composite.Compiler do
 
       """
       @spec parsing_calendars() :: [Calendrical.calendar(), ...]
+      @impl Calendrical
       def parsing_calendars, do: @member_calendars
 
       @doc """
@@ -105,6 +106,7 @@ defmodule Calendrical.Composite.Compiler do
       names a type rather than a calendar.
 
       """
+      @impl Calendrical
       defdelegate calendar_from_cldr_calendar_type(calendar_type), to: Calendrical
 
       @doc """
@@ -453,7 +455,6 @@ defmodule Calendrical.Composite.Compiler do
       Returns the number of periods in the given year.
 
       """
-      @impl true
       def periods_in_year(year), do: months_in_year(year)
 
       @doc """
@@ -471,7 +472,7 @@ defmodule Calendrical.Composite.Compiler do
 
       @impl true
       def dates_in_gregorian_year(gregorian_year, month, day) do
-        Calendrical.dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
+        Calendrical.generic_dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
       end
 
       # The ISO days of the first and last days labelled `year`, or nil
@@ -649,6 +650,7 @@ defmodule Calendrical.Composite.Compiler do
       Returns the number of days in a week.
 
       """
+      @impl true
       def days_in_week, do: 7
 
       @doc """
@@ -692,7 +694,6 @@ defmodule Calendrical.Composite.Compiler do
       of a year, on the rules `quarter/2` follows.
 
       """
-      @impl true
       def quadrimester(year, quadrimester) when quadrimester in 1..3 do
         period_of_year(year, quadrimester, 3)
       end
@@ -704,7 +705,6 @@ defmodule Calendrical.Composite.Compiler do
       year, on the rules `quarter/2` follows.
 
       """
-      @impl true
       def semester(year, semester) when semester in 1..2 do
         period_of_year(year, semester, 2)
       end
@@ -851,6 +851,7 @@ defmodule Calendrical.Composite.Compiler do
       given `year-month-day`.
 
       """
+      @impl true
       def date_to_iso_days(year, month, day) do
         calendar_for_date(year, month, day).date_to_iso_days(year, month, day)
       end
@@ -876,6 +877,7 @@ defmodule Calendrical.Composite.Compiler do
       whose dates are 1155's, are written as 25 March 1156.
 
       """
+      @impl true
       def date_from_iso_days(iso_days) do
         date = calendar_for_iso_days(iso_days).date_from_iso_days(iso_days)
 

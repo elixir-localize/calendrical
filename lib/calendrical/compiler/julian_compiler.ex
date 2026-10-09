@@ -244,7 +244,7 @@ defmodule Calendrical.Julian.Compiler do
       end
 
       def dates_in_gregorian_year(gregorian_year, month, day) do
-        Calendrical.dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
+        Calendrical.generic_dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
       end
 
       # A split variant's month 13 is the new-year month's days before

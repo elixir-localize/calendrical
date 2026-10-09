@@ -23,6 +23,7 @@ defmodule Calendrical.Behaviour.Gregorian do
   epoch for a given `year-month-day`
 
   """
+  @impl true
   def date_to_iso_days(year, month, day) do
     Calendar.ISO.date_to_iso_days(year, month, day)
   end
@@ -32,6 +33,7 @@ defmodule Calendrical.Behaviour.Gregorian do
   the number of `iso_days`.
 
   """
+  @impl true
   def date_from_iso_days(iso_days) do
     Calendar.ISO.date_from_iso_days(iso_days)
   end

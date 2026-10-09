@@ -267,7 +267,7 @@ defmodule Calendrical.Format do
   defp week_holding(date) do
     date
     |> Calendrical.Interval.week()
-    |> full_week_holding(date, days_in_week(date.calendar))
+    |> full_week_holding(date, date.calendar.days_in_week())
   end
 
   defp full_week_holding(
@@ -281,10 +281,6 @@ defmodule Calendrical.Format do
   defp full_week_holding(_short_week, date, days_in_week) do
     first = Date.shift(date, day: 1 - Date.day_of_week(date, :default))
     Date.range(first, Date.shift(first, day: days_in_week - 1))
-  end
-
-  defp days_in_week(calendar) do
-    if function_exported?(calendar, :days_in_week, 0), do: calendar.days_in_week(), else: 7
   end
 
   defp week(week, year, month, options) do

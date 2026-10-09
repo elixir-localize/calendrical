@@ -372,12 +372,14 @@ defmodule Calendrical.Islamic.UmmAlQura do
   published tables.
   """
   @spec date_to_iso_days(year, month, day) :: integer()
+  @impl true
   def date_to_iso_days(year, month, day)
       when is_integer(year) and year in @min_year..@max_year and
              is_integer(month) and month in 1..12 and is_integer(day) do
     first_iso_day(year, month) + day - 1
   end
 
+  @impl true
   def date_to_iso_days(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     Civil.date_to_iso_days(year, month, day)
@@ -388,6 +390,7 @@ defmodule Calendrical.Islamic.UmmAlQura do
   number, by the civil calendar outside the published tables.
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}
+  @impl true
   def date_from_iso_days(iso_days)
       when is_integer(iso_days) and iso_days >= @min_iso_days and iso_days <= @max_iso_days do
     year = year_containing(iso_days, @min_year, @max_year)
@@ -395,6 +398,7 @@ defmodule Calendrical.Islamic.UmmAlQura do
     {year, month, iso_days - first + 1}
   end
 
+  @impl true
   def date_from_iso_days(iso_days) when is_integer(iso_days) do
     Civil.date_from_iso_days(iso_days)
   end

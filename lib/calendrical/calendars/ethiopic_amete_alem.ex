@@ -400,6 +400,7 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
 
   """
   @spec date_to_iso_days(year, month, day) :: integer()
+  @impl true
   def date_to_iso_days(year, month, day) do
     Calendrical.Ethiopic.date_to_iso_days(amete_mihret_year(year), month, day)
   end
@@ -424,6 +425,7 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
 
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}
+  @impl true
   def date_from_iso_days(iso_days) do
     {am_year, month, day} = Calendrical.Ethiopic.date_from_iso_days(iso_days)
     {amete_alem_year(am_year), month, day}

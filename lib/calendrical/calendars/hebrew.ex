@@ -952,6 +952,7 @@ defmodule Calendrical.Hebrew do
 
   """
   @spec date_to_iso_days(year, month, day) :: integer()
+  @impl true
   def date_to_iso_days(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     new_year = hebrew_new_year(year)
@@ -978,6 +979,7 @@ defmodule Calendrical.Hebrew do
 
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}
+  @impl true
   def date_from_iso_days(iso_days) do
     # Approximate year using the average Hebrew year length
     # (35975351/98496 ≈ 365.2468 days). The result may be one less

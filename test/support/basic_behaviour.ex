@@ -27,6 +27,7 @@ defmodule Calendrical.Behaviour.Basic do
   epoch for a given `year-month-day`
 
   """
+  @impl true
   def date_to_iso_days(year, month, day) do
     floor(epoch() + 365 * (year - 1) + floor(year / 4) + 30 * (month - 1) + day - 1)
   end
@@ -36,6 +37,7 @@ defmodule Calendrical.Behaviour.Basic do
   the number of `iso_days`.
 
   """
+  @impl true
   def date_from_iso_days(iso_days) do
     year = floor((4 * (iso_days - epoch()) + 1463) / 1461)
     month = floor((iso_days - date_to_iso_days(year, 1, 1)) / 30) + 1

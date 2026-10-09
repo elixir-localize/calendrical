@@ -141,7 +141,7 @@ defmodule Calendrical.Interval do
   @spec quadrimester(Calendar.year(), Calendrical.quadrimester(), Calendrical.calendar()) ::
           Date.Range.t() | {:error, :not_defined | :invalid_date}
   def quadrimester(year, quadrimester, calendar \\ Calendrical.Gregorian) do
-    calendar.quadrimester(year, quadrimester)
+    period_of_year(calendar, year, quadrimester, :quadrimester, 4)
   end
 
   @doc """
@@ -175,7 +175,18 @@ defmodule Calendrical.Interval do
   @spec semester(Calendar.year(), Calendrical.semester(), Calendrical.calendar()) ::
           Date.Range.t() | {:error, :not_defined | :invalid_date}
   def semester(year, semester, calendar \\ Calendrical.Gregorian) do
-    calendar.semester(year, semester)
+    period_of_year(calendar, year, semester, :semester, 6)
+  end
+
+  # Quadrimesters and semesters are no callbacks: a calendar built with
+  # Calendrical answers them as plain functions, and any other calendar
+  # of the behaviour is answered from its own months.
+  defp period_of_year(calendar, year, period, function, months_per_period) do
+    if Code.ensure_loaded?(calendar) and function_exported?(calendar, function, 2) do
+      apply(calendar, function, [year, period])
+    else
+      Calendrical.Period.date_range(calendar, year, period, months_per_period)
+    end
   end
 
   @doc """
@@ -576,19 +587,24 @@ defmodule Calendrical.Interval do
     Date.range(date, date)
   end
 
+  # The day is counted through the year's own range, which every
+  # calendar answers, where `first_gregorian_day_of_year/1` is only the
+  # month and week compilers' own.
   def day(year, day, calendar \\ Calendrical.Gregorian) do
-    if day <= calendar.days_in_year(year) do
-      iso_days = calendar.first_gregorian_day_of_year(year) + day - 1
-
-      {year, month, day} = calendar.date_from_iso_days(iso_days)
-
-      with {:ok, date} <- Date.new(year, month, day, calendar) do
-        day(date)
-      end
-    else
-      {:error, :invalid_date}
+    with %Date.Range{first_in_iso_days: first, last_in_iso_days: last} <- calendar.year(year) do
+      day_of_the_year(first + day - 1, day, last, calendar)
     end
   end
+
+  defp day_of_the_year(iso_days, day, last, calendar) when day >= 1 and iso_days <= last do
+    {year, month, day} = calendar.date_from_iso_days(iso_days)
+
+    with {:ok, date} <- Date.new(year, month, day, calendar) do
+      day(date)
+    end
+  end
+
+  defp day_of_the_year(_iso_days, _day, _last, _calendar), do: {:error, :invalid_date}
 
   @doc """
   Compares two date ranges and returns the Allen-algebra relation between

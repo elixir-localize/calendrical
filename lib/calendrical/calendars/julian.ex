@@ -120,6 +120,7 @@ defmodule Calendrical.Julian do
   names a type rather than a calendar.
 
   """
+  @impl Calendrical
   defdelegate calendar_from_cldr_calendar_type(calendar_type), to: Calendrical
 
   @doc """
@@ -899,7 +900,6 @@ defmodule Calendrical.Julian do
 
   """
   @spec periods_in_year(year) :: Calendar.month()
-  @impl Calendrical
   def periods_in_year(_year) do
     @months_in_year
   end
@@ -966,7 +966,7 @@ defmodule Calendrical.Julian do
   @spec dates_in_gregorian_year(Calendar.year(), Calendar.month(), Calendar.day()) :: [Date.t()]
   @impl Calendrical
   def dates_in_gregorian_year(gregorian_year, month, day) do
-    Calendrical.dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
+    Calendrical.generic_dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
   end
 
   @doc """
@@ -1073,6 +1073,7 @@ defmodule Calendrical.Julian do
 
   """
   @spec days_in_week() :: 7
+  @impl true
   def days_in_week do
     @days_in_week
   end
@@ -1166,7 +1167,6 @@ defmodule Calendrical.Julian do
   """
   @spec quadrimester(year, Calendrical.quadrimester()) ::
           Date.Range.t() | {:error, :not_defined | :invalid_date}
-  @impl Calendrical
   def quadrimester(year, quadrimester) do
     Calendrical.Period.date_range(__MODULE__, year, quadrimester, 4)
   end
@@ -1195,7 +1195,6 @@ defmodule Calendrical.Julian do
   """
   @spec semester(year, Calendrical.semester()) ::
           Date.Range.t() | {:error, :not_defined | :invalid_date}
-  @impl Calendrical
   def semester(year, semester) do
     Calendrical.Period.date_range(__MODULE__, year, semester, 6)
   end
@@ -1460,6 +1459,7 @@ defmodule Calendrical.Julian do
 
   """
   @spec date_to_iso_days(year, month, day) :: integer()
+  @impl true
   def date_to_iso_days(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     adjustment = adjustment(year, month, day)
@@ -1501,6 +1501,7 @@ defmodule Calendrical.Julian do
 
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}
+  @impl true
   def date_from_iso_days(iso_days) do
     approx = Integer.floor_div(4 * (iso_days - epoch()) + 1464, 1461)
     year = if approx <= 0, do: approx - 1, else: approx

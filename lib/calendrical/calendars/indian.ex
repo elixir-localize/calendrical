@@ -279,6 +279,7 @@ defmodule Calendrical.Indian do
 
   """
   @spec date_to_iso_days(year, month, day) :: integer()
+  @impl true
   def date_to_iso_days(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     chaitra_1(year) + month_offset(year, month) + day - 1
@@ -304,6 +305,7 @@ defmodule Calendrical.Indian do
 
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}
+  @impl true
   def date_from_iso_days(iso_days) do
     # The Saka year is determined by which Saka new-year falls on or
     # before iso_days. Start from the Saka year corresponding to the

@@ -63,6 +63,7 @@ defmodule Calendrical.Compiler.Week do
       names a type rather than a calendar.
 
       """
+      @impl Calendrical
       defdelegate calendar_from_cldr_calendar_type(calendar_type), to: Calendrical
 
       @doc """
@@ -368,7 +369,6 @@ defmodule Calendrical.Compiler.Week do
 
       """
       @spec periods_in_year(year :: Calendrical.year()) :: Calendar.week() | :error
-      @impl true
       def periods_in_year(year) do
         {weeks_in_year, _} = weeks_in_year(year)
         weeks_in_year
@@ -426,7 +426,7 @@ defmodule Calendrical.Compiler.Week do
 
       @impl true
       def dates_in_gregorian_year(gregorian_year, month, day) do
-        Calendrical.dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
+        Calendrical.generic_dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
       end
 
       @doc """
@@ -494,6 +494,7 @@ defmodule Calendrical.Compiler.Week do
       Returns the number days in a a week.
 
       """
+      @impl true
       def days_in_week do
         Week.days_in_week()
       end
@@ -523,7 +524,6 @@ defmodule Calendrical.Compiler.Week do
       a given quadrimester (third) of a year: four of its months.
 
       """
-      @impl true
       def quadrimester(year, quadrimester) do
         Calendrical.Period.date_range(__MODULE__, year, quadrimester, 4)
       end
@@ -533,7 +533,6 @@ defmodule Calendrical.Compiler.Week do
       a given semester (half) of a year: six of its months.
 
       """
-      @impl true
       def semester(year, semester) do
         Calendrical.Period.date_range(__MODULE__, year, semester, 6)
       end
@@ -710,6 +709,7 @@ defmodule Calendrical.Compiler.Week do
       epoch for a given `year-month-day`
 
       """
+      @impl true
       def date_to_iso_days(year, week, day) do
         Week.date_to_iso_days(year, week, day, __config__())
       end
@@ -719,6 +719,7 @@ defmodule Calendrical.Compiler.Week do
       the number of `iso_days`.
 
       """
+      @impl true
       def date_from_iso_days(iso_days) do
         Week.date_from_iso_days(iso_days, __config__())
       end

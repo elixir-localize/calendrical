@@ -20,7 +20,9 @@ defmodule Calendrical.Japanese do
     end
   end
 
+  @impl true
   defdelegate date_from_iso_days(iso_days), to: Calendrical.Gregorian
+  @impl true
   defdelegate date_to_iso_days(year, month, day), to: Calendrical.Gregorian
 
   @impl Calendar

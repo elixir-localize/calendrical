@@ -691,12 +691,14 @@ defmodule Calendrical.Korean do
   end
 
   @doc false
+  @impl true
   def date_to_iso_days(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     Lunisolar.date_to_iso_days(year, month, day, epoch(), &location/1)
   end
 
   @doc false
+  @impl true
   def date_from_iso_days(iso_days) do
     Lunisolar.date_from_iso_days(iso_days, epoch(), &location/1)
   end

@@ -38,6 +38,8 @@ The format is based on
 
 * The Julian new-year variants (`March1`, `March25`, `Sept1`, `Dec25`) take a date's era and year of era from its label year, so 24 March AD 1 is 1 BC in `March25`, where it was AD 1 and was written as the following year's 24 March.
 
+* `days_in_week/0`, `date_to_iso_days/3` and `date_from_iso_days/1` are required callbacks: every calendar Calendrical builds has always exported them and consumers call them unprobed, so a calendar implementing the behaviour by hand must implement them. `quadrimester/2`, `semester/2` and `periods_in_year/1` are callbacks no longer — the built calendars keep the functions, and `Calendrical.Interval` answers a quadrimester or a semester for any other calendar from its own months.
+
 * The Julian new-year variants carry counted months: month 1 begins on the new-year day, a variant whose year begins within a Julian month (`March25`, `Dec25`) has thirteen, and a date's fields are in the order of its days, so `Date.compare/2`, `Date.beginning_of_month/1` and `days_in_month/2` hold. The Julian month and day that name a date are answered by `cardinal_month/1`, `cardinal_day/3` and `julian_date/3`, with `month_of_year/3` the month field itself, as the fiscal calendars answer it; `julian_date/3` gives the whole Julian date.
 
 * A composite's members count their own months, so a change that moves the day a year begins on gives the incoming calendar's label year its whole counted year: England's 1155 is the Lady Day year, 25 March 1155 to 24 March 1156, and the days 1 January to 24 March 1155, whose labels it claims, have no dates and are in no year.
@@ -57,6 +59,8 @@ The format is based on
 * `Calendrical.named_month/3` gives the days of a named month in the order of time, in two ranges where a year-start variant splits it.
 
 * `cardinal_day/3` is an optional callback naming the Julian day of the month where a date's day field is its position in a counted month.
+
+* `months_in_leap_year/0`, `parsing_calendars/0` and `calendar_from_cldr_calendar_type/1` are declared optional callbacks, the probed contract they already were, and the moduledoc sets out the behaviour's required and optional callbacks by what they answer.
 
 * `Calendrical.strftime/3` writes `%d` and `%m` as the named day and month for a calendar that renumbers its days (one exporting `cardinal_day/3`), so `%d %B %Y` of a Julian year-start date is one date: "25 March 1750" from `March25`'s month 1 day 1.
 
@@ -119,6 +123,10 @@ The format is based on
 * `Calendrical.Gettext` interpolates with `Localize.Gettext.Interpolation`, and the exception messages are written in MessageFormat 2 with `{$name}` placeholders, extracted to `priv/gettext/calendrical.pot`. The messages read as they did.
 
 ### Fixed
+
+* `Calendrical.Interval.day/3` answers for every calendar, counting through the year's own range, where it raised for a calendar without `first_gregorian_day_of_year/1` — the Julian, lunisolar and composite calendars among them.
+
+* `Calendrical.dates_in_gregorian_year/4` dispatches the calendar's own `dates_in_gregorian_year/3`, so a calendar that overrides the default implementation answers there too.
 
 * `Calendrical.calendar_from_locale/1` maps a locale's `-u-ca-<name>` through `calendar_from_cldr_calendar_type/1`, the one table of names, refining `gregory` to the territory's Gregorian calendar and `chinese` in Vietnam to `Calendrical.Vietnamese`; a value that is no locale is `{:error, exception}`, where it raised `FunctionClauseError`.
 
