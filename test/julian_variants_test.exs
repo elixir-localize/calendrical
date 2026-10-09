@@ -321,7 +321,7 @@ defmodule Calendrical.JulianVariantsTest do
         assert variant.julian_date(year, month, day) ==
                  {julian.year, julian.month, julian.day}
 
-        assert variant.month_of_year(year, month, day) == julian.month
+        assert variant.month_of_year(year, month, day) == month
         assert variant.cardinal_month(month) == julian.month
         assert variant.cardinal_day(year, month, day) == julian.day
       end
@@ -488,7 +488,7 @@ defmodule Calendrical.JulianVariantsTest do
 
         # A date's month of the year is the Julian month that names it
         for range <- ranges, date <- [range.first, range.last] do
-          assert Calendrical.month_of_year(date) == variant.cardinal_month(date.month)
+          assert Calendrical.month_of_year(date) == date.month
         end
       end
     end
@@ -581,8 +581,8 @@ defmodule Calendrical.JulianVariantsTest do
       december = Date.new!(2022, 10, 10, Calendrical.Julian.March25)
       january = Date.new!(2022, 11, 10, Calendrical.Julian.March25)
 
-      assert Calendrical.Julian.March25.month_of_year(2022, 10, 10) == 12
-      assert Calendrical.Julian.March25.month_of_year(2022, 11, 10) == 1
+      assert Calendrical.Julian.March25.cardinal_month(10) == 12
+      assert Calendrical.Julian.March25.cardinal_month(11) == 1
       assert Date.diff(january, december) == 31
       assert Date.compare(december, january) == :lt
     end

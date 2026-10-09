@@ -59,7 +59,7 @@ defmodule Calendrical.Julian do
   as a short month 1 and its earlier days as a short month 13: in
   `March25`, month 1 of 2024 is 25–31 March 2024, day 1 being 25 March,
   and month 13 is 1–24 March 2025. The Julian month and day that name a
-  date are answered by `month_of_year/3` and `cardinal_day/3`, and the
+  date are answered by `cardinal_month/1` and `cardinal_day/3`, and the
   Julian date itself by each variant's `julian_date/3`.
 
   The module itself is also a fully-functional calendar that can be

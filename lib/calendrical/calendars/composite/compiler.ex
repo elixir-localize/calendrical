@@ -316,24 +316,54 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
-      Calculates the month of the year for the given date.
+      Calculates the month of the year for the given date: the member
+      calendar's month of the year named as the member's
+      `cardinal_month/1` names it, since the composite's own
+      `cardinal_month/1` cannot know the member without the year.
 
       """
       @impl true
       def month_of_year(year, month, day) do
         calendar = calendar_for_date(year, month, day)
-        calendar.month_of_year(year, month, day)
+        member_cardinal_month(calendar, calendar.month_of_year(year, month, day))
       end
+
+      defp member_cardinal_month(calendar, {month, :leap}) when is_integer(month) do
+        {calendar.cardinal_month(month), :leap}
+      end
+
+      defp member_cardinal_month(calendar, month) when is_integer(month) do
+        calendar.cardinal_month(month)
+      end
+
+      defp member_cardinal_month(_calendar, other), do: other
 
       @doc """
       Returns the month of the CLDR calendar that a month of
-      the year names: its member calendars' months are the
-      CLDR calendar's.
+      the year names: `month_of_year/3` already names its member's
+      month, so the composite's own mapping is the identity.
 
       """
       @impl true
       def cardinal_month(month) do
         month
+      end
+
+      @doc """
+      Returns the day of the month that names a date's day: the member
+      calendar's where it renumbers its days, as a Julian year-start
+      variant's counted months do, and the day itself otherwise.
+
+      """
+      @impl true
+      def cardinal_day(year, month, day) do
+        calendar = calendar_for_date(year, month, day)
+
+        if Code.ensure_loaded?(calendar) and function_exported?(calendar, :cardinal_day, 3) do
+          calendar.cardinal_day(year, month, day)
+        else
+          day
+        end
       end
 
       @doc """

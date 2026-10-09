@@ -38,7 +38,7 @@ The format is based on
 
 * The Julian new-year variants (`March1`, `March25`, `Sept1`, `Dec25`) take a date's era and year of era from its label year, so 24 March AD 1 is 1 BC in `March25`, where it was AD 1 and was written as the following year's 24 March.
 
-* The Julian new-year variants carry counted months: month 1 begins on the new-year day, a variant whose year begins within a Julian month (`March25`, `Dec25`) has thirteen, and a date's fields are in the order of its days, so `Date.compare/2`, `Date.beginning_of_month/1` and `days_in_month/2` hold. The Julian month and day that name a date are answered by `month_of_year/3`, `cardinal_day/3` and `julian_date/3`.
+* The Julian new-year variants carry counted months: month 1 begins on the new-year day, a variant whose year begins within a Julian month (`March25`, `Dec25`) has thirteen, and a date's fields are in the order of its days, so `Date.compare/2`, `Date.beginning_of_month/1` and `days_in_month/2` hold. The Julian month and day that name a date are answered by `cardinal_month/1`, `cardinal_day/3` and `julian_date/3`, with `month_of_year/3` the month field itself, as the fiscal calendars answer it; `julian_date/3` gives the whole Julian date.
 
 * A composite's members count their own months, so a change that moves the day a year begins on gives the incoming calendar's label year its whole counted year: England's 1155 is the Lady Day year, 25 March 1155 to 24 March 1156, and the days 1 January to 24 March 1155, whose labels it claims, have no dates and are in no year.
 
@@ -57,6 +57,8 @@ The format is based on
 * `Calendrical.named_month/3` gives the days of a named month in the order of time, in two ranges where a year-start variant splits it.
 
 * `cardinal_day/3` is an optional callback naming the Julian day of the month where a date's day field is its position in a counted month.
+
+* `Calendrical.strftime/3` writes `%d` and `%m` as the named day and month for a calendar that renumbers its days (one exporting `cardinal_day/3`), so `%d %B %Y` of a Julian year-start date is one date: "25 March 1750" from `March25`'s month 1 day 1.
 
 * Every calendar answers `calendar_from_cldr_calendar_type/1` with the calendar module of its family whose CLDR calendar type is the one given, and Calendrical registers itself through `Localize.Calendar.register_provider/1` as its application starts. Localize writes a date in the calendar a locale's `-u-ca-` names, which a `Calendar.ISO` value has no family of its own to supply: `en-u-ca-hebrew` writes 2026-05-16 as "29 Iyar 5786".
 

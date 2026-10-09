@@ -343,10 +343,12 @@ defmodule Calendrical.Julian.Compiler do
         Calendrical.Period.period_number_of_month(__MODULE__, year, month, 3)
       end
 
-      # A date's month field counts the year's months from its start; the
-      # Julian month names it.
+      # A date's month of the year is its counted month, the month field
+      # itself, as the fiscal month calendars answer; the Julian month
+      # that names it is `cardinal_month/1` of it, so the two compose to
+      # the CLDR month, as Localize composes them.
       def month_of_year(_year, month, _day) do
-        counted_to_named(month)
+        month
       end
 
       # The Julian month names the CLDR month whichever month the year

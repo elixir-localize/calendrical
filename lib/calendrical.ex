@@ -1309,9 +1309,71 @@ defmodule Calendrical do
       |> strftime_options!()
       |> Keyword.merge(date_names(value, locale))
 
+    format = named_numeric_format(format, value)
+
     {:ok, Calendar.strftime(value, format, Keyword.merge(names, strftime_options))}
   rescue
     exception -> {:error, exception}
+  end
+
+  # `Calendar.strftime/3` writes `%d` and `%m` from the date's fields,
+  # which name the day and month only where the calendar's months are the
+  # named ones. A calendar that renumbers its days — a Julian year-start
+  # variant, whose months are counted from the new-year day — exports
+  # `cardinal_day/3`, and its `%d` and `%m` are written as the named day
+  # and month, so `%d %B` stays one date. `%%` is kept literal, and the
+  # padding modifiers (`%-d`, `%_m`, `%03d`) are honoured.
+  defp named_numeric_format(format, %{year: year, month: month, day: day} = value)
+       when is_binary(format) and is_integer(year) and is_integer(month) and is_integer(day) do
+    calendar = Map.get(value, :calendar)
+
+    if is_atom(calendar) and not is_nil(calendar) and Code.ensure_loaded?(calendar) and
+         function_exported?(calendar, :cardinal_day, 3) do
+      named_day = calendar.cardinal_day(year, month, day)
+      named_month = cardinal_month_number(calendar, year, month, day)
+
+      format
+      |> String.split("%%")
+      |> Enum.map_join("%%", &replace_numeric_fields(&1, named_day, named_month))
+    else
+      format
+    end
+  end
+
+  defp named_numeric_format(format, _value), do: format
+
+  defp cardinal_month_number(calendar, year, month, day) do
+    case calendar.month_of_year(year, month, day) do
+      month_of_year when is_integer(month_of_year) -> calendar.cardinal_month(month_of_year)
+      _not_a_month -> month
+    end
+  end
+
+  defp replace_numeric_fields(format, named_day, named_month) do
+    Regex.replace(~r/%([-_0]?\d*)([dm])/, format, fn _full, modifiers, field ->
+      number = if field == "d", do: named_day, else: named_month
+      pad_numeric_field(number, modifiers)
+    end)
+  end
+
+  defp pad_numeric_field(number, "-" <> _width), do: Integer.to_string(number)
+
+  defp pad_numeric_field(number, "_" <> width) do
+    String.pad_leading(Integer.to_string(number), field_width(width), " ")
+  end
+
+  defp pad_numeric_field(number, width) do
+    String.pad_leading(Integer.to_string(number), field_width(width), "0")
+  end
+
+  defp field_width(""), do: 2
+  defp field_width("0" <> width), do: field_width(width)
+
+  defp field_width(width) do
+    case Integer.parse(width) do
+      {parsed, ""} -> parsed
+      _not_a_width -> 2
+    end
   end
 
   # `Calendar.strftime/3` passes the name callbacks the month field and the
