@@ -38,6 +38,10 @@ The format is based on
 
 * The Julian new-year variants (`March1`, `March25`, `Sept1`, `Dec25`) take a date's era and year of era from its label year, so 24 March AD 1 is 1 BC in `March25`, where it was AD 1 and was written as the following year's 24 March.
 
+* The Julian new-year variants carry counted months: month 1 begins on the new-year day, a variant whose year begins within a Julian month (`March25`, `Dec25`) has thirteen, and a date's fields are in the order of its days, so `Date.compare/2`, `Date.beginning_of_month/1` and `days_in_month/2` hold. The Julian month and day that name a date are answered by `month_of_year/3`, `cardinal_day/3` and `julian_date/3`.
+
+* A composite's members count their own months, so a change that moves the day a year begins on gives the incoming calendar's label year its whole counted year: England's 1155 is the Lady Day year, 25 March 1155 to 24 March 1156, and the days 1 January to 24 March 1155, whose labels it claims, have no dates and are in no year.
+
 * A calendar of weeks' `days_in_month/2` and `days_in_month/1` count the days of the week its dates' month field holds, 7, where they counted a period of its pattern of weeks, 28 or 35, so `Date.days_in_month/1` and `Date.end_of_month/1` name a date the calendar has. A period's days are those of `month/2`.
 
 * `Calendrical.Julian.Dec25` and `Calendrical.Julian.Sept1` number a year by the Julian year it ends in, as the Nativity style (C. R. Cheney, *A Handbook of Dates*) and the Byzantine year were reckoned: year 1100 begins on 25 December 1099 and on 1 September 1099, where each began a year later. `March1` and `March25` are unchanged, and a composite built on either changed calendar names its change of calendar in the new numbering.
@@ -45,6 +49,14 @@ The format is based on
 * `Calendrical.Composite.new/2` and `use Calendrical.Composite` refuse a configuration a composite cannot keep: a change on a day its calendar does not have, a calendar that is no calendar module (now `Calendrical.InvalidCalendarModuleError`, where it was `UndefinedFunctionError`), a composite or a calendar of weeks as a calendar, two changes on one day, or a calendar numbering its first year before the last year of the calendar before it, as the Hebrew calendar followed by the Gregorian from 1900 would. `new/2` returns `{:error, reason}` and `use` raises, where such a configuration made a calendar whose dates named the wrong days.
 
 ### Added
+
+* `Calendrical.traditional_months/1` and `/2` list a year's months in order, named traditionally, with any leap month among them, and the lunisolar `lunar_month_of_year/2`, `ordinal_month_from_traditional/2`, `leap_month/1` and `traditional_leap_month/1` are declared optional callbacks.
+
+* `Calendrical.Interval.weeks_in_month/3` and `Calendrical.Interval.week/4` give the number of weeks in a month and the dates of its nth week, as `week_of_month/3` numbers them.
+
+* `Calendrical.named_month/3` gives the days of a named month in the order of time, in two ranges where a year-start variant splits it.
+
+* `cardinal_day/3` is an optional callback naming the Julian day of the month where a date's day field is its position in a counted month.
 
 * Every calendar answers `calendar_from_cldr_calendar_type/1` with the calendar module of its family whose CLDR calendar type is the one given, and Calendrical registers itself through `Localize.Calendar.register_provider/1` as its application starts. Localize writes a date in the calendar a locale's `-u-ca-` names, which a `Calendar.ISO` value has no family of its own to supply: `en-u-ca-hebrew` writes 2026-05-16 as "29 Iyar 5786".
 

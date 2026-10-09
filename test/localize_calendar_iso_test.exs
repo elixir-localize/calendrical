@@ -8,8 +8,9 @@ defmodule Calendrical.LocalizeCalendarISOTest do
   answers as `Calendrical.ISO` does, the proleptic Gregorian calendar with
   ISO 8601's weeks.
 
-  A callback added to the behaviour fails the first test until Localize
-  answers it for `Calendar.ISO` too.
+  A required callback added to the behaviour fails the first test until
+  Localize answers it for `Calendar.ISO` too; an optional callback, such
+  as the lunisolar family's, is one callers tolerate the absence of.
 
   """
 
@@ -26,11 +27,15 @@ defmodule Calendrical.LocalizeCalendarISOTest do
   @date_parts [:years, :quarters, :months, :weeks, :days]
 
   describe "Localize.Calendar.ISO" do
-    test "answers every callback of the Calendrical behaviour" do
+    test "answers every required callback of the Calendrical behaviour" do
       Code.ensure_loaded!(@localize)
 
+      required =
+        Calendrical.behaviour_info(:callbacks) --
+          Calendrical.behaviour_info(:optional_callbacks)
+
       missing =
-        for {name, arity} <- Calendrical.behaviour_info(:callbacks),
+        for {name, arity} <- required,
             not function_exported?(@localize, name, arity),
             do: {name, arity}
 

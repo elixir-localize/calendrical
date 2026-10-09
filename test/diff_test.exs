@@ -46,9 +46,11 @@ defmodule Calendrical.Diff.Test do
       assert Calendrical.Reform.England.diff({1752, 9, 2}, {1752, 9, 14}, :days) == 1
     end
 
-    test "a Julian year-start variant counts the Julian months its label year holds" do
-      # Label year 2024 of March25 runs 25 March 2024 to 24 March 2025.
-      assert Calendrical.Julian.March25.diff({2024, 3, 25}, {2024, 3, 24}, :months) == 11
+    test "a Julian year-start variant counts its own counted months" do
+      # Label year 2024 of March25 runs 25 March 2024 to 24 March 2025:
+      # thirteen counted months, twelve of them whole from its first day.
+      assert Calendrical.Julian.March25.diff({2024, 1, 1}, {2024, 13, 24}, :months) == 12
+      assert Calendrical.Julian.March25.diff({2024, 1, 1}, {2025, 1, 1}, :months) == 13
     end
 
     test "a 31st plus a month is the shorter month's last day, one month on" do

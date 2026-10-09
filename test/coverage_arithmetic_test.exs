@@ -426,10 +426,12 @@ defmodule CoverageArithmeticTest do
 
   describe "Julian __using__ variants" do
     test "a runtime-defined variant maps pre-new-year dates to the prior year" do
-      assert Calendrical.CoverageTest.JulianFeb1.date_to_iso_days(2025, 1, 15) ==
+      # The variant's month 12 is the Julian January of the year after
+      # its label.
+      assert Calendrical.CoverageTest.JulianFeb1.date_to_iso_days(2025, 12, 15) ==
                Julian.date_to_iso_days(2026, 1, 15)
 
-      assert Calendrical.CoverageTest.JulianFeb1.date_from_iso_days(740_000) == {2025, 1, 6}
+      assert Calendrical.CoverageTest.JulianFeb1.date_from_iso_days(740_000) == {2025, 12, 6}
     end
   end
 

@@ -65,7 +65,9 @@ defmodule Calendrical.Reform.EnglandTest do
     end
 
     test "March 24, 1750 is followed by March 25, 1751" do
-      day_before = ~D[1750-03-24 Calendrical.Reform.England]
+      # The Lady Day year 1750's last day is its counted month 13
+      # day 24, the Julian 24 March 1751.
+      day_before = ~D[1750-13-24 Calendrical.Reform.England]
       day_after = Date.shift(day_before, day: 1)
       assert day_after == ~D[1751-03-25 Calendrical.Reform.England]
     end

@@ -32,8 +32,10 @@ defmodule Calendrical.Reform.England do
       iex> Date.shift(~D[1752-09-02 Calendrical.Reform.England], day: 1)
       ~D[1752-09-14 Calendrical.Reform.England]
 
-      # 1751 is a short year, ending on 31 December
-      iex> Date.shift(~D[1750-03-24 Calendrical.Reform.England], day: 1)
+      # 1751 is a short year, ending on 31 December. The year 1750
+      # before it carries Lady Day counted months, so its last day is
+      # month 13 day 24, the Julian 24 March 1751.
+      iex> Date.shift(~D[1750-13-24 Calendrical.Reform.England], day: 1)
       ~D[1751-03-25 Calendrical.Reform.England]
 
   ## Reference
@@ -47,7 +49,8 @@ defmodule Calendrical.Reform.England do
   """
   use Calendrical.Composite,
     calendars: [
-      ~D[1155-03-25 Calendrical.Julian.March25],
+      # 25 March 1155, the first day of the Lady Day year 1155
+      ~D[1155-01-01 Calendrical.Julian.March25],
       ~D[1751-03-25 Calendrical.Julian.Jan1],
       ~D[1752-09-14 Calendrical.Gregorian]
     ],

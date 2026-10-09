@@ -476,11 +476,23 @@ defmodule Calendrical.Composite.Compiler do
           %Date.Range{first_in_iso_days: year_first, last_in_iso_days: year_last} ->
             year_first = if first, do: max(year_first, first), else: year_first
             year_last = if last, do: min(year_last, last), else: year_last
-            if year_first <= year_last, do: [{year_first, year_last}], else: []
+
+            if year_first <= year_last and dated?(calendar, year_last),
+              do: [{year_first, year_last}],
+              else: []
 
           _no_such_year ->
             []
         end
+      end
+
+      # Whether a day's date in its segment's calendar is its own: where
+      # a change of the day a year begins on gives a calendar's last
+      # stretch of days the labels the calendar after claims, the whole
+      # stretch has no dates of its own and no day of the year.
+      defp dated?(calendar, iso_days) do
+        {year, month, day} = calendar.date_from_iso_days(iso_days)
+        valid_date?(year, month, day) and date_to_iso_days(year, month, day) == iso_days
       end
 
       @doc """
@@ -669,10 +681,13 @@ defmodule Calendrical.Composite.Compiler do
 
       def semester(_year, _semester), do: {:error, :invalid_date}
 
+      # A year whose months do not divide evenly into the periods — a
+      # split Julian year-start variant's thirteen, or a year a reform
+      # cut short — has no quarters of whole months.
       defp period_of_year(year, period, periods_in_year) do
         months_in_year = months_in_year(year)
 
-        if rem(months_in_year, periods_in_year) == 0 and january_year?(year) do
+        if months_in_year > 0 and rem(months_in_year, periods_in_year) == 0 do
           months_in_period = div(months_in_year, periods_in_year)
           first_month = months_in_period * (period - 1) + 1
 
@@ -682,15 +697,6 @@ defmodule Calendrical.Composite.Compiler do
           |> quarter_range()
         else
           {:error, :not_defined}
-        end
-      end
-
-      # A year labelled from a later new-year day (England's Lady Day years)
-      # has no quarters, as its Julian year-start calendar has none.
-      defp january_year?(year) do
-        case year_bounds(year) do
-          {first, _last} -> Enum.at(@segments, segment_index(first)).january_year?
-          nil -> false
         end
       end
 
@@ -1168,10 +1174,29 @@ defmodule Calendrical.Composite.Compiler do
         civil.date_to_iso_days(civil_year, civil_month, day)
       end
 
+      # A month is shared with a neighbouring segment only when both
+      # label the same month — a change within a month, as England's
+      # September 1752. A neighbour whose months are its own, as a
+      # year-start calendar's counted months, shares none.
       defp sharing_segments(index, civil_month) do
         %{first_month: first, last_month: last} = segment = Enum.at(@segments, index)
-        before = if civil_month == first, do: [Enum.at(@segments, index - 1)], else: []
-        later = if civil_month == last, do: [Enum.at(@segments, index + 1)], else: []
+
+        before =
+          with true <- civil_month == first,
+               %{last_month: ^civil_month} = previous <- Enum.at(@segments, index - 1) do
+            [previous]
+          else
+            _not_shared -> []
+          end
+
+        later =
+          with true <- civil_month == last,
+               %{first_month: ^civil_month} = next <- Enum.at(@segments, index + 1) do
+            [next]
+          else
+            _not_shared -> []
+          end
+
         [segment | before ++ later]
       end
 
@@ -1184,17 +1209,11 @@ defmodule Calendrical.Composite.Compiler do
         end)
       end
 
-      defp to_civil(%{civil: civil, calendar: civil}, year, month, day), do: {year, month, day}
+      # Every member is its own civil calendar, so a member date needs
+      # no translation to walk its months.
+      defp to_civil(_segment, year, month, day), do: {year, month, day}
 
-      defp to_civil(%{civil: civil, calendar: calendar}, year, month, day) do
-        civil.date_from_iso_days(calendar.date_to_iso_days(year, month, day))
-      end
-
-      defp from_civil(%{civil: civil, calendar: civil}, year, month, day), do: {year, month, day}
-
-      defp from_civil(%{calendar: calendar}, year, month, day) do
-        calendar.date_from_julian_date(year, month, day)
-      end
+      defp from_civil(_segment, year, month, day), do: {year, month, day}
 
       @doc false
       @impl Calendar

@@ -6,13 +6,15 @@ defmodule Calendrical.Julian.Dec25 do
 
   The year begins a week before 1 January of the same number: year 1100
   runs from 25 December 1099 to 24 December 1100, so the last seven days
-  of December carry the number of the year to come.
+  of December carry the number of the year to come. Months are counted
+  from the new-year day: month 1 is 25-31 December, day 1 being 25
+  December, month 2 is January, and month 13 is 1-24 December.
 
       iex> Date.convert!(~D[1099-12-25 Calendrical.Julian], Calendrical.Julian.Dec25)
-      ~D[1100-12-25 Calendrical.Julian.Dec25]
+      ~D[1100-01-01 Calendrical.Julian.Dec25]
 
       iex> Date.convert!(~D[1100-01-01 Calendrical.Julian], Calendrical.Julian.Dec25)
-      ~D[1100-01-01 Calendrical.Julian.Dec25]
+      ~D[1100-02-01 Calendrical.Julian.Dec25]
 
   This is the reckoning from Christmas Day that C. R. Cheney's *A
   Handbook of Dates* describes for the year of grace. Matthew Paris
@@ -20,7 +22,7 @@ defmodule Calendrical.Julian.Dec25 do
   1249:
 
       iex> Date.convert!(~D[1249-12-26 Calendrical.Julian], Calendrical.Julian.Dec25)
-      ~D[1250-12-26 Calendrical.Julian.Dec25]
+      ~D[1250-01-02 Calendrical.Julian.Dec25]
 
   See `Calendrical.Julian` for the calendar's structure, leap-year
   rule and the full public API.

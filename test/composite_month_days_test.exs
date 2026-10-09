@@ -26,8 +26,9 @@ defmodule Calendrical.CompositeMonthDaysTest do
   end
 
   test "Russia's 1492 ended on 31 August" do
-    assert days_in_months(Calendrical.Russia, 1492) == [0, 0, 31, 30, 31, 30, 31, 31, 0, 0, 0, 0]
-    assert Calendrical.Russia.months_in_year(1492) == 8
+    # The March year's counted months 1 (March) to 6 (August) have days.
+    assert days_in_months(Calendrical.Russia, 1492) == [31, 30, 31, 30, 31, 31, 0, 0, 0, 0, 0, 0]
+    assert Calendrical.Russia.months_in_year(1492) == 6
     assert Calendrical.Russia.days_in_year(1492) == 184
   end
 

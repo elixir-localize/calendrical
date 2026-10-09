@@ -26,7 +26,8 @@ England is the classic example. It changed the civil New Year from 25 March to
 defmodule CompositeCalendar.England do
   use Calendrical.Composite,
     calendars: [
-      ~D[1155-03-25 Calendrical.Julian.March25],
+      # 25 March 1155: the Lady Day calendar's month 1 day 1
+      ~D[1155-01-01 Calendrical.Julian.March25],
       ~D[1751-03-25 Calendrical.Julian.Jan1],
       ~D[1752-09-14 Calendrical.Gregorian]
     ],
@@ -37,7 +38,7 @@ end
 Read the `:calendars` list as "on this day, switch to this calendar":
 
 * before 1155‑03‑25 — the base `Calendrical.Julian` calendar;
-* from 1155‑03‑25 — Julian with the year starting on 25 March (Lady Day);
+* from 25 March 1155, the incoming calendar's month 1 day 1 — Julian with the year starting on 25 March (Lady Day), its months counted from that day;
 * from 1751‑03‑25 — Julian with the year starting on 1 January;
 * from 1752‑09‑14 — the proleptic Gregorian calendar.
 
@@ -68,12 +69,14 @@ round‑trips to the same member calendar.
 ## Changing when the year starts
 
 Transitions can also change *year numbering* rather than skip days. Under the
-March‑25 (Lady Day) style, the day after 24 March 1750 is 25 March **1751**;
-after the switch to a January start, 1751 becomes the first year to run all the
-way to 31 December, followed directly by 1 January 1752:
+March‑25 (Lady Day) style a year counts thirteen months from 25 March, so the
+year 1750's last day is its month 13 day 24, the Julian 24 March 1751, and the
+day after it is 25 March **1751**; after the switch to a January start, 1751
+becomes the first year to run all the way to 31 December, followed directly by
+1 January 1752:
 
 ```elixir
-iex> Date.shift(~D[1750-03-24 CompositeCalendar.England], day: 1)
+iex> Date.shift(~D[1750-13-24 CompositeCalendar.England], day: 1)
 ~D[1751-03-25 CompositeCalendar.England]
 
 iex> Date.shift(~D[1751-12-31 CompositeCalendar.England], day: 1)

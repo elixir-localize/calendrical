@@ -94,18 +94,21 @@ defmodule Calendrical.DaysInMonthWithoutYearTest do
   end
 
   describe "months_in_year/0" do
-    test "the Julian calendars have twelve months, as the Gregorian has" do
+    test "the Julian calendars have twelve months, and a split variant thirteen" do
       for calendar <- [
             Calendrical.Julian,
             Calendrical.Julian.Jan1,
             Calendrical.Julian.March1,
-            Calendrical.Julian.March25,
-            Calendrical.Julian.Sept1,
-            Calendrical.Julian.Dec25
+            Calendrical.Julian.Sept1
           ] do
         assert calendar.months_in_year() == Calendrical.Gregorian.months_in_year()
         assert calendar.months_in_year() == 12
       end
+
+      # A year that begins within a Julian month splits it into a short
+      # month 1 and a short month 13.
+      assert Calendrical.Julian.March25.months_in_year() == 13
+      assert Calendrical.Julian.Dec25.months_in_year() == 13
     end
 
     test "every calendar answers, a composite that it cannot" do

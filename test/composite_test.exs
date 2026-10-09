@@ -46,7 +46,7 @@ defmodule Calendrical.CompositeTest do
     test "is its changes of calendar: the first day of each, and its calendar" do
       assert [
                {_first, -9999, 1, 1, Calendrical.Julian},
-               {lady_day, 1155, 3, 25, Calendrical.Julian.March25},
+               {lady_day, 1155, 1, 1, Calendrical.Julian.March25},
                {january, 1751, 3, 25, Calendrical.Julian.Jan1},
                {gregorian, 1752, 9, 14, Calendrical.Gregorian}
              ] = Calendrical.Reform.England.__config__()

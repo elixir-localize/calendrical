@@ -349,6 +349,7 @@ defmodule Calendrical.LunarJapanese do
 
   """
   @spec leap_month(date_or_year :: Date.t() | Calendar.year()) :: Calendar.month() | nil
+  @impl true
   def leap_month(%Date{year: year, calendar: __MODULE__}) do
     leap_month(year)
   end
@@ -392,6 +393,7 @@ defmodule Calendrical.LunarJapanese do
   """
   @spec traditional_leap_month(date_or_year :: Date.t() | Calendar.year()) ::
           Calendar.month() | nil
+  @impl true
   def traditional_leap_month(%Date{year: year, calendar: __MODULE__}) do
     traditional_leap_month(year)
   end
@@ -663,6 +665,7 @@ defmodule Calendrical.LunarJapanese do
   """
   @spec lunar_month_of_year(year :: Calendar.year(), month :: Calendar.month()) ::
           Lunisolar.lunar_month()
+  @impl true
   def lunar_month_of_year(year, month) do
     Lunisolar.lunar_month_of_year(year, month, 1, epoch(), &location/1)
   end
@@ -884,6 +887,7 @@ defmodule Calendrical.LunarJapanese do
   """
   @spec ordinal_month_from_traditional(Calendar.year(), Lunisolar.lunar_month()) ::
           {:ok, Calendar.month()} | {:error, :invalid_month | :invalid_leap_month}
+  @impl true
   def ordinal_month_from_traditional(year, lunar_month) do
     Lunisolar.ordinal_month_from_traditional(year, lunar_month, epoch(), &location/1)
   end

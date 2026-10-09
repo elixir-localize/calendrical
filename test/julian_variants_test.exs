@@ -86,30 +86,30 @@ defmodule Calendrical.JulianVariantsTest do
   describe "the day the year changes" do
     test "March1: on Julian 1 March, after 1 January of the same number" do
       assert Date.convert(~D[2024-03-13], March1) ==
-               {:ok, ~D[2023-02-29 Calendrical.Julian.March1]}
+               {:ok, ~D[2023-12-29 Calendrical.Julian.March1]}
 
       assert Date.convert(~D[2024-03-14], March1) ==
-               {:ok, ~D[2024-03-01 Calendrical.Julian.March1]}
+               {:ok, ~D[2024-01-01 Calendrical.Julian.March1]}
     end
 
     test "March25: on Julian 25 March, after 1 January of the same number" do
       assert Date.convert(~D[2024-04-06], March25) ==
-               {:ok, ~D[2023-03-24 Calendrical.Julian.March25]}
+               {:ok, ~D[2023-13-24 Calendrical.Julian.March25]}
 
       assert Date.convert(~D[2024-04-07], March25) ==
-               {:ok, ~D[2024-03-25 Calendrical.Julian.March25]}
+               {:ok, ~D[2024-01-01 Calendrical.Julian.March25]}
     end
 
     test "Sept1: on Julian 1 September, before 1 January of the same number" do
-      assert Date.convert(~D[2024-09-13], Sept1) == {:ok, ~D[2024-08-31 Calendrical.Julian.Sept1]}
-      assert Date.convert(~D[2024-09-14], Sept1) == {:ok, ~D[2025-09-01 Calendrical.Julian.Sept1]}
-      assert Date.convert(~D[2025-01-14], Sept1) == {:ok, ~D[2025-01-01 Calendrical.Julian.Sept1]}
+      assert Date.convert(~D[2024-09-13], Sept1) == {:ok, ~D[2024-12-31 Calendrical.Julian.Sept1]}
+      assert Date.convert(~D[2024-09-14], Sept1) == {:ok, ~D[2025-01-01 Calendrical.Julian.Sept1]}
+      assert Date.convert(~D[2025-01-14], Sept1) == {:ok, ~D[2025-05-01 Calendrical.Julian.Sept1]}
     end
 
     test "Dec25: on Julian 25 December, before 1 January of the same number" do
-      assert Date.convert(~D[2025-01-06], Dec25) == {:ok, ~D[2024-12-24 Calendrical.Julian.Dec25]}
-      assert Date.convert(~D[2025-01-07], Dec25) == {:ok, ~D[2025-12-25 Calendrical.Julian.Dec25]}
-      assert Date.convert(~D[2025-01-14], Dec25) == {:ok, ~D[2025-01-01 Calendrical.Julian.Dec25]}
+      assert Date.convert(~D[2025-01-06], Dec25) == {:ok, ~D[2024-13-24 Calendrical.Julian.Dec25]}
+      assert Date.convert(~D[2025-01-07], Dec25) == {:ok, ~D[2025-01-01 Calendrical.Julian.Dec25]}
+      assert Date.convert(~D[2025-01-14], Dec25) == {:ok, ~D[2025-02-01 Calendrical.Julian.Dec25]}
     end
   end
 
@@ -131,7 +131,7 @@ defmodule Calendrical.JulianVariantsTest do
         first_day = Date.new!(julian_year, month, day, Calendrical.Julian)
         day_before = Date.add(first_day, -1)
 
-        assert %Date{year: ^year, month: ^month, day: ^day} = Date.convert!(first_day, calendar)
+        assert %Date{year: ^year, month: 1, day: 1} = Date.convert!(first_day, calendar)
         assert Date.convert!(day_before, calendar).year == year - 1
         assert calendar.year(year).first == Date.convert!(first_day, calendar)
         assert calendar.year(year - 1).last == Date.convert!(day_before, calendar)
@@ -143,10 +143,10 @@ defmodule Calendrical.JulianVariantsTest do
     # Paris used the Christmas reckoning, and the historical date is
     # therefore 26 December 1249."
     test "Matthew Paris's 26 December 1250 is 26 December 1249" do
-      assert Date.convert!(~D[1250-12-26 Calendrical.Julian.Dec25], Calendrical.Julian) ==
+      assert Date.convert!(~D[1250-01-02 Calendrical.Julian.Dec25], Calendrical.Julian) ==
                ~D[1249-12-26 Calendrical.Julian]
 
-      assert Date.convert!(~D[1250-12-24 Calendrical.Julian.Dec25], Calendrical.Julian) ==
+      assert Date.convert!(~D[1250-13-24 Calendrical.Julian.Dec25], Calendrical.Julian) ==
                ~D[1250-12-24 Calendrical.Julian]
     end
 
@@ -171,13 +171,13 @@ defmodule Calendrical.JulianVariantsTest do
     # In the Venetian style January and February are of the year before.
     test "January and February of a year reckoned from 1 March are of the year before" do
       assert Date.convert!(~D[1700-01-01 Calendrical.Julian], March1) ==
-               ~D[1699-01-01 Calendrical.Julian.March1]
+               ~D[1699-11-01 Calendrical.Julian.March1]
 
       assert Date.convert!(~D[1700-02-29 Calendrical.Julian], March1) ==
-               ~D[1699-02-29 Calendrical.Julian.March1]
+               ~D[1699-12-29 Calendrical.Julian.March1]
 
       assert Date.convert!(~D[1700-03-01 Calendrical.Julian], March1) ==
-               ~D[1700-03-01 Calendrical.Julian.March1]
+               ~D[1700-01-01 Calendrical.Julian.March1]
     end
   end
 
@@ -195,6 +195,22 @@ defmodule Calendrical.JulianVariantsTest do
 
   defp numbered({julian_year, _month, _day}, _new_year, _numbering), do: julian_year
 
+  # The counted month and day of a Julian month and day: month 1 begins
+  # on the new-year day, and a new-year day within a month splits it
+  # into a short month 1 and a short month 13.
+  defp counted({month, day}, {start_month, start_day}) do
+    cond do
+      start_day > 1 and month == start_month and day >= start_day ->
+        {1, day - start_day + 1}
+
+      start_day > 1 and month == start_month ->
+        {13, day}
+
+      true ->
+        {Integer.mod(month - start_month, 12) + 1, day}
+    end
+  end
+
   describe "the `:year` option" do
     test "numbers every day of 3 BC to AD 3 and of 1099 to 1101 by its reckoning" do
       for {calendar, new_year, numbering} <- @reckonings,
@@ -205,9 +221,10 @@ defmodule Calendrical.JulianVariantsTest do
           iso <- range do
         %{year: year, month: month, day: day} = Date.convert!(iso, Calendrical.Julian)
         date = Date.convert!(iso, calendar)
+        {counted_month, counted_day} = counted({month, day}, new_year)
 
         assert {date.year, date.month, date.day} ==
-                 {numbered({year, month, day}, new_year, numbering), month, day},
+                 {numbered({year, month, day}, new_year, numbering), counted_month, counted_day},
                "#{inspect(calendar)} on #{iso}"
 
         assert calendar.valid_date?(date.year, date.month, date.day)
@@ -271,8 +288,8 @@ defmodule Calendrical.JulianVariantsTest do
     end
 
     test "and the day after the last of 1 BC is the first of AD 1" do
-      for {calendar, {month, day}, _numbering} <- @reckonings do
-        first_day = Date.new!(1, month, day, calendar)
+      for {calendar, _new_year, _numbering} <- @reckonings do
+        first_day = Date.new!(1, 1, 1, calendar)
         last_day = Date.add(first_day, -1)
 
         assert last_day.year == -1, inspect(calendar)
@@ -294,13 +311,19 @@ defmodule Calendrical.JulianVariantsTest do
       end
     end
 
-    test "variant dates agree with plain Julian on month and day" do
-      for variant <- @variants, day_offset <- 0..30 do
+    test "variant dates name the plain Julian month and day" do
+      for variant <- @variants, day_offset <- 0..366 do
         date = Date.add(~D[2024-06-01], day_offset)
         {:ok, julian} = Date.convert(date, Calendrical.Julian)
         {:ok, in_variant} = Date.convert(date, variant)
+        %{year: year, month: month, day: day} = in_variant
 
-        assert {julian.month, julian.day} == {in_variant.month, in_variant.day}
+        assert variant.julian_date(year, month, day) ==
+                 {julian.year, julian.month, julian.day}
+
+        assert variant.month_of_year(year, month, day) == julian.month
+        assert variant.cardinal_month(month) == julian.month
+        assert variant.cardinal_day(year, month, day) == julian.day
       end
     end
   end
@@ -313,39 +336,49 @@ defmodule Calendrical.JulianVariantsTest do
     end
   end
 
-  describe "month lengths follow the date's own Julian month" do
+  describe "month lengths follow the counted month's own Julian days" do
     test "days_in_month/2 agrees with valid_date?/3 for every month of every year" do
       for variant <- [Calendrical.Julian.Jan1 | @variants],
           year <- 2020..2027,
-          month <- 1..12,
+          month <- 1..13,
           day <- 1..31 do
         assert variant.valid_date?(year, month, day) == day <= variant.days_in_month(year, month),
                "#{inspect(variant)} #{year}-#{month}-#{day}"
       end
     end
 
-    test "Date.days_in_month/1 matches plain Julian" do
-      for variant <- @variants, {julian, in_variant} <- day_pairs(variant) do
-        assert Date.days_in_month(in_variant) == Date.days_in_month(julian)
+    test "Date.days_in_month/1 is the counted month's length and the months tile the year" do
+      for variant <- [Calendrical.Julian.Jan1 | @variants], year <- [2023, 2024] do
+        months = variant.months_in_year(year)
+
+        lengths = for month <- 1..months, do: variant.days_in_month(year, month)
+        assert Enum.sum(lengths) == variant.days_in_year(year)
+
+        for month <- 1..months do
+          %Date.Range{last: last} = variant.month(year, month)
+          assert Date.days_in_month(last) == variant.days_in_month(year, month)
+        end
       end
     end
 
     test "a March1 February follows the leap year of its Julian year" do
-      # March1 label 2023 runs 1 March 2023 to 29 February 2024 (Julian).
-      assert Calendrical.Julian.March1.days_in_month(2023, 2) == 29
-      assert Calendrical.Julian.March1.days_in_month(2024, 2) == 28
-      assert Calendrical.Julian.Sept1.days_in_month(2024, 9) == 30
+      # March1 label 2023 runs 1 March 2023 to 29 February 2024 (Julian),
+      # so its February is its month 12 and has the Julian 2024's days.
+      assert Calendrical.Julian.March1.days_in_month(2023, 12) == 29
+      assert Calendrical.Julian.March1.days_in_month(2024, 12) == 28
+      assert Calendrical.Julian.Sept1.days_in_month(2024, 1) == 30
     end
 
     # A year reckoned from 1 September or 25 December holds the February of
-    # the Julian year it ends in, and 2024 is a Julian leap year.
+    # the Julian year it ends in, and 2024 is a Julian leap year. February
+    # is Sept1's counted month 6 and Dec25's month 3.
     test "a Sept1 or Dec25 February is that of the Julian year the year ends in" do
-      for calendar <- [Sept1, Dec25] do
-        assert calendar.days_in_month(2024, 2) == 29, inspect(calendar)
-        assert calendar.days_in_month(2023, 2) == 28, inspect(calendar)
-        assert calendar.days_in_month(2025, 2) == 28, inspect(calendar)
-        assert calendar.valid_date?(2024, 2, 29), inspect(calendar)
-        refute calendar.valid_date?(2023, 2, 29), inspect(calendar)
+      for {calendar, february} <- [{Sept1, 6}, {Dec25, 3}] do
+        assert calendar.days_in_month(2024, february) == 29, inspect(calendar)
+        assert calendar.days_in_month(2023, february) == 28, inspect(calendar)
+        assert calendar.days_in_month(2025, february) == 28, inspect(calendar)
+        assert calendar.valid_date?(2024, february, 29), inspect(calendar)
+        refute calendar.valid_date?(2023, february, 29), inspect(calendar)
         assert calendar.leap_year?(2024), inspect(calendar)
         refute calendar.leap_year?(2023), inspect(calendar)
 
@@ -353,29 +386,41 @@ defmodule Calendrical.JulianVariantsTest do
                inspect(calendar)
       end
 
-      # December of a year reckoned from 25 December is the last week of one
-      # Julian December and the first 24 days of the next.
-      assert Dec25.days_in_month(2024, 12) == 31
+      # A year reckoned from 25 December splits the Julian December: its
+      # last seven days are month 1 and its first 24 days month 13, and
+      # the two parts of one label year are a year of days apart.
+      assert Dec25.days_in_month(2024, 1) == 7
+      assert Dec25.days_in_month(2024, 13) == 24
 
       assert Date.diff(
-               ~D[2024-12-24 Calendrical.Julian.Dec25],
-               ~D[2024-12-25 Calendrical.Julian.Dec25]
+               ~D[2024-13-24 Calendrical.Julian.Dec25],
+               ~D[2024-01-01 Calendrical.Julian.Dec25]
              ) == 365
     end
 
-    test "days_in_month/1 is the Julian month's length" do
-      assert Calendrical.Julian.March25.days_in_month(1) == 31
-      assert Calendrical.Julian.March25.days_in_month(2) == {:ambiguous, 28..29}
-      assert Calendrical.Julian.March25.days_in_month(13) == {:error, :undefined}
-      assert Calendrical.Julian.March25.months_in_year() == 12
+    test "days_in_month/1 is the counted month's length" do
+      assert Calendrical.Julian.March25.days_in_month(1) == 7
+      assert Calendrical.Julian.March25.days_in_month(2) == 30
+      assert Calendrical.Julian.March25.days_in_month(12) == {:ambiguous, 28..29}
+      assert Calendrical.Julian.March25.days_in_month(13) == 24
+      assert Calendrical.Julian.March25.days_in_month(14) == {:error, :undefined}
+      assert Calendrical.Julian.March25.months_in_year() == 13
+      assert Calendrical.Julian.March1.days_in_month(1) == 31
+      assert Calendrical.Julian.March1.days_in_month(12) == {:ambiguous, 28..29}
+      assert Calendrical.Julian.March1.months_in_year() == 12
     end
   end
 
-  describe "arithmetic follows the Julian date" do
-    test "Date.shift/2 lands on the same day as in plain Julian" do
-      durations =
-        [month: -13, month: -1, month: 1, month: 11, month: 13, year: -1, year: 1] ++
-          [week: 1, week: -3, day: 1, day: -400]
+  # Day, week and year shifts land on the same day as in the plain
+  # Julian calendar. Month shifts walk the calendar's own counted
+  # months, which are the Julian months themselves in a whole-month
+  # variant; a split variant's thirteen differ from the Julian twelve
+  # about the new-year day.
+  describe "arithmetic follows the counted months" do
+    @whole_month_variants [Calendrical.Julian.Jan1, March1, Sept1]
+
+    test "Date.shift/2 by days, weeks and years lands on the same day as in plain Julian" do
+      durations = [year: -1, year: 1, week: 1, week: -3, day: 1, day: -400]
 
       for variant <- [Calendrical.Julian.Jan1 | @variants],
           {julian, in_variant} <- day_pairs(variant),
@@ -388,21 +433,33 @@ defmodule Calendrical.JulianVariantsTest do
       end
     end
 
-    test "years and months together land on the same day as in plain Julian" do
-      durations = [
-        [year: 1, month: 1],
-        [year: -1, month: 13],
-        [year: 2, month: -1],
-        [year: 1, month: -12]
-      ]
+    test "a whole-month variant's month shifts land on the same day as in plain Julian" do
+      durations =
+        [month: -13, month: -1, month: 1, month: 11, month: 13] ++
+          [[year: 1, month: 1], [year: -1, month: 13], [year: 2, month: -1]]
 
-      for variant <- [Calendrical.Julian.Jan1 | @variants],
+      for variant <- @whole_month_variants,
           {julian, in_variant} <- day_pairs(variant),
           duration <- durations do
+        duration = duration |> List.wrap() |> Duration.new!()
+
         assert Date.convert!(Date.shift(in_variant, duration), Calendar.ISO) ==
                  Date.convert!(Date.shift(julian, duration), Calendar.ISO),
                "#{inspect(in_variant)} + #{inspect(duration)}"
       end
+    end
+
+    test "a split variant's month shifts walk its thirteen months" do
+      # A month on from month 13 lands in month 1, whose seven days cap
+      # the day, and thirteen months are a whole year.
+      assert Date.shift(~D[2023-13-20 Calendrical.Julian.March25], month: 1) ==
+               ~D[2024-01-07 Calendrical.Julian.March25]
+
+      assert Date.shift(~D[2023-05-10 Calendrical.Julian.March25], month: 13) ==
+               ~D[2024-05-10 Calendrical.Julian.March25]
+
+      assert Date.shift(~D[2024-01-03 Calendrical.Julian.Dec25], month: -1) ==
+               ~D[2023-13-03 Calendrical.Julian.Dec25]
     end
 
     test "plain Julian shifts by weeks" do
@@ -416,7 +473,7 @@ defmodule Calendrical.JulianVariantsTest do
   describe "year-relative months, years and times" do
     test "month/2 tiles the year from its first day to its last" do
       for variant <- [Calendrical.Julian.Jan1 | @variants], year <- [2023, 2024] do
-        ranges = for month <- 1..12, do: variant.month(year, month)
+        ranges = for month <- 1..variant.months_in_year(year), do: variant.month(year, month)
         first = Date.to_gregorian_days(Enum.at(ranges, 0).first)
         last = Date.to_gregorian_days(List.last(ranges).last)
 
@@ -429,9 +486,9 @@ defmodule Calendrical.JulianVariantsTest do
           assert Date.to_gregorian_days(range.last) + 1 == Date.to_gregorian_days(next.first)
         end)
 
-        # A date's month of the year is its Julian month, which names it
+        # A date's month of the year is the Julian month that names it
         for range <- ranges, date <- [range.first, range.last] do
-          assert Calendrical.month_of_year(date) == date.month
+          assert Calendrical.month_of_year(date) == variant.cardinal_month(date.month)
         end
       end
     end
@@ -468,22 +525,22 @@ defmodule Calendrical.JulianVariantsTest do
   # 25 December 1 BC was already AD 1.
   describe "the era of a label year" do
     test "the new-year day begins the era" do
-      assert Calendrical.Julian.March25.year_of_era(-1, 3, 24) == {1, 0}
-      assert Calendrical.Julian.March25.year_of_era(1, 3, 25) == {1, 1}
-      assert Calendrical.Julian.Dec25.year_of_era(-1, 12, 24) == {1, 0}
-      assert Calendrical.Julian.Dec25.year_of_era(1, 12, 25) == {1, 1}
+      assert Calendrical.Julian.March25.year_of_era(-1, 13, 24) == {1, 0}
+      assert Calendrical.Julian.March25.year_of_era(1, 1, 1) == {1, 1}
+      assert Calendrical.Julian.Dec25.year_of_era(-1, 13, 24) == {1, 0}
+      assert Calendrical.Julian.Dec25.year_of_era(1, 1, 1) == {1, 1}
 
-      assert Calendrical.Julian.March25.day_of_era(-1, 3, 24) == {1, 0}
-      assert Calendrical.Julian.March25.day_of_era(1, 3, 25) == {1, 1}
+      assert Calendrical.Julian.March25.day_of_era(-1, 13, 24) == {1, 0}
+      assert Calendrical.Julian.March25.day_of_era(1, 1, 1) == {1, 1}
 
       assert Date.convert!(~D[0001-03-24 Calendrical.Julian], March25) ==
-               ~D[-0001-03-24 Calendrical.Julian.March25]
+               ~D[-0001-13-24 Calendrical.Julian.March25]
 
       assert Date.convert!(~D[-0001-12-25 Calendrical.Julian], Dec25) ==
-               ~D[0001-12-25 Calendrical.Julian.Dec25]
+               ~D[0001-01-01 Calendrical.Julian.Dec25]
 
-      assert Calendrical.Julian.Dec25.day_of_era(-1, 12, 24) == {1, 0}
-      assert Calendrical.Julian.Dec25.day_of_era(1, 12, 25) == {1, 1}
+      assert Calendrical.Julian.Dec25.day_of_era(-1, 13, 24) == {1, 0}
+      assert Calendrical.Julian.Dec25.day_of_era(1, 1, 1) == {1, 1}
     end
 
     test "the year of era is the calendar year, and the day of era agrees" do
@@ -500,14 +557,12 @@ defmodule Calendrical.JulianVariantsTest do
     end
   end
 
-  # A variant's date keeps its Julian month and day under the label of the
-  # year its day falls in, so its fields are not in the order of its days: 1
-  # January follows 31 December of the same label year. `Date.compare/2`
-  # orders two dates of one calendar by their fields and never asks the
-  # calendar, so dates are ordered by their days (`Date.diff/2`). The ranges
-  # below cross January and each variant's new-year day; the days expected
-  # are the ISO days between the two, in the variant.
-  describe "dates are ordered by their days, not their fields" do
+  # A variant's date carries counted months, so its fields are in the
+  # order of its days and `Date.compare/2`, which orders two dates of
+  # one calendar by their fields, orders them by their days. The ranges
+  # below cross January and each variant's new-year day; the days
+  # expected are the ISO days between the two, in the variant.
+  describe "dates are ordered by their fields" do
     @ranges [
       {~D[2023-01-01], ~D[2023-01-28]},
       {~D[2023-12-20], ~D[2024-01-20]},
@@ -515,13 +570,21 @@ defmodule Calendrical.JulianVariantsTest do
       {~D[2024-08-25], ~D[2024-09-20]}
     ]
 
-    test "the year's last day in December is the day before 1 January of the same year" do
-      december = Date.new!(2022, 12, 31, Calendrical.Julian.March25)
-      january = Date.new!(2022, 1, 1, Calendrical.Julian.March25)
+    test "every day compares :lt against the day after it" do
+      for variant <- @variants, {_julian, date} <- day_pairs(variant) do
+        next_day = Date.add(date, 1)
+        assert Date.compare(date, next_day) == :lt, "#{inspect(date)} < #{inspect(next_day)}"
+      end
+    end
 
-      assert Date.diff(january, december) == 1
-      assert Calendrical.interval(december, january, :days) == [december, january]
-      assert Calendrical.interval(january, december, :days) == [january, december]
+    test "the Julian December and January of one label year are in field order" do
+      december = Date.new!(2022, 10, 10, Calendrical.Julian.March25)
+      january = Date.new!(2022, 11, 10, Calendrical.Julian.March25)
+
+      assert Calendrical.Julian.March25.month_of_year(2022, 10, 10) == 12
+      assert Calendrical.Julian.March25.month_of_year(2022, 11, 10) == 1
+      assert Date.diff(january, december) == 31
+      assert Date.compare(december, january) == :lt
     end
 
     test "interval/3 runs from the earlier day to the later, and back" do
@@ -552,23 +615,28 @@ defmodule Calendrical.JulianVariantsTest do
       end
     end
 
-    test "an interval of months is the plain Julian calendar's, relabelled" do
-      plain =
-        Calendrical.interval(
-          Date.convert!(~D[2023-10-10], Calendrical.Julian),
-          Date.convert!(~D[2024-05-10], Calendrical.Julian),
-          :months
-        )
-
-      assert length(plain) == 8
-
+    test "an interval of months steps through the calendar's own counted months" do
       for variant <- @variants do
         from = Date.convert!(~D[2023-10-10], variant)
         to = Date.convert!(~D[2024-05-10], variant)
 
-        assert Calendrical.interval(from, to, :months) ==
-                 Enum.map(plain, &Date.convert!(&1, variant)),
-               inspect(variant)
+        interval = Calendrical.interval(from, to, :months)
+
+        assert hd(interval) == from
+
+        assert length(interval) ==
+                 variant.diff(
+                   {from.year, from.month, from.day},
+                   {to.year, to.month, to.day},
+                   :months
+                 ) + 1
+
+        for {step, months} <- Enum.with_index(interval) do
+          {year, month, day} =
+            variant.plus(from.year, from.month, from.day, :months, months, coerce: true)
+
+          assert {step.year, step.month, step.day} == {year, month, day}
+        end
       end
     end
   end

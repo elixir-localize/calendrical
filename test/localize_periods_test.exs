@@ -75,15 +75,15 @@ defmodule Calendrical.LocalizePeriodsTest do
       end
     end
 
-    # 1 January of a year reckoned from 25 March is the day after 31 December
-    # of the same year, and 25 March the day after 24 March of the year
-    # before: in the same month and the next year.
+    # A year reckoned from 25 March counts thirteen months: its month
+    # 10 is the Julian December and its month 11 the Julian January,
+    # and its month 13 day 24 is the day before the next year's first.
     test "where a year turns after its first month, and within one" do
       calendar = Calendrical.Julian.March25
-      december = Date.new!(2022, 12, 31, calendar)
-      january = Date.new!(2022, 1, 1, calendar)
-      last_day = Date.new!(2022, 3, 24, calendar)
-      new_year = Date.new!(2023, 3, 25, calendar)
+      december = Date.new!(2022, 10, 31, calendar)
+      january = Date.new!(2022, 11, 1, calendar)
+      last_day = Date.new!(2022, 13, 24, calendar)
+      new_year = Date.new!(2023, 1, 1, calendar)
 
       assert Date.diff(january, december) == 1
       assert Date.diff(new_year, last_day) == 1
@@ -95,7 +95,7 @@ defmodule Calendrical.LocalizePeriodsTest do
             {december, january, nil, "yesterday"},
             {december, january, :month, "last month"},
             {new_year, last_day, nil, "tomorrow"},
-            {new_year, last_day, :month, "this month"},
+            {new_year, last_day, :month, "next month"},
             {new_year, last_day, :quarter, "next quarter"},
             {new_year, last_day, :year, "next year"},
             {last_day, new_year, :year, "last year"}
@@ -120,29 +120,28 @@ defmodule Calendrical.LocalizePeriodsTest do
       for calendar <- @astronomical, do: assert_durations_add_back(calendar)
     end
 
-    # 31 December 2022 to 1 January 2022 is a day in a year reckoned from 25
-    # March, and from the year's first day to its last, 25 March 2022 to 24
-    # March of the next Julian year, is eleven months, to 25 February, and
-    # 27 days: 2023 is not a leap year.
-    test "where the dates' fields are not in the order of their days" do
+    # The year 2022 of a calendar reckoned from 25 March runs from its
+    # month 1 day 1 to its month 13 day 24: twelve whole months and 23
+    # days, and one day more turns the year.
+    test "across the turn of a year of thirteen counted months" do
       calendar = Calendrical.Julian.March25
 
       assert {:ok, %{year: 0, month: 0, day: 1}} =
                Localize.Duration.new(
-                 Date.new!(2022, 12, 31, calendar),
-                 Date.new!(2022, 1, 1, calendar)
+                 Date.new!(2022, 13, 24, calendar),
+                 Date.new!(2023, 1, 1, calendar)
                )
 
-      assert {:ok, %{year: 0, month: 11, day: 27}} =
+      assert {:ok, %{year: 0, month: 12, day: 23}} =
                Localize.Duration.new(
-                 Date.new!(2022, 3, 25, calendar),
-                 Date.new!(2022, 3, 24, calendar)
+                 Date.new!(2022, 1, 1, calendar),
+                 Date.new!(2022, 13, 24, calendar)
                )
 
       assert {:error, %ArgumentError{}} =
                Localize.Duration.new(
-                 Date.new!(2022, 1, 1, calendar),
-                 Date.new!(2022, 12, 31, calendar)
+                 Date.new!(2023, 1, 1, calendar),
+                 Date.new!(2022, 13, 24, calendar)
                )
     end
 
@@ -283,6 +282,16 @@ defmodule Calendrical.LocalizePeriodsTest do
     end
   end
 
+  # A month is the month field, which counts a calendar's months in the
+  # order of time, and a week calendar's is the period its week is in.
+  defp month_position(calendar, date) do
+    if calendar.calendar_base() == :week do
+      calendar.month_of_year(date.year, date.month, date.day)
+    else
+      date.month
+    end
+  end
+
   # Every day of a span in the calendar, with the number of times each of
   # the calendar's answers has changed since the span's first day. A week
   # turns on Sunday, the first day of the week in `en` (CLDR's weekData).
@@ -294,7 +303,7 @@ defmodule Calendrical.LocalizePeriodsTest do
         answers = %{
           year: date.year,
           quarter: Date.quarter_of_year(date),
-          month: calendar.month_of_year(date.year, date.month, date.day),
+          month: month_position(calendar, date),
           week: Date.day_of_week(iso, :sunday) == 1
         }
 

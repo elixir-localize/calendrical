@@ -89,8 +89,8 @@ defmodule Calendrical.RoundTrip.Test do
 
   test "that Calendrical.Julian.March25 dates all round trip" do
     for year <- 0001..2200,
-        month <- 1..12,
-        day <- 1..28 do
+        month <- 1..13,
+        day <- 1..min(28, Calendrical.Julian.March25.days_in_month(year, month)) do
       {:ok, julian} = Date.new(year, month, day, Calendrical.Julian.March25)
       {:ok, iso} = Date.convert(julian, Calendar.ISO)
       {:ok, converted} = Date.convert(iso, Calendrical.Julian.March25)

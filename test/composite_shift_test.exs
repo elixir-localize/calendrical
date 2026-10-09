@@ -34,8 +34,8 @@ defmodule Calendrical.CompositeShiftTest do
     @moduledoc false
     use Calendrical.Composite,
       calendars: [
-        ~D[1100-12-25 Calendrical.Julian.Dec25],
-        ~D[1300-03-25 Calendrical.Julian.March25],
+        ~D[1100-01-01 Calendrical.Julian.Dec25],
+        ~D[1300-01-01 Calendrical.Julian.March25],
         ~D[1600-01-01 Calendrical.Julian.Jan1]
       ],
       base_calendar: Calendrical.Julian
@@ -55,8 +55,8 @@ defmodule Calendrical.CompositeShiftTest do
     @moduledoc false
     use Calendrical.Composite,
       calendars: [
-        ~D[1155-03-25 Calendrical.Julian.March25],
-        ~D[1500-09-01 Calendrical.Julian.Sept1]
+        ~D[1155-01-01 Calendrical.Julian.March25],
+        ~D[1500-01-01 Calendrical.Julian.Sept1]
       ],
       base_calendar: Calendrical.Julian
   end
@@ -66,7 +66,7 @@ defmodule Calendrical.CompositeShiftTest do
   defmodule March do
     @moduledoc false
     use Calendrical.Composite,
-      calendars: [~D[1400-03-01 Calendrical.Julian.March1]],
+      calendars: [~D[1400-01-01 Calendrical.Julian.March1]],
       base_calendar: Calendrical.Julian
   end
 
@@ -78,15 +78,6 @@ defmodule Calendrical.CompositeShiftTest do
       calendars: [~D[-0045-01-01 Calendrical.Julian]],
       base_calendar: Calendrical.Coptic
   end
-
-  @julian_styles [
-    Calendrical.Julian,
-    Calendrical.Julian.Jan1,
-    Calendrical.Julian.March1,
-    Calendrical.Julian.March25,
-    Calendrical.Julian.Sept1,
-    Calendrical.Julian.Dec25
-  ]
 
   @durations [
     [month: 1],
@@ -113,13 +104,6 @@ defmodule Calendrical.CompositeShiftTest do
   # The furthest a duration above reaches, in days, and a month over.
   @reach 1300
 
-  defp civil(calendar, iso_days) do
-    member = calendar.calendar_for_iso_days(iso_days)
-    civil = if member in @julian_styles, do: Calendrical.Julian, else: member
-
-    civil.date_from_iso_days(iso_days)
-  end
-
   # A day is a date when its year, month and day read back as the day.
   defp date?(calendar, iso_days) do
     {year, month, day} = calendar.date_from_iso_days(iso_days)
@@ -132,41 +116,118 @@ defmodule Calendrical.CompositeShiftTest do
     calendar.__config__() |> Enum.drop(1) |> Enum.map(&elem(&1, 0))
   end
 
-  # The dates of each civil month about the calendar's changes, by their
-  # day of the month.
-  defp months(calendar, window) do
-    calendar
-    |> changes()
-    |> Enum.flat_map(&((&1 - window - @reach)..(&1 + window + @reach)))
-    |> Enum.uniq()
-    |> Enum.sort()
-    |> Enum.filter(&date?(calendar, &1))
-    |> Enum.group_by(
-      fn iso_days ->
-        {year, month, _day} = civil(calendar, iso_days)
-        {year, month}
-      end,
-      fn iso_days -> {elem(civil(calendar, iso_days), 2), iso_days} end
-    )
+  # A year is as many months as the calendar in effect on the date
+  # counts: twelve in a calendar of twelve months, thirteen in a split
+  # Julian year-start variant's years.
+  defp months_in_a_year(calendar, iso_days) do
+    member = calendar.calendar_for_iso_days(iso_days)
+    {year, _month, _day} = member.date_from_iso_days(iso_days)
+
+    case member.months_in_year(year) do
+      months when is_integer(months) and months > 0 -> months
+      _no_months -> 12
+    end
   end
 
-  # The date a duration of years and months reaches from a day, by the rule.
-  defp reached(calendar, months, iso_days, duration) do
-    {year, month, day} = civil(calendar, iso_days)
-    count = Keyword.get(duration, :year, 0) * 12 + Keyword.get(duration, :month, 0)
-    index = year * 12 + (month - 1) + count
+  # Every month each segment's calendar labels about the calendar's
+  # changes, in the order of time — the months of a claimed, dateless
+  # stretch among them, since a shift walks them too and lands on the
+  # first dated day after. A month a change cuts within is one month in
+  # two segments; a neighbouring month with a label of its own is its
+  # own month. Each month holds its days by the segment's own day of
+  # the month.
+  defp months(calendar, window) do
+    days =
+      calendar
+      |> changes()
+      |> Enum.flat_map(&((&1 - window - @reach)..(&1 + window + @reach)))
+      |> Enum.uniq()
+      |> Enum.sort()
 
-    case Map.get(months, {Integer.floor_div(index, 12), Integer.mod(index, 12) + 1}) do
-      nil ->
-        :no_date_in_the_month
+    raw =
+      days
+      |> Enum.group_by(fn iso_days ->
+        member = calendar.calendar_for_iso_days(iso_days)
+        {year, month, _day} = member.date_from_iso_days(iso_days)
+        {member, year, month}
+      end)
+      |> Enum.map(fn {{member, year, month}, month_days} ->
+        %{
+          member: member,
+          label: {year, month},
+          first: Enum.min(month_days),
+          days:
+            Enum.map(month_days, fn iso_days ->
+              {_year, _month, day} = member.date_from_iso_days(iso_days)
+              {day, iso_days}
+            end)
+        }
+      end)
+      |> Enum.sort_by(& &1.first)
 
-      days ->
-        {_day, iso_days} =
-          Enum.find(days, &(elem(&1, 0) == day)) ||
-            Enum.find(days, &(elem(&1, 0) > day)) ||
-            List.last(days)
+    merged =
+      Enum.reduce(raw, [], fn part, acc ->
+        case acc do
+          [%{label: label} = last | rest] when label == part.label ->
+            [%{last | days: last.days ++ part.days} | rest]
 
-        calendar.date_from_iso_days(iso_days)
+          _others ->
+            [part | acc]
+        end
+      end)
+      |> Enum.reverse()
+
+    index_of =
+      for {%{member: member, label: {year, month}}, index} <- Enum.with_index(raw),
+          into: %{} do
+        merged_index =
+          Enum.find_index(merged, fn %{label: label, days: days} ->
+            label == {year, month} and Enum.any?(days, &(&1 in Enum.at(raw, index).days))
+          end)
+
+        {{member, year, month}, merged_index}
+      end
+
+    {List.to_tuple(merged), index_of}
+  end
+
+  # The date a duration of years and months reaches from a day, by the
+  # rule: the month counted on through the months in the order of time,
+  # then the first of its dated days from the day up, the nearest below,
+  # or the day the month's own calendar clamps to — and the first later
+  # day with a date where the day reached has none.
+  defp reached(calendar, {ordered, index_of}, iso_days, duration) do
+    member = calendar.calendar_for_iso_days(iso_days)
+    {year, month, day} = member.date_from_iso_days(iso_days)
+
+    count =
+      Keyword.get(duration, :year, 0) * months_in_a_year(calendar, iso_days) +
+        Keyword.get(duration, :month, 0)
+
+    index = Map.fetch!(index_of, {member, year, month}) + count
+
+    if index >= 0 and index < tuple_size(ordered) do
+      %{member: target_member, label: {target_year, target_month}, days: days} =
+        elem(ordered, index)
+
+      dated = for {d, iso} <- days, date?(calendar, iso), do: {d, iso}
+
+      above = dated |> Enum.filter(&(elem(&1, 0) >= day)) |> Enum.sort()
+      below = dated |> Enum.filter(&(elem(&1, 0) < day)) |> Enum.sort(:desc)
+
+      iso_days =
+        case above ++ below do
+          [{_day, iso_days} | _rest] ->
+            iso_days
+
+          [] ->
+            clamped = min(day, target_member.days_in_month(target_year, target_month))
+            target_member.date_to_iso_days(target_year, target_month, clamped)
+        end
+
+      calendar.date_from_iso_days(iso_days)
+    else
+      :no_date_in_the_month
     end
   end
 
@@ -198,11 +259,12 @@ defmodule Calendrical.CompositeShiftTest do
   defp shifts(calendar, year, month, day, duration) do
     years = Keyword.get(duration, :year, 0)
     months = Keyword.get(duration, :month, 0)
+    iso_days = calendar.date_to_iso_days(year, month, day)
+    count = years * months_in_a_year(calendar, iso_days) + months
 
     [
       {duration, calendar.shift_date(year, month, day, Duration.new!(duration))},
-      {{:months, years * 12 + months},
-       calendar.plus(year, month, day, :months, years * 12 + months)}
+      {{:months, count}, calendar.plus(year, month, day, :months, count)}
     ] ++
       if months == 0,
         do: [{{:years, years}, calendar.plus(year, month, day, :years, years)}],
@@ -247,29 +309,34 @@ defmodule Calendrical.CompositeShiftTest do
                ~D[1751-04-25 Calendrical.Reform.England]
 
       assert Date.shift(~D[1751-03-25 Calendrical.Reform.England], month: -1) ==
-               ~D[1750-02-25 Calendrical.Reform.England]
+               ~D[1750-13-24 Calendrical.Reform.England]
 
       assert Date.shift(~D[1751-03-25 Calendrical.Reform.England], year: 1) ==
                ~D[1752-03-25 Calendrical.Reform.England]
 
+      # A year back is twelve of the calendar's months, through 1750's
+      # month 13: the Lady Day year 1750's month 2, the Julian April.
       assert Date.shift(~D[1751-03-25 Calendrical.Reform.England], year: -1) ==
-               ~D[1750-03-25 Calendrical.Reform.England]
+               ~D[1750-02-25 Calendrical.Reform.England]
 
       assert Date.shift(~D[1751-03-31 Calendrical.Reform.England], year: -1, month: 3) ==
-               ~D[1750-06-30 Calendrical.Reform.England]
+               ~D[1750-05-31 Calendrical.Reform.England]
     end
 
-    # 10 March 1752, a year back, is 10 March 1751: a day of the year that
-    # began on 25 March 1750.
+    # 10 March 1752, a year back, would be 10 March 1751, a day before
+    # the year 1751 began: the shift answers the month's next day that
+    # exists, 25 March 1751.
     test "is shifted to" do
       assert Date.shift(~D[1752-03-10 Calendrical.Reform.England], year: -1) ==
-               ~D[1750-03-10 Calendrical.Reform.England]
+               ~D[1751-03-25 Calendrical.Reform.England]
 
+      # The Lady Day year 1750's month 3 is the Julian May, and a year
+      # on, counted through 1750's thirteen months, is May again.
       assert Date.shift(~D[1750-03-10 Calendrical.Reform.England], year: 1) ==
-               ~D[1752-03-10 Calendrical.Reform.England]
+               ~D[1751-05-10 Calendrical.Reform.England]
 
       assert Date.shift(~D[1751-04-10 Calendrical.Reform.England], month: -1) ==
-               ~D[1750-03-10 Calendrical.Reform.England]
+               ~D[1751-03-25 Calendrical.Reform.England]
     end
 
     # Russia went from 31 January to 14 February 1918.
@@ -351,7 +418,7 @@ defmodule Calendrical.CompositeShiftTest do
       noon = NaiveDateTime.new!(1751, 3, 25, 12, 0, 0, {0, 0}, Calendrical.Reform.England)
 
       assert NaiveDateTime.shift(noon, month: -1, hour: 1) ==
-               NaiveDateTime.new!(1750, 2, 25, 13, 0, 0, {0, 0}, Calendrical.Reform.England)
+               NaiveDateTime.new!(1750, 13, 24, 13, 0, 0, {0, 0}, Calendrical.Reform.England)
     end
   end
 
@@ -365,8 +432,9 @@ defmodule Calendrical.CompositeShiftTest do
       assert Shift.months(Calendrical.Gregorian, 2026, 6, Duration.new!(month: 7)) == 7
       assert Shift.months(Calendrical.Julian, 1582, 10, Duration.new!(year: -3, month: 2)) == -34
 
+      # A split year-start variant counts thirteen months a year.
       assert Shift.months(Calendrical.Julian.March25, 1751, 3, Duration.new!(year: 2, month: -1)) ==
-               23
+               25
     end
 
     test "is thirteen a year in the Coptic calendar, of thirteen months" do

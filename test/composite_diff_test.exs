@@ -19,42 +19,45 @@ defmodule Calendrical.CompositeDiffTest do
   alias Calendrical.Russia
 
   describe "across days that have no dates of their own" do
-    # 15 June to 20 December 1155 is six months and five days, in a year
-    # that ran on to 24 March 1156.
+    # The Julian 15 June to 20 December 1155 are the Lady Day year's
+    # month 4 day 15 to month 10 day 20: six months and five days.
     test "counts the months to a date before them" do
-      assert England.diff({1155, 6, 15}, {1155, 12, 20}, :months) == 6
-      assert England.diff({1155, 12, 20}, {1155, 6, 15}, :months) == -6
-      assert England.diff({1155, 6, 15}, {1155, 12, 20}, :quarters) == 2
-      assert England.diff({1155, 6, 15}, {1155, 12, 20}, :years) == 0
-      assert England.diff({1155, 6, 15}, {1155, 12, 20}, :days) == 188
-      assert England.diff({1155, 6, 15}, {1155, 12, 20}, :weeks) == 26
+      assert England.diff({1155, 4, 15}, {1155, 10, 20}, :months) == 6
+      assert England.diff({1155, 10, 20}, {1155, 4, 15}, :months) == -6
+      assert England.diff({1155, 4, 15}, {1155, 10, 20}, :quarters) == 2
+      assert England.diff({1155, 4, 15}, {1155, 10, 20}, :years) == 0
+      assert England.diff({1155, 4, 15}, {1155, 10, 20}, :days) == 188
+      assert England.diff({1155, 4, 15}, {1155, 10, 20}, :weeks) == 26
     end
 
-    # 20 December 1154 to 10 April 1156 is a year, three months and three
-    # weeks: 477 days, the 29 February of 1156 among them.
+    # The Julian 20 December 1154, a date of the base calendar, to 10
+    # April 1156, the Lady Day year 1156's month 2 day 10: 477 days
+    # through the dateless stretch, and seventeen months — the months
+    # of the stretch are walked too, and 1155 holds thirteen.
     test "counts through them to a date after them" do
-      assert England.diff({1154, 12, 20}, {1156, 4, 10}, :months) == 15
-      assert England.diff({1156, 4, 10}, {1154, 12, 20}, :months) == -15
-      assert England.diff({1154, 12, 20}, {1156, 4, 10}, :quarters) == 5
-      assert England.diff({1154, 12, 20}, {1156, 4, 10}, :years) == 1
-      assert England.diff({1154, 12, 20}, {1156, 4, 10}, :days) == 477
-      assert England.diff({1154, 12, 20}, {1156, 4, 10}, :weeks) == 68
+      assert England.diff({1154, 12, 20}, {1156, 2, 10}, :months) == 17
+      assert England.diff({1156, 2, 10}, {1154, 12, 20}, :months) == -17
+      assert England.diff({1154, 12, 20}, {1156, 2, 10}, :quarters) == 5
+      assert England.diff({1154, 12, 20}, {1156, 2, 10}, :years) == 1
+      assert England.diff({1154, 12, 20}, {1156, 2, 10}, :days) == 477
+      assert England.diff({1154, 12, 20}, {1156, 2, 10}, :weeks) == 68
 
-      # 15 June 1155 to 15 June 1156 and to the day before it.
-      assert England.diff({1155, 6, 15}, {1156, 6, 15}, :months) == 12
-      assert England.diff({1155, 6, 15}, {1156, 6, 14}, :months) == 11
-      assert England.diff({1155, 6, 15}, {1156, 6, 15}, :years) == 1
-      assert England.diff({1155, 6, 15}, {1156, 6, 14}, :years) == 0
+      # A year of thirteen counted months, and the month before it.
+      assert England.diff({1155, 4, 15}, {1156, 4, 15}, :months) == 13
+      assert England.diff({1155, 4, 15}, {1156, 4, 14}, :months) == 12
+      assert England.diff({1155, 4, 15}, {1156, 4, 15}, :years) == 1
+      assert England.diff({1155, 4, 15}, {1156, 4, 14}, :years) == 0
     end
 
-    # In the test calendar of Russia September to December 1699 carry the
-    # dates of the September to December after them. 15 June 1699 to 15
-    # February 1700 is eight months, and to 15 June 1700 a year.
+    # In the test calendar of Russia the days of September to December
+    # 1699 have no dates and no months. The September year 1699's month
+    # 10, the Julian June, to the January year 1700's February is eight
+    # dated months, and to its June a year.
     test "counts through them where they begin a year" do
-      assert Russia.diff({1699, 6, 15}, {1700, 2, 15}, :months) == 8
-      assert Russia.diff({1699, 6, 15}, {1700, 2, 14}, :months) == 7
-      assert Russia.diff({1699, 6, 15}, {1700, 6, 15}, :years) == 1
-      assert Russia.diff({1700, 6, 15}, {1699, 6, 15}, :months) == -12
+      assert Russia.diff({1699, 10, 15}, {1700, 2, 15}, :months) == 8
+      assert Russia.diff({1699, 10, 15}, {1700, 2, 14}, :months) == 7
+      assert Russia.diff({1699, 10, 15}, {1700, 6, 15}, :years) == 1
+      assert Russia.diff({1700, 6, 15}, {1699, 10, 15}, :months) == -12
     end
   end
 

@@ -23,7 +23,8 @@ defmodule Calendrical.Russia do
   """
   use Calendrical.Composite,
     calendars: [
-      ~D[1493-09-01 Calendrical.Julian.Sept1],
+      # 1 September 1492, the first day of the Byzantine year 1493
+      ~D[1493-01-01 Calendrical.Julian.Sept1],
       ~D[1700-01-01 Calendrical.Julian.Jan1],
       ~D[1918-02-14 Calendrical.Gregorian]
     ],

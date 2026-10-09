@@ -34,7 +34,7 @@ defmodule Calendrical.CompositeEraTest do
     @moduledoc false
     use Calendrical.Composite,
       calendars: [
-        ~D[-0100-03-25 Calendrical.Julian.March25],
+        ~D[-0100-01-01 Calendrical.Julian.March25],
         ~D[0200-01-01 Calendrical.Julian.Jan1]
       ],
       base_calendar: Calendrical.Julian
@@ -48,9 +48,9 @@ defmodule Calendrical.CompositeEraTest do
     @moduledoc false
     use Calendrical.Composite,
       calendars: [
-        ~D[-0300-03-25 Calendrical.Julian.March25],
+        ~D[-0300-01-01 Calendrical.Julian.March25],
         ~D[-0200-01-01 Calendrical.Julian.Jan1],
-        ~D[-0100-03-25 Calendrical.Julian.March25]
+        ~D[-0100-01-01 Calendrical.Julian.March25]
       ],
       base_calendar: Calendrical.Julian
   end
@@ -203,21 +203,25 @@ defmodule Calendrical.CompositeEraTest do
   end
 
   describe "a change of the day the year begins on" do
-    # England's year began on 25 March from 1155 to 1751. 24 March of the
-    # year labelled 1750 is the day before 25 March 1751.
+    # England's year began on 25 March from 1155 to 1751. The Lady Day
+    # year 1750's month 13 day 24 is the day before 25 March 1751, and
+    # the dated day before 25 March 1155 is 31 December 1154, since the
+    # days between are the base calendar's dateless stretch — the era
+    # counts through them all the same.
     test "England's count runs on through 1155 and 1751" do
       first_day = Date.new!(1, 1, 1, England)
 
-      for {before, later} <- [
-            {~D[1155-03-24 Calendrical.Reform.England],
-             ~D[1155-03-25 Calendrical.Reform.England]},
-            {~D[1750-03-24 Calendrical.Reform.England],
-             ~D[1751-03-25 Calendrical.Reform.England]},
-            {~D[1752-09-02 Calendrical.Reform.England], ~D[1752-09-14 Calendrical.Reform.England]}
+      for {before, later, gap} <- [
+            {~D[1154-12-31 Calendrical.Reform.England], ~D[1155-01-01 Calendrical.Reform.England],
+             84},
+            {~D[1750-13-24 Calendrical.Reform.England], ~D[1751-03-25 Calendrical.Reform.England],
+             1},
+            {~D[1752-09-02 Calendrical.Reform.England], ~D[1752-09-14 Calendrical.Reform.England],
+             1}
           ] do
-        assert Date.diff(later, before) == 1
+        assert Date.diff(later, before) == gap
         assert {count, 1} = Date.day_of_era(before)
-        assert Date.day_of_era(later) == {count + 1, 1}
+        assert Date.day_of_era(later) == {count + gap, 1}
         assert Date.day_of_era(before) == counted(before, first_day)
         assert Date.day_of_era(later) == counted(later, first_day)
       end
@@ -239,13 +243,13 @@ defmodule Calendrical.CompositeEraTest do
     # Where a year reckoned from 25 March is the first calendar, the common
     # era begins on 25 March AD 1, and the later calendars keep that count.
     test "the count is the first calendar's where it begins the era" do
-      first_day = Date.new!(1, 3, 25, LadyDayFirst)
+      first_day = Date.new!(1, 1, 1, LadyDayFirst)
 
       assert Date.day_of_era(first_day) == {1, 1}
       assert Date.day_of_era(Date.add(first_day, -1)) == {1, 0}
 
       for date <- [
-            ~D[1599-12-31 Calendrical.CompositeEraTest.LadyDayFirst],
+            ~D[1599-10-31 Calendrical.CompositeEraTest.LadyDayFirst],
             ~D[1600-01-01 Calendrical.CompositeEraTest.LadyDayFirst],
             ~D[1752-09-02 Calendrical.CompositeEraTest.LadyDayFirst],
             ~D[1752-09-14 Calendrical.CompositeEraTest.LadyDayFirst],
@@ -269,17 +273,18 @@ defmodule Calendrical.CompositeEraTest do
     # day before the first of a year reckoned from 25 March, and not from 31
     # December 1 BC as the Julian calendar alone counts them.
     test "are counted back through a change of calendar from the last day of the era" do
-      first_day = Date.new!(1, 3, 25, BeforeCommonEra)
-      last_before = Date.new!(-100, 3, 24, BeforeCommonEra)
-      first_after = Date.new!(-100, 3, 25, BeforeCommonEra)
+      first_day = Date.new!(1, 1, 1, BeforeCommonEra)
+      last_before = Date.new!(-101, 12, 31, BeforeCommonEra)
+      first_after = Date.new!(-100, 1, 1, BeforeCommonEra)
 
-      assert Date.diff(first_after, last_before) == 1
+      gap = Date.diff(first_after, last_before)
+      assert gap > 1
       assert {count, 0} = Date.day_of_era(last_before)
-      assert Date.day_of_era(first_after) == {count - 1, 0}
+      assert Date.day_of_era(first_after) == {count - gap, 0}
 
       # The common era, which begins on 25 March AD 1, runs on through the
       # change of AD 200.
-      last_of_199 = Date.new!(199, 12, 31, BeforeCommonEra)
+      last_of_199 = Date.new!(199, 10, 31, BeforeCommonEra)
       first_of_200 = Date.new!(200, 1, 1, BeforeCommonEra)
 
       assert Date.diff(first_of_200, last_of_199) == 1
@@ -290,7 +295,7 @@ defmodule Calendrical.CompositeEraTest do
             last_before,
             first_after,
             Date.new!(-150, 6, 1, BeforeCommonEra),
-            Date.new!(-2, 12, 31, BeforeCommonEra),
+            Date.new!(-2, 10, 31, BeforeCommonEra),
             Date.add(first_day, -1),
             first_day,
             Date.new!(100, 6, 15, BeforeCommonEra),
@@ -309,34 +314,38 @@ defmodule Calendrical.CompositeEraTest do
     # in the first calendar and in the third, whose own counts are back from
     # 31 December 1 BC.
     test "are counted back from the era's last day in the latest calendar" do
-      first_day = Date.new!(1, 3, 25, ThriceBeforeCommonEra)
+      first_day = Date.new!(1, 1, 1, ThriceBeforeCommonEra)
 
       assert Date.day_of_era(first_day) == {1, 1}
       assert Date.day_of_era(Date.add(first_day, -1)) == {1, 0}
 
+      # A change into a year-start calendar leaves the outgoing
+      # calendar's last stretch dateless, so the dated day before it is
+      # the end of the year before; a change back to 1 January is clean.
       for {before, later} <- [
-            {Date.new!(-300, 3, 24, ThriceBeforeCommonEra),
-             Date.new!(-300, 3, 25, ThriceBeforeCommonEra)},
-            {Date.new!(-201, 12, 31, ThriceBeforeCommonEra),
+            {Date.new!(-301, 12, 31, ThriceBeforeCommonEra),
+             Date.new!(-300, 1, 1, ThriceBeforeCommonEra)},
+            {Date.new!(-201, 10, 31, ThriceBeforeCommonEra),
              Date.new!(-200, 1, 1, ThriceBeforeCommonEra)},
-            {Date.new!(-100, 3, 24, ThriceBeforeCommonEra),
-             Date.new!(-100, 3, 25, ThriceBeforeCommonEra)}
+            {Date.new!(-101, 12, 31, ThriceBeforeCommonEra),
+             Date.new!(-100, 1, 1, ThriceBeforeCommonEra)}
           ] do
-        assert Date.diff(later, before) == 1
+        gap = Date.diff(later, before)
+        assert gap >= 1
         assert {count, 0} = Date.day_of_era(before)
-        assert Date.day_of_era(later) == {count - 1, 0}
+        assert Date.day_of_era(later) == {count - gap, 0}
       end
 
       for date <- [
             Date.new!(-400, 6, 1, ThriceBeforeCommonEra),
-            Date.new!(-300, 3, 24, ThriceBeforeCommonEra),
-            Date.new!(-300, 3, 25, ThriceBeforeCommonEra),
+            Date.new!(-301, 12, 31, ThriceBeforeCommonEra),
+            Date.new!(-300, 1, 1, ThriceBeforeCommonEra),
             Date.new!(-250, 6, 1, ThriceBeforeCommonEra),
-            Date.new!(-201, 12, 31, ThriceBeforeCommonEra),
+            Date.new!(-201, 10, 31, ThriceBeforeCommonEra),
             Date.new!(-200, 1, 1, ThriceBeforeCommonEra),
             Date.new!(-150, 6, 1, ThriceBeforeCommonEra),
-            Date.new!(-100, 3, 24, ThriceBeforeCommonEra),
-            Date.new!(-100, 3, 25, ThriceBeforeCommonEra),
+            Date.new!(-101, 12, 31, ThriceBeforeCommonEra),
+            Date.new!(-100, 1, 1, ThriceBeforeCommonEra),
             Date.new!(-50, 6, 1, ThriceBeforeCommonEra),
             Date.new!(1800, 6, 15, ThriceBeforeCommonEra)
           ] do

@@ -26,8 +26,8 @@ defmodule Calendrical.CompositeValidationTest do
     @moduledoc false
     use Calendrical.Composite,
       calendars: [
-        ~D[1100-09-01 Calendrical.Julian.Sept1],
-        ~D[1200-03-25 Calendrical.Julian.March25]
+        ~D[1100-01-01 Calendrical.Julian.Sept1],
+        ~D[1200-01-01 Calendrical.Julian.March25]
       ]
   end
 
@@ -37,8 +37,8 @@ defmodule Calendrical.CompositeValidationTest do
     @moduledoc false
     use Calendrical.Composite,
       calendars: [
-        ~D[1100-12-25 Calendrical.Julian.Dec25],
-        ~D[1200-03-25 Calendrical.Julian.March25]
+        ~D[1100-01-01 Calendrical.Julian.Dec25],
+        ~D[1200-01-01 Calendrical.Julian.March25]
       ]
   end
 
@@ -48,7 +48,7 @@ defmodule Calendrical.CompositeValidationTest do
   defmodule LadyDayOnChristmas do
     @moduledoc false
     use Calendrical.Composite,
-      calendars: [~D[1200-12-25 Calendrical.Julian.March25]],
+      calendars: [~D[1200-10-25 Calendrical.Julian.March25]],
       base_calendar: Calendrical.Julian.Dec25
   end
 
@@ -191,16 +191,20 @@ defmodule Calendrical.CompositeValidationTest do
       # The Christmas year 1201 began on 25 December 1200, and the Lady Day
       # year 1200 runs to 24 March 1201.
       assert Composite.new(Validation.LadyDayAfterChristmas,
-               calendars: [~D[1200-12-26 Calendrical.Julian.March25]],
+               calendars: [~D[1200-10-26 Calendrical.Julian.March25]],
                base_calendar: Calendrical.Julian.Dec25
              ) == {:error, :years_must_not_go_back}
     end
 
     test "may stay the same through a change of calendar" do
-      assert LadyDayOnChristmas.calendar_for_date(1200, 12, 24) == Calendrical.Julian.Dec25
-      assert LadyDayOnChristmas.calendar_for_date(1200, 12, 25) == Calendrical.Julian.March25
+      # The Lady Day calendar takes effect on its month 10 day 25, the
+      # Julian 25 December 1200, and claims the Christmas year 1200's
+      # fields from there; the fields below it stay the Christmas
+      # calendar's.
+      assert LadyDayOnChristmas.calendar_for_date(1200, 10, 24) == Calendrical.Julian.Dec25
+      assert LadyDayOnChristmas.calendar_for_date(1200, 10, 25) == Calendrical.Julian.March25
 
-      assert Date.convert!(Date.new!(1200, 12, 25, LadyDayOnChristmas), Calendrical.Julian) ==
+      assert Date.convert!(Date.new!(1200, 10, 25, LadyDayOnChristmas), Calendrical.Julian) ==
                ~D[1200-12-25 Calendrical.Julian]
     end
   end
@@ -253,20 +257,19 @@ defmodule Calendrical.CompositeValidationTest do
     end
   end
 
-  # Where two stretches of a year's days carry the same dates one has none
-  # of its own, and the year's range runs between the dates of the other,
-  # in the order of the days.
+  # Where a change moves the day a year begins on, the incoming
+  # calendar's label year owns its whole counted year, and the outgoing
+  # calendar's claimed stretch has no dates and no days of the year.
   describe "year/1" do
     test "runs between the dates that have days of their own" do
       for {calendar, year, first, last, days_in_year} <- [
-            # 1 January 1155 to 24 March 1156.
-            {Calendrical.Reform.England, 1155, ~D[1155-01-01], ~D[1155-12-31], 449},
-            # 1 September 1699 to 31 December 1700.
-            {Calendrical.Russia, 1700, ~D[1700-01-01], ~D[1700-12-31], 488},
-            # 1 September 1199 to 24 March 1201.
-            {SeptemberThenLadyDay, 1200, ~D[1200-01-01], ~D[1200-12-31], 571},
-            # 25 December 1199 to 24 March 1201.
-            {ChristmasThenLadyDay, 1200, ~D[1200-01-01], ~D[1200-12-31], 456}
+            # The Lady Day year 1155: 25 March 1155 to 24 March 1156.
+            {Calendrical.Reform.England, 1155, ~D[1155-03-25], ~D[1156-03-24], 366},
+            # The January year 1700: 1 January to 31 December 1700.
+            {Calendrical.Russia, 1700, ~D[1700-01-01], ~D[1700-12-31], 366},
+            # The Lady Day year 1200: 25 March 1200 to 24 March 1201.
+            {SeptemberThenLadyDay, 1200, ~D[1200-03-25], ~D[1201-03-24], 365},
+            {ChristmasThenLadyDay, 1200, ~D[1200-03-25], ~D[1201-03-24], 365}
           ] do
         context = "#{inspect(calendar)} #{year}"
 

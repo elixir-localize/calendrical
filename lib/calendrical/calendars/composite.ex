@@ -103,49 +103,41 @@ defmodule Calendrical.Composite do
 
   ## Years that begin on another day
 
-  A calendar need not begin its years on 1 January: `Calendrical.Julian.March25` begins them on 25 March and `Calendrical.Julian.Sept1` on 1 September, and its year then holds months that come before the month it begins in.
-
-  A date's year, month and day are read in the calendar they fall in among the transitions, taken in order: the calendar of the last transition they are not before. Where that calendar has no day of the date's year, they are read in the calendar that has. A year reckoned from 1 September that takes effect on 1 September 1492 begins its year 1493 on that day, and the January to August that follow are dates of that year, although they come before September in the order of the months:
+  A calendar need not begin its years on 1 January: `Calendrical.Julian.March25` begins them on 25 March and `Calendrical.Julian.Sept1` on 1 September. Such a calendar counts its months from its year's first day, so a date's fields are always in the order of its days: a year reckoned from 1 September that takes effect on 1 September 1492 begins its year 1493 on that day, as month 1 day 1, and the January that follows is its month 5:
 
       iex> {:ok, muscovy} =
       ...>   Calendrical.Composite.new(MyApp.Muscovy,
-      ...>     calendars: [~D[1493-09-01 Calendrical.Julian.Sept1]]
+      ...>     calendars: [~D[1493-01-01 Calendrical.Julian.Sept1]]
       ...>   )
       iex> Date.new!(1493, 1, 15, muscovy) |> Date.convert!(Calendrical.Julian)
+      ~D[1492-09-15 Calendrical.Julian]
+      iex> Date.new!(1493, 5, 15, muscovy) |> Date.convert!(Calendrical.Julian)
       ~D[1493-01-15 Calendrical.Julian]
 
-  A change to a year that begins later — England's move to Lady Day, 25 March, in 1155 — numbers the days from 1 January to 24 March of the following year with the year that already named the same days a year earlier. Those labels name the earlier days, and the later ones have no label of their own; historians write them with both years ("10 March 1155/6"). A leap day among them has none either: 29 February 1156 would be 29 February 1155, a day the February those labels name does not have.
+  When the day a year begins on moves, the incoming calendar's label year owns its whole counted year, and the outgoing calendar's last stretch of days — whose labels the incoming calendar claims — has no dates of its own and is in no year. England's move to Lady Day, 25 March, in 1155 makes 25 March 1155 the first day of the Lady Day year 1155, and the days 1 January to 24 March 1155, which the January reckoning had called 1155, have no dates; historians write them with both years ("10 March 1154/5"). Russia's September year gave way to Peter the Great's January year on 1 January 1700 the same way: 1 September to 31 December 1699, which had begun the September year 1700, have no dates of their own.
 
-      iex> Calendrical.Reform.England.valid_date?(1155, 2, 29)
-      false
-
-  The days are days of the year all the same: England's 1155 has 449, and ends on 24 March 1156. `Calendrical.first_gregorian_day_of_year/2` and `Calendrical.last_gregorian_day_of_year/2` give a year's first and last days in the Gregorian calendar, where each has a date of its own. The year's range of dates runs between the dates that have days of their own:
+  England's 1155 is then a whole Lady Day year of 366 days, from its month 1 day 1, the Julian 25 March 1155, to its month 13 day 24, the Julian 24 March 1156. `Calendrical.first_gregorian_day_of_year/2` and `Calendrical.last_gregorian_day_of_year/2` give a year's first and last days in the Gregorian calendar:
 
       iex> Calendrical.Reform.England.days_in_year(1155)
-      449
+      366
 
       iex> Calendrical.last_gregorian_day_of_year(1155, Calendrical.Reform.England)
       ~D[1156-03-31 Calendrical.Gregorian]
 
       iex> Calendrical.Reform.England.year(1155)
-      Date.range(~D[1155-01-01 Calendrical.Reform.England], ~D[1155-12-31 Calendrical.Reform.England])
-
-  A change from a year that begins before 1 January to the January year does the same from the other side. A year reckoned from 1 September or 25 December takes the number of the January year it ends in, so where it gives way on 1 January, as Russia's September year did in 1700, its last months already carry the number the new year keeps: those labels name the later days, and September to December 1699 have none of their own.
+      Date.range(~D[1155-01-01 Calendrical.Reform.England], ~D[1155-13-24 Calendrical.Reform.England])
 
   A shift or a conversion that reaches a day with no date of its own answers the first later day that has one, as a shift into the days a reform took out answers the day after them:
 
-      iex> Date.shift(~D[1155-12-15 Calendrical.Reform.England], month: 1)
-      ~D[1156-03-25 Calendrical.Reform.England]
-
-      iex> Date.convert!(~D[1156-01-15 Calendrical.Julian], Calendrical.Reform.England)
-      ~D[1156-03-25 Calendrical.Reform.England]
+      iex> Date.convert!(~D[1155-01-15 Calendrical.Julian], Calendrical.Reform.England)
+      ~D[1155-01-01 Calendrical.Reform.England]
 
       iex> Date.shift(~D[1752-08-05 Calendrical.Reform.England], month: 1)
       ~D[1752-09-14 Calendrical.Reform.England]
 
   ## Arithmetic across a transition
 
-  Years, quarters and months are added in the calendar in effect on the date, a year being as many months as that calendar counts. When the result falls under another calendar the months are counted on through each calendar's own months, from January however a year-start style numbers its years, and a day the resulting month does not have becomes the month's next day that exists, or its last day:
+  Years, quarters and months are added in the calendar in effect on the date, a year being as many months as that calendar counts. When the result falls under another calendar the months are counted on through each calendar's own months, and a day the resulting month does not have becomes the month's next day that exists, or its last day:
 
       iex> Date.shift(~D[1752-08-20 Calendrical.Reform.England], month: 1)
       ~D[1752-09-20 Calendrical.Reform.England]
@@ -153,10 +145,10 @@ defmodule Calendrical.Composite do
       iex> Date.shift(~D[1752-08-05 Calendrical.Reform.England], month: 1)
       ~D[1752-09-14 Calendrical.Reform.England]
 
-  A change of calendar can begin a month part of the way through it, as England's year 1751 began on 25 March. A month before that day is 25 February, in the year the calendar before it numbered 1750:
+  A change of calendar can begin a month part of the way through it, as England's year 1751 began on 25 March. The month before it is the Lady Day year 1750's month 13, whose last day is the Julian 24 March 1751:
 
       iex> Date.shift(~D[1751-03-25 Calendrical.Reform.England], month: -1)
-      ~D[1750-02-25 Calendrical.Reform.England]
+      ~D[1750-13-24 Calendrical.Reform.England]
 
   ## Eras
 

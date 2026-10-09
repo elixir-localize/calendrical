@@ -149,14 +149,14 @@ defmodule Calendrical.CalendarArithmetic.Test do
 
     test "a date-time month shift is the date's month shift" do
       {:ok, date_time} =
-        NaiveDateTime.new(2023, 12, 31, 10, 30, 0, {0, 0}, Calendrical.Julian.March25)
+        NaiveDateTime.new(2023, 10, 31, 10, 30, 0, {0, 0}, Calendrical.Julian.March25)
 
       shifted = NaiveDateTime.shift(date_time, month: 1)
 
       assert NaiveDateTime.to_date(shifted) ==
                Date.shift(NaiveDateTime.to_date(date_time), month: 1)
 
-      assert NaiveDateTime.to_date(shifted) == ~D[2023-01-31 Calendrical.Julian.March25]
+      assert NaiveDateTime.to_date(shifted) == ~D[2023-11-31 Calendrical.Julian.March25]
     end
   end
 end

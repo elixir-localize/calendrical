@@ -48,14 +48,19 @@ defmodule Calendrical.Julian do
   | `Calendrical.Julian.Sept1` | 1 September 1099 | `:ending` |
   | `Calendrical.Julian.Dec25` | 25 December 1099 | `:ending` |
 
-  A variant date keeps its Julian month and day; only the year changes
-  on the new-year day. A variant whose year starts part-way through a
-  month (`March25`, `Dec25`) therefore holds two parts of that month
-  under one year: in `March25`, year 2024 holds 25–31 March 2024 and
-  1–24 March 2025, and in `Dec25`, year 2025 holds 25–31 December 2024
-  and 1–24 December 2025. Functions that keep the year and change only
-  the day, such as `Date.beginning_of_month/1` and
-  `Date.end_of_month/1`, step between those two parts.
+  A variant date carries counted months: month 1 begins on the
+  new-year day and the months follow in the order of time, so a date's
+  fields order as its days do and `Date.compare/2`,
+  `Date.beginning_of_month/1` and `days_in_month/2` hold. A variant
+  whose year begins on the first of a Julian month has twelve counted
+  months, each a whole Julian month (`March1`'s month 1 is March and
+  its month 12 February); one whose year begins part-way through a
+  month (`March25`, `Dec25`) has thirteen, the split month's later days
+  as a short month 1 and its earlier days as a short month 13: in
+  `March25`, month 1 of 2024 is 25–31 March 2024, day 1 being 25 March,
+  and month 13 is 1–24 March 2025. The Julian month and day that name a
+  date are answered by `month_of_year/3` and `cardinal_day/3`, and the
+  Julian date itself by each variant's `julian_date/3`.
 
   The module itself is also a fully-functional calendar that can be
   used directly (`~D[1500-03-15 Calendrical.Julian]`), in which case

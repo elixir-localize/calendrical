@@ -179,11 +179,9 @@ defmodule Calendrical.Composite.Config do
   @doc false
   # The segments of the time line, one per member calendar in order: the
   # ISO days each governs (the last is open-ended), the label years they
-  # carry, and their first and last months in the calendar's civil
-  # numbering. A Julian year-start variant counts its months as the
-  # Julian calendar does, from January, whatever its labels say; any
-  # other calendar counts its own. The first segment is open-ended before:
-  # the base calendar has no first day.
+  # carry, and their first and last months in the member's own numbering
+  # — a Julian year-start variant's counted months among them. The first
+  # segment is open-ended before: the base calendar has no first day.
   def segments(config) do
     ends =
       config
@@ -205,26 +203,16 @@ defmodule Calendrical.Composite.Config do
         first_year: if(first?, do: label_year(calendar, first)),
         last_year: if(last, do: label_year(calendar, last)),
         first_month: if(first?, do: civil_month(civil, first)),
-        last_month: if(last, do: civil_month(civil, last)),
-        january_year?: january_year?(calendar, civil)
+        last_month: if(last, do: civil_month(civil, last))
       }
     end)
   end
 
-  # Whether the calendar's years begin on 1 January, so its quarters are
-  # the months in label order. A Julian year-start variant names the day
-  # its years begin on.
-  defp january_year?(calendar, calendar), do: true
-
-  defp january_year?(calendar, _civil) do
-    match?({_year, 1, 1}, calendar.first_day_of_year(2000))
-  end
-
-  defp civil_calendar(calendar) do
-    if Code.ensure_loaded?(calendar) and function_exported?(calendar, :date_from_julian_date, 3),
-      do: Calendrical.Julian,
-      else: calendar
-  end
+  # Every member counts its own months from its year's first day — a
+  # Julian year-start variant's are its counted months — so each member
+  # is its own civil calendar and its quarters are the months in label
+  # order.
+  defp civil_calendar(calendar), do: calendar
 
   defp label_year(calendar, iso_days) do
     {year, _month, _day} = calendar.date_from_iso_days(iso_days)

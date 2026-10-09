@@ -30,8 +30,8 @@ defmodule Calendrical.CompositeLabelTest do
     @moduledoc false
     use Calendrical.Composite,
       calendars: [
-        ~D[1100-12-25 Calendrical.Julian.Dec25],
-        ~D[1300-03-25 Calendrical.Julian.March25],
+        ~D[1100-01-01 Calendrical.Julian.Dec25],
+        ~D[1300-01-01 Calendrical.Julian.March25],
         ~D[1600-01-01 Calendrical.Julian.Jan1]
       ],
       base_calendar: Calendrical.Julian
@@ -44,8 +44,8 @@ defmodule Calendrical.CompositeLabelTest do
     @moduledoc false
     use Calendrical.Composite,
       calendars: [
-        ~D[1155-03-25 Calendrical.Julian.March25],
-        ~D[1500-09-01 Calendrical.Julian.Sept1]
+        ~D[1155-01-01 Calendrical.Julian.March25],
+        ~D[1500-01-01 Calendrical.Julian.Sept1]
       ],
       base_calendar: Calendrical.Julian
   end
@@ -83,13 +83,24 @@ defmodule Calendrical.CompositeLabelTest do
   end
 
   describe "a day whose year, month and day are no other day's" do
-    # 29 February 1156 is the one exception, where the year turned on 25
-    # March from 1155. Its January to 24 March carry the year 1155, as the
-    # January to 24 March before them do, and are read as those: February
-    # 1155, which had 28 days.
+    # The exceptions are in the outgoing calendar's dateless stretch,
+    # where a change moves the day a year begins on: its labels are
+    # claimed by the incoming calendar's counted months, and a label
+    # whose day runs past the claiming month's length names no day at
+    # all. England's and September's base stretch of 1155 is claimed by
+    # Lady Day months 1 to 3, and month 1 has seven days, so the
+    # January 1155 labels from day 8 name nothing; Christmas's Nativity
+    # stretch of 1300 and Russia's September stretch of 1700 lose the
+    # days past the claiming months' 30s and 28s the same way.
     test "is a date of the calendar, and reads back as the day" do
       for calendar <- composites() do
-        expected = if calendar in [England, September], do: [{1155, 2, 29}], else: []
+        expected =
+          cond do
+            calendar in [England, September] -> for day <- 8..31, do: {1155, 1, day}
+            calendar == Christmas -> [{1300, 2, 31}]
+            calendar == Russia -> [{1700, 2, 30}, {1700, 2, 31}, {1700, 4, 31}]
+            true -> []
+          end
 
         # Japan's lunisolar months are found from new moons, a few a second.
         days_about_a_change = if calendar == Japan, do: 90, else: 800
@@ -132,19 +143,20 @@ defmodule Calendrical.CompositeLabelTest do
       assert Date.add(first, 365).year == 1494
 
       assert Date.convert!(~D[1493-01-15 Calendrical.Russia], Calendrical.Julian) ==
-               ~D[1493-01-15 Calendrical.Julian]
+               ~D[1492-09-15 Calendrical.Julian]
 
       assert Date.new(1493, 1, 15, Russia) == {:ok, ~D[1493-01-15 Calendrical.Russia]}
 
       assert Date.day_of_week(~D[1493-01-15 Calendrical.Russia]) ==
-               Date.day_of_week(~D[1493-01-15 Calendrical.Julian])
+               Date.day_of_week(~D[1492-09-15 Calendrical.Julian])
     end
 
     # 1493 was no leap year, and the year ran from September 1492 to August
-    # 1493, twelve months of the calendar in effect.
+    # 1493, twelve counted months of the calendar in effect: its February
+    # is month 6.
     test "is the year its questions are answered for" do
       assert Russia.days_in_year(1493) == 365
-      assert Russia.days_in_month(1493, 2) == 28
+      assert Russia.days_in_month(1493, 6) == 28
       refute Russia.leap_year?(1493)
       assert Russia.months_in_year(1493) == 12
     end
@@ -154,39 +166,39 @@ defmodule Calendrical.CompositeLabelTest do
     # March, of which that day was in 1499.
     test "under a calendar that is not the base calendar" do
       assert Date.convert!(~D[1499-09-01 Calendrical.Julian], September) ==
-               ~D[1500-09-01 Calendrical.CompositeLabelTest.September]
+               ~D[1500-01-01 Calendrical.CompositeLabelTest.September]
 
       assert Date.convert!(~D[1499-08-31 Calendrical.Julian], September) ==
-               ~D[1499-08-31 Calendrical.CompositeLabelTest.September]
+               ~D[1499-06-31 Calendrical.CompositeLabelTest.September]
 
-      for julian <- [
-            ~D[1500-01-01 Calendrical.Julian],
-            ~D[1500-02-29 Calendrical.Julian],
-            ~D[1500-08-31 Calendrical.Julian]
+      for {julian, fields} <- [
+            {~D[1500-01-01 Calendrical.Julian], {1500, 5, 1}},
+            {~D[1500-02-29 Calendrical.Julian], {1500, 6, 29}},
+            {~D[1500-08-31 Calendrical.Julian], {1500, 12, 31}}
           ] do
         date = Date.convert!(julian, September)
 
-        assert {date.year, date.month, date.day} == {1500, julian.month, julian.day}
+        assert {date.year, date.month, date.day} == fields
         assert September.valid_date?(date.year, date.month, date.day), inspect(date)
         assert September.calendar_for_date(date) == Calendrical.Julian.Sept1
         assert Date.convert!(date, Calendrical.Julian) == julian
       end
 
       assert September.days_in_year(1500) == 366
-      assert September.days_in_month(1500, 2) == 29
+      assert September.days_in_month(1500, 6) == 29
     end
 
     test "in a year reckoned from Christmas" do
       first = Date.convert!(~D[1099-12-25 Calendrical.Julian], Christmas)
 
-      assert first == ~D[1100-12-25 Calendrical.CompositeLabelTest.Christmas]
+      assert first == ~D[1100-01-01 Calendrical.CompositeLabelTest.Christmas]
 
       for {julian, expected} <- [
             {~D[1099-12-24 Calendrical.Julian], {1099, 12, 24}},
-            {~D[1100-01-01 Calendrical.Julian], {1100, 1, 1}},
-            {~D[1100-02-29 Calendrical.Julian], {1100, 2, 29}},
-            {~D[1100-12-24 Calendrical.Julian], {1100, 12, 24}},
-            {~D[1100-12-25 Calendrical.Julian], {1101, 12, 25}}
+            {~D[1100-01-01 Calendrical.Julian], {1100, 2, 1}},
+            {~D[1100-02-29 Calendrical.Julian], {1100, 3, 29}},
+            {~D[1100-12-24 Calendrical.Julian], {1100, 13, 24}},
+            {~D[1100-12-25 Calendrical.Julian], {1101, 1, 1}}
           ] do
         date = Date.convert!(julian, Christmas)
 
@@ -197,25 +209,26 @@ defmodule Calendrical.CompositeLabelTest do
     end
   end
 
-  describe "a year, month and day that two days have" do
-    # England's year turned on 25 March from 1155: the days of January to
-    # 24 March 1156 carry the year 1155, as those of 1155 do, and the year,
-    # month and day name the earlier. The later have no date of their own
-    # and are written as the first day after them that has one, 25 March
-    # 1156 (user, 2026-10-03).
+  describe "days whose labels the incoming calendar claims" do
+    # England's year turned on 25 March from 1155: the Lady Day year 1155
+    # owns its whole counted year, so the days of 1 January to 24 March
+    # 1155, which the January reckoning had called 1155, have no date of
+    # their own and are written as the first day after them that has one,
+    # 25 March 1155 (user, 2026-10-03). The Julian January to 24 March
+    # 1156 are that year's months 11 to 13.
     test "name the day of the calendar they fall in by their order" do
-      assert Date.convert!(~D[1155-01-15 Calendrical.Reform.England], Calendrical.Julian) ==
-               ~D[1155-01-15 Calendrical.Julian]
-
       assert Date.convert!(~D[1155-01-15 Calendrical.Julian], England) ==
-               ~D[1155-01-15 Calendrical.Reform.England]
+               ~D[1155-01-01 Calendrical.Reform.England]
 
       assert Date.convert!(~D[1156-01-15 Calendrical.Julian], England) ==
-               ~D[1156-03-25 Calendrical.Reform.England]
+               ~D[1155-11-15 Calendrical.Reform.England]
 
-      # Russia's September to December 1699 carry the year 1700, which the
-      # year reckoned from 1 January kept: they name the later, and the
-      # earlier are written as 1 January 1700.
+      assert Date.convert!(~D[1155-11-15 Calendrical.Reform.England], Calendrical.Julian) ==
+               ~D[1156-01-15 Calendrical.Julian]
+
+      # Russia's September to December 1699, which began the September
+      # year 1700, are claimed by the January year 1700: they have no
+      # dates of their own and are written as 1 January 1700.
       assert Date.convert!(~D[1700-09-01 Calendrical.Russia], Calendrical.Julian) ==
                ~D[1700-09-01 Calendrical.Julian]
 
@@ -223,11 +236,11 @@ defmodule Calendrical.CompositeLabelTest do
                ~D[1700-01-01 Calendrical.Russia]
     end
 
-    test "leave the month they are read in whole" do
-      assert England.valid_date?(1155, 2, 28)
-      refute England.valid_date?(1155, 2, 29)
-      assert England.days_in_month(1155, 2) == 28
-      assert Date.new(1155, 2, 29, England) == {:error, :invalid_date}
+    test "the first Lady Day year's split months are short" do
+      assert England.days_in_month(1155, 1) == 7
+      assert England.days_in_month(1155, 13) == 24
+      refute England.valid_date?(1155, 1, 8)
+      assert Date.new(1155, 1, 8, England) == {:error, :invalid_date}
     end
   end
 

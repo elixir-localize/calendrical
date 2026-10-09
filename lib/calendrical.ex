@@ -221,6 +221,13 @@ defmodule Calendrical do
   @type leap_month? :: boolean() | :leap
 
   @typedoc """
+  A traditional lunisolar month: its number in the traditional
+  numbering, or that number and `:leap` for a leap month.
+
+  """
+  @type traditional_month :: Calendar.month() | {Calendar.month(), :leap}
+
+  @typedoc """
   The precision for date intervals
   """
   @type precision :: :years | :quarters | :months | :weeks | :days
@@ -288,6 +295,29 @@ defmodule Calendrical do
 
   """
   @callback cardinal_month(month :: Calendar.month()) :: Calendar.month()
+
+  @doc """
+  Returns the day of the month that names a date's day, where it is not
+  the day field itself.
+
+  A calendar whose months are counted from the year's start can begin a
+  month within the month that names it: in `Calendrical.Julian.March25`
+  the year begins on 25 March, so its month 1 day 1 is named 25 March,
+  and this callback answers `25`. A calendar whose day field is its own
+  name need not implement it; callers fall back to the day field.
+
+  """
+  @callback cardinal_day(
+              year :: Calendar.year(),
+              month :: Calendar.month(),
+              day :: Calendar.day()
+            ) ::
+              Calendar.day()
+
+  # Only a calendar whose month 1 begins within the month that names it
+  # renumbers its days, so callers must tolerate this callback's absence
+  # and fall back to the date's day field.
+  @optional_callbacks cardinal_day: 3
 
   @doc """
   Returns a tuple of `{year, week_in_year}` for a given `year`, `month` or `week`, and `day`
@@ -429,6 +459,55 @@ defmodule Calendrical do
   # compiler and those using the behaviour default implement it; others
   # may not, so callers must tolerate its absence.
   @optional_callbacks months_in_year: 0
+
+  @doc """
+  Returns the traditional lunisolar month at a position in a year.
+
+  The position is the ordinal month, the month a date of this calendar
+  carries. The traditional month is the number the culture names the
+  month by, with `{month, :leap}` for a leap month, so in a Chinese
+  year whose leap month follows month 2, ordinal month 3 is `{2, :leap}`
+  and ordinal month 4 is `3`.
+
+  """
+  @callback lunar_month_of_year(year :: Calendar.year(), month :: Calendar.month()) ::
+              traditional_month() | {:error, :invalid_month}
+
+  @doc """
+  Returns the position in a year of a traditional lunisolar month.
+
+  The inverse of `c:lunar_month_of_year/2`: given a traditional month,
+  with `{month, :leap}` for the leap month, it answers the ordinal
+  month a date of this calendar carries, or an error when the year has
+  no such month.
+
+  """
+  @callback ordinal_month_from_traditional(
+              year :: Calendar.year(),
+              traditional_month :: traditional_month()
+            ) :: Calendar.month() | {:error, :invalid_month}
+
+  @doc """
+  Returns the ordinal month that is the leap month of a year, or `nil`
+  when the year has none.
+
+  """
+  @callback leap_month(year :: Calendar.year()) :: Calendar.month() | nil
+
+  @doc """
+  Returns the traditional number of the month a year's leap month
+  follows, or `nil` when the year has none.
+
+  """
+  @callback traditional_leap_month(year :: Calendar.year()) :: Calendar.month() | nil
+
+  # Traditional month numbering exists only for lunisolar calendars;
+  # every other calendar's months are their own numbering, so callers
+  # must tolerate these callbacks' absence.
+  @optional_callbacks lunar_month_of_year: 2,
+                      ordinal_month_from_traditional: 2,
+                      leap_month: 1,
+                      traditional_leap_month: 1
 
   @doc """
   Returns the CLDR calendar type whose data names the months and days
@@ -1429,7 +1508,7 @@ defmodule Calendrical do
       %Date{calendar: Calendrical.NRF, day: 1, month: 1, year: 2019}
 
       iex> Calendrical.first_day_of_year(1700, Calendrical.Julian.March25)
-      ~D[1700-03-25 Calendrical.Julian.March25]
+      ~D[1700-01-01 Calendrical.Julian.March25]
 
   """
   @spec first_day_of_year(year :: year(), calendar :: calendar()) ::
@@ -2159,6 +2238,144 @@ defmodule Calendrical do
   def month_of_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
     calendar.month_of_year(year, month, day)
+  end
+
+  @doc """
+  Returns a year's months in order, named traditionally, with any
+  leap month among them.
+
+  For a lunisolar calendar the list is the year's traditional months
+  in the order the year holds them, with the leap month as
+  `{month, :leap}` after the month it follows. For every other
+  calendar the months are their own numbering, so the list is simply
+  `1` up to the year's month count. The nth element of the list names
+  the year's nth ordinal month — the month a date of the calendar
+  carries.
+
+  ### Arguments
+
+  * `date` is any `t:Calendar.date/0` or a map with one or more of
+    the fields `:year`, `:month`, `:day` and optionally `:calendar`.
+
+  ### Returns
+
+  * A list of `t:traditional_month/0` in time order.
+
+  ### Examples
+
+      iex> Calendrical.traditional_months(Date.new!(4660, 1, 1, Calendrical.Chinese))
+      [1, 2, {2, :leap}, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+      iex> Calendrical.traditional_months(~D[2026-01-01])
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+  """
+  @spec traditional_months(date()) :: [traditional_month()]
+  def traditional_months(%{} = date) do
+    {year, _month, _day, calendar} = extract_date(date)
+    traditional_months(year, calendar)
+  end
+
+  @doc """
+  Returns a year's months in order, named traditionally, with any
+  leap month among them.
+
+  This is `traditional_months/1` with the year and calendar supplied
+  directly; use this arity when the calendar is chosen at runtime.
+
+  ### Arguments
+
+  * `year` is any year in `calendar`.
+
+  * `calendar` is a module implementing the `Calendrical` behaviour.
+
+  ### Returns
+
+  * A list of `t:traditional_month/0` in time order.
+
+  ### Examples
+
+      # The Hebrew year 5784 is a leap year: Adar I follows the
+      # fifth traditional month
+      iex> Calendrical.traditional_months(5784, Calendrical.Hebrew)
+      [1, 2, 3, 4, 5, {5, :leap}, 6, 7, 8, 9, 10, 11, 12]
+
+      iex> Calendrical.traditional_months(5785, Calendrical.Hebrew)
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+      iex> Calendrical.traditional_months(2026, Calendrical.Gregorian)
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+  """
+  @spec traditional_months(Calendar.year(), calendar()) :: [traditional_month()]
+  def traditional_months(year, Calendar.ISO) do
+    traditional_months(year, Calendrical.Gregorian)
+  end
+
+  def traditional_months(year, calendar) do
+    months_in_year = calendar.months_in_year(year)
+
+    if Code.ensure_loaded?(calendar) and function_exported?(calendar, :lunar_month_of_year, 2) do
+      for month <- 1..months_in_year, do: calendar.lunar_month_of_year(year, month)
+    else
+      Enum.to_list(1..months_in_year)
+    end
+  end
+
+  @doc """
+  Returns the days of a named month in a year, in the order of time.
+
+  A calendar that counts its months from the year's first day can
+  split the month that names them: `Calendrical.Julian.March25` begins
+  its year on 25 March, so its March is two counted months, the year's
+  month 1 (25-31 March) and its month 13 (1-24 March), 364 days apart.
+  The named month's days are returned as one `t:Date.Range.t/0` per
+  counted month that carries the name, earliest first.
+
+  ### Arguments
+
+  * `year` is any year in `calendar`.
+
+  * `named_month` is the month that names the days: the month
+    `cardinal_month/1` answers, which is the month field itself in a
+    calendar whose months are their own numbering.
+
+  * `calendar` is a module implementing the `Calendrical` behaviour.
+    The default is `Calendrical.Gregorian`.
+
+  ### Returns
+
+  * A list of one or two `t:Date.Range.t/0` in time order, or `[]`
+    when no month of the year carries the name.
+
+  ### Examples
+
+      iex> Calendrical.named_month(2026, 5)
+      [Date.range(~D[2026-05-01 Calendrical.Gregorian], ~D[2026-05-31 Calendrical.Gregorian])]
+
+      iex> Calendrical.named_month(1750, 3, Calendrical.Julian.March25)
+      [
+        Date.range(~D[1750-01-01 Calendrical.Julian.March25], ~D[1750-01-07 Calendrical.Julian.March25]),
+        Date.range(~D[1750-13-01 Calendrical.Julian.March25], ~D[1750-13-24 Calendrical.Julian.March25])
+      ]
+
+      iex> Calendrical.named_month(2026, 14)
+      []
+
+  """
+  @spec named_month(Calendar.year(), Calendar.month(), calendar()) :: [Date.Range.t()]
+  def named_month(year, named_month, calendar \\ Calendrical.Gregorian)
+
+  def named_month(year, named_month, Calendar.ISO) do
+    named_month(year, named_month, Calendrical.Gregorian)
+  end
+
+  def named_month(year, named_month, calendar) do
+    for month <- 1..calendar.months_in_year(year)//1,
+        calendar.cardinal_month(month) == named_month,
+        %Date.Range{} = range <- [calendar.month(year, month)] do
+      range
+    end
   end
 
   @doc """
@@ -4533,7 +4750,7 @@ defmodule Calendrical do
       {:error, :invalid_date}
 
       iex> Calendrical.date_from_day_of_year(1700, 1, Calendrical.Julian.March25)
-      ~D[1700-03-25 Calendrical.Julian.March25]
+      ~D[1700-01-01 Calendrical.Julian.March25]
 
   """
   @spec date_from_day_of_year(Calendar.year(), pos_integer(), calendar()) ::

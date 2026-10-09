@@ -106,6 +106,94 @@ defmodule Calendrical.WeekInMonth.Test do
     end
   end
 
+  describe "Interval.week/4 and Interval.weeks_in_month/3" do
+    alias Calendrical.Interval
+
+    # Every week `Interval.week/4` constructs holds exactly the days whose
+    # `week_of_month/3` names it, the weeks abut, and the count agrees
+    # with `Interval.weeks_in_month/3`.
+    test "agree with week_of_month/3 for every month of every calendar family" do
+      calendars = [
+        Calendrical.Gregorian,
+        Calendrical.ISO,
+        Calendrical.BasicWeek,
+        Calendrical.NRF,
+        Calendrical.ISOWeek,
+        Calendrical.Julian,
+        Calendrical.Fiscal.US,
+        Calendrical.Fiscal.UK,
+        Calendrical.Coptic,
+        Calendrical.Hebrew
+      ]
+
+      for calendar <- calendars, year <- [2019, 2020, 2026] do
+        year = if calendar == Calendrical.Hebrew, do: year + 3760, else: year
+
+        for month <- 1..calendar.months_in_year(year) do
+          weeks = Interval.weeks_in_month(year, month, calendar)
+          assert is_integer(weeks) and weeks > 0
+
+          ranges =
+            for nth <- 1..weeks do
+              assert %Date.Range{} = range = Interval.week(year, month, nth, calendar)
+
+              for date <- range do
+                assert calendar.week_of_month(date.year, date.month, date.day) == {month, nth}
+              end
+
+              range
+            end
+
+          for [earlier, later] <- Enum.chunk_every(ranges, 2, 1, :discard) do
+            assert later.first_in_iso_days == earlier.last_in_iso_days + 1
+          end
+        end
+      end
+    end
+
+    test "a month whose first week is cut short at the month's start" do
+      # Julian weeks do not cross its months: February 2019 begins on a
+      # Thursday of its Monday-started weeks, so week 1 is four days.
+      assert Interval.week(2019, 2, 1, Calendrical.Julian) ==
+               Date.range(~D[2019-02-01 Calendrical.Julian], ~D[2019-02-04 Calendrical.Julian])
+
+      assert Interval.week(2019, 2, 2, Calendrical.Julian) ==
+               Date.range(~D[2019-02-05 Calendrical.Julian], ~D[2019-02-11 Calendrical.Julian])
+    end
+
+    test "a week that begins in the month before" do
+      assert Interval.week(2026, 5, 1, Calendrical.Gregorian) ==
+               Date.range(
+                 ~D[2026-04-27 Calendrical.Gregorian],
+                 ~D[2026-05-03 Calendrical.Gregorian]
+               )
+    end
+
+    test "the months of England's reform year" do
+      # September 1752 has 19 dates: 1, 2, then 14 to 30.
+      for month <- 1..12 do
+        weeks = Interval.weeks_in_month(1752, month, Calendrical.Reform.England)
+        assert is_integer(weeks) and weeks > 0
+
+        for nth <- 1..weeks do
+          assert %Date.Range{} =
+                   range = Interval.week(1752, month, nth, Calendrical.Reform.England)
+
+          for date <- range do
+            calendar = date.calendar
+            assert calendar.week_of_month(date.year, date.month, date.day) == {month, nth}
+          end
+        end
+      end
+    end
+
+    test "a month the year does not have" do
+      assert Interval.weeks_in_month(2026, 13, Calendrical.Gregorian) == {:error, :invalid_date}
+      assert Interval.week(2026, 13, 1, Calendrical.Gregorian) == {:error, :invalid_date}
+      assert Interval.week(2026, 5, 6, Calendrical.Gregorian) == {:error, :invalid_date}
+    end
+  end
+
   # The days from `first` to `last` whose week of the month in `calendar`
   # is not the one TR35's rule gives.
   defp misnumbered(calendar, first_day, min_days, first, last) do

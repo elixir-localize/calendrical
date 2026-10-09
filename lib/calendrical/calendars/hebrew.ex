@@ -762,6 +762,7 @@ defmodule Calendrical.Hebrew do
   """
   @spec ordinal_month_from_traditional(Calendar.year(), traditional_month()) ::
           {:ok, Calendar.month()} | {:error, :invalid_month | :invalid_leap_month}
+  @impl true
   def ordinal_month_from_traditional(year, month)
       when is_integer(year) and is_integer(month) and month in 1..12 do
     if month > @traditional_leap_month and leap_year?(year),
@@ -849,6 +850,7 @@ defmodule Calendrical.Hebrew do
   """
   @spec lunar_month_of_year(Calendar.year(), Calendar.month()) ::
           Calendar.month() | {5, :leap} | {:error, :invalid_month}
+  @impl true
   def lunar_month_of_year(year, month) when is_integer(year) and is_integer(month) do
     cond do
       month not in 1..months_in_year(year) -> {:error, :invalid_month}
@@ -884,6 +886,7 @@ defmodule Calendrical.Hebrew do
 
   """
   @spec leap_month(Date.t() | Calendar.year()) :: 6 | nil
+  @impl true
   def leap_month(%Date{year: year, calendar: __MODULE__}), do: leap_month(year)
   def leap_month(year) when is_integer(year), do: if(leap_year?(year), do: @leap_month)
   def leap_month(_date_or_year), do: nil
@@ -915,6 +918,7 @@ defmodule Calendrical.Hebrew do
 
   """
   @spec traditional_leap_month(Date.t() | Calendar.year()) :: 5 | nil
+  @impl true
   def traditional_leap_month(%Date{year: year, calendar: __MODULE__}),
     do: traditional_leap_month(year)
 

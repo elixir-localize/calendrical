@@ -161,7 +161,8 @@ A composite calendar uses one base calendar before a specified transition date a
 defmodule MyApp.England do
   use Calendrical.Composite,
     calendars: [
-      ~D[1155-03-25 Calendrical.Julian.March25],
+      # 25 March 1155: the Lady Day calendar's month 1 day 1
+      ~D[1155-01-01 Calendrical.Julian.March25],
       ~D[1751-03-25 Calendrical.Julian.Jan1],
       ~D[1752-09-14 Calendrical.Gregorian]
     ],

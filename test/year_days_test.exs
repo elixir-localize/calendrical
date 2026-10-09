@@ -116,13 +116,13 @@ defmodule Calendrical.YearDaysTest do
 
     test "a year reckoned from another day than 1 January begins on that day" do
       assert Calendrical.first_day_of_year(1700, Calendrical.Julian.March25) ==
-               ~D[1700-03-25 Calendrical.Julian.March25]
+               ~D[1700-01-01 Calendrical.Julian.March25]
 
       assert Calendrical.last_day_of_year(1700, Calendrical.Julian.March25) ==
-               ~D[1700-03-24 Calendrical.Julian.March25]
+               ~D[1700-13-24 Calendrical.Julian.March25]
 
       assert Calendrical.first_day_of_year(1100, Calendrical.Julian.Dec25) ==
-               ~D[1100-12-25 Calendrical.Julian.Dec25]
+               ~D[1100-01-01 Calendrical.Julian.Dec25]
 
       assert Calendrical.first_day_of_year(1751, Calendrical.Reform.England) ==
                ~D[1751-03-25 Calendrical.Reform.England]
@@ -199,21 +199,25 @@ defmodule Calendrical.YearDaysTest do
     end
   end
 
-  # Where a year's number does not change on 1 January a composite calendar
-  # has a year two stretches of whose days carry the same dates. England's
-  # 1155 ran from 1 January 1155 to 24 March 1156, 449 days, its year
-  # turning on 25 March from then on; in the test calendar of Russia 1700
-  # ran from 1 September 1699, when the September year 1700 began, to 31
-  # December 1700, 488 days. The Julian calendar was 7 days behind the
-  # Gregorian in the twelfth century, 10 in 1699 and 11 from March 1700.
-  describe "a year two stretches of whose days carry the same dates" do
+  # Where a change moves the day a year begins on, the incoming
+  # calendar's label year owns its whole counted year, and the outgoing
+  # calendar's last stretch of days — whose labels the incoming calendar
+  # claims — has no dates and is in no year. England's 1155, the first
+  # reckoned from Lady Day, runs from 25 March 1155 to 24 March 1156, 366
+  # days, and the days 1 January to 24 March 1155 are in no year; in the
+  # test calendar of Russia 1700 is Peter the Great's January year, 1
+  # January to 31 December 1700, 366 Julian days, and the days 1
+  # September to 31 December 1699, which began the September year 1700,
+  # are in no year. The Julian calendar was 7 days behind the Gregorian
+  # in the twelfth century, 10 in 1699 and 11 from March 1700.
+  describe "a year whose first day moved" do
     alias Calendrical.Reform.England
     alias Calendrical.Russia
 
     test "begins and ends on its own days, in the Gregorian calendar" do
-      assert Calendrical.first_gregorian_day_of_year(1155, England) == gregorian(~D[1155-01-08])
+      assert Calendrical.first_gregorian_day_of_year(1155, England) == gregorian(~D[1155-04-01])
       assert Calendrical.last_gregorian_day_of_year(1155, England) == gregorian(~D[1156-03-31])
-      assert Calendrical.first_gregorian_day_of_year(1700, Russia) == gregorian(~D[1699-09-11])
+      assert Calendrical.first_gregorian_day_of_year(1700, Russia) == gregorian(~D[1700-01-11])
       assert Calendrical.last_gregorian_day_of_year(1700, Russia) == gregorian(~D[1701-01-11])
     end
 
@@ -222,46 +226,42 @@ defmodule Calendrical.YearDaysTest do
                ~D[1155-01-01 Calendrical.Reform.England]
 
       assert Calendrical.date_from_day_of_year(1155, 84, England) ==
-               ~D[1155-03-25 Calendrical.Reform.England]
+               ~D[1155-04-16 Calendrical.Reform.England]
 
-      assert Calendrical.date_from_day_of_year(1155, 365, England) ==
-               ~D[1155-12-31 Calendrical.Reform.England]
+      assert Calendrical.date_from_day_of_year(1155, 366, England) ==
+               ~D[1155-13-24 Calendrical.Reform.England]
 
-      assert Calendrical.date_from_day_of_year(1155, 450, England) == {:error, :invalid_date}
+      assert Calendrical.date_from_day_of_year(1155, 367, England) == {:error, :invalid_date}
 
-      assert Calendrical.date_from_day_of_year(1700, 123, Russia) ==
+      assert Calendrical.date_from_day_of_year(1700, 1, Russia) ==
                ~D[1700-01-01 Calendrical.Russia]
 
-      assert Calendrical.date_from_day_of_year(1700, 488, Russia) ==
+      assert Calendrical.date_from_day_of_year(1700, 366, Russia) ==
                ~D[1700-12-31 Calendrical.Russia]
 
-      assert Calendrical.date_from_day_of_year(1700, 489, Russia) == {:error, :invalid_date}
+      assert Calendrical.date_from_day_of_year(1700, 367, Russia) == {:error, :invalid_date}
     end
 
-    # 24 March 1156 was written 24 March 1155, as the day a year before it
-    # was, and 1 September 1699 was written 1 September 1700, as the day a
-    # year after it was.
-    test "writes its first and last days as the calendar wrote them" do
+    # England's 1155 ends on its month 13 day 24, the Julian 24 March
+    # 1156; Russia's 1699, the last September year, ends on its month 12
+    # day 31, the Julian 31 August 1699.
+    test "writes its first and last days in counted months" do
       assert Calendrical.first_day_of_year(1155, England) ==
                ~D[1155-01-01 Calendrical.Reform.England]
 
       assert Calendrical.last_day_of_year(1155, England) ==
-               ~D[1155-03-24 Calendrical.Reform.England]
+               ~D[1155-13-24 Calendrical.Reform.England]
 
-      assert Calendrical.date_from_day_of_year(1155, 449, England) ==
-               ~D[1155-03-24 Calendrical.Reform.England]
+      assert Calendrical.first_day_of_year(1699, Russia) == ~D[1699-01-01 Calendrical.Russia]
+      assert Calendrical.last_day_of_year(1699, Russia) == ~D[1699-12-31 Calendrical.Russia]
 
-      assert Calendrical.first_day_of_year(1700, Russia) == ~D[1700-09-01 Calendrical.Russia]
-
-      assert Calendrical.date_from_day_of_year(1700, 1, Russia) ==
-               ~D[1700-09-01 Calendrical.Russia]
-
-      assert Calendrical.last_day_of_year(1700, Russia) == ~D[1700-12-31 Calendrical.Russia]
+      assert Calendrical.last_gregorian_day_of_year(1699, Russia) ==
+               gregorian(~D[1699-09-10])
     end
 
     # A day that has a date of its own is the day `day_of_year/1` numbers.
     test "numbers each of its dates as day_of_year/1 does" do
-      for {calendar, year, days} <- [{England, 1155, 1..365}, {Russia, 1700, 123..488}],
+      for {calendar, year, days} <- [{England, 1155, 1..366}, {Russia, 1700, 1..366}],
           day_of_year <- days do
         date = Calendrical.date_from_day_of_year(year, day_of_year, calendar)
 
