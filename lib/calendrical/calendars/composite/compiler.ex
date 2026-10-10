@@ -699,6 +699,7 @@ defmodule Calendrical.Composite.Compiler do
       of a year, on the rules `quarter/2` follows.
 
       """
+      @impl true
       def quadrimester(year, quadrimester) when quadrimester in 1..3 do
         period_of_year(year, quadrimester, 3)
       end
@@ -710,6 +711,7 @@ defmodule Calendrical.Composite.Compiler do
       year, on the rules `quarter/2` follows.
 
       """
+      @impl true
       def semester(year, semester) when semester in 1..2 do
         period_of_year(year, semester, 2)
       end

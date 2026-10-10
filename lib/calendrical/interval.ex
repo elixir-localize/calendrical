@@ -141,7 +141,7 @@ defmodule Calendrical.Interval do
   @spec quadrimester(Calendar.year(), Calendrical.quadrimester(), Calendrical.calendar()) ::
           Date.Range.t() | {:error, :not_defined | :invalid_date}
   def quadrimester(year, quadrimester, calendar \\ Calendrical.Gregorian) do
-    period_of_year(calendar, year, quadrimester, :quadrimester, 4)
+    calendar.quadrimester(year, quadrimester)
   end
 
   @doc """
@@ -175,18 +175,7 @@ defmodule Calendrical.Interval do
   @spec semester(Calendar.year(), Calendrical.semester(), Calendrical.calendar()) ::
           Date.Range.t() | {:error, :not_defined | :invalid_date}
   def semester(year, semester, calendar \\ Calendrical.Gregorian) do
-    period_of_year(calendar, year, semester, :semester, 6)
-  end
-
-  # Quadrimesters and semesters are no callbacks: a calendar built with
-  # Calendrical answers them as plain functions, and any other calendar
-  # of the behaviour is answered from its own months.
-  defp period_of_year(calendar, year, period, function, months_per_period) do
-    if Code.ensure_loaded?(calendar) and function_exported?(calendar, function, 2) do
-      apply(calendar, function, [year, period])
-    else
-      Calendrical.Period.date_range(calendar, year, period, months_per_period)
-    end
+    calendar.semester(year, semester)
   end
 
   @doc """

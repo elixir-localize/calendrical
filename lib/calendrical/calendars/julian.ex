@@ -1168,6 +1168,7 @@ defmodule Calendrical.Julian do
   """
   @spec quadrimester(year, Calendrical.quadrimester()) ::
           Date.Range.t() | {:error, :not_defined | :invalid_date}
+  @impl true
   def quadrimester(year, quadrimester) do
     Calendrical.Period.date_range(__MODULE__, year, quadrimester, 4)
   end
@@ -1196,6 +1197,7 @@ defmodule Calendrical.Julian do
   """
   @spec semester(year, Calendrical.semester()) ::
           Date.Range.t() | {:error, :not_defined | :invalid_date}
+  @impl true
   def semester(year, semester) do
     Calendrical.Period.date_range(__MODULE__, year, semester, 6)
   end

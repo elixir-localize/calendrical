@@ -61,7 +61,8 @@ defmodule Calendrical do
 
   * **Geometry** — `c:days_in_month/1`, `c:days_in_year/1`,
     `c:weeks_in_year/1`, `c:dates_in_gregorian_year/3` and the ranges
-    `c:year/1`, `c:quarter/2`, `c:month/2` and `c:week/2`.
+    `c:year/1`, `c:semester/2`, `c:quadrimester/2`, `c:quarter/2`,
+    `c:month/2` and `c:week/2`.
 
   * **Arithmetic** — `c:plus/6`, `c:diff/3` and the day-count pair
     `c:date_to_iso_days/3` and `c:date_from_iso_days/1` that every
@@ -703,6 +704,22 @@ defmodule Calendrical do
 
   """
   @callback quarter(year :: year(), quarter :: Calendrical.quarter()) ::
+              Date.Range.t() | {:error, :not_defined} | date_error()
+
+  @doc """
+  Returns a date range representing the days in a
+  given quadrimester (third) of a calendar year.
+
+  """
+  @callback quadrimester(year :: year(), quadrimester :: Calendrical.quadrimester()) ::
+              Date.Range.t() | {:error, :not_defined} | date_error()
+
+  @doc """
+  Returns a date range representing the days in a
+  given semester (half) of a calendar year.
+
+  """
+  @callback semester(year :: year(), semester :: Calendrical.semester()) ::
               Date.Range.t() | {:error, :not_defined} | date_error()
 
   @doc """

@@ -807,6 +807,7 @@ defmodule Calendrical.Behaviour do
 
       """
 
+      @impl true
       def quadrimester(year, quadrimester) do
         Calendrical.Period.date_range(__MODULE__, year, quadrimester, 4)
       end
@@ -818,6 +819,7 @@ defmodule Calendrical.Behaviour do
 
       """
 
+      @impl true
       def semester(year, semester) do
         Calendrical.Period.date_range(__MODULE__, year, semester, 6)
       end

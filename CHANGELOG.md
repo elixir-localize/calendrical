@@ -10,6 +10,8 @@ The format is based on
 
 ### Breaking changes
 
+* `quadrimester/2` and `semester/2` are required callbacks again, beside `quarter/2`: every calendar answers the thirds and the halves of its year, and `Calendrical.Interval.quadrimester/3` and `semester/3` ask the calendar. A calendar written by hand defines both.
+
 * `cardinal_day/3` and `months_in_year/0` are required callbacks, and `numeric_month/3` is a new one, the number a date's month is written with in figures: every calendar answers all three, so no caller asks a calendar whether it can. A calendar made with `use Calendrical.Behaviour` or a compiler has each by default (the day and the month themselves); one written by hand defines them.
 
 * The `plus/6` callback is declared for each of the five periods every calendar answers it for (`:years`, `:quarters`, `:months`, `:weeks`, `:days`), where its type and documentation named `:months` and `:quarters` alone. A calendar written by hand answers all five, as one made with `use Calendrical.Behaviour` or a compiler does.
