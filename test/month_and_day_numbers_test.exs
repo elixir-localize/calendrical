@@ -63,6 +63,25 @@ defmodule Calendrical.MonthAndDayNumbersTest do
     end
   end
 
+  describe "a year a calendar cannot reckon" do
+    # The Islamic calendars reckoned from the sky cover the years the
+    # installed ephemeris does (1849 to 2150 CE), and 1750 AH is 2318 CE.
+    # `months_in_year/1` and `days_in_month/2` raise for a year outside it.
+    test "has no months and no days, and asking for them does not raise" do
+      for calendar <- [Calendrical.Islamic.Rgsa, Calendrical.Islamic.Observational] do
+        assert calendar.month_numbers(1446) == [1..12]
+        assert [%Range{first: 1, last: last}] = calendar.day_numbers(1446, 1)
+        assert last in 29..30
+
+        assert calendar.month_numbers(1750) == []
+        assert calendar.day_numbers(1750, 1) == []
+        assert calendar.month_numbers(0) == []
+        assert calendar.day_numbers(1446, 13) == []
+        assert calendar.day_numbers(nil, 1) == []
+      end
+    end
+  end
+
   describe "counted_from_one?/0" do
     # One of each way a calendar is made, and of each kind of year: by a
     # rule, by the moon and the sun, by the sky, in weeks, and counted from

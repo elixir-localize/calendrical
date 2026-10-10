@@ -452,4 +452,52 @@ defmodule Calendrical.Islamic.Observational do
   @impl true
   def days_in_month(month) when month in 1..12, do: {:ambiguous, 29..30}
   def days_in_month(_month), do: {:error, :undefined}
+
+  @doc """
+  Returns the months a year has, as runs of their numbers: the twelve,
+  and none for a year the ephemeris does not cover, which this calendar
+  cannot reckon and so does not have.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Observational.month_numbers(1446)
+      [1..12]
+
+      iex> Calendrical.Islamic.Observational.month_numbers(1750)
+      []
+
+  """
+  @impl true
+  def month_numbers(year) when is_integer(year) and year >= 1 do
+    case month_length(year, 1) do
+      {:ok, _days} -> [1..12//1]
+      {:error, _date} -> []
+    end
+  end
+
+  def month_numbers(_year), do: []
+
+  @doc """
+  Returns the days a month of a year has, as runs of their numbers, and
+  none for a month the year does not have or the ephemeris does not
+  cover.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.Observational.day_numbers(1446, 1)
+      [1..30]
+
+      iex> Calendrical.Islamic.Observational.day_numbers(1750, 1)
+      []
+
+  """
+  @impl true
+  def day_numbers(year, month) when is_integer(year) and year >= 1 and month in 1..12 do
+    case month_length(year, month) do
+      {:ok, days} -> [1..days//1]
+      {:error, _date} -> []
+    end
+  end
+
+  def day_numbers(_year, _month), do: []
 end
