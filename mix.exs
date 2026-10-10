@@ -175,7 +175,11 @@ defmodule Calendrical.MixProject do
 
   defp deps do
     [
-      {:localize, github: "elixir-localize/localize", branch: "main"},
+      # A path dependency for now (2026-10-10), while the callbacks every
+      # calendar answers are added here and for `Calendar.ISO` in Localize
+      # together: back to `github: "elixir-localize/localize", branch: "main"`
+      # before a push.
+      {:localize, path: "../localize"},
       {:astro, "~> 2.7"},
       {:tz_world, "~> 2.3", optional: true},
       {:tz, "~> 0.26", optional: true},
