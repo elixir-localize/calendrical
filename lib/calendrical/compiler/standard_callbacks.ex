@@ -160,6 +160,24 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       defoverridable years_in_cycle: 0
 
+      @doc """
+      Returns the day of a solar term of a Gregorian year, reckoned at
+      the traditional reference for the solar terms, the Chinese
+      calendar's meridian: this calendar is reckoned at no place.
+
+      """
+      unquote(impl)
+
+      def solar_term(index, gregorian_year),
+        do:
+          Calendrical.Lunisolar.solar_term(
+            index,
+            gregorian_year,
+            &Calendrical.Chinese.location/1
+          )
+
+      defoverridable solar_term: 2
+
       defoverridable cardinal_day: 3,
                      date_from_day_of_year: 2,
                      named_month: 2,

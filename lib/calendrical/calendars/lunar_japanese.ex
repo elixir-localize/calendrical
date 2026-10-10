@@ -1139,4 +1139,13 @@ defmodule Calendrical.LunarJapanese do
       {deg(35), deg(135), mt(0), @japan_standard_offset}
     end
   end
+
+  @doc """
+  Returns the day of a solar term of a Gregorian year, reckoned at this
+  calendar's own meridian (`location/1`).
+
+  """
+  @impl true
+  def solar_term(index, gregorian_year),
+    do: Calendrical.Lunisolar.solar_term(index, gregorian_year, &location/1)
 end

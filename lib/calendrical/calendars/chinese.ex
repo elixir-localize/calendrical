@@ -1040,4 +1040,13 @@ defmodule Calendrical.Chinese do
       &location/1
     )
   end
+
+  @doc """
+  Returns the day of a solar term of a Gregorian year, reckoned at this
+  calendar's own meridian (`location/1`).
+
+  """
+  @impl true
+  def solar_term(index, gregorian_year),
+    do: Calendrical.Lunisolar.solar_term(index, gregorian_year, &location/1)
 end

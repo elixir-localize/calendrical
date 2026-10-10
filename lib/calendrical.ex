@@ -556,6 +556,25 @@ defmodule Calendrical do
   @callback day_numbers(year :: year(), month :: month()) :: [Range.t()]
 
   @doc """
+  Returns the day of a solar term of a Gregorian year.
+
+  The 24 solar terms are numbered from `lichun` (立春, index 1), where
+  the sun is at 315° of ecliptic longitude, and come every 15°. The day
+  is the civil day at the place the calendar is reckoned at, so a
+  lunisolar calendar answers at its own meridian, and the four of them
+  can differ by a day: the seventh term of 2002 is 6 May in the
+  Chinese, Korean and Japanese calendars and 5 May in the Vietnamese. A
+  calendar reckoned at no place answers at the traditional reference
+  for the terms, the Chinese calendar's meridian, which is the default.
+
+  The date is of `Calendrical.Gregorian`. An index outside `1..24` is
+  `{:error, {:invalid_solar_term, index}}`.
+
+  """
+  @callback solar_term(index :: 1..24, gregorian_year :: Calendar.year()) ::
+              {:ok, Date.t()} | {:error, term()}
+
+  @doc """
   Returns the number of years after which this calendar's years repeat.
 
   Every year has the months, the days of each and the weekdays of the

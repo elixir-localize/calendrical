@@ -895,4 +895,13 @@ defmodule Calendrical.Vietnamese do
       {angle(21, 2, 0), angle(105, 51, 0), mt(0), Astro.Time.hours_to_days(7)}
     end
   end
+
+  @doc """
+  Returns the day of a solar term of a Gregorian year, reckoned at this
+  calendar's own meridian (`location/1`).
+
+  """
+  @impl true
+  def solar_term(index, gregorian_year),
+    do: Calendrical.Lunisolar.solar_term(index, gregorian_year, &location/1)
 end

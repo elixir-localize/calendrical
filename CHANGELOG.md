@@ -10,6 +10,8 @@ The format is based on
 
 ### Breaking changes
 
+* `solar_term/2` is a required callback, the day of a solar term of a Gregorian year: a lunisolar calendar reckons it at its own meridian, and any other calendar at the Chinese calendar's, the traditional reference, which is the default. `Calendrical.Lunisolar.solar_term/3`, which takes the place as a function, is unchanged.
+
 * `years_in_cycle/0` is a required callback, the number of years after which a calendar's years repeat, their days and their weekdays alike: 400 in the Gregorian calendar and those that follow its leap rule, 28 in the Julian, Coptic and Ethiopic, 210 in the tabular Islamic, and `{:error, :undefined}`, the default, in a calendar reckoned from the sky and in a composite.
 
 * `month_numbers/1` and `day_numbers/2` are required callbacks, the months a year has and the days a month has as runs of their numbers: `Calendrical.Reform.England` answers `[3..12]` for 1751 and `[1..2, 14..30]` for September 1752, where `months_in_year/1` and `days_in_month/2` are counts. Every calendar answers both, and one written by hand defines them.
