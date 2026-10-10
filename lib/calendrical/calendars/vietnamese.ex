@@ -720,43 +720,6 @@ defmodule Calendrical.Vietnamese do
   def days_in_month(_month), do: {:error, :undefined}
 
   @doc """
-  Returns the number of days since the start of the epoch for an ordinal
-  date, validating it in the same pass.
-
-  This is `valid_date?/3` and `date_to_iso_days/3` answered from one
-  computation of the lunar year; `Calendrical.iso_days/4` uses it.
-
-  ### Arguments
-
-  * `year` is any year in the `#{inspect(__MODULE__)}` calendar.
-
-  * `month` is an ordinal month number, 1..12 or 1..13 in a leap year.
-
-  * `day` is a day of the month.
-
-  ### Returns
-
-  * `{:ok, iso_days}` or
-
-  * `{:error, :invalid_date}`.
-
-  ### Examples
-
-      # The lunar new year of Y4662 (= AD 2025) is 2025-01-29
-      iex> Calendrical.Vietnamese.iso_days(4662, 1, 1)
-      {:ok, 739645}
-
-      iex> Calendrical.Vietnamese.iso_days(4661, 13, 1)
-      {:error, :invalid_date}
-
-  """
-  @spec iso_days(Calendar.year(), Calendar.month(), Calendar.day()) ::
-          {:ok, integer()} | {:error, :invalid_date}
-  def iso_days(year, month, day) do
-    Lunisolar.iso_days(year, month, day, epoch(), &location/1)
-  end
-
-  @doc """
   Returns the ordinal month of a traditional month in a year.
 
   A leap month repeats the number of the month before it, so from the leap

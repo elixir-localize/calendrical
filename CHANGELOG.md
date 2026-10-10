@@ -106,8 +106,6 @@ The format is based on
 
 * `mix calendrical.umm_al_qura.verify` audits the embedded Umm al-Qura tables, and with `--kacst` compares them with KACST's official data to detect later revisions.
 
-* `Calendrical.iso_days/4` validates a year, month and day in a calendar and returns its ISO day number in one step; the lunisolar calendars answer it through their own `iso_days/3` from a single computation of the lunar year.
-
 * `ordinal_month_from_traditional/2` on the Chinese, Korean, Vietnamese and Lunar Japanese calendars returns the ordinal month of a traditional month (`{month, :leap}` included), and their `days_in_month/1` returns `{:ambiguous, 29..30}`.
 
 * `use Calendrical.Julian` takes a `:year` option, `:beginning`, `:ending` or `:majority`, the Julian year that gives a year its number, so `new_year_starting_month_and_day: {3, 25}, year: :ending` is the Pisan reckoning. The default is `:beginning`.

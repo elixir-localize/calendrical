@@ -4862,68 +4862,6 @@ defmodule Calendrical do
   end
 
   @doc """
-  Returns the number of days since the start of the epoch for a year, month
-  and day in a calendar, or an error when they are not a valid date in it.
-
-  This is `Date.new/4` and `date_to_iso_days/1` in one step. A calendar that
-  defines `iso_days/3` answers both in a single pass — the lunisolar
-  calendars do, since validating a date and locating it both need the same
-  lunar year — and any other calendar validates, then converts.
-
-  ### Arguments
-
-  * `year`, `month` and `day` are the integer parts of a date in `calendar`.
-
-  * `calendar` is any module implementing the `Calendar` behaviour.
-
-  ### Returns
-
-  * `{:ok, iso_days}` where `iso_days` is the integer number of days since
-    `0000-01-01`, or
-
-  * `{:error, :invalid_date}` when the parts are not a date in `calendar`, or
-
-  * `{:error, exception}` when `calendar` is not a calendar module.
-
-  ### Examples
-
-      iex> Calendrical.iso_days(2019, 1, 1, Calendrical.Gregorian)
-      {:ok, 737425}
-
-      iex> Calendrical.iso_days(2019, 2, 29, Calendrical.Gregorian)
-      {:error, :invalid_date}
-
-      # The Chinese New Year of Y4662 (= AD 2025)
-      iex> {:ok, iso_days} = Calendrical.iso_days(4662, 1, 1, Calendrical.Chinese)
-      iex> Date.from_gregorian_days(iso_days)
-      ~D[2025-01-29]
-
-  """
-  @doc since: "1.4.0"
-  @spec iso_days(Calendar.year(), Calendar.month(), Calendar.day(), Calendar.calendar()) ::
-          {:ok, iso_day_number()} | {:error, :invalid_date | Exception.t()}
-
-  def iso_days(year, month, day, calendar)
-      when is_integer(year) and is_integer(month) and is_integer(day) and is_atom(calendar) do
-    cond do
-      not (Code.ensure_loaded?(calendar) and function_exported?(calendar, :valid_date?, 3)) ->
-        {:error, invalid_calendar_error(calendar)}
-
-      function_exported?(calendar, :iso_days, 3) ->
-        calendar.iso_days(year, month, day)
-
-      true ->
-        with {:ok, date} <- Date.new(year, month, day, calendar) do
-          {:ok, Date.to_gregorian_days(date)}
-        end
-    end
-  end
-
-  def iso_days(_year, _month, _day, _calendar) do
-    {:error, :invalid_date}
-  end
-
-  @doc """
   Returns a date represented by a number of
   days since the start of the epoch.
 

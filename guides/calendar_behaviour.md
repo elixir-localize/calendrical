@@ -156,7 +156,7 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 | `week_of_year/3` | Returns the calendar-aligned `{year, week}`: weeks turn over on the calendar's own week boundary and week 1 holds the first day of the year, so a year that opens mid-week has a short week 1. **Override** for a calendar with week rules of its own. |
 | `iso_week_of_year/3` | Returns the ISO 8601 `{year, week}` of the day. |
 | `week_of_month/3` | Returns `{month, week}`, counting the month's weeks as `week_of_year/3` counts the year's. |
-| `day_of_year/3` | Returns `iso_days(year, month, day) - iso_days(year, 1, 1) + 1`. Works for any month-based calendar. |
+| `day_of_year/3` | Returns `date_to_iso_days(year, month, day) - date_to_iso_days(year, 1, 1) + 1`. Works for any month-based calendar. |
 | `day_of_week/4` | Computes the ISO day-of-week (1=Mon, 7=Sun) using the calendar's `date_to_iso_days/3`. **Override** for calendars whose week starts on a non-Monday (Coptic and Ethiopic both use Saturday). |
 | `cardinal_day/3` | Returns the day unchanged, the day of the month that names the date. **Override** where a month begins within the month that names it, as a year beginning on 25 March does. |
 | `numeric_month/3` | Returns the month unchanged, the number the month is written with in figures. **Override** where dates are written by the months that name them and not by their place in the year. |

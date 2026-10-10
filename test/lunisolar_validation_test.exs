@@ -181,37 +181,4 @@ defmodule Calendrical.LunisolarValidation.Test do
       end
     end
   end
-
-  describe "iso_days/3 and Calendrical.iso_days/4" do
-    for calendar <- @lunisolar do
-      test "#{inspect(calendar)} validates and converts in one pass" do
-        calendar = unquote(calendar)
-
-        for year <- sample_years(calendar), month <- -1..14, day <- [-1, 0, 1, 29, 30, 31] do
-          expected =
-            if calendar.valid_date?(year, month, day),
-              do: {:ok, calendar.date_to_iso_days(year, month, day)},
-              else: {:error, :invalid_date}
-
-          assert calendar.iso_days(year, month, day) == expected, "#{year}-#{month}-#{day}"
-          assert Calendrical.iso_days(year, month, day, calendar) == expected
-        end
-      end
-    end
-
-    test "any calendar validates, then converts" do
-      assert Calendrical.iso_days(2024, 2, 29, Calendrical.Gregorian) ==
-               {:ok, Date.to_gregorian_days(~D[2024-02-29])}
-
-      assert Calendrical.iso_days(2024, 2, 29, Calendar.ISO) ==
-               {:ok, Date.to_gregorian_days(~D[2024-02-29])}
-
-      assert {:error, :invalid_date} = Calendrical.iso_days(2023, 2, 29, Calendrical.Gregorian)
-      assert {:error, :invalid_date} = Calendrical.iso_days(1446, 0, 1, Calendrical.Islamic.Civil)
-      assert {:error, :invalid_date} = Calendrical.iso_days(2025, 1, 1.5, Calendrical.Gregorian)
-
-      assert {:error, %Calendrical.InvalidCalendarModuleError{}} =
-               Calendrical.iso_days(2025, 1, 1, :not_a_calendar)
-    end
-  end
 end

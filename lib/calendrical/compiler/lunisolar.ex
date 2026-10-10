@@ -602,35 +602,6 @@ defmodule Calendrical.Lunisolar do
 
   def valid_date?(_year, _month, _day, _epoch, _location_fun), do: false
 
-  @doc false
-  # An ordinal date's ISO day number as `{:ok, iso_days}` when the date is
-  # valid, or `{:error, :invalid_date}` — `valid_date?/5` and
-  # `date_to_iso_days/5` answered from one pass over the year.
-  def iso_days(year, 13, day, epoch, location_fun)
-      when is_integer(year) and is_integer(day) and day >= 1 do
-    {{new_year, _leap}, _next_solstice, {next_new_year, _next_leap}} =
-      year_suis(year, epoch, location_fun)
-
-    start_of_month = month_start(new_year, 13, location_fun)
-
-    if thirteen_months?(new_year, next_new_year) and day <= next_new_year - start_of_month,
-      do: {:ok, start_of_month + day - 1},
-      else: {:error, :invalid_date}
-  end
-
-  def iso_days(year, month, day, epoch, location_fun)
-      when is_integer(year) and month in 1..@lunar_calendar_months_in_year and is_integer(day) and
-             day >= 1 do
-    new_year = new_year(year, epoch, location_fun)
-    start_of_month = month_start(new_year, month, location_fun)
-
-    if day <= month_start(new_year, month + 1, location_fun) - start_of_month,
-      do: {:ok, start_of_month + day - 1},
-      else: {:error, :invalid_date}
-  end
-
-  def iso_days(_year, _month, _day, _epoch, _location_fun), do: {:error, :invalid_date}
-
   defp leap_lunisolar_year?({start_of_year, end_of_year}) do
     leap_lunisolar_year?(start_of_year, end_of_year)
   end
