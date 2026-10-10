@@ -82,7 +82,7 @@ defmodule Calendrical.MonthAndDayNumbersTest do
     end
   end
 
-  describe "counted_from_one?/0" do
+  describe "a calendar that is no composite" do
     # One of each way a calendar is made, and of each kind of year: by a
     # rule, by the moon and the sun, by the sky, in weeks, and counted from
     # another new-year day.
@@ -99,10 +99,8 @@ defmodule Calendrical.MonthAndDayNumbersTest do
       Calendrical.NRF
     ]
 
-    test "is true of a calendar that is no composite, whose every year is numbered from 1" do
+    test "numbers every year's months and every month's days from 1, and begins a year with them" do
       for calendar <- @counted, year <- years(calendar) do
-        assert calendar.counted_from_one?(), inspect(calendar)
-
         assert calendar.month_numbers(year) == [1..calendar.months_in_year(year)],
                "#{inspect(calendar)} #{year}"
 
@@ -114,18 +112,6 @@ defmodule Calendrical.MonthAndDayNumbersTest do
                  "#{inspect(calendar)} #{year}-#{month}"
         end
       end
-    end
-
-    test "is false of a composite calendar, a year of which has the months that are left" do
-      refute Calendrical.Reform.England.counted_from_one?()
-      assert Calendrical.Reform.England.month_numbers(1751) == [3..12]
-
-      {:ok, composite} =
-        Calendrical.Composite.new(Calendrical.MonthAndDayNumbersTest.FromMarch1700,
-          calendars: [~D[1700-03-01 Calendrical.Gregorian]]
-        )
-
-      refute composite.counted_from_one?()
     end
   end
 

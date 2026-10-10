@@ -671,16 +671,6 @@ defmodule Calendrical.Composite.Compiler do
         do: Calendrical.Base.Common.dated_day_numbers(__MODULE__, year, month)
 
       @doc """
-      Returns whether every year has its months, and every month its
-      days, numbered from 1 with none missing: `false`, since the year
-      and the month a change of calendar falls in have those that are
-      left.
-
-      """
-      @impl true
-      def counted_from_one?, do: false
-
-      @doc """
       Returns the number of days in a week.
 
       """

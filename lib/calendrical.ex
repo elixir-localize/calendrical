@@ -556,23 +556,6 @@ defmodule Calendrical do
   @callback day_numbers(year :: year(), month :: month()) :: [Range.t()]
 
   @doc """
-  Returns whether every year of this calendar has its months, and every
-  month its days, numbered from 1 with none missing.
-
-  Where it is so, `months_in_year/1` and `days_in_month/2` are counts
-  that say which months and days there are, and every year begins on
-  the first day of its first month: one answer, with no year, for every
-  year. A composite calendar answers `false`, since the year and the
-  month it changes calendar in have the months and the days that are
-  left, and each is asked (`month_numbers/1`, `day_numbers/2`).
-
-  `true` is the default. A calendar that answers `month_numbers/1` or
-  `day_numbers/2` for itself answers this too.
-
-  """
-  @callback counted_from_one?() :: boolean()
-
-  @doc """
   Returns the day of a solar term of a Gregorian year.
 
   The 24 solar terms are numbered from `lichun` (立春, index 1), where
