@@ -67,7 +67,8 @@ defmodule Calendrical do
   * **Weeks** — `c:week_of_year/3`, `c:iso_week_of_year/3`,
     `c:week_of_month/3` and `c:days_in_week/0`.
 
-  * **Geometry** — `c:days_in_month/1`, `c:days_in_year/1`,
+  * **Geometry** — `c:years_in_cycle/0`, `c:days_in_month/1`,
+    `c:days_in_year/1`,
     `c:month_numbers/1`, `c:day_numbers/2`, `c:weeks_in_year/1`,
     `c:weeks_in_month/2`,
     `c:dates_in_gregorian_year/3` and the ranges `c:year/1`,
@@ -553,6 +554,20 @@ defmodule Calendrical do
 
   """
   @callback day_numbers(year :: year(), month :: month()) :: [Range.t()]
+
+  @doc """
+  Returns the number of years after which this calendar's years repeat.
+
+  Every year has the months, the days of each and the weekdays of the
+  year that many years before it, so what is true of every year of one
+  cycle is true of every year: the Gregorian calendar answers `400`,
+  the Julian `28` and the tabular Islamic calendars `210`. A calendar
+  whose years are reckoned from the sky, or by a rule that comes round
+  too seldom to be walked, answers `{:error, :undefined}`, which is the
+  default.
+
+  """
+  @callback years_in_cycle() :: pos_integer() | {:error, :undefined}
 
   @doc """
   Returns the number of months in a year (without a year).

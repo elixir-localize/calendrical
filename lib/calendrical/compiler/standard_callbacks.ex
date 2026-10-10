@@ -150,6 +150,16 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       defoverridable month_numbers: 1, day_numbers: 2
 
+      @doc """
+      Returns the number of years after which this calendar's years
+      repeat: `{:error, :undefined}`, in a calendar that says no cycle.
+
+      """
+      unquote(impl)
+      def years_in_cycle, do: {:error, :undefined}
+
+      defoverridable years_in_cycle: 0
+
       defoverridable cardinal_day: 3,
                      date_from_day_of_year: 2,
                      named_month: 2,

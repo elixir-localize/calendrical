@@ -71,6 +71,15 @@ defmodule Calendrical.Julian do
   @behaviour Calendar
   @behaviour Calendrical
   use Calendrical.Compiler.StandardCallbacks
+
+  @doc """
+  Returns the number of years after which the Julian calendar's years
+  repeat, their days and their weekdays alike: 28, seven of its cycles
+  of four years.
+
+  """
+  @impl true
+  def years_in_cycle, do: 28
   @before_compile Calendrical.Compiler.DateCheck
 
   @type year :: -9999..-1 | 1..9999

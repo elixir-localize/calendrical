@@ -498,4 +498,12 @@ defmodule Calendrical.Coptic do
   def days_in_month(month) when month in 1..12, do: 30
   def days_in_month(13), do: {:ambiguous, 5..6}
   def days_in_month(_month), do: {:error, :undefined}
+
+  @doc """
+  Returns the number of years after which this calendar's years repeat,
+  their days and their weekdays alike: 28, seven of its cycles of four years.
+
+  """
+  @impl true
+  def years_in_cycle, do: 28
 end

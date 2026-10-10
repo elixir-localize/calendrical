@@ -312,4 +312,12 @@ defmodule Calendrical.Buddhist do
   @impl true
   def days_in_month(month) when month in 1..12, do: Calendrical.Gregorian.days_in_month(month)
   def days_in_month(_month), do: {:error, :undefined}
+
+  @doc """
+  Returns the number of years after which this calendar's years repeat,
+  their days and their weekdays alike: 400, the Gregorian calendar's cycle of leap years, whose rule it follows.
+
+  """
+  @impl true
+  def years_in_cycle, do: 400
 end

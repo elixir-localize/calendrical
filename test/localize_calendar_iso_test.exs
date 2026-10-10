@@ -81,6 +81,10 @@ defmodule Calendrical.LocalizeCalendarISOTest do
       assert mismatches == []
     end
 
+    test "for the years it comes round in" do
+      assert @localize.years_in_cycle() == @calendrical.years_in_cycle()
+    end
+
     test "for a year" do
       for year <- @years do
         for callback <- [

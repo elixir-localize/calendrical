@@ -16,6 +16,15 @@ defmodule Calendrical.Compiler.Month do
       @behaviour Calendrical
       use Calendrical.Compiler.StandardCallbacks
 
+      @doc """
+      Returns the number of years after which this calendar's years
+      repeat, their days and their weekdays alike: 400, the Gregorian
+      calendar's cycle of leap years, which is a whole number of weeks.
+
+      """
+      @impl true
+      def years_in_cycle, do: 400
+
       import Localize.Macros
 
       import Calendrical,

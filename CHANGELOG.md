@@ -10,6 +10,8 @@ The format is based on
 
 ### Breaking changes
 
+* `years_in_cycle/0` is a required callback, the number of years after which a calendar's years repeat, their days and their weekdays alike: 400 in the Gregorian calendar and those that follow its leap rule, 28 in the Julian, Coptic and Ethiopic, 210 in the tabular Islamic, and `{:error, :undefined}`, the default, in a calendar reckoned from the sky and in a composite.
+
 * `month_numbers/1` and `day_numbers/2` are required callbacks, the months a year has and the days a month has as runs of their numbers: `Calendrical.Reform.England` answers `[3..12]` for 1751 and `[1..2, 14..30]` for September 1752, where `months_in_year/1` and `days_in_month/2` are counts. Every calendar answers both, and one written by hand defines them.
 
 * `named_month/2` and `date_from_day_of_year/2` are required callbacks, the days of a named month and the date of a day of a year, and `Calendrical.named_month/3` and `date_from_day_of_year/3` ask the calendar. A month carries the name its own dates are of, where it was named by its number: the ninth month of a Hebrew year of twelve is Sivan, and was answered with Tamuz's days.

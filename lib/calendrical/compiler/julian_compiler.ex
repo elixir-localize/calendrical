@@ -25,6 +25,10 @@ defmodule Calendrical.Julian.Compiler do
       @behaviour Calendrical
       use Calendrical.Compiler.StandardCallbacks, impl: false
 
+      # The Julian calendar's years repeat, their days and their weekdays
+      # alike, after 28: seven of its cycles of four years.
+      def years_in_cycle, do: 28
+
       {start_month, start_day} = Keyword.get(options, :new_year_starting_month_and_day, {1, 1})
 
       @new_year_starting_month start_month

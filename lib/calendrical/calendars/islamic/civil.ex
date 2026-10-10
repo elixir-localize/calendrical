@@ -288,4 +288,12 @@ defmodule Calendrical.Islamic.Civil do
   def days_in_month(month) when month in [1, 3, 5, 7, 9, 11], do: 30
   def days_in_month(month) when month in [2, 4, 6, 8, 10], do: 29
   def days_in_month(_month), do: {:error, :undefined}
+
+  @doc """
+  Returns the number of years after which this calendar's years repeat,
+  their days and their weekdays alike: 210, seven of its cycles of thirty years.
+
+  """
+  @impl true
+  def years_in_cycle, do: 210
 end

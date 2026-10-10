@@ -405,4 +405,12 @@ defmodule Calendrical.Indian do
   def days_in_month(month) when month in 2..6, do: 31
   def days_in_month(month) when month in 7..12, do: 30
   def days_in_month(_month), do: {:error, :undefined}
+
+  @doc """
+  Returns the number of years after which this calendar's years repeat,
+  their days and their weekdays alike: 400, the Gregorian calendar's cycle of leap years, whose rule it follows.
+
+  """
+  @impl true
+  def years_in_cycle, do: 400
 end
