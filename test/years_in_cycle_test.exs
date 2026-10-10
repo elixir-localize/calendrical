@@ -71,7 +71,7 @@ defmodule Calendrical.YearsInCycleTest do
 
     test "every calendar that names a cycle has, each year, the layout of the year a cycle before" do
       for calendar <- @calendars,
-          cycle = apply(calendar, :years_in_cycle, []),
+          cycle = calendar.years_in_cycle(),
           is_integer(cycle) do
         first_year = 1000
 

@@ -39,8 +39,11 @@ defmodule Calendrical.CalendarContract.Test do
 
   for calendar <- @calendars do
     describe "#{inspect(calendar)}" do
+      # The calendar is also given through the context, for a test that
+      # asks it a question each calendar answers with one of several shapes,
+      # of which the compiler knows the one a calendar named in the test has.
       setup do
-        {:ok, date: Date.convert!(~D[2025-06-15], unquote(calendar))}
+        {:ok, date: Date.convert!(~D[2025-06-15], unquote(calendar)), calendar: unquote(calendar)}
       end
 
       test "valid_date?/3 is false for parts that are not a date", %{date: date} do
@@ -157,8 +160,8 @@ defmodule Calendrical.CalendarContract.Test do
 
       # The numbers a year's months and a month's days have are those of
       # its dates: the date is among them, and they are as many as counted.
-      test "numbers the months of a year and the days of a month", %{date: date} do
-        calendar = unquote(calendar)
+      test "numbers the months of a year and the days of a month",
+           %{date: date, calendar: calendar} do
         months = Enum.flat_map(calendar.month_numbers(date.year), &Enum.to_list/1)
         days = Enum.flat_map(calendar.day_numbers(date.year, date.month), &Enum.to_list/1)
 
@@ -167,15 +170,13 @@ defmodule Calendrical.CalendarContract.Test do
         assert calendar.month_numbers(nil) == []
         assert calendar.day_numbers(date.year, 0) == []
 
-        if apply(calendar, :calendar_base, []) == :month do
+        if calendar.calendar_base() == :month do
           assert date.month in months
         end
       end
 
-      test "says how many months a year has with no year" do
-        # Asked through `apply/3`, since each calendar's own answer is one
-        # of the three and the compiler knows which.
-        case apply(unquote(calendar), :months_in_year, []) do
+      test "says how many months a year has with no year", %{calendar: calendar} do
+        case calendar.months_in_year() do
           months when is_integer(months) -> assert months > 0
           {:ambiguous, counts} -> assert Enum.all?(counts, &(&1 > 0))
           other -> assert other == {:error, :undefined}
