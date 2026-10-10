@@ -56,6 +56,14 @@ defmodule Calendrical do
     `c:cardinal_day/3` names a date's day, and `c:numeric_month/3`
     gives the number its month is written with in figures.
 
+  * **Traditional months** — `c:traditional_months/1` lists a year's
+    months as they are named, `c:lunar_month_of_year/2` and
+    `c:ordinal_month_from_traditional/2` turn a month's place into its
+    name and back, and `c:leap_month/1` and `c:traditional_leap_month/1`
+    say which month of a year is its leap month. A lunisolar calendar
+    answers with its own months; any other calendar's months are their
+    own numbering, and it has no leap month.
+
   * **Weeks** — `c:week_of_year/3`, `c:iso_week_of_year/3`,
     `c:week_of_month/3` and `c:days_in_week/0`.
 
@@ -72,11 +80,8 @@ defmodule Calendrical do
   question arises: a leap year's year-less month count
   (`c:months_in_leap_year/0`), a per-date CLDR type
   (`c:cldr_calendar_type/3`), the calendars a composite's dates are
-  written in (`c:parsing_calendars/0`), the family resolver
-  (`c:calendar_from_cldr_calendar_type/1`) and the traditional months of a lunisolar
-  calendar (`c:lunar_month_of_year/2`,
-  `c:ordinal_month_from_traditional/2`, `c:leap_month/1`,
-  `c:traditional_leap_month/1`).
+  written in (`c:parsing_calendars/0`) and the family resolver
+  (`c:calendar_from_cldr_calendar_type/1`).
 
   Localize validates a calendar against the callbacks it asks —
   identity, the year notions, months, weeks and arithmetic — before
@@ -551,6 +556,10 @@ defmodule Calendrical do
   year whose leap month follows month 2, ordinal month 3 is `{2, :leap}`
   and ordinal month 4 is `3`.
 
+  A calendar whose months are their own numbering answers the month
+  itself, and `{:error, :invalid_month}` for a place the year does not
+  have.
+
   """
   @callback lunar_month_of_year(year :: Calendar.year(), month :: Calendar.month()) ::
               traditional_month() | {:error, :invalid_month}
@@ -559,15 +568,16 @@ defmodule Calendrical do
   Returns the position in a year of a traditional lunisolar month.
 
   The inverse of `c:lunar_month_of_year/2`: given a traditional month,
-  with `{month, :leap}` for the leap month, it answers the ordinal
-  month a date of this calendar carries, or an error when the year has
-  no such month.
+  with `{month, :leap}` for the leap month, it answers `{:ok, month}`
+  with the ordinal month a date of this calendar carries, or an error
+  when the year has no such month. A calendar whose months are their
+  own numbering answers the month itself, and has no leap month.
 
   """
   @callback ordinal_month_from_traditional(
               year :: Calendar.year(),
               traditional_month :: traditional_month()
-            ) :: Calendar.month() | {:error, :invalid_month}
+            ) :: {:ok, Calendar.month()} | {:error, :invalid_month | :invalid_leap_month}
 
   @doc """
   Returns the ordinal month that is the leap month of a year, or `nil`
@@ -583,13 +593,19 @@ defmodule Calendrical do
   """
   @callback traditional_leap_month(year :: Calendar.year()) :: Calendar.month() | nil
 
-  # Traditional month numbering exists only for lunisolar calendars;
-  # every other calendar's months are their own numbering, so callers
-  # must tolerate these callbacks' absence.
-  @optional_callbacks lunar_month_of_year: 2,
-                      ordinal_month_from_traditional: 2,
-                      leap_month: 1,
-                      traditional_leap_month: 1
+  @doc """
+  Returns a year's months in order, named traditionally, with any
+  leap month among them.
+
+  The nth element names the year's nth ordinal month, the month a date
+  of this calendar carries: its traditional number, or `{month, :leap}`
+  for the leap month that follows traditional `month`. A calendar whose
+  months are their own numbering answers `1` up to the year's month
+  count, and every calendar answers, so a caller asks any calendar for
+  the months of a year as they are named.
+
+  """
+  @callback traditional_months(year :: Calendar.year()) :: [traditional_month()]
 
   @doc """
   Returns the CLDR calendar type whose data names the months and days
@@ -2520,13 +2536,7 @@ defmodule Calendrical do
   end
 
   def traditional_months(year, calendar) do
-    months_in_year = calendar.months_in_year(year)
-
-    if Code.ensure_loaded?(calendar) and function_exported?(calendar, :lunar_month_of_year, 2) do
-      for month <- 1..months_in_year, do: calendar.lunar_month_of_year(year, month)
-    else
-      Enum.to_list(1..months_in_year)
-    end
+    calendar.traditional_months(year)
   end
 
   @doc """

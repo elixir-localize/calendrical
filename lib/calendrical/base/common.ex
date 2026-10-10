@@ -230,6 +230,55 @@ defmodule Calendrical.Base.Common do
     Enum.all?(@calendar_behaviours, &(&1 in declared))
   end
 
+  # The traditional months of a calendar whose months are their own
+  # numbering: each is named by its place in the year, and none is a leap
+  # month. A lunisolar calendar answers the first two for itself.
+  def lunar_month_of_year(calendar, year, month)
+      when is_integer(year) and is_integer(month) and month >= 1 do
+    if month <= months_in(calendar, year), do: month, else: {:error, :invalid_month}
+  end
+
+  def lunar_month_of_year(_calendar, _year, _month), do: {:error, :invalid_month}
+
+  def ordinal_month_from_traditional(calendar, year, month)
+      when is_integer(year) and is_integer(month) and month >= 1 do
+    if month <= months_in(calendar, year), do: {:ok, month}, else: {:error, :invalid_month}
+  end
+
+  def ordinal_month_from_traditional(_calendar, year, {_month, :leap}) when is_integer(year),
+    do: {:error, :invalid_leap_month}
+
+  def ordinal_month_from_traditional(_calendar, _year, _month), do: {:error, :invalid_month}
+
+  # A year's months in order as they are named: the months it numbers, and
+  # its leap month after the month it follows. Both are the calendar's own
+  # to say (`traditional_leap_month/1`, `months_in_year/1`), so a year is
+  # asked for its leap month once, and no month for its name.
+  def traditional_months(calendar, year) when is_integer(year) do
+    months = months_in(calendar, year)
+
+    case calendar.traditional_leap_month(year) do
+      follows when is_integer(follows) ->
+        Enum.flat_map(1..(months - 1)//1, &with_leap_month_after(&1, follows))
+
+      _no_leap_month ->
+        Enum.to_list(1..months//1)
+    end
+  end
+
+  def traditional_months(_calendar, _year), do: []
+
+  defp with_leap_month_after(month, month), do: [month, {month, :leap}]
+  defp with_leap_month_after(month, _follows), do: [month]
+
+  # The months a year has, which is none for a year the calendar lacks.
+  defp months_in(calendar, year) do
+    case calendar.months_in_year(year) do
+      months when is_integer(months) -> months
+      _no_such_year -> 0
+    end
+  end
+
   # A composite calendar answers for the days of its years, and for a shift
   # of years and months, itself.
   def composite?(calendar) do

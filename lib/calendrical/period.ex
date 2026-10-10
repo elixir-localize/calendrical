@@ -87,14 +87,8 @@ defmodule Calendrical.Period do
 
   # The ordinal position of a traditional month: the same number in a
   # calendar without leap months.
-  defp ordinal_month_from_traditional(calendar, year, traditional_month) do
-    if Code.ensure_loaded?(calendar) and
-         function_exported?(calendar, :ordinal_month_from_traditional, 2) do
-      calendar.ordinal_month_from_traditional(year, traditional_month)
-    else
-      {:ok, traditional_month}
-    end
-  end
+  defp ordinal_month_from_traditional(calendar, year, traditional_month),
+    do: calendar.ordinal_month_from_traditional(year, traditional_month)
 
   defp periods_in_year(months_per_period),
     do: div(@traditional_months_in_year, months_per_period)
