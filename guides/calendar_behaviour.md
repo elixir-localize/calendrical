@@ -158,6 +158,13 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 | `week_of_month/3` | Returns `{month, week}`, counting the month's weeks as `week_of_year/3` counts the year's. |
 | `day_of_year/3` | Returns `iso_days(year, month, day) - iso_days(year, 1, 1) + 1`. Works for any month-based calendar. |
 | `day_of_week/4` | Computes the ISO day-of-week (1=Mon, 7=Sun) using the calendar's `date_to_iso_days/3`. **Override** for calendars whose week starts on a non-Monday (Coptic and Ethiopic both use Saturday). |
+| `cardinal_day/3` | Returns the day unchanged, the day of the month that names the date. **Override** where a month begins within the month that names it, as a year beginning on 25 March does. |
+| `numeric_month/3` | Returns the month unchanged, the number the month is written with in figures. **Override** where dates are written by the months that name them and not by their place in the year. |
+| `lunar_month_of_year/2` | Returns the month unchanged, or `{:error, :invalid_month}` for a place the year does not have. **Override** in a lunisolar calendar, with `{month, :leap}` for a leap month. |
+| `ordinal_month_from_traditional/2` | Returns `{:ok, month}` for a month the year has, and an error for a leap month, since the calendar has none. **Override** with `lunar_month_of_year/2`. |
+| `leap_month/1` and `traditional_leap_month/1` | Return `nil`: no year has a leap month. **Override** with `lunar_month_of_year/2`. |
+| `traditional_months/1` | Returns the year's months in order as they are named, built from `traditional_leap_month/1` and `months_in_year/1`. |
+| `solar_term/2` | Returns the day of a solar term of a Gregorian year at the Chinese calendar's meridian. **Override** in a calendar reckoned at a place of its own. |
 
 ### Period counts
 
@@ -170,6 +177,10 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 | `days_in_year/1` | Computes `date_to_iso_days(year + 1, 1, 1) - date_to_iso_days(year, 1, 1)`. **Override** for an explicit constant when known. |
 | `days_in_month/1` | Returns `{:error, :undefined}`. **Override** with the month's length where it has as many days in every year, and `{:ambiguous, range}` where its length depends on the year, as every built-in calendar does. |
 | `days_in_month/2` | Computes the difference between the start of the month and the start of the next month. **Override** for any non-trivial calendar (this is one of the most commonly overridden callbacks). |
+| `month_numbers/1` | Returns `[1..months_in_year(year)]`, the months a year has as runs of their numbers, and `[]` for a year the calendar does not have. |
+| `day_numbers/2` | Returns `[1..days_in_month(year, month)]`, the days a month has as runs of their numbers, and `[]` for a month the year does not have. |
+| `weeks_in_month/2` | Returns the number of weeks `week_of_month/3` names for the month. |
+| `years_in_cycle/0` | Returns `{:error, :undefined}`. **Override** with the number of years after which the calendar's years repeat, their days and their weekdays alike, where its rule has one. |
 | `leap_year?/1` | **Not provided by default.** Every calendar must define its own `leap_year?/1`. |
 
 ### Period ranges
@@ -182,12 +193,15 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 | `semester/2` | Returns six traditional months, placed as `quarter/2` places them. |
 | `month/2` | Returns a `Date.Range` covering the first to last day of the given month. |
 | `week/2` | Returns a `Date.Range` of the week's days, cut to the year. |
+| `month_week/3` | Returns a `Date.Range` of the days of the nth week of a month, as `week_of_month/3` numbers them. |
+| `named_month/2` | Returns one `Date.Range` for each month of the year that carries the name, in order: two where a year begins within a month. |
+| `date_from_day_of_year/2` | Returns the date of a day of the year, counted from the year's first day: the inverse of `day_of_year/3`. |
 
 ### Arithmetic
 
 | Callback | Default behaviour |
 |---|---|
-| `plus/5` and `plus/6` | Adds an increment of `:months` to a `{year, month, day}`. Used internally by `shift_date/4`. The default handles only `:months`; calendars that need `:years`, `:weeks`, etc. should override. |
+| `plus/5` and `plus/6` | Adds an increment of `:years`, `:quarters`, `:months`, `:weeks` or `:days` to a `{year, month, day}`. Used internally by `shift_date/4`. With `coerce: true` a month or a day the resulting year or month does not have is brought back into it. |
 | `diff/3` | Counts the whole `:years`, `:quarters`, `:months`, `:weeks` or `:days` from one `{year, month, day}` to another, the inverse of `plus/6`. The Hebrew and lunisolar calendars override it with a faster month count. |
 | `shift_date/4` | Delegates to `Calendrical.shift_date/5` with the calendar module. |
 | `shift_time/5` | Delegates to `Calendar.ISO.shift_time/5`. |
