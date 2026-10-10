@@ -252,11 +252,15 @@ defmodule Calendrical.Base.Common do
   # that have days, and a month's days those of its dates.
   def dated_month_numbers(calendar, year) when is_integer(year) do
     1..months_in(calendar, year)//1
-    |> Enum.filter(&match?(%Date.Range{}, calendar.month(year, &1)))
+    |> Enum.filter(&has_days?(calendar.days_in_month(year, &1)))
     |> runs()
   end
 
   def dated_month_numbers(_calendar, _year), do: []
+
+  # A month has days where the calendar counts some in it: the count is
+  # asked, and the month's dates are not built to find that there are any.
+  defp has_days?(days), do: is_integer(days) and days > 0
 
   def dated_day_numbers(calendar, year, month) when is_integer(year) and is_integer(month) do
     case calendar.month(year, month) do
