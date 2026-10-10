@@ -324,6 +324,7 @@ defmodule Calendrical.JulianVariantsTest do
         assert variant.month_of_year(year, month, day) == month
         assert variant.cardinal_month(month) == julian.month
         assert variant.cardinal_day(year, month, day) == julian.day
+        assert variant.numeric_month(year, month, day) == julian.month
       end
     end
   end

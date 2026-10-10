@@ -10,6 +10,8 @@ The format is based on
 
 ### Breaking changes
 
+* `cardinal_day/3` and `months_in_year/0` are required callbacks, and `numeric_month/3` is a new one, the number a date's month is written with in figures: every calendar answers all three, so no caller asks a calendar whether it can. A calendar made with `use Calendrical.Behaviour` or a compiler has each by default (the day and the month themselves); one written by hand defines them.
+
 * The `plus/6` callback is declared for each of the five periods every calendar answers it for (`:years`, `:quarters`, `:months`, `:weeks`, `:days`), where its type and documentation named `:months` and `:quarters` alone. A calendar written by hand answers all five, as one made with `use Calendrical.Behaviour` or a compiler does.
 
 * `Calendrical.validate_calendar/1` and `Calendrical.calendar_module?/1` take a module for a calendar when it implements the `Calendar` and `Calendrical` behaviours, where any module that exported `cldr_calendar_type/0` was one. A calendar written without `use Calendrical.Behaviour` or one of the compilers declares both with `@behaviour`.
@@ -66,7 +68,7 @@ The format is based on
 
 * `months_in_leap_year/0`, `parsing_calendars/0` and `calendar_from_cldr_calendar_type/1` are declared optional callbacks, the probed contract they already were, and the moduledoc sets out the behaviour's required and optional callbacks by what they answer.
 
-* `Calendrical.strftime/3` writes `%d` and `%m` as the named day and month for a calendar that renumbers its days (one exporting `cardinal_day/3`), so `%d %B %Y` of a Julian year-start date is one date: "25 March 1750" from `March25`'s month 1 day 1.
+* `Calendrical.strftime/3` writes `%d` and `%m` as the day and the month every calendar says its date is written with (`cardinal_day/3`, `numeric_month/3`), so `%d %B %Y` of a Julian year-start date is one date: "25 March 1750" from `March25`'s month 1 day 1.
 
 * Every calendar answers `calendar_from_cldr_calendar_type/1` with the calendar module of its family whose CLDR calendar type is the one given, and Calendrical registers itself through `Localize.Calendar.register_provider/1` as its application starts. Localize writes a date in the calendar a locale's `-u-ca-` names, which a `Calendar.ISO` value has no family of its own to supply: `en-u-ca-hebrew` writes 2026-05-16 as "29 Iyar 5786".
 

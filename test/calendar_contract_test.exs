@@ -105,6 +105,34 @@ defmodule Calendrical.CalendarContract.Test do
         assert {:error, _} = calendar.week(date.year, 99)
       end
 
+      # The behaviour is one surface every calendar has, so a consumer asks
+      # a calendar a question and never whether it can.
+      test "answers every callback the behaviour requires" do
+        calendar = unquote(calendar)
+        optional = Calendrical.behaviour_info(:optional_callbacks)
+
+        for {callback, arity} <- Calendrical.behaviour_info(:callbacks) -- optional do
+          assert function_exported?(calendar, callback, arity), "#{callback}/#{arity}"
+        end
+      end
+
+      test "names a date's day, and writes its month in figures", %{date: date} do
+        calendar = unquote(calendar)
+
+        assert calendar.cardinal_day(date.year, date.month, date.day) in 1..31
+        assert calendar.numeric_month(date.year, date.month, date.day) in 1..53
+      end
+
+      test "says how many months a year has with no year" do
+        # Asked through `apply/3`, since each calendar's own answer is one
+        # of the three and the compiler knows which.
+        case apply(unquote(calendar), :months_in_year, []) do
+          months when is_integer(months) -> assert months > 0
+          {:ambiguous, counts} -> assert Enum.all?(counts, &(&1 > 0))
+          other -> assert other == {:error, :undefined}
+        end
+      end
+
       test "a month of the year names a month of the CLDR calendar", %{date: date} do
         calendar = unquote(calendar)
 

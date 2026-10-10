@@ -70,6 +70,7 @@ defmodule Calendrical.Julian do
 
   @behaviour Calendar
   @behaviour Calendrical
+  use Calendrical.Compiler.StandardCallbacks
   @before_compile Calendrical.Compiler.DateCheck
 
   @type year :: -9999..-1 | 1..9999

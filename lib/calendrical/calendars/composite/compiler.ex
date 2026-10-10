@@ -21,6 +21,7 @@ defmodule Calendrical.Composite.Compiler do
           ] do
       @behaviour Calendar
       @behaviour Calendrical
+      use Calendrical.Compiler.StandardCallbacks
 
       @type year :: -9999..9999
       @type month :: 1..12
@@ -359,13 +360,17 @@ defmodule Calendrical.Composite.Compiler do
       """
       @impl true
       def cardinal_day(year, month, day) do
-        calendar = calendar_for_date(year, month, day)
+        calendar_for_date(year, month, day).cardinal_day(year, month, day)
+      end
 
-        if Code.ensure_loaded?(calendar) and function_exported?(calendar, :cardinal_day, 3) do
-          calendar.cardinal_day(year, month, day)
-        else
-          day
-        end
+      @doc """
+      Returns the number a date's month is written with in figures: the
+      member calendar's.
+
+      """
+      @impl true
+      def numeric_month(year, month, day) do
+        calendar_for_date(year, month, day).numeric_month(year, month, day)
       end
 
       @doc """

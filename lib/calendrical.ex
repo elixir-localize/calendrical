@@ -53,8 +53,8 @@ defmodule Calendrical do
   * **Months** — `c:month_of_year/3` is a date's month of the year and
     `c:cardinal_month/1` names the CLDR month it stands for, so the two
     compose: a fiscal year beginning in July names its month 1 July.
-    `c:cardinal_day/3` (optional) names the day where a calendar
-    renumbers them.
+    `c:cardinal_day/3` names a date's day, and `c:numeric_month/3`
+    gives the number its month is written with in figures.
 
   * **Weeks** — `c:week_of_year/3`, `c:iso_week_of_year/3`,
     `c:week_of_month/3` and `c:days_in_week/0`.
@@ -68,12 +68,11 @@ defmodule Calendrical do
     conversion runs through.
 
   The optional callbacks are those a calendar answers only where the
-  question arises: a year-less month count (`c:months_in_year/0`,
-  `c:months_in_leap_year/0`), a per-date CLDR type
+  question arises: a leap year's year-less month count
+  (`c:months_in_leap_year/0`), a per-date CLDR type
   (`c:cldr_calendar_type/3`), the calendars a composite's dates are
   written in (`c:parsing_calendars/0`), the family resolver
-  (`c:calendar_from_cldr_calendar_type/1`), a renumbered day
-  (`c:cardinal_day/3`) and the traditional months of a lunisolar
+  (`c:calendar_from_cldr_calendar_type/1`) and the traditional months of a lunisolar
   calendar (`c:lunar_month_of_year/2`,
   `c:ordinal_month_from_traditional/2`, `c:leap_month/1`,
   `c:traditional_leap_month/1`).
@@ -359,14 +358,13 @@ defmodule Calendrical do
   @callback cardinal_month(month :: Calendar.month()) :: Calendar.month()
 
   @doc """
-  Returns the day of the month that names a date's day, where it is not
-  the day field itself.
+  Returns the day of the month that names a date's day.
 
   A calendar whose months are counted from the year's start can begin a
   month within the month that names it: in `Calendrical.Julian.March25`
   the year begins on 25 March, so its month 1 day 1 is named 25 March,
   and this callback answers `25`. A calendar whose day field is its own
-  name need not implement it; callers fall back to the day field.
+  name answers the day, which is the default every calendar has.
 
   """
   @callback cardinal_day(
@@ -376,10 +374,26 @@ defmodule Calendrical do
             ) ::
               Calendar.day()
 
-  # Only a calendar whose month 1 begins within the month that names it
-  # renumbers its days, so callers must tolerate this callback's absence
-  # and fall back to the date's day field.
-  @optional_callbacks cardinal_day: 3
+  @doc """
+  Returns the number a date's month is written with in figures.
+
+  It is the month field in a calendar whose months are numbered as they
+  are written, which is the default every calendar has: the first month
+  of a fiscal year beginning in July is written `01`, and the ninth
+  month of a Hebrew year `09`. A calendar that counts its months from a
+  new-year day and writes its dates by the months that name them answers
+  the month that names the date: `Calendrical.Julian.March25`'s month 1
+  is written `03`, as `c:cardinal_day/3` writes its first day `25`, so
+  the date in figures and the date in words are one date.
+  `Calendrical.strftime/3` writes `%d` and `%m` from this pair.
+
+  """
+  @callback numeric_month(
+              year :: Calendar.year(),
+              month :: Calendar.month(),
+              day :: Calendar.day()
+            ) ::
+              Calendar.month()
 
   @doc """
   Returns a tuple of `{year, week_in_year}` for a given `year`, `month` or `week`, and `day`
@@ -514,12 +528,6 @@ defmodule Calendrical do
   """
   @callback months_in_year() ::
               month() | {:ambiguous, Range.t() | [pos_integer()]} | {:error, :undefined}
-
-  # Year-less month count is only defined for calendars whose month
-  # structure is knowable without a year. Calendars built on the month
-  # compiler and those using the behaviour default implement it; others
-  # may not, so callers must tolerate its absence.
-  @optional_callbacks months_in_year: 0
 
   @doc """
   Returns the number of months in a leap year (without a year).
@@ -1441,34 +1449,31 @@ defmodule Calendrical do
 
   # `Calendar.strftime/3` writes `%d` and `%m` from the date's fields,
   # which name the day and month only where the calendar's months are the
-  # named ones. A calendar that renumbers its days — a Julian year-start
-  # variant, whose months are counted from the new-year day — exports
-  # `cardinal_day/3`, and its `%d` and `%m` are written as the named day
-  # and month, so `%d %B` stays one date. `%%` is kept literal, and the
-  # padding modifiers (`%-d`, `%_m`, `%03d`) are honoured.
+  # named ones. Every calendar says which day names a date
+  # (`cardinal_day/3`) and which number its month is written with
+  # (`numeric_month/3`): the fields themselves in most, and the named day
+  # and month in a Julian year-start variant, whose months are counted from
+  # the new-year day, so `%d %B` stays one date. `%%` is kept literal, and
+  # the padding modifiers (`%-d`, `%_m`, `%03d`) are honoured.
   defp named_numeric_format(format, %{year: year, month: month, day: day} = value)
        when is_binary(format) and is_integer(year) and is_integer(month) and is_integer(day) do
-    calendar = Map.get(value, :calendar)
-
-    if is_atom(calendar) and not is_nil(calendar) and Code.ensure_loaded?(calendar) and
-         function_exported?(calendar, :cardinal_day, 3) do
-      named_day = calendar.cardinal_day(year, month, day)
-      named_month = cardinal_month_number(calendar, year, month, day)
-
-      format
-      |> String.split("%%")
-      |> Enum.map_join("%%", &replace_numeric_fields(&1, named_day, named_month))
-    else
-      format
+    case validate_calendar(Map.get(value, :calendar)) do
+      {:ok, calendar} -> numeric_fields_as_written(format, calendar, year, month, day)
+      {:error, _no_calendar} -> format
     end
   end
 
   defp named_numeric_format(format, _value), do: format
 
-  defp cardinal_month_number(calendar, year, month, day) do
-    case calendar.month_of_year(year, month, day) do
-      month_of_year when is_integer(month_of_year) -> calendar.cardinal_month(month_of_year)
-      _not_a_month -> month
+  defp numeric_fields_as_written(format, calendar, year, month, day) do
+    case {calendar.cardinal_day(year, month, day), calendar.numeric_month(year, month, day)} do
+      {^day, ^month} ->
+        format
+
+      {named_day, named_month} ->
+        format
+        |> String.split("%%")
+        |> Enum.map_join("%%", &replace_numeric_fields(&1, named_day, named_month))
     end
   end
 

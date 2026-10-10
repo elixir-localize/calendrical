@@ -329,11 +329,8 @@ defmodule Calendrical.Base.Common do
   end
 
   defp fixed_months_in_year(calendar) do
-    with true <-
-           Code.ensure_loaded?(calendar) and function_exported?(calendar, :months_in_year, 0),
-         months when is_integer(months) <- calendar.months_in_year() do
-      months
-    else
+    case calendar.months_in_year() do
+      months when is_integer(months) -> months
       _varies_or_unknown -> :varies
     end
   end

@@ -14,6 +14,7 @@ defmodule Calendrical.Compiler.Month do
     quote location: :keep do
       @behaviour Calendar
       @behaviour Calendrical
+      use Calendrical.Compiler.StandardCallbacks
 
       import Localize.Macros
 

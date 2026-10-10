@@ -23,6 +23,7 @@ defmodule Calendrical.Julian.Compiler do
     quote bind_quoted: [options: options] do
       @behaviour Calendar
       @behaviour Calendrical
+      use Calendrical.Compiler.StandardCallbacks, impl: false
 
       {start_month, start_day} = Keyword.get(options, :new_year_starting_month_and_day, {1, 1})
 
@@ -361,6 +362,12 @@ defmodule Calendrical.Julian.Compiler do
       # month 1 the day field counts from the new-year day.
       def cardinal_day(_year, month, day) do
         named_day(month, day)
+      end
+
+      # A date of a year-start variant is written in figures by the Julian
+      # month that names it, as it is in words: 25 March, 25/03.
+      def numeric_month(_year, month, _day) do
+        counted_to_named(month)
       end
 
       def day_of_year(year, month, day) do

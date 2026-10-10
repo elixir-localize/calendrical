@@ -13,6 +13,7 @@ defmodule Calendrical.Compiler.Week do
     quote location: :keep do
       @behaviour Calendar
       @behaviour Calendrical
+      use Calendrical.Compiler.StandardCallbacks
 
       # @type year :: -9999..9999
       # @type month :: 1..12

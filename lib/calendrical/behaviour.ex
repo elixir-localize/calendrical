@@ -194,6 +194,7 @@ defmodule Calendrical.Behaviour do
 
       @behaviour Calendar
       @behaviour Calendrical
+      use Calendrical.Compiler.StandardCallbacks
       @before_compile Calendrical.Compiler.DateCheck
 
       @days_in_week unquote(days_in_week)
