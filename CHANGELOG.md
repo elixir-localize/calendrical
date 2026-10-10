@@ -10,6 +10,8 @@ The format is based on
 
 ### Breaking changes
 
+* The `plus/6` callback is declared for each of the five periods every calendar answers it for (`:years`, `:quarters`, `:months`, `:weeks`, `:days`), where its type and documentation named `:months` and `:quarters` alone. A calendar written by hand answers all five, as one made with `use Calendrical.Behaviour` or a compiler does.
+
 * `Calendrical.validate_calendar/1` and `Calendrical.calendar_module?/1` take a module for a calendar when it implements the `Calendar` and `Calendrical` behaviours, where any module that exported `cldr_calendar_type/0` was one. A calendar written without `use Calendrical.Behaviour` or one of the compilers declares both with `@behaviour`.
 
 * A calendar of weeks refuses `:begins_or_ends` paired against `:first_or_last` (`:begins` with `:last`, `:ends` with `:first`), which was accepted and ignored; left out, `:begins_or_ends` follows `:first_or_last`.

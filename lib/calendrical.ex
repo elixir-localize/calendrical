@@ -714,19 +714,21 @@ defmodule Calendrical do
               Date.Range.t() | {:error, :not_defined} | date_error()
 
   @doc """
-  Increments a `t:Calendar.date/0` or `t:Date.Range.t/0` by a specified positive
-  or negative integer number of periods (year, quarter, month,
-  week or day).
+  Returns the date a specified positive or negative integer number of
+  periods (years, quarters, months, weeks or days) from a
+  `{year, month, day}` of this calendar.
 
-  Calendars need only implement this callback for `:months` and `:quarters`
-  since all other date periods can be derived.
+  Every calendar answers for each of the five periods. The `:coerce`
+  option says whether a month or a day the resulting year or month does
+  not have is brought back into it (`true`) or kept as it is counted
+  (`false`); where it is not given, the calendar's own default applies.
 
   """
   @callback plus(
               year :: year(),
               month :: month() | week(),
               day :: day(),
-              months_or_quarters :: :months | :quarters,
+              date_part :: :years | :quarters | :months | :weeks | :days,
               increment :: integer,
               options :: Keyword.t()
             ) :: {Calendar.year(), Calendar.month(), Calendar.day()}
