@@ -148,7 +148,16 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       def day_numbers(year, month),
         do: Calendrical.Base.Common.day_numbers(__MODULE__, year, month)
 
-      defoverridable month_numbers: 1, day_numbers: 2
+      @doc """
+      Returns whether every year has its months, and every month its
+      days, numbered from 1 with none missing: `true`, in a calendar
+      that is no composite.
+
+      """
+      unquote(impl)
+      def counted_from_one?, do: true
+
+      defoverridable month_numbers: 1, day_numbers: 2, counted_from_one?: 0
 
       @doc """
       Returns the number of years after which this calendar's years

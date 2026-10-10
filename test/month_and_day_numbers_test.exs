@@ -63,6 +63,53 @@ defmodule Calendrical.MonthAndDayNumbersTest do
     end
   end
 
+  describe "counted_from_one?/0" do
+    # One of each way a calendar is made, and of each kind of year: by a
+    # rule, by the moon and the sun, by the sky, in weeks, and counted from
+    # another new-year day.
+    @counted [
+      Calendrical.Gregorian,
+      Calendrical.Julian,
+      Calendrical.Julian.March25,
+      Calendrical.Hebrew,
+      Calendrical.Coptic,
+      Calendrical.Islamic.Civil,
+      Calendrical.Persian,
+      Calendrical.Chinese,
+      Calendrical.ISOWeek,
+      Calendrical.NRF
+    ]
+
+    test "is true of a calendar that is no composite, whose every year is numbered from 1" do
+      for calendar <- @counted, year <- years(calendar) do
+        assert calendar.counted_from_one?(), inspect(calendar)
+
+        assert calendar.month_numbers(year) == [1..calendar.months_in_year(year)],
+               "#{inspect(calendar)} #{year}"
+
+        assert %Date.Range{first: %Date{year: ^year, month: 1, day: 1}} = calendar.year(year)
+        assert calendar.day_of_year(year, 1, 1) == 1
+
+        for month <- 1..calendar.months_in_year(year) do
+          assert [%Range{first: 1, step: 1}] = calendar.day_numbers(year, month),
+                 "#{inspect(calendar)} #{year}-#{month}"
+        end
+      end
+    end
+
+    test "is false of a composite calendar, a year of which has the months that are left" do
+      refute Calendrical.Reform.England.counted_from_one?()
+      assert Calendrical.Reform.England.month_numbers(1751) == [3..12]
+
+      {:ok, composite} =
+        Calendrical.Composite.new(Calendrical.MonthAndDayNumbersTest.FromMarch1700,
+          calendars: [~D[1700-03-01 Calendrical.Gregorian]]
+        )
+
+      refute composite.counted_from_one?()
+    end
+  end
+
   describe "every month and day a calendar numbers" do
     test "is a date, and no other day of the month is" do
       for calendar <- [Calendrical.Gregorian, Calendrical.Hebrew, Calendrical.Reform.England],
@@ -83,5 +130,10 @@ defmodule Calendrical.MonthAndDayNumbersTest do
 
   defp years(Calendrical.Hebrew), do: [5786, 5787]
   defp years(Calendrical.Reform.England), do: [1750, 1751, 1752, 1760]
+  defp years(Calendrical.Julian.March25), do: [1750, 1751]
+  defp years(Calendrical.Coptic), do: [1742, 1743]
+  defp years(Calendrical.Islamic.Civil), do: [1447, 1448]
+  defp years(Calendrical.Persian), do: [1404, 1405]
+  defp years(Calendrical.Chinese), do: [4662, 4663]
   defp years(_calendar), do: [2024, 2026]
 end

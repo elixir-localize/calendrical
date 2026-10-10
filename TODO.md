@@ -30,6 +30,8 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Done
 
+* [x] **Whether a calendar's years are counted from 1, asked with no year** — `counted_from_one?/0` is required of every calendar: `true` where every year has its months and every month its days numbered from 1 with none missing (the default), `false` in a composite, whose years and months are each asked. Tempo kept that answer for each calendar by testing whether it was a composite. The name is a working one, for the user to settle. 2026-10-11.
+
 * [x] **Validity and the day count, two questions** — the user, 2026-10-11: "validity and conversion to iso_days are separate concerns and should remain that way." `Calendrical.iso_days/4` and the `iso_days/3` four lunisolar calendars exported, which no behaviour declared and the wrapper probed for, are removed before their first release: `valid_date?/3` and `date_to_iso_days/3` answer between them. 2026-10-11.
 
 * [x] **Localize from GitHub again** — the path dependency of the callback work is gone: `mix.exs` names `github: "elixir-localize/localize", branch: "main"` and the lock is at `d01dead0`, the Localize commit whose `Localize.Calendar.ISO` answers every required callback. 2026-10-11.

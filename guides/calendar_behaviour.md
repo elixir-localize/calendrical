@@ -179,6 +179,7 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 | `days_in_month/2` | Computes the difference between the start of the month and the start of the next month. **Override** for any non-trivial calendar (this is one of the most commonly overridden callbacks). |
 | `month_numbers/1` | Returns `[1..months_in_year(year)]`, the months a year has as runs of their numbers, and `[]` for a year the calendar does not have. |
 | `day_numbers/2` | Returns `[1..days_in_month(year, month)]`, the days a month has as runs of their numbers, and `[]` for a month the year does not have. |
+| `counted_from_one?/0` | Returns `true`: every year has its months, and every month its days, numbered from 1 with none missing. **Override** with `false` beside a `month_numbers/1` or a `day_numbers/2` of your own. |
 | `weeks_in_month/2` | Returns the number of weeks `week_of_month/3` names for the month. |
 | `years_in_cycle/0` | Returns `{:error, :undefined}`. **Override** with the number of years after which the calendar's years repeat, their days and their weekdays alike, where its rule has one. |
 | `leap_year?/1` | **Not provided by default.** Every calendar must define its own `leap_year?/1`. |
