@@ -88,6 +88,7 @@ defmodule Calendrical.LocalizeCalendarISOTest do
               :weeks_in_year,
               :days_in_year,
               :traditional_months,
+              :month_numbers,
               :leap_month,
               :traditional_leap_month
             ] do
@@ -103,7 +104,12 @@ defmodule Calendrical.LocalizeCalendarISOTest do
     # have and a day a year does not have are the same answer from both.
     test "for the months of a year, their weeks and the days of a year" do
       for year <- @years, month <- 0..13 do
-        for callback <- [:lunar_month_of_year, :ordinal_month_from_traditional, :weeks_in_month] do
+        for callback <- [
+              :lunar_month_of_year,
+              :ordinal_month_from_traditional,
+              :weeks_in_month,
+              :day_numbers
+            ] do
           assert apply(@localize, callback, [year, month]) ==
                    apply(@calendrical, callback, [year, month]),
                  "#{callback}(#{year}, #{month})"

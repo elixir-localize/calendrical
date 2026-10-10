@@ -132,6 +132,24 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       defoverridable weeks_in_month: 2, month_week: 3
 
+      @doc """
+      Returns the months a year has, as runs of their numbers.
+
+      """
+      unquote(impl)
+      def month_numbers(year), do: Calendrical.Base.Common.month_numbers(__MODULE__, year)
+
+      @doc """
+      Returns the days a month of a year has, as runs of their numbers.
+
+      """
+      unquote(impl)
+
+      def day_numbers(year, month),
+        do: Calendrical.Base.Common.day_numbers(__MODULE__, year, month)
+
+      defoverridable month_numbers: 1, day_numbers: 2
+
       defoverridable cardinal_day: 3,
                      date_from_day_of_year: 2,
                      named_month: 2,

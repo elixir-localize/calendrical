@@ -68,7 +68,8 @@ defmodule Calendrical do
     `c:week_of_month/3` and `c:days_in_week/0`.
 
   * **Geometry** — `c:days_in_month/1`, `c:days_in_year/1`,
-    `c:weeks_in_year/1`, `c:weeks_in_month/2`,
+    `c:month_numbers/1`, `c:day_numbers/2`, `c:weeks_in_year/1`,
+    `c:weeks_in_month/2`,
     `c:dates_in_gregorian_year/3` and the ranges `c:year/1`,
     `c:semester/2`, `c:quadrimester/2`, `c:quarter/2`, `c:month/2`,
     `c:week/2` and, for a week of a month, `c:month_week/3`.
@@ -523,6 +524,35 @@ defmodule Calendrical do
               month :: Calendar.month(),
               day :: Calendar.day()
             ) :: [Date.t()]
+
+  @doc """
+  Returns the months a year has, as runs of their numbers in order.
+
+  `months_in_year/1` is a count, which says which months a year has
+  only where they run from 1 with none missing. A year a composite
+  calendar changes its new-year day in has the months that are left:
+  `Calendrical.Reform.England`'s 1751, which began on 25 March and
+  ended on 31 December, answers `[3..12]`. Every other year of every
+  calendar answers one run from 1, and a year the calendar does not
+  have answers `[]`.
+
+  """
+  @callback month_numbers(year :: year()) :: [Range.t()]
+
+  @doc """
+  Returns the days a month of a year has, as runs of their numbers in
+  order.
+
+  `days_in_month/2` is a count, which says which days a month has only
+  where they run from 1 with none missing. A month a composite calendar
+  changes calendar in has the days that are left:
+  `Calendrical.Reform.England`'s September 1752 answers
+  `[1..2, 14..30]`, and its March 1751 `[25..31]`. Every other month
+  answers one run from 1, and a month the year does not have answers
+  `[]`.
+
+  """
+  @callback day_numbers(year :: year(), month :: month()) :: [Range.t()]
 
   @doc """
   Returns the number of months in a year (without a year).

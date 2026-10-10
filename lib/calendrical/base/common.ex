@@ -213,6 +213,69 @@ defmodule Calendrical.Base.Common do
 
   def year_days(_calendar, _year), do: {:error, :invalid_date}
 
+  # The months a year has and the days a month of a year has, as the
+  # numbers themselves: runs of them, in order, and none for a year or a
+  # month the calendar does not have. A count (`months_in_year/1`,
+  # `days_in_month/2`) says which numbers they are only where they run from
+  # 1 with none missing, which is every year and month of a calendar that is
+  # no composite.
+  def month_numbers(calendar, year) when is_integer(year),
+    do: counted_from_one(months_in(calendar, year))
+
+  def month_numbers(_calendar, _year), do: []
+
+  def day_numbers(calendar, year, month)
+      when is_integer(year) and is_integer(month) and month >= 1 do
+    if month <= months_in(calendar, year),
+      do: counted_from_one(calendar.days_in_month(year, month)),
+      else: []
+  end
+
+  def day_numbers(_calendar, _year, _month), do: []
+
+  # A calendar of weeks holds a week in a date's month field, and
+  # `days_in_month/2` follows that field, so the days numbered are those of
+  # the week: of each week its year has.
+  def week_day_numbers(calendar, year, week) do
+    if calendar.valid_date?(year, week, 1),
+      do: counted_from_one(calendar.days_in_month(year, week)),
+      else: []
+  end
+
+  defp counted_from_one(count) when is_integer(count) and count >= 1, do: [1..count//1]
+  defp counted_from_one(_no_count), do: []
+
+  # A composite calendar changes from one calendar to another on a day, so
+  # the year and the month that day is in have the months and the days that
+  # are left: `Calendrical.Reform.England`'s 1751 has the months 3 to 12,
+  # and its September 1752 the days 1, 2 and 14 to 30. Its months are those
+  # that have days, and a month's days those of its dates.
+  def dated_month_numbers(calendar, year) when is_integer(year) do
+    1..months_in(calendar, year)//1
+    |> Enum.filter(&match?(%Date.Range{}, calendar.month(year, &1)))
+    |> runs()
+  end
+
+  def dated_month_numbers(_calendar, _year), do: []
+
+  def dated_day_numbers(calendar, year, month) when is_integer(year) and is_integer(month) do
+    case calendar.month(year, month) do
+      %Date.Range{} = dates -> dates |> Enum.map(& &1.day) |> runs()
+      _no_such_month -> []
+    end
+  end
+
+  def dated_day_numbers(_calendar, _year, _month), do: []
+
+  # Whole numbers in order as the runs they make: `[1, 2, 14, 15]` is
+  # `[1..2, 14..15]`.
+  defp runs([]), do: []
+  defp runs([first | rest]), do: runs(rest, first, first)
+
+  defp runs([number | rest], first, last) when number == last + 1, do: runs(rest, first, number)
+  defp runs([number | rest], first, last), do: [first..last//1 | runs(rest, number, number)]
+  defp runs([], first, last), do: [first..last//1]
+
   # A day of a year as the calendar wrote it. In a composite calendar that
   # is the date the calendar in effect on the day gives it, even where the
   # date is another day's: England wrote 24 March 1156, the last day of its

@@ -652,6 +652,25 @@ defmodule Calendrical.Composite.Compiler do
       def months_in_year, do: {:error, :undefined}
 
       @doc """
+      Returns the months a year has, as runs of their numbers: those
+      that have days, so a year a change of calendar cut short has the
+      months that are left.
+
+      """
+      @impl true
+      def month_numbers(year), do: Calendrical.Base.Common.dated_month_numbers(__MODULE__, year)
+
+      @doc """
+      Returns the days a month of a year has, as runs of their numbers:
+      those of its dates, so a month a change of calendar took days from
+      has the days that are left.
+
+      """
+      @impl true
+      def day_numbers(year, month),
+        do: Calendrical.Base.Common.dated_day_numbers(__MODULE__, year, month)
+
+      @doc """
       Returns the number of days in a week.
 
       """

@@ -492,6 +492,15 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
+      Returns the days a week of a year has, as runs of their numbers: a
+      calendar of weeks holds its week in a date's month field.
+
+      """
+      @impl true
+      def day_numbers(year, week),
+        do: Calendrical.Base.Common.week_day_numbers(__MODULE__, year, week)
+
+      @doc """
       Returns the number days in a a week.
 
       """

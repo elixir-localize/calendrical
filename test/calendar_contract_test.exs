@@ -155,6 +155,23 @@ defmodule Calendrical.CalendarContract.Test do
         assert Enum.any?(spans, &(date in &1)), inspect(spans)
       end
 
+      # The numbers a year's months and a month's days have are those of
+      # its dates: the date is among them, and they are as many as counted.
+      test "numbers the months of a year and the days of a month", %{date: date} do
+        calendar = unquote(calendar)
+        months = Enum.flat_map(calendar.month_numbers(date.year), &Enum.to_list/1)
+        days = Enum.flat_map(calendar.day_numbers(date.year, date.month), &Enum.to_list/1)
+
+        assert date.day in days
+        assert Enum.all?(days, &calendar.valid_date?(date.year, date.month, &1))
+        assert calendar.month_numbers(nil) == []
+        assert calendar.day_numbers(date.year, 0) == []
+
+        if apply(calendar, :calendar_base, []) == :month do
+          assert date.month in months
+        end
+      end
+
       test "says how many months a year has with no year" do
         # Asked through `apply/3`, since each calendar's own answer is one
         # of the three and the compiler knows which.

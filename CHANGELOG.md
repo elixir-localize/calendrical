@@ -10,6 +10,8 @@ The format is based on
 
 ### Breaking changes
 
+* `month_numbers/1` and `day_numbers/2` are required callbacks, the months a year has and the days a month has as runs of their numbers: `Calendrical.Reform.England` answers `[3..12]` for 1751 and `[1..2, 14..30]` for September 1752, where `months_in_year/1` and `days_in_month/2` are counts. Every calendar answers both, and one written by hand defines them.
+
 * `named_month/2` and `date_from_day_of_year/2` are required callbacks, the days of a named month and the date of a day of a year, and `Calendrical.named_month/3` and `date_from_day_of_year/3` ask the calendar. A month carries the name its own dates are of, where it was named by its number: the ninth month of a Hebrew year of twelve is Sivan, and was answered with Tamuz's days.
 
 * The traditional-month callbacks are required of every calendar, and `traditional_months/1` is a new one beside them: `lunar_month_of_year/2`, `ordinal_month_from_traditional/2`, `leap_month/1` and `traditional_leap_month/1` were answered by the lunisolar calendars alone. A calendar whose months are their own numbering has each by default (the month itself, and no leap month), and `ordinal_month_from_traditional/2` is declared with the `{:ok, month}` it returns.
