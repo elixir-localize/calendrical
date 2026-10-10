@@ -123,6 +123,38 @@ defmodule Calendrical.CalendarContract.Test do
         assert calendar.numeric_month(date.year, date.month, date.day) in 1..53
       end
 
+      test "gives back a date from its day of the year", %{date: date} do
+        calendar = unquote(calendar)
+        day_of_year = calendar.day_of_year(date.year, date.month, date.day)
+
+        assert calendar.date_from_day_of_year(date.year, day_of_year) == date
+        assert calendar.date_from_day_of_year(date.year, 0) == {:error, :invalid_date}
+        assert calendar.date_from_day_of_year(date.year, 999) == {:error, :invalid_date}
+        assert calendar.date_from_day_of_year(nil, 1) == {:error, :invalid_date}
+
+        assert Calendrical.date_from_day_of_year(date.year, day_of_year, calendar) == date
+      end
+
+      # The month a date is of, named once, is a month of its year, and the
+      # date is one of that month's days.
+      test "has a date among the days of the month that names it", %{date: date} do
+        calendar = unquote(calendar)
+
+        named =
+          case calendar.month_of_year(date.year, date.month, date.day) do
+            {month, _leap} -> calendar.cardinal_month(month)
+            month -> calendar.cardinal_month(month)
+          end
+
+        spans = calendar.named_month(date.year, named)
+
+        assert Calendrical.named_month(date.year, named, calendar) == spans
+        assert calendar.named_month(date.year, 99) == []
+        assert calendar.named_month(nil, named) == []
+
+        assert Enum.any?(spans, &(date in &1)), inspect(spans)
+      end
+
       test "says how many months a year has with no year" do
         # Asked through `apply/3`, since each calendar's own answer is one
         # of the three and the compiler knows which.

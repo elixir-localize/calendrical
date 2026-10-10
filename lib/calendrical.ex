@@ -608,6 +608,33 @@ defmodule Calendrical do
   @callback traditional_months(year :: Calendar.year()) :: [traditional_month()]
 
   @doc """
+  Returns the days of a named month in a year, in the order of time.
+
+  A calendar that counts its months from the year's first day can
+  split the month that names them: `Calendrical.Julian.March25` begins
+  its year on 25 March, so its March is two counted months, the year's
+  month 1 (25-31 March) and its month 13 (1-24 March). The named
+  month's days are one `t:Date.Range.t/0` for each counted month that
+  carries the name (`c:cardinal_month/1`), earliest first, and `[]`
+  when no month of the year carries it.
+
+  """
+  @callback named_month(year :: Calendar.year(), named_month :: Calendar.month()) ::
+              [Date.Range.t()]
+
+  @doc """
+  Returns the date of a day of a year: the inverse of `day_of_year/3`.
+
+  The days of a year are counted from its first day, whichever day of
+  the calendar that is, so day 1 of a `Calendrical.Julian.March25` year
+  is its month 1 day 1, 25 March. A day the year does not have is
+  `{:error, :invalid_date}`.
+
+  """
+  @callback date_from_day_of_year(year :: Calendar.year(), day_of_year :: pos_integer()) ::
+              Date.t() | {:error, :invalid_date}
+
+  @doc """
   Returns the CLDR calendar type whose data names the months and days
   of the given date.
 
@@ -1760,15 +1787,7 @@ defmodule Calendrical do
   # date is another day's: England wrote 24 March 1156, the last day of its
   # 1155, as 24 March 1155. A shift or conversion that reaches such a day
   # answers the next day that has a date of its own instead.
-  defp date_at(iso_days, calendar) do
-    writing =
-      if Calendrical.Base.Common.composite?(calendar),
-        do: calendar.calendar_for_iso_days(iso_days),
-        else: calendar
-
-    {year, month, day} = writing.date_from_iso_days(iso_days)
-    %Date{year: year, month: month, day: day, calendar: calendar}
-  end
+  defp date_at(iso_days, calendar), do: Calendrical.Base.Common.date_at(calendar, iso_days)
 
   @doc """
   Returns the first date of a `year`
@@ -2588,11 +2607,7 @@ defmodule Calendrical do
   end
 
   def named_month(year, named_month, calendar) do
-    for month <- 1..calendar.months_in_year(year)//1,
-        calendar.cardinal_month(month) == named_month,
-        %Date.Range{} = range <- [calendar.month(year, month)] do
-      range
-    end
+    calendar.named_month(year, named_month)
   end
 
   @doc """
@@ -4983,19 +4998,21 @@ defmodule Calendrical do
           Date.t() | {:error, :invalid_date}
   def date_from_day_of_year(year, day_of_year, calendar \\ Calendrical.Gregorian)
 
-  # The days of a year are counted from its first day, whichever day of
-  # the calendar that is.
-  def date_from_day_of_year(year, day_of_year, calendar)
+  # `Calendar.ISO` has none of this behaviour's callbacks: its year is the
+  # Gregorian calendar's, and the date is its own.
+  def date_from_day_of_year(year, day_of_year, Calendar.ISO)
       when is_integer(year) and is_integer(day_of_year) and day_of_year > 0 do
-    with {:ok, first, last} <- year_days(year, calendar) do
+    with {:ok, first, last} <- year_days(year, Calendar.ISO) do
       if first + day_of_year - 1 <= last,
-        do: date_at(first + day_of_year - 1, calendar),
+        do: date_at(first + day_of_year - 1, Calendar.ISO),
         else: {:error, :invalid_date}
     end
   end
 
-  def date_from_day_of_year(_year, _day_of_year, _calendar) do
-    {:error, :invalid_date}
+  def date_from_day_of_year(_year, _day_of_year, Calendar.ISO), do: {:error, :invalid_date}
+
+  def date_from_day_of_year(year, day_of_year, calendar) do
+    calendar.date_from_day_of_year(year, day_of_year)
   end
 
   @doc """

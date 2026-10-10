@@ -90,7 +90,29 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       def traditional_months(year),
         do: Calendrical.Base.Common.traditional_months(__MODULE__, year)
 
+      @doc """
+      Returns the date of a day of a year, counted from the year's first
+      day.
+
+      """
+      unquote(impl)
+
+      def date_from_day_of_year(year, day_of_year),
+        do: Calendrical.Base.Common.date_from_day_of_year(__MODULE__, year, day_of_year)
+
+      @doc """
+      Returns the days of a named month in a year, in the order of time:
+      one range for each month the year counts that carries the name.
+
+      """
+      unquote(impl)
+
+      def named_month(year, named_month),
+        do: Calendrical.Base.Common.named_month(__MODULE__, year, named_month)
+
       defoverridable cardinal_day: 3,
+                     date_from_day_of_year: 2,
+                     named_month: 2,
                      numeric_month: 3,
                      lunar_month_of_year: 2,
                      ordinal_month_from_traditional: 2,

@@ -10,6 +10,8 @@ The format is based on
 
 ### Breaking changes
 
+* `named_month/2` and `date_from_day_of_year/2` are required callbacks, the days of a named month and the date of a day of a year, and `Calendrical.named_month/3` and `date_from_day_of_year/3` ask the calendar. A month carries the name its own dates are of, where it was named by its number: the ninth month of a Hebrew year of twelve is Sivan, and was answered with Tamuz's days.
+
 * The traditional-month callbacks are required of every calendar, and `traditional_months/1` is a new one beside them: `lunar_month_of_year/2`, `ordinal_month_from_traditional/2`, `leap_month/1` and `traditional_leap_month/1` were answered by the lunisolar calendars alone. A calendar whose months are their own numbering has each by default (the month itself, and no leap month), and `ordinal_month_from_traditional/2` is declared with the `{:ok, month}` it returns.
 
 * `quadrimester/2` and `semester/2` are required callbacks again, beside `quarter/2`: every calendar answers the thirds and the halves of its year, and `Calendrical.Interval.quadrimester/3` and `semester/3` ask the calendar. A calendar written by hand defines both.

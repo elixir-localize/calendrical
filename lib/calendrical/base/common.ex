@@ -213,6 +213,56 @@ defmodule Calendrical.Base.Common do
 
   def year_days(_calendar, _year), do: {:error, :invalid_date}
 
+  # A day of a year as the calendar wrote it. In a composite calendar that
+  # is the date the calendar in effect on the day gives it, even where the
+  # date is another day's: England wrote 24 March 1156, the last day of its
+  # 1155, as 24 March 1155. A shift or conversion that reaches such a day
+  # answers the next day that has a date of its own instead.
+  def date_at(calendar, iso_days) do
+    writing =
+      if composite?(calendar), do: calendar.calendar_for_iso_days(iso_days), else: calendar
+
+    {year, month, day} = writing.date_from_iso_days(iso_days)
+    %Date{year: year, month: month, day: day, calendar: calendar}
+  end
+
+  # The date of a day of a year. The days of a year are counted from its
+  # first day, whichever day of the calendar that is.
+  def date_from_day_of_year(calendar, year, day_of_year)
+      when is_integer(year) and is_integer(day_of_year) and day_of_year > 0 do
+    with {:ok, first, last} <- year_days(calendar, year) do
+      if first + day_of_year - 1 <= last,
+        do: date_at(calendar, first + day_of_year - 1),
+        else: {:error, :invalid_date}
+    end
+  end
+
+  def date_from_day_of_year(_calendar, _year, _day_of_year), do: {:error, :invalid_date}
+
+  # The days of a named month in a year, in the order of time: one range
+  # for each month the year counts that carries the name. A month carries
+  # the name its own dates are of (`month_of_year/3`, named once by
+  # `cardinal_month/1`), which is not the name of its number in every
+  # calendar: the ninth month of a Hebrew year of twelve is of the tenth
+  # month CLDR names, Sivan.
+  def named_month(calendar, year, named_month) when is_integer(year) do
+    for month <- 1..months_in(calendar, year)//1,
+        %Date.Range{first: first} = range <- [calendar.month(year, month)],
+        month_named(calendar, first) == named_month do
+      range
+    end
+  end
+
+  def named_month(_calendar, _year, _named_month), do: []
+
+  defp month_named(calendar, %Date{year: year, month: month, day: day}) do
+    case calendar.month_of_year(year, month, day) do
+      {month_of_year, :leap} -> calendar.cardinal_month(month_of_year)
+      month_of_year when is_integer(month_of_year) -> calendar.cardinal_month(month_of_year)
+      _no_month -> nil
+    end
+  end
+
   # The behaviours a calendar implements. A loaded module that declares
   # both is a calendar, and what it then answers for each callback is its
   # author's to keep; one that exports some of their functions and declares
