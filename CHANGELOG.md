@@ -10,6 +10,8 @@ The format is based on
 
 ### Breaking changes
 
+* `Calendrical.validate_calendar/1` and `Calendrical.calendar_module?/1` take a module for a calendar when it implements the `Calendar` and `Calendrical` behaviours, where any module that exported `cldr_calendar_type/0` was one. A calendar written without `use Calendrical.Behaviour` or one of the compilers declares both with `@behaviour`.
+
 * A calendar of weeks refuses `:begins_or_ends` paired against `:first_or_last` (`:begins` with `:last`, `:ends` with `:first`), which was accepted and ignored; left out, `:begins_or_ends` follows `:first_or_last`.
 
 * A month or week calendar's `day_of_era/3` gives a date its calendar year's era, as `year_of_era/3` does, and counts era 1 from the first day of calendar year 1: a fiscal year 0 running into AD 1 kept the Gregorian era, and NRF's days now count 34 fewer.

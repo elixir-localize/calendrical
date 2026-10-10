@@ -57,13 +57,30 @@ defmodule Calendrical.CompositeValidationTest do
     def valid_date?(_year, _month, _day), do: true
   end
 
-  # A calendar module that raises for a date it does not reach.
+  # A calendar module that raises for a date it does not reach. It is a
+  # calendar as `Calendrical.validate_calendar/1` has one: a module that
+  # implements the `Calendar` and `Calendrical` behaviours.
   defmodule Unreached do
     @moduledoc false
-    def cldr_calendar_type, do: :gregorian
-    def calendar_base, do: :month
+    use Calendrical.Behaviour,
+      epoch: ~D[0001-01-01 Calendar.ISO],
+      cldr_calendar_type: :gregorian
+
+    @impl true
+    def leap_year?(year), do: Calendar.ISO.leap_year?(year)
+
+    @impl true
     def valid_date?(_year, _month, _day), do: true
-    def date_to_iso_days(_year, _month, _day), do: raise(ArgumentError, "not reached")
+
+    # It reaches no date after its year 0, which is where the tests ask it.
+    @impl true
+    def date_to_iso_days(year, _month, _day) when year > 0,
+      do: raise(ArgumentError, "not reached")
+
+    def date_to_iso_days(year, month, day), do: Calendar.ISO.date_to_iso_days(year, month, day)
+
+    @impl true
+    def date_from_iso_days(iso_days), do: Calendar.ISO.date_from_iso_days(iso_days)
   end
 
   describe "the list of changes of calendar" do

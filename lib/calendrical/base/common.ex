@@ -213,6 +213,23 @@ defmodule Calendrical.Base.Common do
 
   def year_days(_calendar, _year), do: {:error, :invalid_date}
 
+  # The behaviours a calendar implements. A loaded module that declares
+  # both is a calendar, and what it then answers for each callback is its
+  # author's to keep; one that exports some of their functions and declares
+  # neither is not. `Calendrical.calendar_module?/1` and a composite's check
+  # of its members ask here, each once the module is loaded.
+  @calendar_behaviours [Calendar, Calendrical]
+
+  def calendar_behaviours?(module) do
+    declared =
+      :attributes
+      |> module.module_info()
+      |> Keyword.get_values(:behaviour)
+      |> List.flatten()
+
+    Enum.all?(@calendar_behaviours, &(&1 in declared))
+  end
+
   # A composite calendar answers for the days of its years, and for a shift
   # of years and months, itself.
   def composite?(calendar) do

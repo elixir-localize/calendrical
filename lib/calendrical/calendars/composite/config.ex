@@ -129,7 +129,7 @@ defmodule Calendrical.Composite.Config do
 
   defp calendar_module?(calendar) do
     is_atom(calendar) and match?({:module, _module}, Code.ensure_compiled(calendar)) and
-      function_exported?(calendar, :cldr_calendar_type, 0)
+      Calendrical.Base.Common.calendar_behaviours?(calendar)
   end
 
   defp member(Calendar.ISO), do: Calendrical.Gregorian

@@ -1119,19 +1119,27 @@ defmodule Calendrical do
   Returns a boolean indicating if a module
   is a `Calendrical` module.
 
+  A calendar is a module that implements Elixir's `Calendar` behaviour
+  and the `Calendrical` behaviour, and says so with `@behaviour`. That
+  is all that is asked of it here: what the module then answers for
+  each callback is its author's to keep.
+
   ### Arguments
 
   * `module` is any module name as an `atom`.
 
   ### Returns
 
-  * `true` if `module` is a calendar module conforming to
-    the `Calendrical` behaviour, otherwise `false`.
+  * `true` if `module` is a calendar module that implements the
+    `Calendar` and `Calendrical` behaviours, otherwise `false`.
 
   ### Examples
 
       iex> Calendrical.calendar_module?(Calendrical.Gregorian)
       true
+
+      iex> Calendrical.calendar_module?(Calendar.ISO)
+      false
 
       iex> Calendrical.calendar_module?(Enum)
       false
@@ -1139,8 +1147,17 @@ defmodule Calendrical do
   """
   @spec calendar_module?(module()) :: boolean()
   def calendar_module?(module) when is_atom(module) do
-    Code.ensure_loaded?(module) &&
-      function_exported?(module, :cldr_calendar_type, 0)
+    :persistent_term.get({__MODULE__, :calendar_module, module}, false) or
+      (Code.ensure_loaded?(module) and Calendrical.Base.Common.calendar_behaviours?(module) and
+         known_calendar_module(module))
+  end
+
+  # A module found to be a calendar is one for as long as it is loaded, so
+  # it is asked for its behaviours once. One that is no calendar is asked
+  # each time: a calendar created at runtime is none until it is created.
+  defp known_calendar_module(module) do
+    :persistent_term.put({__MODULE__, :calendar_module, module}, true)
+    true
   end
 
   @doc false
@@ -4987,13 +5004,15 @@ defmodule Calendrical do
   Validates if the argument is a Calendrical
   calendar module.
 
-  If the calendar is `Calendar.ISO` then the
-  validated calendar is returned as `Calendrical.Gregorian`.
+  A calendar is a module that implements Elixir's `Calendar` behaviour
+  and the `Calendrical` behaviour (see `calendar_module?/1`). If the
+  calendar is `Calendar.ISO`, which implements `Calendar` alone, then
+  the validated calendar is returned as `Calendrical.Gregorian`.
 
   ### Arguments
 
-  * `calendar_module` is a module that implements the
-    `Calendrical` behaviour.
+  * `calendar_module` is a module that implements the `Calendar`
+    and `Calendrical` behaviours.
 
   ### Returns
 
@@ -5019,12 +5038,9 @@ defmodule Calendrical do
   end
 
   def validate_calendar(calendar_module) when is_atom(calendar_module) do
-    if Code.ensure_loaded?(calendar_module) &&
-         function_exported?(calendar_module, :cldr_calendar_type, 0) do
-      {:ok, calendar_module}
-    else
-      {:error, invalid_calendar_error(calendar_module)}
-    end
+    if calendar_module?(calendar_module),
+      do: {:ok, calendar_module},
+      else: {:error, invalid_calendar_error(calendar_module)}
   end
 
   def validate_calendar(other) do
