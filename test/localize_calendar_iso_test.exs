@@ -58,6 +58,8 @@ defmodule Calendrical.LocalizeCalendarISOTest do
     test "for a date" do
       callbacks = [
         :month_of_year,
+        :cardinal_day,
+        :numeric_month,
         :week_of_year,
         :iso_week_of_year,
         :week_of_month,
@@ -81,12 +83,47 @@ defmodule Calendrical.LocalizeCalendarISOTest do
 
     test "for a year" do
       for year <- @years do
-        for callback <- [:periods_in_year, :weeks_in_year, :days_in_year] do
+        for callback <- [
+              :periods_in_year,
+              :weeks_in_year,
+              :days_in_year,
+              :traditional_months,
+              :leap_month,
+              :traditional_leap_month
+            ] do
           assert apply(@localize, callback, [year]) == apply(@calendrical, callback, [year]),
                  "#{callback}(#{year})"
         end
 
         assert days(@localize.year(year)) == days(@calendrical.year(year))
+      end
+    end
+
+    # A month the year does not have, 0 or 13, a week a month does not
+    # have and a day a year does not have are the same answer from both.
+    test "for the months of a year, their weeks and the days of a year" do
+      for year <- @years, month <- 0..13 do
+        for callback <- [:lunar_month_of_year, :ordinal_month_from_traditional, :weeks_in_month] do
+          assert apply(@localize, callback, [year, month]) ==
+                   apply(@calendrical, callback, [year, month]),
+                 "#{callback}(#{year}, #{month})"
+        end
+
+        assert Enum.map(@localize.named_month(year, month), &days/1) ==
+                 Enum.map(@calendrical.named_month(year, month), &days/1),
+               "named_month(#{year}, #{month})"
+
+        for week <- 0..6 do
+          assert days(@localize.month_week(year, month, week)) ==
+                   days(@calendrical.month_week(year, month, week)),
+                 "month_week(#{year}, #{month}, #{week})"
+        end
+      end
+
+      for year <- @years, day <- [0, 1, 59, 60, 365, 366, 367] do
+        assert day_number(@localize.date_from_day_of_year(year, day)) ==
+                 day_number(@calendrical.date_from_day_of_year(year, day)),
+               "date_from_day_of_year(#{year}, #{day})"
       end
     end
 
@@ -165,6 +202,9 @@ defmodule Calendrical.LocalizeCalendarISOTest do
   end
 
   # A range of days by its first and last, whichever calendar names them.
+  defp day_number(%Date{} = date), do: Date.to_gregorian_days(date)
+  defp day_number(error), do: error
+
   defp days(%Date.Range{first: first, last: last}), do: {fields(first), fields(last)}
   defp days(error), do: error
 

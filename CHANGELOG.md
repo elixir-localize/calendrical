@@ -66,7 +66,7 @@ The format is based on
 
 * `Calendrical.traditional_months/1` and `/2` list a year's months in order, named traditionally, with any leap month among them, and the lunisolar `lunar_month_of_year/2`, `ordinal_month_from_traditional/2`, `leap_month/1` and `traditional_leap_month/1` are declared optional callbacks.
 
-* `Calendrical.Interval.weeks_in_month/3` and `Calendrical.Interval.week/4` give the number of weeks in a month and the dates of its nth week, as `week_of_month/3` numbers them.
+* The callbacks `weeks_in_month/2` and `month_week/3` give the number of weeks in a month and the dates of its nth week, as `week_of_month/3` numbers them. Every calendar answers both, and one written by hand defines them.
 
 * `Calendrical.named_month/3` gives the days of a named month in the order of time, in two ranges where a year-start variant splits it.
 

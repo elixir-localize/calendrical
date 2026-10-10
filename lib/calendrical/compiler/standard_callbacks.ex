@@ -110,6 +110,28 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       def named_month(year, named_month),
         do: Calendrical.Base.Common.named_month(__MODULE__, year, named_month)
 
+      @doc """
+      Returns the number of weeks in a month: the weeks `week_of_month/3`
+      names for it.
+
+      """
+      unquote(impl)
+
+      def weeks_in_month(year, month),
+        do: Calendrical.Base.MonthWeeks.weeks_in_month(__MODULE__, year, month)
+
+      @doc """
+      Returns a `t:Date.Range.t/0` representing a given week of a month
+      of a year: the days `week_of_month/3` names for it.
+
+      """
+      unquote(impl)
+
+      def month_week(year, month, week),
+        do: Calendrical.Base.MonthWeeks.month_week(__MODULE__, year, month, week)
+
+      defoverridable weeks_in_month: 2, month_week: 3
+
       defoverridable cardinal_day: 3,
                      date_from_day_of_year: 2,
                      named_month: 2,

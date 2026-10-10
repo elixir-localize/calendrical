@@ -68,9 +68,10 @@ defmodule Calendrical do
     `c:week_of_month/3` and `c:days_in_week/0`.
 
   * **Geometry** — `c:days_in_month/1`, `c:days_in_year/1`,
-    `c:weeks_in_year/1`, `c:dates_in_gregorian_year/3` and the ranges
-    `c:year/1`, `c:semester/2`, `c:quadrimester/2`, `c:quarter/2`,
-    `c:month/2` and `c:week/2`.
+    `c:weeks_in_year/1`, `c:weeks_in_month/2`,
+    `c:dates_in_gregorian_year/3` and the ranges `c:year/1`,
+    `c:semester/2`, `c:quadrimester/2`, `c:quarter/2`, `c:month/2`,
+    `c:week/2` and, for a week of a month, `c:month_week/3`.
 
   * **Arithmetic** — `c:plus/6`, `c:diff/3` and the day-count pair
     `c:date_to_iso_days/3` and `c:date_from_iso_days/1` that every
@@ -780,6 +781,29 @@ defmodule Calendrical do
   """
   @callback week(year :: year(), week :: week()) ::
               Date.Range.t() | {:error, :not_defined} | date_error()
+
+  @doc """
+  Returns a date range representing the days in a
+  given week of a month of a calendar year.
+
+  The weeks of a month are the weeks `c:week_of_month/3` names for it:
+  week 1 is the month's first week under the calendar's week
+  configuration, which may begin in the month before, and its last week
+  may run into the month after. A week the month does not have is
+  `{:error, :invalid_date}`.
+
+  """
+  @callback month_week(year :: year(), month :: month(), week :: pos_integer()) ::
+              Date.Range.t() | {:error, :not_defined} | date_error()
+
+  @doc """
+  Returns the number of weeks in a month of a calendar year: the weeks
+  `c:week_of_month/3` names for it, which `c:month_week/3` gives the
+  days of.
+
+  """
+  @callback weeks_in_month(year :: year(), month :: month()) ::
+              pos_integer() | {:error, :not_defined} | date_error()
 
   @doc """
   Returns the date a specified positive or negative integer number of

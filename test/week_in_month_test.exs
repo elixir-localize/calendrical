@@ -106,12 +106,10 @@ defmodule Calendrical.WeekInMonth.Test do
     end
   end
 
-  describe "Interval.week/4 and Interval.weeks_in_month/3" do
-    alias Calendrical.Interval
-
-    # Every week `Interval.week/4` constructs holds exactly the days whose
+  describe "month_week/3 and weeks_in_month/2" do
+    # Every week `month_week/3` constructs holds exactly the days whose
     # `week_of_month/3` names it, the weeks abut, and the count agrees
-    # with `Interval.weeks_in_month/3`.
+    # with `weeks_in_month/2`.
     test "agree with week_of_month/3 for every month of every calendar family" do
       calendars = [
         Calendrical.Gregorian,
@@ -130,12 +128,12 @@ defmodule Calendrical.WeekInMonth.Test do
         year = if calendar == Calendrical.Hebrew, do: year + 3760, else: year
 
         for month <- 1..calendar.months_in_year(year) do
-          weeks = Interval.weeks_in_month(year, month, calendar)
+          weeks = calendar.weeks_in_month(year, month)
           assert is_integer(weeks) and weeks > 0
 
           ranges =
             for nth <- 1..weeks do
-              assert %Date.Range{} = range = Interval.week(year, month, nth, calendar)
+              assert %Date.Range{} = range = calendar.month_week(year, month, nth)
 
               for date <- range do
                 assert calendar.week_of_month(date.year, date.month, date.day) == {month, nth}
@@ -154,15 +152,15 @@ defmodule Calendrical.WeekInMonth.Test do
     test "a month whose first week is cut short at the month's start" do
       # Julian weeks do not cross its months: February 2019 begins on a
       # Thursday of its Monday-started weeks, so week 1 is four days.
-      assert Interval.week(2019, 2, 1, Calendrical.Julian) ==
+      assert Calendrical.Julian.month_week(2019, 2, 1) ==
                Date.range(~D[2019-02-01 Calendrical.Julian], ~D[2019-02-04 Calendrical.Julian])
 
-      assert Interval.week(2019, 2, 2, Calendrical.Julian) ==
+      assert Calendrical.Julian.month_week(2019, 2, 2) ==
                Date.range(~D[2019-02-05 Calendrical.Julian], ~D[2019-02-11 Calendrical.Julian])
     end
 
     test "a week that begins in the month before" do
-      assert Interval.week(2026, 5, 1, Calendrical.Gregorian) ==
+      assert Calendrical.Gregorian.month_week(2026, 5, 1) ==
                Date.range(
                  ~D[2026-04-27 Calendrical.Gregorian],
                  ~D[2026-05-03 Calendrical.Gregorian]
@@ -172,12 +170,12 @@ defmodule Calendrical.WeekInMonth.Test do
     test "the months of England's reform year" do
       # September 1752 has 19 dates: 1, 2, then 14 to 30.
       for month <- 1..12 do
-        weeks = Interval.weeks_in_month(1752, month, Calendrical.Reform.England)
+        weeks = Calendrical.Reform.England.weeks_in_month(1752, month)
         assert is_integer(weeks) and weeks > 0
 
         for nth <- 1..weeks do
           assert %Date.Range{} =
-                   range = Interval.week(1752, month, nth, Calendrical.Reform.England)
+                   range = Calendrical.Reform.England.month_week(1752, month, nth)
 
           for date <- range do
             calendar = date.calendar
@@ -188,9 +186,9 @@ defmodule Calendrical.WeekInMonth.Test do
     end
 
     test "a month the year does not have" do
-      assert Interval.weeks_in_month(2026, 13, Calendrical.Gregorian) == {:error, :invalid_date}
-      assert Interval.week(2026, 13, 1, Calendrical.Gregorian) == {:error, :invalid_date}
-      assert Interval.week(2026, 5, 6, Calendrical.Gregorian) == {:error, :invalid_date}
+      assert Calendrical.Gregorian.weeks_in_month(2026, 13) == {:error, :invalid_date}
+      assert Calendrical.Gregorian.month_week(2026, 13, 1) == {:error, :invalid_date}
+      assert Calendrical.Gregorian.month_week(2026, 5, 6) == {:error, :invalid_date}
     end
   end
 
