@@ -166,8 +166,8 @@ defmodule Calendrical.LocalizeCalendarISOTest do
 
     # Each reads a written date as a date of its own.
     test "for the calendar a written date is parsed in" do
-      assert @localize.parsing_calendar() == Calendar.ISO
-      assert @calendrical.parsing_calendar() == Calendrical.ISO
+      assert @localize.parsing_calendar() == @localize
+      assert @calendrical.parsing_calendar() == @calendrical
     end
 
     test "for the dates of a month and day in a Gregorian year" do
