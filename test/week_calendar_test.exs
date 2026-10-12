@@ -5,7 +5,7 @@ defmodule Calendrical.Week.Test do
 
   # The last month of a calendar's pattern of weeks takes a long year's
   # extra week: four weeks become five, or five six. A month's days are
-  # those of its `month/2`; `days_in_month/2` counts a week's (below).
+  # those of its `month/2`, which `days_in_month/2` counts (below).
   test "that the last month of a long year is 35 or 42 days" do
     assert Enum.count(Calendrical.NRF.month(2012, 12)) == 35
     assert Enum.count(Calendrical.ISOWeek.month(2015, 12)) == 35
@@ -17,41 +17,54 @@ defmodule Calendrical.Week.Test do
     assert Enum.count(Calendars.Sunday.month(2013, 12)) == 35
   end
 
-  # A week date's month field is its week, and it is that field Elixir's
+  # A date's month field is its month, and it is that field Elixir's
   # `Date.days_in_month/1` and `Date.end_of_month/1` put to
-  # `days_in_month/2`: a week has seven days and ends on its seventh. 2026
-  # has 53 ISO weeks and 2025 has 52.
-  test "that a week has seven days, so Elixir's Date functions name its ends" do
+  # `days_in_month/2`: a month has the days of its weeks and ends on the
+  # last day of a week. 2026 has 53 ISO weeks and 2025 has 52.
+  test "that a month has the days of its weeks, so Elixir's Date functions name its ends" do
     for calendar <- [Calendrical.ISOWeek, Calendrical.NRF, Calendars.Sunday],
-        week <- [1, 2, 3, 12, 13, 25, 52] do
-      date = Date.new!(2026, week, 3, calendar)
+        month <- 1..12 do
+      days = calendar.days_in_month(2026, month)
+      date = Date.new!(2026, month, 3, calendar)
 
-      assert calendar.days_in_month(2026, week) == 7, "#{inspect(calendar)} week #{week}"
-      assert Date.days_in_month(date) == 7
-      assert Calendrical.days_in_month(date) == 7
-      assert Date.beginning_of_month(date) == Date.new!(2026, week, 1, calendar)
-      assert Date.end_of_month(date) == Date.new!(2026, week, 7, calendar)
-      assert Date.end_of_month(date) == Date.end_of_week(date)
+      assert days == Enum.count(calendar.month(2026, month)),
+             "#{inspect(calendar)} month #{month}"
+
+      assert rem(days, 7) == 0
+      assert Date.days_in_month(date) == days
+      assert Calendrical.days_in_month(date) == days
+      assert Date.beginning_of_month(date) == Date.new!(2026, month, 1, calendar)
+      assert Date.end_of_month(date) == Date.new!(2026, month, days, calendar)
+      assert Date.end_of_week(Date.end_of_month(date)) == Date.end_of_month(date)
     end
 
-    assert Calendrical.ISOWeek.days_in_month(2026, 53) == 7
-    assert Calendrical.ISOWeek.days_in_month(2025, 53) == {:error, :invalid_date}
-    assert Calendrical.ISOWeek.days_in_month(2026, 54) == {:error, :invalid_date}
+    assert Calendrical.ISOWeek.days_in_month(2026, 12) == 35
+    assert Calendrical.ISOWeek.days_in_month(2025, 12) == 28
+    assert Calendrical.ISOWeek.days_in_month(2026, 13) == {:error, :invalid_date}
     assert Calendrical.ISOWeek.days_in_month(2026, 0) == {:error, :invalid_date}
 
     assert {:error, %Calendrical.MissingFieldsError{}} =
-             Calendrical.ISOWeek.days_in_month(nil, 25)
+             Calendrical.ISOWeek.days_in_month(nil, 6)
   end
 
-  # The twelve months of the pattern are still the calendar's months: the
-  # weeks of a year are its `weeks_in_year/1`.
+  # A date of a calendar of weeks is a year, a month of its pattern and a
+  # day of that month: the third day of week 25 is the 17th of the sixth
+  # month. The fields its dates held until 1.4, a week and a day of it, are
+  # no date now.
   test "that a year has the twelve months of its pattern" do
-    date = Date.new!(2026, 25, 3, Calendrical.ISOWeek)
+    date = week_date(2026, 25, 3, Calendrical.ISOWeek)
 
+    assert {date.month, date.day} == {6, 17}
     assert Date.months_in_year(date) == 12
     assert Calendrical.ISOWeek.months_in_year() == 12
     assert Calendrical.ISOWeek.weeks_in_year(2026) == {53, 7}
-    assert Calendrical.ISOWeek.month_of_year(2026, 25, 3) == 6
+    assert Calendrical.month_of_year(date) == 6
+    assert Calendrical.week_of_year(date) == {2026, 25}
+
+    assert Date.new(2026, 25, 3, Calendrical.ISOWeek) == {:error, :invalid_date}
+    assert Calendrical.ISOWeek.month_numbers(2026) == [1..12]
+    assert Calendrical.ISOWeek.day_numbers(2026, 6) == [1..28]
+    assert Calendrical.ISOWeek.day_numbers(2026, 12) == [1..35]
   end
 
   # Day of week is always the ordinal day. And therefore for
@@ -101,42 +114,44 @@ defmodule Calendrical.Week.Test do
   end
 
   test "tuesday week calendar" do
-    {:ok, today} = Date.new(2019, 13, 4, Calendars.Tuesday)
+    today = week_date(2019, 13, 4, Calendars.Tuesday)
     last_year_day = Calendrical.previous(today, :year)
-    assert last_year_day == %Date{calendar: Calendars.Tuesday, day: 4, month: 13, year: 2018}
+    assert last_year_day == week_date(2018, 13, 4, Calendars.Tuesday)
   end
 
   test "wednesday week calendar" do
-    {:ok, today} = Date.new(2019, 13, 4, Calendars.Wednesday)
+    today = week_date(2019, 13, 4, Calendars.Wednesday)
     last_year_day = Calendrical.previous(today, :year)
-    assert last_year_day == %Date{calendar: Calendars.Wednesday, day: 4, month: 13, year: 2018}
+    assert last_year_day == week_date(2018, 13, 4, Calendars.Wednesday)
   end
 
   test "thursday week calendar" do
-    {:ok, today} = Date.new(2019, 13, 4, Calendars.Thursday)
+    today = week_date(2019, 13, 4, Calendars.Thursday)
     last_year_day = Calendrical.previous(today, :year)
-    assert last_year_day == %Date{calendar: Calendars.Thursday, day: 4, month: 13, year: 2018}
+    assert last_year_day == week_date(2018, 13, 4, Calendars.Thursday)
   end
 
   test "friday week calendar" do
-    {:ok, today} = Date.new(2019, 13, 4, Calendars.Friday)
+    today = week_date(2019, 13, 4, Calendars.Friday)
     last_year_day = Calendrical.previous(today, :year)
-    assert last_year_day == %Date{calendar: Calendars.Friday, day: 4, month: 13, year: 2018}
+    assert last_year_day == week_date(2018, 13, 4, Calendars.Friday)
   end
 
   test "saturday week calendar" do
-    {:ok, today} = Date.new(2019, 13, 4, Calendars.Saturday)
+    today = week_date(2019, 13, 4, Calendars.Saturday)
     last_year_day = Calendrical.previous(today, :year)
-    assert last_year_day == %Date{calendar: Calendars.Saturday, day: 4, month: 13, year: 2018}
+    assert last_year_day == week_date(2018, 13, 4, Calendars.Saturday)
   end
 
   test "sunday week calendar" do
-    {:ok, today} = Date.new(2018, 53, 3, Calendars.Sunday)
+    today = week_date(2018, 53, 3, Calendars.Sunday)
     current_period = Calendrical.Interval.month(today)
     first_day_of_period = current_period.first
     last_day_of_period = current_period.last
-    assert first_day_of_period == %Date{calendar: Calendars.Sunday, day: 1, month: 48, year: 2018}
-    assert last_day_of_period == %Date{calendar: Calendars.Sunday, day: 7, month: 53, year: 2018}
+    assert first_day_of_period == week_date(2018, 48, 1, Calendars.Sunday)
+    assert last_day_of_period == week_date(2018, 53, 7, Calendars.Sunday)
+    assert {first_day_of_period.month, first_day_of_period.day} == {12, 1}
+    assert {last_day_of_period.month, last_day_of_period.day} == {12, 42}
   end
 
   test "that previous month and next month actually are for a week calendar" do
@@ -145,12 +160,12 @@ defmodule Calendrical.Week.Test do
     this_period = Calendrical.Interval.month(today)
 
     previous = Calendrical.previous(this_period, :month, coerce: true)
-    assert previous.first == %Date{calendar: Calendars.Sunday, day: 1, month: 44, year: 2018}
-    assert previous.last == %Date{calendar: Calendars.Sunday, day: 7, month: 47, year: 2018}
+    assert previous.first == week_date(2018, 44, 1, Calendars.Sunday)
+    assert previous.last == week_date(2018, 47, 7, Calendars.Sunday)
 
     next = Calendrical.next(this_period, :month, coerce: true)
-    assert next.first == %Date{calendar: Calendars.Sunday, day: 1, month: 1, year: 2019}
-    assert next.last == %Date{calendar: Calendars.Sunday, day: 7, month: 4, year: 2019}
+    assert next.first == week_date(2019, 1, 1, Calendars.Sunday)
+    assert next.last == week_date(2019, 4, 7, Calendars.Sunday)
   end
 
   test "previous month for a week calendar transitioning to prior quarter" do
@@ -169,16 +184,19 @@ defmodule Calendrical.Week.Test do
            }
   end
 
-  # Whatever the year, a week it can have has seven days.
-  test "days in a week without its year" do
+  # Without a year a month has the days of its weeks, and the last month
+  # one week more in a long year.
+  test "days in a month without its year" do
     config = %Calendrical.Config{weeks_in_month: [4, 4, 5]}
 
-    for week <- [1, 2, 3, 12, 13, 52, 53] do
-      assert Calendrical.Base.Week.days_in_month(week, config) == 7
+    for {month, days} <- [{1, 28}, {2, 28}, {3, 35}, {10, 28}, {11, 28}] do
+      assert Calendrical.Base.Week.days_in_month(month, config) == days
     end
 
-    assert Calendrical.Base.Week.days_in_month(54, config) == {:error, :invalid_date}
-    assert Calendrical.Base.Week.days_in_month(0, config) == {:error, :invalid_date}
-    assert Calendrical.ISOWeek.days_in_month(25) == 7
+    assert Calendrical.Base.Week.days_in_month(12, config) == {:ambiguous, [35, 42]}
+    assert Calendrical.Base.Week.days_in_month(13, config) == {:error, :undefined}
+    assert Calendrical.Base.Week.days_in_month(0, config) == {:error, :undefined}
+    assert Calendrical.ISOWeek.days_in_month(6) == 28
+    assert Calendrical.ISOWeek.days_in_month(12) == {:ambiguous, [28, 35]}
   end
 end

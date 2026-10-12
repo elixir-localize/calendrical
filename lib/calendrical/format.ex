@@ -238,8 +238,7 @@ defmodule Calendrical.Format do
 
   # A calendar of weeks' month is the weeks its pattern gives it, the days
   # of its `month/2`: four or five weeks, and one more where a long year's
-  # last month takes the extra week. Its `days_in_month/2` counts the days
-  # of a week, the month field of its dates.
+  # last month takes the extra week.
   defp month(year, _month, %Date.Range{first: date, last: last}, :week, options) do
     %Options{calendar: calendar, formatter: formatter} = options
     month = Calendrical.month_of_year(date)

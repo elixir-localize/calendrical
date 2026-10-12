@@ -443,9 +443,9 @@ defmodule Calendrical do
   week that holds the year's fourth day. In the Gregorian calendar
   these are ISO 8601's week dates (`2026-W10-1` is 2 March 2026), and
   in any other calendar of months the weeks RFC 7529 counts for a rule
-  in that calendar. A calendar of weeks answers with its own dates,
-  which are a year, a week and a day of the week already, the day
-  counted from the day its own weeks begin on.
+  in that calendar. A calendar of weeks counts a week date in the weeks
+  it is built of: the week is a week of its own year, and the day is
+  counted from the day its weeks begin on.
 
   This is not the week `c:iso_week_of_year/3` gives, which is the week
   of the Gregorian year a day is in, whichever calendar names the day.
@@ -508,9 +508,11 @@ defmodule Calendrical do
               | :indian
 
   @doc """
-  Returns the calendar basis.
+  Returns the calendar basis: what its year is built of.
 
-  Returns either `:week` or `:month`.
+  Returns `:week` for a calendar whose year is a whole number of weeks,
+  with months of four or five of them, and `:month` for any other. The
+  dates of both are a year, a month and a day of the month.
   """
   @callback calendar_base() :: :week | :month
 
@@ -787,10 +789,9 @@ defmodule Calendrical do
   parsed in, before it is converted into this calendar.
 
   It is the calendar itself unless a written month and day cannot
-  name one of its dates: a calendar of weeks has no month or day of
-  the month of its own, and "Feb 1, 2024" names no single one of its
-  weeks, so its dates are read as Gregorian dates, in `Calendar.ISO`,
-  and converted.
+  name one of its dates. Every calendar Calendrical builds answers
+  itself, a calendar of weeks among them: its dates are a year, a
+  month of its pattern of weeks and a day of that month.
 
   """
   @callback parsing_calendar() :: module()
@@ -1972,7 +1973,7 @@ defmodule Calendrical do
       %Date{calendar: Calendrical.Gregorian, day: 31, month: 12, year: 2019}
 
       iex> Calendrical.last_day_of_year(2019, Calendrical.NRF)
-      %Date{calendar: Calendrical.NRF, day: 7, month: 52, year: 2019}
+      %Date{calendar: Calendrical.NRF, day: 28, month: 12, year: 2019}
 
       iex> Calendrical.last_day_of_year(5786, Calendrical.Hebrew)
       ~D[5786-12-29 Calendrical.Hebrew]
@@ -2594,9 +2595,9 @@ defmodule Calendrical do
       1
       iex> Calendrical.month_of_year(~D[2019-12-01])
       12
-      iex> Calendrical.month_of_year(~D[2019-52-01 Calendrical.NRF])
+      iex> Calendrical.month_of_year(~D[2019-W52-1 Calendrical.NRF])
       12
-      iex> Calendrical.month_of_year(~D[2019-26-01 Calendrical.NRF])
+      iex> Calendrical.month_of_year(~D[2019-W26-1 Calendrical.NRF])
       6
 
   """
@@ -2762,9 +2763,9 @@ defmodule Calendrical do
       {2019, 1}
       iex> Calendrical.week_of_year(~D[2019-12-01])
       {2019, 48}
-      iex> Calendrical.week_of_year(~D[2019-52-01 Calendrical.NRF])
+      iex> Calendrical.week_of_year(~D[2019-W52-1 Calendrical.NRF])
       {2019, 52}
-      iex> Calendrical.week_of_year(~D[2019-26-01 Calendrical.NRF])
+      iex> Calendrical.week_of_year(~D[2019-W26-1 Calendrical.NRF])
       {2019, 26}
       iex> Calendrical.week_of_year(~D[2019-12-01 Calendrical.Julian])
       {2019, 48}
@@ -2801,9 +2802,9 @@ defmodule Calendrical do
       {2019, 1}
       iex> Calendrical.iso_week_of_year(~D[2019-02-01])
       {2019, 5}
-      iex> Calendrical.iso_week_of_year(~D[2019-52-01 Calendrical.NRF])
+      iex> Calendrical.iso_week_of_year(~D[2019-W52-1 Calendrical.NRF])
       {2020, 4}
-      iex> Calendrical.iso_week_of_year(~D[2019-26-01 Calendrical.NRF])
+      iex> Calendrical.iso_week_of_year(~D[2019-W26-1 Calendrical.NRF])
       {2019, 30}
       iex> Calendrical.iso_week_of_year(~D[2019-12-01 Calendrical.Julian])
       {2019, 50}
@@ -2880,10 +2881,10 @@ defmodule Calendrical do
       iex> Calendrical.day_of_year(~D[2019-12-31])
       365
 
-      iex> Calendrical.day_of_year(~D[2019-52-07 Calendrical.NRF])
+      iex> Calendrical.day_of_year(~D[2019-W52-7 Calendrical.NRF])
       364
 
-      iex> Calendrical.day_of_year(~D[2012-53-07 Calendrical.NRF])
+      iex> Calendrical.day_of_year(~D[2012-W53-7 Calendrical.NRF])
       371
 
   """
@@ -3534,8 +3535,8 @@ defmodule Calendrical do
       iex> Calendrical.date_to_string(~D[2019-12-04])
       "2019-12-04"
 
-      iex> Calendrical.date_to_string(~D[2019-23-04 Calendrical.NRF])
-      "2019-W23-4"
+      iex> Calendrical.date_to_string(~D[2019-06-04 Calendrical.NRF])
+      "2019-06-04"
 
   """
   @spec date_to_string(Date.t()) :: String.t()
@@ -5621,7 +5622,7 @@ defmodule Calendrical do
   @doc """
   Returns the number of days in the month of a date.
 
-  Delegates to `Date.days_in_month/1`, which asks about the date's month field. In a calendar of weeks that field is the week, so the answer is its seven days; the days of a month of the calendar's pattern of weeks are those of its `month/2`.
+  Delegates to `Date.days_in_month/1`. A month of a calendar of weeks is four or five weeks, as its pattern of weeks gives it, and its last month has one week more in a year of 53 weeks.
 
   ### Arguments
 
@@ -5636,8 +5637,8 @@ defmodule Calendrical do
       iex> Calendrical.days_in_month(~D[2026-07-05])
       31
 
-      iex> Calendrical.days_in_month(~D[2026-W25-2 Calendrical.ISOWeek])
-      7
+      iex> Calendrical.days_in_month(~D[2026-06-16 Calendrical.ISOWeek])
+      28
 
   """
   @spec days_in_month(date()) :: Calendar.day()
@@ -5646,7 +5647,7 @@ defmodule Calendrical do
   @doc """
   Returns the number of months in the year of a date.
 
-  Delegates to `Date.months_in_year/1`. A calendar of weeks has the twelve months of its pattern of weeks, though the month field of its dates is the week: the weeks in its year are `weeks_in_year/1`.
+  Delegates to `Date.months_in_year/1`. A calendar of weeks has the twelve months of its pattern of weeks; the weeks in its year are `weeks_in_year/1`.
 
   ### Arguments
 

@@ -10,10 +10,9 @@ defmodule Calendrical.Base.Common do
 
   @days_in_week 7
 
-  # The middle field is the month for month calendars and the week
-  # for week calendars. Week calendars store the week number in the
-  # %Date{} struct's :month field, because the stdlib Date struct
-  # has no :week field.
+  # The middle field is a month where the three are the fields of a date,
+  # and a week where `Calendrical.Base.Week` counts in its own year, week
+  # and day of the week.
   defguard is_date(year, month_or_week, day)
            when is_integer(year) and is_integer(month_or_week) and is_integer(day)
 
@@ -232,15 +231,6 @@ defmodule Calendrical.Base.Common do
   end
 
   def day_numbers(_calendar, _year, _month), do: []
-
-  # A calendar of weeks holds a week in a date's month field, and
-  # `days_in_month/2` follows that field, so the days numbered are those of
-  # the week: of each week its year has.
-  def week_day_numbers(calendar, year, week) do
-    if calendar.valid_date?(year, week, 1),
-      do: counted_from_one(calendar.days_in_month(year, week)),
-      else: []
-  end
 
   defp counted_from_one(count) when is_integer(count) and count >= 1, do: [1..count//1]
   defp counted_from_one(_no_count), do: []
@@ -480,8 +470,8 @@ defmodule Calendrical.Base.Common do
   # same number, otherwise year by year. A week calendar's month is the period
   # its `month_of_year/3` places the week in.
   def months_between(calendar, {year_from, _, _} = from, {year_to, _, _} = to) do
-    months_before(calendar, year_from, year_to) + month_position(calendar, to) -
-      month_position(calendar, from)
+    months_before(calendar, year_from, year_to) + month_position(to) -
+      month_position(from)
   end
 
   defp months_before(calendar, year_from, year_to) do
@@ -501,11 +491,7 @@ defmodule Calendrical.Base.Common do
     end
   end
 
-  defp month_position(calendar, {year, month_or_week, day}) do
-    if calendar.calendar_base() == :week do
-      calendar.month_of_year(year, month_or_week, day)
-    else
-      month_or_week
-    end
+  defp month_position({_year, month, _day}) do
+    month
   end
 end

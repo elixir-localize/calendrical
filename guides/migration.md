@@ -331,6 +331,25 @@ defmodule MyApp.Retail do
 end
 ```
 
+### Week-based calendars hold a month and a day
+
+A date of a week-based calendar is a year, a month and a day of the month, as a date of any calendar is. In `ex_cldr_calendars`, and in Calendrical before 1.4, its `:month` field held the week of the year and its `:day` field the day of the week.
+
+```elixir
+# Old — the second day of week 25
+Date.new!(2026, 25, 2, Cldr.Calendar.NRF)
+
+# New — the same day: the sixteenth of the sixth month of the 4-5-4 pattern
+Date.new!(2026, 6, 16, Calendrical.NRF)
+Calendrical.NRF.date_from_week_date(2026, 25, 2)
+# => ~D[2026-06-16 Calendrical.NRF]
+
+Calendrical.NRF.week_date_from_date(2026, 6, 16)
+# => {2026, 25, 2}
+```
+
+A date read from `date.month` as a week, or built from a week and a day of it, goes through `week_date_from_date/3` and `date_from_week_date/3`. A stored `"2026-W25-2"` still parses; a date is now written `"2026-06-16"`.
+
 ### Intervals and streams
 
 ```elixir
@@ -369,12 +388,14 @@ The native `~D` sigil has supported the trailing calendar form since Elixir 1.10
 
 Features the old `~d` sigil supported that the native `~D` does not:
 
-* **ISO week date format** (`~d[2024-W24-6]`) — there is no native sigil for week dates. If you need to parse a week date, do so explicitly:
+* **ISO week date format** (`~d[2024-W24-6]`) — the native sigil reads a week date for a calendar of weeks, as the date it names, and any calendar gives the date of one:
 
   ```elixir
-  # Roughly equivalent to ~d[2024-W24-6]
-  {year, week, day} = {2024, 24, 6}
-  Date.new!(year, week, day, Calendrical.ISOWeek)
+  ~D[2024-W24-6 Calendrical.ISOWeek]
+  # => ~D[2024-06-13 Calendrical.ISOWeek]
+
+  Calendrical.ISOWeek.date_from_week_date(2024, 24, 6)
+  # => ~D[2024-06-13 Calendrical.ISOWeek]
   ```
 
 * **Short calendar names** (`~d[2024-06-15 Persian]` → `Calendrical.Persian`) — write the full module name with the native sigil.

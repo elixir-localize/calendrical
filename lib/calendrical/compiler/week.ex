@@ -89,14 +89,14 @@ defmodule Calendrical.Compiler.Week do
 
       @doc """
       Returns the calendar module a date written for this calendar
-      is parsed in: `Calendar.ISO`. A written month and day, such as
-      "Feb 1, 2024", name no single week, so a date is read as a
-      Gregorian date and converted into this calendar.
+      is parsed in: this calendar. Its dates are a year, a month of its
+      pattern of weeks and a day of that month, so a written month and
+      day name one of them.
 
       """
       @impl true
       def parsing_calendar do
-        Calendar.ISO
+        __MODULE__
       end
 
       @doc """
@@ -104,8 +104,8 @@ defmodule Calendrical.Compiler.Week do
 
       """
       @impl true
-      def valid_date?(year, week, day) do
-        Week.valid_date?(year, week, day, __config__())
+      def valid_date?(year, month, day) do
+        Week.valid_date?(year, month, day, __config__())
       end
 
       @doc """
@@ -243,7 +243,8 @@ defmodule Calendrical.Compiler.Week do
               quarter :: Calendrical.quarter() | Calendrical.date_error()
 
       @impl true
-      def quarter_of_year(year, week, day) do
+      def quarter_of_year(year, month, day) do
+        {year, week, day} = Week.week_date(year, month, day, __config__())
         Week.quarter_of_year(year, week, day, __config__())
       end
 
@@ -260,7 +261,8 @@ defmodule Calendrical.Compiler.Week do
               month :: Calendar.month() | Calendrical.date_error()
 
       @impl true
-      def month_of_year(year, week, day) do
+      def month_of_year(year, month, day) do
+        {year, week, day} = Week.week_date(year, month, day, __config__())
         Week.month_of_year(year, week, day, __config__())
       end
 
@@ -287,7 +289,8 @@ defmodule Calendrical.Compiler.Week do
               | Calendrical.date_error()
 
       @impl true
-      def week_of_year(year, week, day) do
+      def week_of_year(year, month, day) do
+        {year, week, day} = Week.week_date(year, month, day, __config__())
         Week.week_of_year(year, week, day, __config__())
       end
 
@@ -301,7 +304,8 @@ defmodule Calendrical.Compiler.Week do
               | Calendrical.date_error()
 
       @impl true
-      def iso_week_of_year(year, week, day) do
+      def iso_week_of_year(year, month, day) do
+        {year, week, day} = Week.week_date(year, month, day, __config__())
         Week.iso_week_of_year(year, week, day, __config__())
       end
 
@@ -315,7 +319,8 @@ defmodule Calendrical.Compiler.Week do
               | Calendrical.date_error()
 
       @impl true
-      def week_of_month(year, week, day) do
+      def week_of_month(year, month, day) do
+        {year, week, day} = Week.week_date(year, month, day, __config__())
         Week.week_of_month(year, week, day, __config__())
       end
 
@@ -328,7 +333,8 @@ defmodule Calendrical.Compiler.Week do
               | Calendrical.date_error()
 
       @impl true
-      def day_of_era(year, week, day) do
+      def day_of_era(year, month, day) do
+        {year, week, day} = Week.week_date(year, month, day, __config__())
         Week.day_of_era(year, week, day, __config__())
       end
 
@@ -341,7 +347,8 @@ defmodule Calendrical.Compiler.Week do
               day :: Calendar.day() | Calendrical.date_error()
 
       @impl true
-      def day_of_year(year, week, day) do
+      def day_of_year(year, month, day) do
+        {year, week, day} = Week.week_date(year, month, day, __config__())
         Week.day_of_year(year, week, day, __config__())
       end
 
@@ -365,7 +372,9 @@ defmodule Calendrical.Compiler.Week do
               | Calendrical.date_error()
 
       @impl true
-      def day_of_week(year, week, day, starting_on) do
+      def day_of_week(year, month, day, starting_on) do
+        {year, week, day} = Week.week_date(year, month, day, __config__())
+
         case Week.day_of_week(year, week, day, starting_on, __config__()) do
           {:error, reason} -> {:error, reason}
           day -> {day, 1, 7}
@@ -373,15 +382,13 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
-      Calculates the number of period in a given `year`. A period
-      corresponds to a month in month-based calendars and
-      a week in week-based calendars..
+      Calculates the number of periods in a given `year`: its months,
+      which a date's month field counts.
 
       """
-      @spec periods_in_year(year :: Calendrical.year()) :: Calendar.week() | :error
+      @spec periods_in_year(year :: Calendrical.year()) :: Calendar.month()
       def periods_in_year(year) do
-        {weeks_in_year, _} = weeks_in_year(year)
-        weeks_in_year
+        months_in_year(year)
       end
 
       @doc """
@@ -440,55 +447,58 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
-      Returns how many days there are in the given week of a year: seven.
+      Returns how many days there are in the given month of a year.
 
-      A date of this calendar is a year, a week and a day of the week, so the week is its month field, and it is the week that `Date.days_in_month/1` and `Date.end_of_month/1` ask about: the last day of 2026-W25 is 2026-W25-7. The days of a month of the calendar's pattern of weeks (4-4-5 and its kin) are those of `month/2`.
+      A month of this calendar is four or five weeks, as its pattern of weeks gives it (4-4-5 and its kin), and the last month of a year of 53 weeks has one week more.
 
       ### Arguments
 
       * `year` is any year.
 
-      * `week` is a week of that year.
+      * `month` is a month of that year, from 1 to 12.
 
       ### Returns
 
-      * `7`, or
+      * The number of days, a multiple of seven, or
 
-      * `{:error, :invalid_date}` for a week the year does not have.
+      * `{:error, :invalid_date}` for a month the year does not have.
 
       """
-      @spec days_in_month(year :: Calendrical.year(), week :: Calendrical.week()) ::
+      @spec days_in_month(year :: Calendrical.year(), month :: Calendrical.month()) ::
               days ::
               Calendar.day()
               | {:error, :invalid_date | Exception.t()}
 
       @impl true
-      def days_in_month(year, week) do
-        Week.days_in_month(year, week, __config__())
+      def days_in_month(year, month) do
+        Week.days_in_month(year, month, __config__())
       end
 
       @doc """
-      Returns how many days there are in the given week, whatever the year: seven.
+      Returns how many days there are in the given month, whatever the year.
 
       ### Arguments
 
-      * `week` is a week of the year.
+      * `month` is a month of the year, from 1 to 12.
 
       ### Returns
 
-      * `7`, or
+      * The number of days of a month that has as many in every year, or
 
-      * `{:error, :invalid_date}` for a week no year has.
+      * `{:ambiguous, [days, days_in_a_long_year]}` for the last month, which has one week more in a year of 53 weeks, or
+
+      * `{:error, :undefined}` for a month no year has.
 
       """
-      @spec days_in_month(week :: Calendrical.week()) ::
+      @spec days_in_month(month :: Calendrical.month()) ::
               days ::
               Calendar.day()
-              | {:error, :invalid_date | Exception.t()}
+              | {:ambiguous, [pos_integer()]}
+              | {:error, :undefined | Exception.t()}
 
       @impl true
-      def days_in_month(week) do
-        Week.days_in_month(week, __config__())
+      def days_in_month(month) do
+        Week.days_in_month(month, __config__())
       end
 
       @doc """
@@ -501,32 +511,24 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
-      Returns the days a week of a year has, as runs of their numbers: a
-      calendar of weeks holds its week in a date's month field.
-
-      """
-      @impl true
-      def day_numbers(year, week),
-        do: Calendrical.Base.Common.week_day_numbers(__MODULE__, year, week)
-
-      @doc """
-      Returns the date of a day of a week of a year: a calendar of weeks'
-      week dates are its own dates.
+      Returns the date of a day of a week of a year. A calendar of weeks'
+      week dates are counted in its own weeks: the week is a week of its
+      year, and the day is counted from the day its weeks begin on.
 
       """
       @impl true
       def date_from_week_date(year, week, day) do
-        Calendrical.Base.WeekDate.date_from_own_week_date(__MODULE__, year, week, day)
+        Week.date_from_week_date(year, week, day, __config__())
       end
 
       @doc """
-      Returns the year, the week and the day of the week of a date: its
-      own fields, in a calendar of weeks.
+      Returns the year, the week and the day of the week of a date, as
+      `date_from_week_date/3` counts them.
 
       """
       @impl true
-      def week_date_from_date(year, week, day) do
-        Calendrical.Base.WeekDate.own_week_date_from_date(__MODULE__, year, week, day)
+      def week_date_from_date(year, month, day) do
+        Week.week_date_from_date(year, month, day, __config__())
       end
 
       @doc """
@@ -618,24 +620,14 @@ defmodule Calendrical.Compiler.Week do
       @impl true
       def plus(year, month, day, date_part, increment, options \\ [])
 
-      def plus(year, month, day, :years, quarters, options) do
-        Week.plus(year, month, day, __config__(), :years, quarters, options)
-      end
+      def plus(year, month, day, date_part, increment, options)
+          when date_part in [:years, :quarters, :months, :weeks, :days] do
+        {year, week, day} = Week.week_date(year, month, day, __config__())
 
-      def plus(year, week, day, :quarters, quarters, options) do
-        Week.plus(year, week, day, __config__(), :quarters, quarters, options)
-      end
+        {year, week, day} =
+          Week.plus(year, week, day, __config__(), date_part, increment, options)
 
-      def plus(year, week, day, :months, months, options) do
-        Week.plus(year, week, day, __config__(), :months, months, options)
-      end
-
-      def plus(year, month, day, :weeks, weeks, options) do
-        Week.plus(year, month, day, __config__(), :weeks, weeks, options)
-      end
-
-      def plus(year, week, day, :days, days, options) do
-        Week.plus(year, week, day, __config__(), :days, days, options)
+        Week.month_date(year, week, day, __config__())
       end
 
       @doc """
@@ -760,7 +752,8 @@ defmodule Calendrical.Compiler.Week do
 
       """
       @impl true
-      def date_to_iso_days(year, week, day) do
+      def date_to_iso_days(year, month, day) do
+        {year, week, day} = Week.week_date(year, month, day, __config__())
         Week.date_to_iso_days(year, week, day, __config__())
       end
 
@@ -771,7 +764,8 @@ defmodule Calendrical.Compiler.Week do
       """
       @impl true
       def date_from_iso_days(iso_days) do
-        Week.date_from_iso_days(iso_days, __config__())
+        {year, week, day} = Week.date_from_iso_days(iso_days, __config__())
+        Week.month_date(year, week, day, __config__())
       end
 
       @doc """
@@ -809,7 +803,9 @@ defmodule Calendrical.Compiler.Week do
               Calendar.microsecond()
             ) :: Calendar.iso_days()
 
-      def naive_datetime_to_iso_days(year, week, day, hour, minute, second, microsecond) do
+      def naive_datetime_to_iso_days(year, month, day, hour, minute, second, microsecond) do
+        {year, week, day} = Week.week_date(year, month, day, __config__())
+
         Week.naive_datetime_to_iso_days(
           year,
           week,
@@ -837,7 +833,11 @@ defmodule Calendrical.Compiler.Week do
             }
       @impl true
       def naive_datetime_from_iso_days({days, day_fraction}) do
-        Week.naive_datetime_from_iso_days({days, day_fraction}, __config__())
+        {year, week, day, hour, minute, second, microsecond} =
+          Week.naive_datetime_from_iso_days({days, day_fraction}, __config__())
+
+        {year, month, day} = Week.month_date(year, week, day, __config__())
+        {year, month, day, hour, minute, second, microsecond}
       end
 
       @doc false

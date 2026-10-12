@@ -117,12 +117,17 @@ defmodule Calendrical.WeekDateTest do
   end
 
   describe "in a calendar of weeks" do
-    test "a week date is the calendar's own date" do
+    # A week date is counted in the calendar's own weeks, and names a date
+    # of a month of its pattern: week 10 begins the third month.
+    test "a week date is counted in the calendar's own weeks" do
       assert Calendrical.ISOWeek.date_from_week_date(2026, 10, 1) ==
-               Date.new!(2026, 10, 1, Calendrical.ISOWeek)
+               Date.new!(2026, 3, 1, Calendrical.ISOWeek)
 
-      assert Calendrical.ISOWeek.week_date_from_date(2026, 10, 1) == {2026, 10, 1}
-      assert Calendrical.NRF.week_date_from_date(2026, 10, 3) == {2026, 10, 3}
+      assert Calendrical.ISOWeek.week_date_from_date(2026, 3, 1) == {2026, 10, 1}
+      assert Calendrical.NRF.week_date_from_date(2026, 3, 3) == {2026, 10, 3}
+
+      assert Calendrical.ISOWeek.date_from_week_date(2026, 54, 1) == {:error, :invalid_date}
+      assert Calendrical.NRF.week_date_from_date(2026, 3, 36) == {:error, :invalid_date}
     end
 
     test "ISO 8601's calendar of weeks has the weeks the Gregorian year has" do

@@ -24,7 +24,7 @@ defmodule Calendrical.Test.DateGenerator do
                          ) do
       {weeks_in_year, _days_in_last_week} = Calendrical.weeks_in_year(year, calendar)
       week = min(week, weeks_in_year)
-      {:ok, date} = Date.new(year, week, day, calendar)
+      %Date{} = date = calendar.date_from_week_date(year, week, day)
       date
     end
   end

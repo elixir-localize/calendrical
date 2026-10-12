@@ -47,12 +47,14 @@ defmodule Calendrical.IsoParseTest do
   end
 
   describe "parse_week_date/2" do
+    # The third day of week 15 is the tenth of the fourth month, of four,
+    # five and four weeks to a quarter.
     test "parses a week-formatted date" do
-      assert Parse.parse_week_date("2026-W15-3", Calendrical.ISOWeek) == {:ok, {2026, 15, 3}}
+      assert Parse.parse_week_date("2026-W15-3", Calendrical.ISOWeek) == {:ok, {2026, 4, 10}}
     end
 
     test "parses a negative week-formatted year" do
-      assert {:ok, {-100, 15, 3}} = Parse.parse_week_date("-0100-W15-3", Calendrical.ISOWeek)
+      assert {:ok, {-100, 4, 10}} = Parse.parse_week_date("-0100-W15-3", Calendrical.ISOWeek)
     end
 
     test "falls back to plain date parsing without the W marker" do

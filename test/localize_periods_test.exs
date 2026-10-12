@@ -203,7 +203,7 @@ defmodule Calendrical.LocalizePeriodsTest do
             {Calendrical.ISOWeek, Date.range(~D[2020-12-28], ~D[2021-01-03])},
             {Calendrical.NRF, Date.range(~D[2024-01-28], ~D[2024-02-03])}
           ] do
-        assert Enum.all?(days, &(Date.convert!(&1, calendar).month == 53)), inspect(calendar)
+        assert Enum.all?(days, &(week_of_year(&1, calendar) == 53)), inspect(calendar)
         assert_durations_add_back(calendar, days)
       end
     end
@@ -211,10 +211,10 @@ defmodule Calendrical.LocalizePeriodsTest do
     # A calendar of weeks' months are its periods of weeks, and a Hebrew leap
     # year has thirteen months: neither is twelve months of the month field.
     test "in a calendar of weeks and across a Hebrew leap year" do
-      week = Date.new!(2026, 25, 2, Calendrical.ISOWeek)
+      week = ~D[2026-W25-2 Calendrical.ISOWeek]
 
       assert {:ok, %{year: 1, month: 0, day: 0}} =
-               Localize.Duration.new(week, Date.new!(2027, 25, 2, Calendrical.ISOWeek))
+               Localize.Duration.new(week, ~D[2027-W25-2 Calendrical.ISOWeek])
 
       # 5784 is a leap year of thirteen months, so 1 Tishri 5784 to 1 Tishri
       # 5785 is a year, and to the day before it twelve months and 28 days:
@@ -283,13 +283,19 @@ defmodule Calendrical.LocalizePeriodsTest do
   end
 
   # A month is the month field, which counts a calendar's months in the
-  # order of time, and a week calendar's is the period its week is in.
-  defp month_position(calendar, date) do
-    if calendar.calendar_base() == :week do
-      calendar.month_of_year(date.year, date.month, date.day)
-    else
-      date.month
-    end
+  # order of time.
+  defp month_position(_calendar, date) do
+    date.month
+  end
+
+  # The week of its year a day is in, in a calendar.
+  defp week_of_year(date, calendar) do
+    {_year, week} =
+      date
+      |> Date.convert!(calendar)
+      |> Calendrical.week_of_year()
+
+    week
   end
 
   # Every day of a span in the calendar, with the number of times each of

@@ -10,7 +10,9 @@ The format is based on
 
 ### Breaking changes
 
-* `date_from_week_date/3`, `week_date_from_date/3` and `weeks_in_week_year/1` are required callbacks: a week date by ISO 8601's rule over the calendar's own year, which every calendar answers by default and a calendar of weeks answers with its own dates. `iso_week_of_year/3` is unchanged, the week of the Gregorian year a day is in.
+* A date of a calendar of weeks (`Calendrical.ISOWeek`, `Calendrical.NRF`, one made with `Calendrical.new/3`) is a year, a month of its pattern of weeks and a day of that month, as `Date.new/4` takes a date of any calendar, where its month field held the week and its day field the day of the week: the second day of week 25 is `~D[2026-06-16 Calendrical.NRF]`, and `Date.new(2026, 25, 2, Calendrical.NRF)` is an error. The week is asked for (`week_of_year/3`, `week_date_from_date/3`) and given (`date_from_week_date/3`, and `parse_date/1` and `~D` still read `2026-W25-2`); a date is written `2026-06-16`, `days_in_month/2` counts a month's 28 or 35 days, and `parsing_calendar/0` is the calendar itself.
+
+* `date_from_week_date/3`, `week_date_from_date/3` and `weeks_in_week_year/1` are required callbacks: a week date by ISO 8601's rule over the calendar's own year, which every calendar answers by default and a calendar of weeks answers in the weeks it is built of. `iso_week_of_year/3` is unchanged, the week of the Gregorian year a day is in.
 
 * `solar_term/2` is a required callback, the day of a solar term of a Gregorian year: a lunisolar calendar reckons it at its own meridian, and any other calendar at the Chinese calendar's, the traditional reference, which is the default. `Calendrical.Lunisolar.solar_term/3`, which takes the place as a function, is unchanged.
 

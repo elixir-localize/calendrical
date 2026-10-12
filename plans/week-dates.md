@@ -36,7 +36,7 @@ Three required callbacks, each with a default every calendar has from `Calendric
 
 * **`weeks_in_week_year/1`** — how many weeks a week-year has.
 
-A year's week 1 begins on the Monday on or before its fourth day (`Calendrical.Base.Common.year_days/2`, `Calendrical.Kday.kday_on_or_before/2`), and the rest is counting in days. A calendar of weeks overrides the three with its own date fields. `iso_week_of_year/3` is not changed.
+A year's week 1 begins on the Monday on or before its fourth day (`Calendrical.Base.Common.year_days/2`, `Calendrical.Kday.kday_on_or_before/2`), and the rest is counting in days. A calendar of weeks overrides the three and counts in the weeks it is built of; since 2026-10-13 its dates hold a month and a day of it, not the week ([week-calendar-dates.md](week-calendar-dates.md)). `iso_week_of_year/3` is not changed.
 
 Measured with it in the tree: the Gregorian calendar's week date of every day from 25 December 2019 to 7 January 2028 is that of Erlang's `:calendar.iso_week_number/1` with Elixir's `Date.day_of_week/1`, and its weeks in each year from 1990 to 2050 are the week 28 December is in; every date of two years in the Hebrew, Persian, Coptic, `Julian.March25` and `Reform.England` (1751 to 1753) calendars has one week date, which names it; week 1 holds the fourth day of each of 43 years in three calendars, and the day before it is day 7 of the last week of the year before. Ten tests, all passing.
 

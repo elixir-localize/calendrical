@@ -37,8 +37,10 @@ defmodule Calendrical.NumericMonthTest do
       assert written(Date.new!(2026, 1, 15, fiscal)) == {15, 1}
     end
 
-    test "are its week and its day of the week in a calendar of weeks" do
-      assert written(Date.new!(2025, 25, 1, Calendrical.ISOWeek)) == {1, 25}
+    # Week 25's first day is the fifteenth of the sixth month of the pattern.
+    test "are its month and its day in a calendar of weeks, as in any calendar" do
+      assert written(Date.new!(2025, 6, 15, Calendrical.ISOWeek)) == {15, 6}
+      assert Calendrical.ISOWeek.week_date_from_date(2025, 6, 15) == {2025, 25, 1}
     end
 
     test "are the Julian day and month in a calendar that counts its months from a new-year day" do
@@ -89,8 +91,8 @@ defmodule Calendrical.NumericMonthTest do
                locale: :en
              ) == {:ok, "20/09/5785, 20 Sivan"}
 
-      assert Calendrical.strftime(Date.new!(2025, 25, 1, Calendrical.ISOWeek), "%d/%m/%Y") ==
-               {:ok, "01/25/2025"}
+      assert Calendrical.strftime(Date.new!(2025, 6, 15, Calendrical.ISOWeek), "%d/%m/%Y") ==
+               {:ok, "15/06/2025"}
     end
 
     test "keeps the padding of a field it writes" do

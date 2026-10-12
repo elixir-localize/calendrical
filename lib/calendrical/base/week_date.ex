@@ -11,8 +11,8 @@ defmodule Calendrical.Base.WeekDate do
   # `iso_week_of_year/3` is another question, the week of the Gregorian year
   # a day is in, whichever calendar names the day.
   #
-  # A calendar of weeks has week dates of its own: its dates are a year, a
-  # week and a day of the week already.
+  # A calendar of weeks has week dates of its own, counted in the weeks it
+  # is built of.
 
   alias Calendrical.Base.Common
   alias Calendrical.Kday
@@ -106,22 +106,9 @@ defmodule Calendrical.Base.WeekDate do
     %Date{year: year, month: month, day: day, calendar: calendar}
   end
 
-  # A calendar of weeks' own week dates: the fields of its dates.
-  def date_from_own_week_date(calendar, year, week, day) do
-    case Date.new(year, week, day, calendar) do
-      {:ok, date} -> date
-      {:error, _reason} -> {:error, :invalid_date}
-    end
-  end
-
-  def own_week_date_from_date(calendar, year, week, day) do
-    if calendar.valid_date?(year, week, day) do
-      {year, week, day}
-    else
-      {:error, :invalid_date}
-    end
-  end
-
+  # A calendar of weeks counts its week dates in its own weeks
+  # (`Calendrical.Base.Week.date_from_week_date/4`), and has as many weeks in
+  # a week-year as in its year.
   def weeks_in_own_year(calendar, year) do
     case calendar.weeks_in_year(year) do
       {weeks, _days_in_last_week} when is_integer(weeks) -> weeks

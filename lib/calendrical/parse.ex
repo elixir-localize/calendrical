@@ -15,16 +15,32 @@ defmodule Calendrical.Parse do
     {:error, :invalid_date}
   end
 
-  def parse_week_date(<<"-", year::bytes-4, "-W", month::bytes-2, "-", day::bytes-1>>, calendar) do
-    return_date({"-", year}, month, day, calendar)
+  # A calendar of weeks reads a date written as a week date ("2026-W25-2")
+  # as the date its week-date callback gives it, as well as one written as
+  # a year, a month and a day. It wrote its dates as week dates until 1.4.
+  def parse_week_date(<<"-", year::bytes-4, "-W", week::bytes-2, "-", day::bytes-1>>, calendar) do
+    return_week_date({"-", year}, week, day, calendar)
   end
 
-  def parse_week_date(<<year::bytes-4, "-W", month::bytes-2, "-", day::bytes-1>>, calendar) do
-    return_date({"", year}, month, day, calendar)
+  def parse_week_date(<<year::bytes-4, "-W", week::bytes-2, "-", day::bytes-1>>, calendar) do
+    return_week_date({"", year}, week, day, calendar)
   end
 
   def parse_week_date(string, calendar) do
     parse_date(string, calendar)
+  end
+
+  defp return_week_date({sign, year}, week, day, calendar) do
+    if digits?(year) and digits?(week) and digits?(day) do
+      year = String.to_integer(sign <> year)
+
+      case calendar.date_from_week_date(year, String.to_integer(week), String.to_integer(day)) do
+        %Date{year: year, month: month, day: day} -> {:ok, {year, month, day}}
+        {:error, _reason} -> {:error, :invalid_date}
+      end
+    else
+      {:error, :invalid_format}
+    end
   end
 
   # The fields are digits or the text is no date, and the date is checked

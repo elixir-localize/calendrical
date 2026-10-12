@@ -143,8 +143,8 @@ defmodule Calendrical.LocalizeExtendedYearTest do
             {%{year: 2026, calendar: Calendrical.Japanese}, "2026"},
             {%{year: 2019, calendar: Calendrical.Japanese}, "2019"},
             {%{year: 2026, calendar: Calendrical.ISOWeek}, "2026"},
-            {%{year: 2026, month: 25, calendar: Calendrical.ISOWeek}, "2026"},
-            {%{year: 2026, month: 53, calendar: Calendrical.ISOWeek}, "2026"}
+            {%{year: 2026, month: 6, calendar: Calendrical.ISOWeek}, "2026"},
+            {%{year: 2026, month: 12, calendar: Calendrical.ISOWeek}, "2026"}
           ] do
         assert format(value, "u") == {:ok, expected}, inspect(value)
       end

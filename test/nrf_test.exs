@@ -28,22 +28,20 @@ defmodule Calendrical.NRF.Test do
     assert Calendrical.NRF.leap_year?(2022) == false
   end
 
-  # Months of four, five and four weeks: week 9's seventh day is the 35th of
-  # the second month. Three months on, or back, is the 35th of the next
-  # five-week month, the four-week months between not taking the day with
-  # them; one month on is the 28th, the last day of a four-week month.
+  # Months of four, five and four weeks: the 35th of the second month is the
+  # last day of a five-week month. Three months on, or back, is the 35th of
+  # the next five-week month, the four-week months between not taking the
+  # day with them; one month on is the 28th, the last day of a four-week
+  # month.
   test "a shift by months places the day of the month once" do
-    config = Calendrical.NRF.__config__()
+    assert Calendrical.NRF.days_in_month(2024, 2) == 35
+    assert Calendrical.NRF.week_date_from_date(2024, 2, 35) == {2024, 9, 7}
 
-    assert Calendrical.Base.Week.day_of_month(2024, 9, 7, config) == 35
-    assert Calendrical.NRF.plus(2024, 9, 7, :months, 3, coerce: true) == {2024, 22, 7}
-    assert Calendrical.NRF.plus(2024, 9, 7, :months, -3, coerce: true) == {2023, 48, 7}
-    assert Calendrical.NRF.plus(2024, 9, 7, :months, 1, coerce: true) == {2024, 13, 7}
-    assert Calendrical.Base.Week.day_of_month(2024, 22, 7, config) == 35
-    assert Calendrical.Base.Week.day_of_month(2023, 48, 7, config) == 35
-    assert Calendrical.Base.Week.day_of_month(2024, 13, 7, config) == 28
+    assert Calendrical.NRF.plus(2024, 2, 35, :months, 3, coerce: true) == {2024, 5, 35}
+    assert Calendrical.NRF.plus(2024, 2, 35, :months, -3, coerce: true) == {2023, 11, 35}
+    assert Calendrical.NRF.plus(2024, 2, 35, :months, 1, coerce: true) == {2024, 3, 28}
 
-    assert Date.shift(%Date{year: 2024, month: 9, day: 7, calendar: Calendrical.NRF}, month: 3) ==
-             %Date{year: 2024, month: 22, day: 7, calendar: Calendrical.NRF}
+    assert Date.shift(%Date{year: 2024, month: 2, day: 35, calendar: Calendrical.NRF}, month: 3) ==
+             %Date{year: 2024, month: 5, day: 35, calendar: Calendrical.NRF}
   end
 end

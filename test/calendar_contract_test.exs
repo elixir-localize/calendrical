@@ -199,17 +199,10 @@ defmodule Calendrical.CalendarContract.Test do
         assert unquote(calendar).era_calendar_type() in Localize.Calendar.known_calendars()
       end
 
-      # A calendar of weeks has no month or day of the month of its own,
-      # so a written date is read as a Gregorian one; any other calendar
-      # reads its own.
-      test "its written dates are parsed in itself, or as Gregorian for a calendar of weeks" do
-        expected =
-          Map.fetch!(
-            %{week: Calendar.ISO, month: unquote(calendar)},
-            unquote(calendar).calendar_base()
-          )
-
-        assert unquote(calendar).parsing_calendar() == expected
+      # Every calendar reads its own written dates: those of a calendar of
+      # weeks are a year, a month of its pattern of weeks and a day of it.
+      test "its written dates are parsed in itself" do
+        assert unquote(calendar).parsing_calendar() == unquote(calendar)
       end
 
       # Localize reads a calendar of weeks' dates back as the calendar writes

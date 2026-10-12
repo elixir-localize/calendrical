@@ -84,7 +84,7 @@ defmodule Calendrical.PeriodsTest do
   describe "Calendrical.Interval" do
     test "quadrimester/3 and semester/3 take the calendar's periods" do
       assert months(Calendrical.Interval.quadrimester(2026, 3)) == {9, 12}
-      assert months(Calendrical.Interval.semester(2026, 2, Calendrical.ISOWeek)) == {27, 53}
+      assert months(Calendrical.Interval.semester(2026, 2, Calendrical.ISOWeek)) == {7, 12}
     end
   end
 end

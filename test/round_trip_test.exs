@@ -34,8 +34,8 @@ defmodule Calendrical.RoundTrip.Test do
 
   test "that Calendrical.ISOWeek dates all round trip" do
     for year <- 0001..2200,
-        month <- 1..elem(Calendrical.ISOWeek.weeks_in_year(year), 0),
-        day <- 1..7 do
+        month <- 1..12,
+        day <- 1..Calendrical.ISOWeek.days_in_month(year, month) do
       {:ok, iso_week} = Date.new(year, month, day, Calendrical.ISOWeek)
       {:ok, iso} = Date.convert(iso_week, Calendar.ISO)
       {:ok, converted} = Date.convert(iso, Calendrical.ISOWeek)

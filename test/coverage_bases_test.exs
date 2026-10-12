@@ -285,14 +285,16 @@ defmodule CoverageBasesTest do
   end
 
   describe "Base.Week week and day functions" do
+    # The third day of the second month is the third day of week 5, four
+    # weeks of the first month before it.
     test "week_of_year and iso_week_of_year" do
-      assert NRF.week_of_year(2019, 5, 3) == {2019, 5}
-      assert NRF.iso_week_of_year(2019, 5, 3) == {2019, 10}
-      assert ISOWeek.iso_week_of_year(2020, 5, 3) == {2020, 5}
+      assert NRF.week_of_year(2019, 2, 3) == {2019, 5}
+      assert NRF.iso_week_of_year(2019, 2, 3) == {2019, 10}
+      assert ISOWeek.iso_week_of_year(2020, 2, 3) == {2020, 5}
     end
 
     test "day_of_year" do
-      assert NRF.day_of_year(2019, 5, 3) == 31
+      assert NRF.day_of_year(2019, 2, 3) == 31
     end
 
     test "day_of_week with the default and explicit weekday starts" do
@@ -300,9 +302,16 @@ defmodule CoverageBasesTest do
       assert NRF.day_of_week(2019, 1, 1, :monday) == {7, 1, 7}
     end
 
+    # The first day of week 53 is the 29th of the last month, which a year
+    # of 52 weeks does not have.
     test "valid_date? respects the number of weeks in the year" do
-      assert NRF.valid_date?(2023, 53, 1)
-      refute NRF.valid_date?(2022, 53, 1)
+      assert NRF.week_date_from_date(2023, 12, 29) == {2023, 53, 1}
+      assert NRF.valid_date?(2023, 12, 29)
+      refute NRF.valid_date?(2022, 12, 29)
+      refute NRF.valid_date?(2023, 53, 1)
+      refute NRF.valid_date?(2023, 13, 1)
+      refute NRF.valid_date?(2023, 0, 1)
+      refute NRF.valid_date?(2023, 1, 0)
     end
   end
 
@@ -320,15 +329,16 @@ defmodule CoverageBasesTest do
       assert Enum.count(NRF.month(2022, 12)) == 28
     end
 
-    # `days_in_month/2` is asked about a date's month field, which is its
-    # week in a calendar of weeks.
-    test "days_in_month/2 and days_in_month/1 count a week's days" do
-      assert NRF.days_in_month(2023, 12) == 7
-      assert NRF.days_in_month(2023, 53) == 7
-      assert NRF.days_in_month(2022, 53) == {:error, :invalid_date}
-      assert NRF.days_in_month(12) == 7
-      assert NRF.days_in_month(1) == 7
-      assert NRF.days_in_month(54) == {:error, :invalid_date}
+    # `days_in_month/2` is asked about a date's month field, which is a
+    # month of the calendar's pattern of weeks.
+    test "days_in_month/2 and days_in_month/1 count a month's days" do
+      assert NRF.days_in_month(2023, 12) == 35
+      assert NRF.days_in_month(2022, 12) == 28
+      assert NRF.days_in_month(2023, 2) == 35
+      assert NRF.days_in_month(2023, 13) == {:error, :invalid_date}
+      assert NRF.days_in_month(12) == {:ambiguous, [28, 35]}
+      assert NRF.days_in_month(1) == 28
+      assert NRF.days_in_month(13) == {:error, :undefined}
     end
 
     test "days_in_week/2" do
@@ -364,21 +374,24 @@ defmodule CoverageBasesTest do
 
   describe "Base.Week plus/7 and add_days" do
     test "plus :quarters" do
-      assert NRF.plus(2019, 1, 1, :quarters, 1) == {2019, 14, 1}
+      assert NRF.plus(2019, 1, 1, :quarters, 1) == {2019, 4, 1}
     end
 
     test "plus :months with a zero increment" do
       assert NRF.plus(2019, 5, 3, :months, 0) == {2019, 5, 3}
     end
 
+    # The 34th of a five-week month is brought to the 28th, the last day of
+    # the four-week month two months back.
     test "plus :months forwards and backwards" do
-      assert NRF.plus(2019, 4, 6, :months, 2) == {2019, 13, 6}
-      assert NRF.plus(2019, 9, 6, :months, -2) == {2018, 52, 7}
-      assert NRF.plus(2019, 5, 7, :months, 2) == {2019, 14, 7}
+      assert NRF.plus(2019, 1, 27, :months, 2) == {2019, 3, 27}
+      assert NRF.plus(2019, 2, 34, :months, -2) == {2018, 12, 28}
+      assert NRF.plus(2019, 2, 7, :months, 2) == {2019, 4, 7}
     end
 
     test "plus :days" do
-      assert NRF.plus(2019, 1, 1, :days, 10) == {2019, 2, 4}
+      assert NRF.plus(2019, 1, 1, :days, 10) == {2019, 1, 11}
+      assert NRF.plus(2019, 1, 28, :days, 1) == {2019, 2, 1}
     end
 
     test "add_days with coercion clamps to the month" do
@@ -397,16 +410,16 @@ defmodule CoverageBasesTest do
   end
 
   describe "Base.Week string conversions and helpers" do
-    test "date_to_string pads single-digit weeks" do
-      assert Week.date_to_string(2019, 5, 3) == "2019-W05-3"
-      assert Week.date_to_string(2019, 12, 3) == "2019-W12-3"
+    test "date_to_string writes a year, a month and a day" do
+      assert Week.date_to_string(2019, 5, 3) == "2019-05-03"
+      assert Week.date_to_string(2019, 12, 31) == "2019-12-31"
     end
 
     test "naive_datetime_to_string and datetime_to_string" do
-      assert Week.naive_datetime_to_string(2019, 5, 3, 1, 2, 3, {0, 0}) == "2019-W05-3 01:02:03"
+      assert Week.naive_datetime_to_string(2019, 5, 3, 1, 2, 3, {0, 0}) == "2019-05-03 01:02:03"
 
       assert Week.datetime_to_string(2019, 5, 3, 1, 2, 3, {0, 0}, "Etc/UTC", "UTC", 0, 0) ==
-               "2019-W05-3 01:02:03Z"
+               "2019-05-03 01:02:03Z"
     end
 
     test "sign/1" do

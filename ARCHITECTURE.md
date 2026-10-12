@@ -43,7 +43,7 @@ The consequence for navigation: to find the implementation of `Calendrical.Grego
 
 ## Data conventions (read before touching anything)
 
-* **Week calendars store the week number in the `%Date{}` struct's `:month` field.** A `~D[2026-W05-3 Calendrical.ISOWeek]` date is `%Date{year: 2026, month: 5, day: 3}`. This is why `Calendrical.Base.Week`'s map defguard checks `:month`, why several week functions name their second parameter `month`, and why the two base modules can share `Date`-facing plumbing. It is a deliberate compatibility choice — the stdlib `Date` struct has no `:week` field — but it is the single most surprising fact in the codebase.
+* **A week calendar's date is a year, a month and a day of the month, as every calendar's is.** The month is one of the twelve of its pattern of weeks (4-4-5 and its kin) and has 28 or 35 days, so `~D[2026-06-16 Calendrical.ISOWeek]` is the second day of week 25. The week is not a field: it is asked for (`week_of_year/3`, `week_date_from_date/3`) and given (`date_from_week_date/3`, and `parse_date/1` reads `2026-W25-2`). Inside `Calendrical.Base.Week` the arithmetic still counts in weeks: the compiler turns a date into its year, week and day of the week on the way in (`week_date/4`) and back on the way out (`month_date/4`). Until 1.4 the week and the day of the week were the fields themselves.
 
 * **`iso_days` is a bare integer day number** (proleptic Gregorian day count as used by `Calendar.ISO.date_to_iso_days/3`), except in the `naive_datetime_*` plumbing where it is the stdlib's `{days, day_fraction}` pair. Functions named `*_iso_days` operate on the integer form.
 

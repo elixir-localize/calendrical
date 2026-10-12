@@ -32,13 +32,94 @@ defmodule Calendrical.Base.Week do
     end
   end
 
-  def valid_date?(year, week, day, config)
+  # A date of a calendar of weeks is a year, a month of its pattern of weeks
+  # (4-4-5 and its kin) and a day of that month, as a date of any calendar
+  # is a year, a month and a day. The arithmetic of this module counts in
+  # weeks, as the calendar is built: a date comes to it as its year, its
+  # week and its day of the week (`week_date/4`), and a date it answers
+  # with goes back as a month and a day (`month_date/4`). Until 1.4 the
+  # week and the day of the week were the fields of the date themselves.
+
+  @doc false
+  # The year, the week and the day of the week of a year, a month and a day
+  # of the month. What is no date of whole numbers is given back as it is,
+  # for the function that takes it to refuse.
+  def week_date(year, month, day, config)
+      when is_integer(year) and is_integer(month) and is_integer(day) do
+    week = first_week_of_month(month, config) + Integer.floor_div(day - 1, days_in_week())
+    {year, week, Integer.mod(day - 1, days_in_week()) + 1}
+  end
+
+  def week_date(year, month, day, _config) do
+    {year, month, day}
+  end
+
+  @doc false
+  # The year, the month and the day of the month of a year, a week and a day
+  # of the week: the inverse of `week_date/4`.
+  def month_date(year, week, day, config)
+      when is_integer(year) and is_integer(week) and is_integer(day) do
+    month = month_of_year(year, week, day, config)
+    {year, month, (week - first_week_of_month(month, config)) * days_in_week() + day}
+  end
+
+  def month_date(year, week, day, _config) do
+    {year, week, day}
+  end
+
+  @doc false
+  # The week of the year a month begins with: the weeks of the quarters
+  # before it and of the months before it in its own quarter.
+  def first_week_of_month(month, %Config{weeks_in_month: weeks_in_month}) do
+    quarters_before = Integer.floor_div(month - 1, @months_in_quarter)
+    months_before = Integer.mod(month - 1, @months_in_quarter)
+
+    weeks_before =
+      weeks_in_month
+      |> Enum.take(months_before)
+      |> Enum.sum()
+
+    quarters_before * @weeks_in_quarter + weeks_before + 1
+  end
+
+  @doc false
+  # The date of a day of a week of a year, and the year, the week and the
+  # day of the week of a date: a calendar of weeks' week dates are counted
+  # in its own weeks, the day from the day its weeks begin on.
+  def date_from_week_date(year, week, day, config) do
+    if valid_week_date?(year, week, day, config) do
+      {year, month, day} = month_date(year, week, day, config)
+      %Date{year: year, month: month, day: day, calendar: config.calendar}
+    else
+      {:error, :invalid_date}
+    end
+  end
+
+  @doc false
+  def week_date_from_date(year, month, day, config) do
+    if valid_date?(year, month, day, config) do
+      week_date(year, month, day, config)
+    else
+      {:error, :invalid_date}
+    end
+  end
+
+  def valid_date?(year, month, day, config)
+      when is_integer(year) and is_integer(month) and is_integer(day) do
+    month in 1..@months_in_year and day in 1..days_in_month(year, month, config)
+  end
+
+  def valid_date?(_year, _month, _day, _config), do: false
+
+  @doc false
+  # Whether a year, a week and a day of the week name a day of the calendar.
+  def valid_week_date?(year, week, day, config)
       when is_integer(year) and is_integer(week) and is_integer(day) do
     {weeks_in_year, _days_in_last_week} = weeks_in_year(year, config)
     week in 1..weeks_in_year and day in 1..days_in_week()
   end
 
-  def valid_date?(_year, _week, _day, _config), do: false
+  def valid_week_date?(_year, _week, _day, _config), do: false
 
   # Year of era assumes that the era transitions are always aligned
   # to the calendar year. But for 445 type calendar and country fiscal
@@ -90,9 +171,15 @@ defmodule Calendrical.Base.Week do
   end
 
   def iso_week_of_year(year, week, day, config) when is_date(year, week, day) do
-    with {:ok, date} <- Date.new(year, week, day, config.calendar) do
-      {:ok, %{year: year, month: month, day: day}} = Date.convert(date, Calendrical.Gregorian)
+    if valid_week_date?(year, week, day, config) do
+      {year, month, day} =
+        year
+        |> date_to_iso_days(week, day, config)
+        |> Calendrical.Gregorian.date_from_iso_days()
+
       Calendrical.Gregorian.iso_week_of_year(year, month, day)
+    else
+      {:error, :invalid_date}
     end
   end
 
@@ -102,8 +189,7 @@ defmodule Calendrical.Base.Week do
 
   def week_of_month(year, week, day, config) when is_date(year, week, day) do
     month = month_of_year(year, week, day, config)
-    %Date.Range{first: first} = month(year, month, config)
-    {month, week - first.month + 1}
+    {month, week - first_week_of_month(month, config) + 1}
   end
 
   def week_of_month(year, week, day, _config) do
@@ -196,35 +282,37 @@ defmodule Calendrical.Base.Week do
     {:error, missing_year_error("days_in_year", year)}
   end
 
-  # A date's month field is its week in a calendar of weeks, and Elixir's
-  # `Date.days_in_month/1` and `Date.end_of_month/1` put that field to this
-  # callback, so the days "in the month" are the seven of the week: the
-  # last day of 2026-W25 is 2026-W25-7. The days of a month of the calendar's
-  # pattern (4-4-5 and its kin) are those of `month/3`.
-  def days_in_month(year, week, config) when is_integer(year) and is_integer(week) do
-    {weeks_in_year, _days_in_last_week} = weeks_in_year(year, config)
-    if week in 1..weeks_in_year, do: days_in_week(), else: {:error, :invalid_date}
+  # The days of a month of a year: those of the weeks its pattern gives it.
+  def days_in_month(year, month, config)
+      when is_integer(year) and is_integer(month) and month in 1..@months_in_year do
+    days_in_pattern_month(year, month, config)
   end
 
-  def days_in_month(year, _week, _config) when is_integer(year) do
+  def days_in_month(year, _month, _config) when is_integer(year) do
     {:error, :invalid_date}
   end
 
-  def days_in_month(year, _week, _config) do
+  def days_in_month(year, _month, _config) do
     {:error, missing_year_error("days_in_month", year)}
   end
 
-  # Without a year, every week a year can have has seven days.
-  def days_in_month(week, _config) when week in 1..@weeks_in_long_year do
-    days_in_week()
+  # Without a year a month has the days of its weeks, and the last month one
+  # week more in a long year.
+  def days_in_month(@months_in_year, %Config{weeks_in_month: [_, _, weeks_in_last_month]}) do
+    days = weeks_in_last_month * days_in_week()
+    {:ambiguous, [days, days + days_in_week()]}
   end
 
-  def days_in_month(week, _config) when is_integer(week) do
-    {:error, :invalid_date}
+  def days_in_month(month, config) when month in 1..@months_in_year do
+    days_in_pattern_month(nil, month, config)
   end
 
-  def days_in_month(week, _config) do
-    {:error, missing_year_error("days_in_month", week)}
+  def days_in_month(month, _config) when is_integer(month) do
+    {:error, :undefined}
+  end
+
+  def days_in_month(month, _config) do
+    {:error, missing_year_error("days_in_month", month)}
   end
 
   # The days of a month of the calendar's pattern of weeks, `month` being
@@ -247,10 +335,26 @@ defmodule Calendrical.Base.Week do
   defdelegate days_in_week(year, week), to: Calendrical.Base.Common
 
   def year(year, config) do
-    with {:ok, first_day} <- Date.new(year, 1, 1, config.calendar),
-         {weeks_in_year, _} <- weeks_in_year(year, config),
-         {:ok, last_day} <- Date.new(year, weeks_in_year, days_in_week(), config.calendar) do
+    with {weeks_in_year, _} <- weeks_in_year(year, config) do
+      weeks(year, 1, weeks_in_year, config)
+    end
+  end
+
+  # The dates from the first day of a week of a year to the last day of
+  # another, or `{:error, :invalid_date}` where the year does not have them.
+  defp weeks(year, first_week, last_week, config) do
+    with {:ok, first_day} <- date_of_week_date(year, first_week, 1, config),
+         {:ok, last_day} <- date_of_week_date(year, last_week, days_in_week(), config) do
       Date.range(first_day, last_day)
+    end
+  end
+
+  defp date_of_week_date(year, week, day, config) do
+    if valid_week_date?(year, week, day, config) do
+      {year, month, day} = month_date(year, week, day, config)
+      Date.new(year, month, day, config.calendar)
+    else
+      {:error, :invalid_date}
     end
   end
 
@@ -259,10 +363,7 @@ defmodule Calendrical.Base.Week do
       starting_week = (quarter - 1) * @weeks_in_quarter + 1
       ending_week = starting_week + weeks_in_quarter(year, quarter, config) - 1
 
-      with {:ok, first_day} <- Date.new(year, starting_week, 1, config.calendar),
-           {:ok, last_day} <- Date.new(year, ending_week, days_in_week(), config.calendar) do
-        Date.range(first_day, last_day)
-      end
+      weeks(year, starting_week, ending_week, config)
     else
       {:error, :invalid_date}
     end
@@ -286,10 +387,7 @@ defmodule Calendrical.Base.Week do
       first_week = quarter_weeks_prior + weeks_prior_in_quarter + 1
       last_week = first_week + weeks_in_month - 1
 
-      {:ok, start_of_month} = Date.new(year, first_week, 1, config.calendar)
-      {:ok, end_of_month} = Date.new(year, last_week, days_in_week(), config.calendar)
-
-      Date.range(start_of_month, end_of_month)
+      weeks(year, first_week, last_week, config)
     else
       {:error, :invalid_date}
     end
@@ -299,20 +397,24 @@ defmodule Calendrical.Base.Week do
     {weeks_in_year, _days_in_last_week} = weeks_in_year(year, config)
 
     if week in 1..weeks_in_year do
-      with {:ok, first_day} <- Date.new(year, week, 1, config.calendar),
-           {:ok, last_day} <- Date.new(year, week, days_in_week(), config.calendar) do
-        Date.range(first_day, last_day)
-      end
+      weeks(year, week, week, config)
     else
       {:error, :invalid_date}
     end
   end
 
+  # A year on, a day keeps its week and its day of the week, and a day of a
+  # fifty-third week is brought into the last week of a year that has
+  # fifty-two.
   def plus(year, week, day, config, :years, years, options) do
     new_year = year + years
-    coerce? = Keyword.get(options, :coerce, @default_coercion)
-    {new_week, new_day} = Calendrical.month_day(new_year, week, day, config.calendar, coerce?)
-    {new_year, new_week, new_day}
+
+    if Keyword.get(options, :coerce, @default_coercion) do
+      {weeks_in_year, _days_in_last_week} = weeks_in_year(new_year, config)
+      {new_year, min(week, weeks_in_year), day}
+    else
+      {new_year, week, day}
+    end
   end
 
   def plus(year, week, day, config, :quarters, quarters, options) do
@@ -567,12 +669,11 @@ defmodule Calendrical.Base.Week do
     {year, week, day}
   end
 
-  # An ISO 8601 week date, its year written as `Calendar.ISO` writes one, at
-  # least four digits and signed before year 0, so `parse_date/1` reads it
-  # back: "0004-W09-7", "-0044-W11-4".
-  def date_to_string(year, week, day) do
-    year_to_string(year) <> "-W" <> zero_pad(week, 2) <> "-" <> Integer.to_string(day)
-  end
+  # A date is written as its year, its month and its day, as `Calendar.ISO`
+  # writes one: "2026-06-16". Until 1.4 it was written as the week date it
+  # then held, "2026-W25-2", which `Calendrical.Parse.parse_week_date/2`
+  # still reads.
+  defdelegate date_to_string(year, month, day), to: Calendar.ISO
 
   def naive_datetime_from_iso_days({days, day_fraction}, config) do
     {year, _month, _day} = Calendar.ISO.date_from_iso_days(days)
@@ -637,11 +738,6 @@ defmodule Calendrical.Base.Week do
       " " <>
       Calendar.ISO.time_to_string(hour, minute, second, microsecond)
   end
-
-  defp year_to_string(year) when year < 0, do: "-" <> zero_pad(-year, 4)
-  defp year_to_string(year), do: zero_pad(year, 4)
-
-  defp zero_pad(value, digits), do: String.pad_leading(Integer.to_string(value), digits, "0")
 
   defp week_to_days(week) do
     (week - 1) * days_in_week()

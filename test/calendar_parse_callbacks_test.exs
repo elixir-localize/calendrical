@@ -13,8 +13,8 @@ defmodule Calendrical.CalendarParseCallbacksTest do
     end
 
     test "parse_date/1 for a week calendar accepts ISO week syntax" do
-      assert Calendrical.ISOWeek.parse_date("2026-W21-6") == {:ok, {2026, 21, 6}}
-      assert Calendrical.ISOWeek.parse_date("-2026-W21-6") == {:ok, {-2026, 21, 6}}
+      assert Calendrical.ISOWeek.parse_date("2026-W21-6") == {:ok, {2026, 5, 27}}
+      assert Calendrical.ISOWeek.parse_date("-2026-W21-6") == {:ok, {-2026, 5, 27}}
     end
 
     # A field that is not digits is no date, as `Calendar.ISO` answers it,
@@ -35,20 +35,24 @@ defmodule Calendrical.CalendarParseCallbacksTest do
       assert Calendrical.Coptic.parse_date("-0003-13-06") == {:error, :invalid_date}
     end
 
-    # A week date is written as ISO 8601 writes one, the year as
-    # `Calendar.ISO` writes it, so it reads back for any year.
-    test "a week calendar writes a date it reads back" do
-      for {year, week, day, text} <- [
-            {4, 9, 7, "0004-W09-7"},
-            {-44, 11, 4, "-0044-W11-4"},
-            {2026, 25, 2, "2026-W25-2"}
+    # A calendar of weeks writes a date as its year, its month and its day,
+    # as `Calendar.ISO` writes one, so it reads back for any year. It reads a
+    # week date too, which is how it wrote its dates until 1.4.
+    test "a week calendar writes a date it reads back, and reads a week date" do
+      for {year, month, day, text, week_date} <- [
+            {4, 2, 35, "0004-02-35", "0004-W09-7"},
+            {-44, 3, 11, "-0044-03-11", "-0044-W11-4"},
+            {2026, 6, 16, "2026-06-16", "2026-W25-2"}
           ],
           calendar <- [Calendrical.ISOWeek, Calendrical.NRF] do
-        assert calendar.date_to_string(year, week, day) == text
-        assert calendar.parse_date(text) == {:ok, {year, week, day}}
+        assert calendar.date_to_string(year, month, day) == text
+        assert calendar.parse_date(text) == {:ok, {year, month, day}}
+        assert calendar.parse_date(week_date) == {:ok, {year, month, day}}
       end
 
-      assert inspect(~D[0004-W09-7 Calendrical.ISOWeek]) == "~D[0004-W09-7 Calendrical.ISOWeek]"
+      assert inspect(~D[0004-W09-7 Calendrical.ISOWeek]) == "~D[0004-02-35 Calendrical.ISOWeek]"
+      assert Calendrical.ISOWeek.parse_date("2026-W54-1") == {:error, :invalid_date}
+      assert Calendrical.ISOWeek.parse_date("2026-13-01") == {:error, :invalid_date}
     end
 
     test "parse_naive_datetime/1 via NaiveDateTime.from_iso8601/2" do
