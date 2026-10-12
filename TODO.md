@@ -30,6 +30,8 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Done
 
+* [x] **A calendar of weeks names `Calendar.ISO` for parsing** — its `parsing_calendar/0` is `Calendar.ISO` again, where it was the calendar itself for a day and "Feb 1, 2024" an error: Localize reads the calendar's own formats first ("M02 1, 2024 AD") and only what none of them reads as a Gregorian date, converted. 2026-10-13.
+
 * [x] **A calendar of weeks holds a month and a day** — decided by the user on 2026-10-13: a date of `Calendrical.ISOWeek`, `Calendrical.NRF` or a week calendar made with `Calendrical.new/3` is a year, a month of its pattern of weeks and a day of that month, where the month field held the week, and the week goes through the week-date callbacks. Every answer about a day is as it was, by a dump of 42,455 days of five calendars before and after. Design in [plans/week-calendar-dates.md](plans/week-calendar-dates.md). 2026-10-13.
 
 * [x] **Week dates in a calendar's own year** — decided by the user on 2026-10-12 ("Add the callbacks"): `date_from_week_date/3`, `week_date_from_date/3` and `weeks_in_week_year/1` are required callbacks, by ISO 8601's rule over the calendar's own year, with a default every calendar has and a calendar of weeks' own dates. `Localize.Calendar.ISO` answers them too, so Tempo asks every calendar alike. [plans/week-dates.md](plans/week-dates.md). 2026-10-12.

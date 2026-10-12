@@ -88,15 +88,16 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
-      Returns the calendar module a date written for this calendar
-      is parsed in: this calendar. Its dates are a year, a month of its
-      pattern of weeks and a day of that month, so a written month and
-      day name one of them.
+      Returns the calendar module that text none of this calendar's
+      own formats reads is parsed in: `Calendar.ISO`. Its months are
+      named as CLDR's generic calendar names them, "M02", so "Feb 1,
+      2024" is none of its own dates: it is read as a Gregorian date
+      and converted into this calendar.
 
       """
       @impl true
       def parsing_calendar do
-        __MODULE__
+        Calendar.ISO
       end
 
       @doc """

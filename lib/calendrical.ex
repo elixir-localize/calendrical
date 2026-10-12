@@ -42,8 +42,8 @@ defmodule Calendrical do
   * **Identity** — `c:cldr_calendar_type/0`, `c:era_calendar_type/0`,
     `c:calendar_base/0` and `c:parsing_calendar/0` say which CLDR
     calendar names the dates and the eras, whether the calendar is one
-    of months or of weeks, and which calendar its written dates are
-    read in.
+    of months or of weeks, and which calendar reads the text its own
+    formats do not.
 
   * **The notions of a year** — `c:calendar_year/3`,
     `c:extended_year/3`, `c:related_gregorian_year/3` and
@@ -785,13 +785,15 @@ defmodule Calendrical do
   @callback era_calendar_type() :: atom()
 
   @doc """
-  Returns the calendar module a date written for this calendar is
-  parsed in, before it is converted into this calendar.
+  Returns the calendar module that text none of this calendar's own
+  formats reads is parsed in, before it is converted into this
+  calendar.
 
-  It is the calendar itself unless a written month and day cannot
-  name one of its dates. Every calendar Calendrical builds answers
-  itself, a calendar of weeks among them: its dates are a year, a
-  month of its pattern of weeks and a day of that month.
+  It is the calendar itself unless such text is written as another
+  calendar writes a date. A calendar of weeks, whose months are named
+  "M01" to "M12", answers `Calendar.ISO`: "Feb 1, 2024" is none of
+  its own dates and is read as a Gregorian date and converted, where
+  "M02 1, 2024 AD", which it writes, is its own.
 
   """
   @callback parsing_calendar() :: module()

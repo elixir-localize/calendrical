@@ -10,7 +10,7 @@ The format is based on
 
 ### Breaking changes
 
-* A date of a calendar of weeks (`Calendrical.ISOWeek`, `Calendrical.NRF`, one made with `Calendrical.new/3`) is a year, a month of its pattern of weeks and a day of that month, as `Date.new/4` takes a date of any calendar, where its month field held the week and its day field the day of the week: the second day of week 25 is `~D[2026-06-16 Calendrical.NRF]`, and `Date.new(2026, 25, 2, Calendrical.NRF)` is an error. The week is asked for (`week_of_year/3`, `week_date_from_date/3`) and given (`date_from_week_date/3`, and `parse_date/1` and `~D` still read `2026-W25-2`); a date is written `2026-06-16`, `days_in_month/2` counts a month's 28 or 35 days, and `parsing_calendar/0` is the calendar itself.
+* A date of a calendar of weeks (`Calendrical.ISOWeek`, `Calendrical.NRF`, one made with `Calendrical.new/3`) is a year, a month of its pattern of weeks and a day of that month, as `Date.new/4` takes a date of any calendar, where its month field held the week and its day field the day of the week: the second day of week 25 is `~D[2026-06-16 Calendrical.NRF]`, and `Date.new(2026, 25, 2, Calendrical.NRF)` is an error. The week is asked for (`week_of_year/3`, `week_date_from_date/3`) and given (`date_from_week_date/3`, and `parse_date/1` and `~D` still read `2026-W25-2`); a date is written `2026-06-16`, and `days_in_month/2` counts a month's 28 or 35 days.
 
 * `date_from_week_date/3`, `week_date_from_date/3` and `weeks_in_week_year/1` are required callbacks: a week date by ISO 8601's rule over the calendar's own year, which every calendar answers by default and a calendar of weeks answers in the weeks it is built of. `iso_week_of_year/3` is unchanged, the week of the Gregorian year a day is in.
 
@@ -44,7 +44,7 @@ The format is based on
 
 * `era_calendar_type/0` is a required callback, the CLDR calendar that names a calendar's eras: `cldr_calendar_type/0` unless the calendar takes its era names elsewhere, as the lunisolar Japanese calendar does. Localize asks for it without probing, so a calendar implementing the behaviour itself must implement it.
 
-* `parsing_calendar/0` is a required callback, the calendar a date written for a calendar is parsed in before it is converted into it: the calendar itself, or `Calendar.ISO` for a calendar of weeks, whose month and day name no single week. Localize reads "Feb 1, 2024" in `Calendrical.ISOWeek` as 1 February 2024, 2024-W05-4.
+* `parsing_calendar/0` is a required callback, the calendar that text none of a calendar's own formats reads is parsed in before it is converted: the calendar itself, or `Calendar.ISO` for a calendar of weeks, whose months are "M02" and not "Feb". Localize reads "Feb 1, 2024" in `Calendrical.ISOWeek` as 1 February 2024, `~D[2024-02-04 Calendrical.ISOWeek]`, and "M02 1, 2024 AD" as the first day of its second month.
 
 * `cardinal_month/1` is a callback every calendar implements, naming the CLDR month a month of the year stands for (a year beginning in July names its first month July), in place of the module function `Calendrical.cardinal_month/3`. Localize names months through it, so a calendar implementing the behaviour itself must implement it.
 

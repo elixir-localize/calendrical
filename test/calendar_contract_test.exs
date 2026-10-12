@@ -199,10 +199,14 @@ defmodule Calendrical.CalendarContract.Test do
         assert unquote(calendar).era_calendar_type() in Localize.Calendar.known_calendars()
       end
 
-      # Every calendar reads its own written dates: those of a calendar of
-      # weeks are a year, a month of its pattern of weeks and a day of it.
-      test "its written dates are parsed in itself" do
-        assert unquote(calendar).parsing_calendar() == unquote(calendar)
+      # Text none of a calendar's own formats reads is read in the calendar
+      # it names: itself, or `Calendar.ISO`, as a calendar of weeks answers,
+      # whose months are CLDR's generic calendar's and not the Gregorian
+      # calendar's (`Calendrical.WeekCalendarParsing.Test`).
+      test "names itself or Calendar.ISO for its written dates to be parsed in" do
+        calendar = unquote(calendar)
+
+        assert calendar.parsing_calendar() in [calendar, Calendar.ISO]
       end
 
       # Localize reads a calendar of weeks' dates back as the calendar writes

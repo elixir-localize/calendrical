@@ -20,7 +20,7 @@ The user, 2026-10-13: a month in a calendar of weeks is its own month. A date of
 
 * **The week goes by callbacks** — `week_of_year/3`, `week_of_month/3`, `week_date_from_date/3` and `date_from_week_date/3`, whose day is counted from the day the calendar's weeks begin on.
 
-* **Text** — a date is written as its year, month and day, `2026-06-16`, as `Calendar.ISO` writes one. `parse_date/1`, and so the `~D` sigil, still reads a week date, `2026-W25-2`, as the date it names, which is how these calendars wrote their dates until 1.4. `parsing_calendar/0` is the calendar itself, where it was `Calendar.ISO`.
+* **Text** — a date is written as its year, month and day, `2026-06-16`, as `Calendar.ISO` writes one. `parse_date/1`, and so the `~D` sigil, still reads a week date, `2026-W25-2`, as the date it names, which is how these calendars wrote their dates until 1.4. `parsing_calendar/0` stays `Calendar.ISO` (the user, 2026-10-13: "Week calendars don't have \"Feb\" that have \"M02\". So it needs to be the gregorian date converted"): Localize reads the calendar's own formats first, "M02 1, 2024 AD", and only what none of them reads in the calendar it names, so "Feb 1, 2024" is 1 February 2024 converted. It was the calendar itself in `80bdbf9`, which made that text an error.
 
 * **`calendar_base/0` stays** — it says what a calendar's year is built of, and Calendrical's own calendar pages and its shift of years and months ask it. No consumer needs it to read a date.
 

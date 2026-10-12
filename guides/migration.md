@@ -350,6 +350,8 @@ Calendrical.NRF.week_date_from_date(2026, 6, 16)
 
 A date read from `date.month` as a week, or built from a week and a day of it, goes through `week_date_from_date/3` and `date_from_week_date/3`. A stored `"2026-W25-2"` still parses; a date is now written `"2026-06-16"`.
 
+Localize writes such a date in the locale's formats of CLDR's generic calendar, `"M06 16, 2026 AD"`, and reads that back as itself. Text that names a Gregorian month, `"Feb 1, 2024"`, is none of the calendar's own formats', so it is still read as the Gregorian date and converted, as the calendar's `parsing_calendar/0` says.
+
 ### Intervals and streams
 
 ```elixir
