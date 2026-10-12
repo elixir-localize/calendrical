@@ -65,7 +65,9 @@ defmodule Calendrical do
     own numbering, and it has no leap month.
 
   * **Weeks** — `c:week_of_year/3`, `c:iso_week_of_year/3`,
-    `c:week_of_month/3` and `c:days_in_week/0`.
+    `c:week_of_month/3` and `c:days_in_week/0`; and the week dates ISO
+    8601's rule gives a calendar's own year, `c:date_from_week_date/3`,
+    `c:week_date_from_date/3` and `c:weeks_in_week_year/1`.
 
   * **Geometry** — `c:years_in_cycle/0`, `c:days_in_month/1`,
     `c:days_in_year/1`,
@@ -431,6 +433,44 @@ defmodule Calendrical do
               day :: day()
             ) ::
               {Calendar.year(), Calendar.week()} | {:error, :not_defined} | date_error()
+
+  @doc """
+  Returns the date of a day of a week of a week-year: the inverse of
+  `c:week_date_from_date/3`.
+
+  A week date is counted by ISO 8601's rule over this calendar's own
+  year: a week begins on Monday, day 1, and week 1 of a year is the
+  week that holds the year's fourth day. In the Gregorian calendar
+  these are ISO 8601's week dates (`2026-W10-1` is 2 March 2026), and
+  in any other calendar of months the weeks RFC 7529 counts for a rule
+  in that calendar. A calendar of weeks answers with its own dates,
+  which are a year, a week and a day of the week already, the day
+  counted from the day its own weeks begin on.
+
+  This is not the week `c:iso_week_of_year/3` gives, which is the week
+  of the Gregorian year a day is in, whichever calendar names the day.
+
+  """
+  @callback date_from_week_date(
+              week_year :: year(),
+              week :: Calendrical.week(),
+              day :: Calendar.day_of_week()
+            ) :: Date.t() | {:error, :invalid_date}
+
+  @doc """
+  Returns the week-year, the week and the day of the week of a date, as
+  `c:date_from_week_date/3` counts them.
+
+  """
+  @callback week_date_from_date(year :: year(), month :: month(), day :: day()) ::
+              {year(), Calendrical.week(), Calendar.day_of_week()} | {:error, :invalid_date}
+
+  @doc """
+  Returns the number of weeks in a week-year, as
+  `c:date_from_week_date/3` counts them.
+
+  """
+  @callback weeks_in_week_year(week_year :: year()) :: pos_integer() | {:error, :invalid_date}
 
   @doc """
   Returns a tuple of `{month, week_in_month}` for a given `year`, `month` or `week`, and `day`

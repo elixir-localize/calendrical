@@ -510,6 +510,35 @@ defmodule Calendrical.Compiler.Week do
         do: Calendrical.Base.Common.week_day_numbers(__MODULE__, year, week)
 
       @doc """
+      Returns the date of a day of a week of a year: a calendar of weeks'
+      week dates are its own dates.
+
+      """
+      @impl true
+      def date_from_week_date(year, week, day) do
+        Calendrical.Base.WeekDate.date_from_own_week_date(__MODULE__, year, week, day)
+      end
+
+      @doc """
+      Returns the year, the week and the day of the week of a date: its
+      own fields, in a calendar of weeks.
+
+      """
+      @impl true
+      def week_date_from_date(year, week, day) do
+        Calendrical.Base.WeekDate.own_week_date_from_date(__MODULE__, year, week, day)
+      end
+
+      @doc """
+      Returns the number of weeks in a year of this calendar of weeks.
+
+      """
+      @impl true
+      def weeks_in_week_year(year) do
+        Calendrical.Base.WeekDate.weeks_in_own_year(__MODULE__, year)
+      end
+
+      @doc """
       Returns the number days in a a week.
 
       """

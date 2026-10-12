@@ -1,8 +1,8 @@
 # Week dates in a calendar's own year
 
-**Status:** draft, 2026-10-10
+**Status:** implemented (v1.4.0), 2026-10-12
 
-For discussion. The user, 2026-10-10, after choosing "the calendar's own year" from a question put to them, and before the work was committed: "We will go back and discuss week dates (iso or calendar) later." Nothing of this is in the library: the implementation below was built, tested and taken out again, and is kept as a patch.
+The user chose "the calendar's own year" on 2026-10-10 and parked the work ("We will go back and discuss week dates (iso or calendar) later"), then on 2026-10-12, asked how Tempo was to stop asking whether a calendar is of weeks or of months, chose "Add the callbacks": the three below are in the behaviour, with the implementation that was built on 2026-10-10 and kept as a patch.
 
 ## The question
 
@@ -44,4 +44,4 @@ The patch is in the checkout's ignored `tmp/week_dates/`: `tracked.patch` (the t
 
 ## Tasks
 
-* [ ] **Decide with the user** — the four points above.
+* [x] **Decide with the user** — the calendar's own year, and the three callbacks under the names they were built with. 2026-10-12.

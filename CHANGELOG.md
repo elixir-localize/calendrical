@@ -10,6 +10,8 @@ The format is based on
 
 ### Breaking changes
 
+* `date_from_week_date/3`, `week_date_from_date/3` and `weeks_in_week_year/1` are required callbacks: a week date by ISO 8601's rule over the calendar's own year, which every calendar answers by default and a calendar of weeks answers with its own dates. `iso_week_of_year/3` is unchanged, the week of the Gregorian year a day is in.
+
 * `solar_term/2` is a required callback, the day of a solar term of a Gregorian year: a lunisolar calendar reckons it at its own meridian, and any other calendar at the Chinese calendar's, the traditional reference, which is the default. `Calendrical.Lunisolar.solar_term/3`, which takes the place as a function, is unchanged.
 
 * `years_in_cycle/0` is a required callback, the number of years after which a calendar's years repeat, their days and their weekdays alike: 400 in the Gregorian calendar and those that follow its leap rule, 28 in the Julian, Coptic and Ethiopic, 210 in the tabular Islamic, and `{:error, :undefined}`, the default, in a calendar reckoned from the sky and in a composite.

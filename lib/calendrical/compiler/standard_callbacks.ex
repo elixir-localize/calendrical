@@ -151,6 +151,41 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       defoverridable month_numbers: 1, day_numbers: 2
 
       @doc """
+      Returns the date of a day of a week of a week-year, by ISO 8601's
+      rule over this calendar's own year.
+
+      """
+      unquote(impl)
+
+      def date_from_week_date(week_year, week, day) do
+        Calendrical.Base.WeekDate.date_from_week_date(__MODULE__, week_year, week, day)
+      end
+
+      @doc """
+      Returns the week-year, the week and the day of the week of a date,
+      by ISO 8601's rule over this calendar's own year.
+
+      """
+      unquote(impl)
+
+      def week_date_from_date(year, month, day) do
+        Calendrical.Base.WeekDate.week_date_from_date(__MODULE__, year, month, day)
+      end
+
+      @doc """
+      Returns the number of weeks in a week-year, by ISO 8601's rule over
+      this calendar's own year.
+
+      """
+      unquote(impl)
+
+      def weeks_in_week_year(week_year) do
+        Calendrical.Base.WeekDate.weeks_in_week_year(__MODULE__, week_year)
+      end
+
+      defoverridable date_from_week_date: 3, week_date_from_date: 3, weeks_in_week_year: 1
+
+      @doc """
       Returns the number of years after which this calendar's years
       repeat: `{:error, :undefined}`, in a calendar that says no cycle.
 
