@@ -108,7 +108,6 @@ defmodule Calendrical.TraditionalMonthsTest do
 
     test "has no leap month" do
       for calendar <- [Calendrical.Gregorian, Calendrical.Coptic, Calendrical.Islamic.Civil] do
-        assert calendar.leap_month(2026) == nil
         assert calendar.traditional_leap_month(2026) == nil
 
         assert calendar.ordinal_month_from_traditional(2026, {5, :leap}) ==

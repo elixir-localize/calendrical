@@ -65,14 +65,6 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           )
 
       @doc """
-      Returns the ordinal month that is the leap month of a year: `nil`,
-      in a calendar that has no leap month.
-
-      """
-      unquote(impl)
-      def leap_month(_year), do: nil
-
-      @doc """
       Returns the traditional number of the month a year's leap month
       follows: `nil`, in a calendar that has no leap month.
 
@@ -111,26 +103,6 @@ defmodule Calendrical.Compiler.StandardCallbacks do
         do: Calendrical.Base.Common.named_month(__MODULE__, year, named_month)
 
       @doc """
-      Returns the number of weeks in a month: the weeks `week_of_month/3`
-      names for it.
-
-      """
-      unquote(impl)
-
-      def weeks_in_month(year, month),
-        do: Calendrical.Base.MonthWeeks.weeks_in_month(__MODULE__, year, month)
-
-      @doc """
-      Returns a `t:Date.Range.t/0` representing a given week of a month
-      of a year: the days `week_of_month/3` names for it.
-
-      """
-      unquote(impl)
-
-      def month_week(year, month, week),
-        do: Calendrical.Base.MonthWeeks.month_week(__MODULE__, year, month, week)
-
-      @doc """
       Returns the weeks of a month of a year in order, each a
       `t:Date.Range.t/0` of the days `week_of_month/3` names for it.
 
@@ -140,7 +112,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       def weeks_of_month(year, month),
         do: Calendrical.Base.MonthWeeks.weeks_of_month(__MODULE__, year, month)
 
-      defoverridable weeks_in_month: 2, month_week: 3, weeks_of_month: 2
+      defoverridable weeks_of_month: 2
 
       @doc """
       Returns a month of a year as this calendar names it: the month
@@ -276,7 +248,6 @@ defmodule Calendrical.Compiler.StandardCallbacks do
                      numeric_month: 3,
                      lunar_month_of_year: 2,
                      ordinal_month_from_traditional: 2,
-                     leap_month: 1,
                      traditional_leap_month: 1,
                      traditional_months: 1
     end

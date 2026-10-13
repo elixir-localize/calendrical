@@ -1,9 +1,10 @@
 defmodule Calendrical.Base.MonthWeeks do
   @moduledoc false
 
-  # The weeks of a month: how many it has (`weeks_in_month/2`) and the days
-  # of its nth week (`month_week/3`), which every calendar answers through
-  # `Calendrical.Compiler.StandardCallbacks`.
+  # The weeks of a month in order (`weeks_of_month/3`), which every
+  # calendar answers through `Calendrical.Compiler.StandardCallbacks`, from
+  # how many it has (`weeks_in_month/3`) and the days of its nth week
+  # (`month_week/4`).
   #
   # The weeks of a month are the weeks the calendar's `week_of_month/3`
   # names for it: week 1 is the month's first week under the calendar's

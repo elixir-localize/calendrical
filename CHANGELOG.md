@@ -22,7 +22,7 @@ The format is based on
 
 * `named_month/2` and `date_from_day_of_year/2` are required callbacks, the days of a named month and the date of a day of a year, and `Calendrical.named_month/3` and `date_from_day_of_year/3` ask the calendar. A month carries the name its own dates are of, where it was named by its number: the ninth month of a Hebrew year of twelve is Sivan, and was answered with Tamuz's days.
 
-* The traditional-month callbacks are required of every calendar, and `traditional_months/1` is a new one beside them: `lunar_month_of_year/2`, `ordinal_month_from_traditional/2`, `leap_month/1` and `traditional_leap_month/1` were answered by the lunisolar calendars alone. A calendar whose months are their own numbering has each by default (the month itself, and no leap month), and `ordinal_month_from_traditional/2` is declared with the `{:ok, month}` it returns.
+* The traditional-month callbacks are required of every calendar, and `traditional_months/1` is a new one beside them: `lunar_month_of_year/2`, `ordinal_month_from_traditional/2` and `traditional_leap_month/1` were answered by the lunisolar calendars alone, and `leap_month/1` stays a function of those calendars and of the Hebrew, not a callback. A calendar whose months are their own numbering has each by default (the month itself, and no leap month), and `ordinal_month_from_traditional/2` is declared with the `{:ok, month}` it returns.
 
 * `quadrimester/2` and `semester/2` are required callbacks again, beside `quarter/2`: every calendar answers the thirds and the halves of its year, and `Calendrical.Interval.quadrimester/3` and `semester/3` ask the calendar. A calendar written by hand defines both.
 
@@ -84,9 +84,9 @@ The format is based on
 
 * `test/calendrical/laws_test.exs` asserts the seven laws of the calendar contract for every calendar of the library over a handful of its years: the day scale round-trips, the fields order the days, the months and the weeks tile the year, the labels agree with the periods, an absent period is an error, the bounds bound the years, and a shift of nothing is nothing. A law an existing calendar breaks is tagged `known_failure` with its reason.
 
-* `Calendrical.traditional_months/1` and `/2` list a year's months in order, named traditionally, with any leap month among them, and the lunisolar `lunar_month_of_year/2`, `ordinal_month_from_traditional/2`, `leap_month/1` and `traditional_leap_month/1` are declared optional callbacks.
+* `Calendrical.traditional_months/1` and `/2` list a year's months in order, named traditionally, with any leap month among them, and the lunisolar `lunar_month_of_year/2`, `ordinal_month_from_traditional/2` and `traditional_leap_month/1` are declared callbacks.
 
-* The callbacks `weeks_in_month/2` and `month_week/3` give the number of weeks in a month and the dates of its nth week, as `week_of_month/3` numbers them. Every calendar answers both, and one written by hand defines them.
+* `weeks_of_month/2` is the one callback for the weeks of a month: a calendar answers how many a month has and the days of its nth by the list, so `weeks_in_month/2` and `month_week/3` are not callbacks.
 
 * `Calendrical.named_month/3` gives the days of a named month in the order of time, in two ranges where a year-start variant splits it.
 

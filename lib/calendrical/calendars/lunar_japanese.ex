@@ -349,7 +349,6 @@ defmodule Calendrical.LunarJapanese do
 
   """
   @spec leap_month(date_or_year :: Date.t() | Calendar.year()) :: Calendar.month() | nil
-  @impl true
   def leap_month(%Date{year: year, calendar: __MODULE__}) do
     leap_month(year)
   end

@@ -886,7 +886,6 @@ defmodule Calendrical.Hebrew do
 
   """
   @spec leap_month(Date.t() | Calendar.year()) :: 6 | nil
-  @impl true
   def leap_month(%Date{year: year, calendar: __MODULE__}), do: leap_month(year)
   def leap_month(year) when is_integer(year), do: if(leap_year?(year), do: @leap_month)
   def leap_month(_date_or_year), do: nil

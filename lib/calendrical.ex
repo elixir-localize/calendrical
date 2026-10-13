@@ -61,9 +61,8 @@ defmodule Calendrical do
     `c:month_from_traditional/2` turn a month the year has into its
     name and back (`c:lunar_month_of_year/2` and
     `c:ordinal_month_from_traditional/2` are the pair beneath them,
-    answering in atoms), and `c:leap_month/1` and
-    `c:traditional_leap_month/1` say which month of a year is its leap
-    month. A lunisolar calendar answers with its own months; any other
+    answering in atoms), and `c:traditional_leap_month/1` says which
+    month of a year its leap month follows. A lunisolar calendar answers with its own months; any other
     calendar's months are their own numbering, and it has no leap month.
 
   * **Weeks** — `c:week_of_year/3`, `c:iso_week_of_year/3`,
@@ -74,11 +73,10 @@ defmodule Calendrical do
   * **Geometry** — `c:years_in_cycle/0`, `c:days_in_month/1`,
     `c:days_in_year/1`,
     `c:month_numbers/1`, `c:day_numbers/2`, `c:weeks_in_year/1`,
-    `c:weeks_in_month/2`,
     `c:dates_in_gregorian_year/3`, the ranges `c:year/1`,
     `c:semester/2`, `c:quadrimester/2`, `c:quarter/2`, `c:month/2`,
-    `c:week/2` and, for the weeks of a month, `c:weeks_of_month/2` and
-    `c:month_week/3`; and the bounds no year is given for,
+    `c:week/2` and, for the weeks of a month, `c:weeks_of_month/2`; and
+    the bounds no year is given for,
     `c:months_in_year_bounds/0` and `c:days_in_month_bounds/1`.
 
   * **Arithmetic** — `c:plus/6`, `c:diff/3` and the day-count pair
@@ -722,13 +720,6 @@ defmodule Calendrical do
             ) :: {:ok, Calendar.month()} | {:error, :invalid_month | :invalid_leap_month}
 
   @doc """
-  Returns the ordinal month that is the leap month of a year, or `nil`
-  when the year has none.
-
-  """
-  @callback leap_month(year :: Calendar.year()) :: Calendar.month() | nil
-
-  @doc """
   Returns the traditional number of the month a year's leap month
   follows, or `nil` when the year has none.
 
@@ -957,36 +948,12 @@ defmodule Calendrical do
               Date.Range.t() | {:error, :not_defined} | date_error()
 
   @doc """
-  Returns a date range representing the days in a
-  given week of a month of a calendar year.
-
-  The weeks of a month are the weeks `c:week_of_month/3` names for it:
-  week 1 is the month's first week under the calendar's week
-  configuration, which may begin in the month before, and its last week
-  may run into the month after. A week the month does not have is
-  `{:error, :invalid_date}`.
-
-  """
-  @callback month_week(year :: year(), month :: month(), week :: pos_integer()) ::
-              Date.Range.t() | {:error, :not_defined} | date_error()
-
-  @doc """
-  Returns the number of weeks in a month of a calendar year: the weeks
-  `c:week_of_month/3` names for it, which `c:month_week/3` gives the
-  days of.
-
-  """
-  @callback weeks_in_month(year :: year(), month :: month()) ::
-              pos_integer() | {:error, :not_defined} | date_error()
-
-  @doc """
   Returns the weeks of a month of a calendar year in order, each the
   `t:Date.Range.t/0` of its days.
 
-  The weeks are those `c:week_of_month/3` names for the month, as many
-  as `c:weeks_in_month/2` counts and each the days `c:month_week/3`
-  gives: the first may begin in the month before and the last run into
-  the month after. A month the year does not have is
+  The weeks are those `c:week_of_month/3` names for the month: the
+  first may begin in the month before and the last run into the month
+  after. A month the year does not have is
   `{:error, exception}`.
 
   """

@@ -93,7 +93,6 @@ defmodule Calendrical.LocalizeCalendarISOTest do
               :days_in_year,
               :traditional_months,
               :month_numbers,
-              :leap_month,
               :traditional_leap_month
             ] do
           assert apply(@localize, callback, [year]) == apply(@calendrical, callback, [year]),
@@ -111,7 +110,6 @@ defmodule Calendrical.LocalizeCalendarISOTest do
         for callback <- [
               :lunar_month_of_year,
               :ordinal_month_from_traditional,
-              :weeks_in_month,
               :day_numbers
             ] do
           assert apply(@localize, callback, [year, month]) ==
@@ -122,12 +120,6 @@ defmodule Calendrical.LocalizeCalendarISOTest do
         assert Enum.map(@localize.named_month(year, month), &days/1) ==
                  Enum.map(@calendrical.named_month(year, month), &days/1),
                "named_month(#{year}, #{month})"
-
-        for week <- 0..6 do
-          assert days(@localize.month_week(year, month, week)) ==
-                   days(@calendrical.month_week(year, month, week)),
-                 "month_week(#{year}, #{month}, #{week})"
-        end
       end
 
       for year <- @years, day <- [0, 1, 59, 60, 365, 366, 367] do

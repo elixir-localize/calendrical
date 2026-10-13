@@ -57,7 +57,10 @@ defmodule Calendrical.LawsTest do
   extra_years = @extra_years
   known_failures = @known_failures
 
-  for calendar <- Calendrical.Laws.calendars(@sighting_calendars) do
+  # `Localize.Calendar.ISO` answers the behaviour for `Calendar.ISO` without
+  # declaring it, since Localize does not depend on Calendrical, so the
+  # laws are held to it here beside the library's own calendars.
+  for calendar <- Calendrical.Laws.calendars(@sighting_calendars) ++ [Localize.Calendar.ISO] do
     defmodule Module.concat(__MODULE__, calendar) do
       use ExUnit.Case, async: true
 

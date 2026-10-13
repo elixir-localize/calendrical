@@ -106,11 +106,10 @@ defmodule Calendrical.WeekInMonth.Test do
     end
   end
 
-  describe "month_week/3 and weeks_in_month/2" do
-    # Every week `month_week/3` constructs holds exactly the days whose
-    # `week_of_month/3` names it, the weeks abut, and the count agrees
-    # with `weeks_in_month/2`.
-    test "agree with week_of_month/3 for every month of every calendar family" do
+  describe "weeks_of_month/2" do
+    # Every week `weeks_of_month/2` lists holds exactly the days whose
+    # `week_of_month/3` names it, and the weeks abut.
+    test "agrees with week_of_month/3 for every month of every calendar family" do
       calendars = [
         Calendrical.Gregorian,
         Calendrical.ISO,
@@ -128,19 +127,11 @@ defmodule Calendrical.WeekInMonth.Test do
         year = if calendar == Calendrical.Hebrew, do: year + 3760, else: year
 
         for month <- 1..calendar.months_in_year(year) do
-          weeks = calendar.weeks_in_month(year, month)
-          assert is_integer(weeks) and weeks > 0
+          assert [%Date.Range{} | _rest] = ranges = calendar.weeks_of_month(year, month)
 
-          ranges =
-            for nth <- 1..weeks do
-              assert %Date.Range{} = range = calendar.month_week(year, month, nth)
-
-              for date <- range do
-                assert calendar.week_of_month(date.year, date.month, date.day) == {month, nth}
-              end
-
-              range
-            end
+          for {range, nth} <- Enum.with_index(ranges, 1), date <- range do
+            assert calendar.week_of_month(date.year, date.month, date.day) == {month, nth}
+          end
 
           for [earlier, later] <- Enum.chunk_every(ranges, 2, 1, :discard) do
             assert later.first_in_iso_days == earlier.last_in_iso_days + 1
@@ -152,15 +143,17 @@ defmodule Calendrical.WeekInMonth.Test do
     test "a month whose first week is cut short at the month's start" do
       # Julian weeks do not cross its months: February 2019 begins on a
       # Thursday of its Monday-started weeks, so week 1 is four days.
-      assert Calendrical.Julian.month_week(2019, 2, 1) ==
+      assert [first, second | _rest] = Calendrical.Julian.weeks_of_month(2019, 2)
+
+      assert first ==
                Date.range(~D[2019-02-01 Calendrical.Julian], ~D[2019-02-04 Calendrical.Julian])
 
-      assert Calendrical.Julian.month_week(2019, 2, 2) ==
+      assert second ==
                Date.range(~D[2019-02-05 Calendrical.Julian], ~D[2019-02-11 Calendrical.Julian])
     end
 
     test "a week that begins in the month before" do
-      assert Calendrical.Gregorian.month_week(2026, 5, 1) ==
+      assert hd(Calendrical.Gregorian.weeks_of_month(2026, 5)) ==
                Date.range(
                  ~D[2026-04-27 Calendrical.Gregorian],
                  ~D[2026-05-03 Calendrical.Gregorian]
@@ -170,25 +163,21 @@ defmodule Calendrical.WeekInMonth.Test do
     test "the months of England's reform year" do
       # September 1752 has 19 dates: 1, 2, then 14 to 30.
       for month <- 1..12 do
-        weeks = Calendrical.Reform.England.weeks_in_month(1752, month)
-        assert is_integer(weeks) and weeks > 0
+        assert [%Date.Range{} | _rest] =
+                 ranges = Calendrical.Reform.England.weeks_of_month(1752, month)
 
-        for nth <- 1..weeks do
-          assert %Date.Range{} =
-                   range = Calendrical.Reform.England.month_week(1752, month, nth)
-
-          for date <- range do
-            calendar = date.calendar
-            assert calendar.week_of_month(date.year, date.month, date.day) == {month, nth}
-          end
+        for {range, nth} <- Enum.with_index(ranges, 1), date <- range do
+          calendar = date.calendar
+          assert calendar.week_of_month(date.year, date.month, date.day) == {month, nth}
         end
       end
     end
 
     test "a month the year does not have" do
-      assert Calendrical.Gregorian.weeks_in_month(2026, 13) == {:error, :invalid_date}
-      assert Calendrical.Gregorian.month_week(2026, 13, 1) == {:error, :invalid_date}
-      assert Calendrical.Gregorian.month_week(2026, 5, 6) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidMonthError{}} =
+               Calendrical.Gregorian.weeks_of_month(2026, 13)
+
+      assert length(Calendrical.Gregorian.weeks_of_month(2026, 5)) == 5
     end
   end
 

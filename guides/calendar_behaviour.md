@@ -164,7 +164,7 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 | `ordinal_month_from_traditional/2` | Returns `{:ok, month}` for a month the year has, and an error for a leap month, since the calendar has none. **Override** with `lunar_month_of_year/2`. |
 | `traditional_month/2` | Returns the month as the calendar names it, `lunar_month_of_year/2`'s answer for a month the year has (`month_numbers/1`), and `{:error, exception}` for one it does not. Follows `lunar_month_of_year/2`, so needs no override of its own. |
 | `month_from_traditional/2` | Returns the ordinal month a traditional month names, `ordinal_month_from_traditional/2`'s answer where the year has the month, and `{:error, exception}` where it does not. Follows `ordinal_month_from_traditional/2`, so needs no override of its own. |
-| `leap_month/1` and `traditional_leap_month/1` | Return `nil`: no year has a leap month. **Override** with `lunar_month_of_year/2`. |
+| `traditional_leap_month/1` | Returns `nil`: no year has a leap month. **Override** with `lunar_month_of_year/2`. |
 | `traditional_months/1` | Returns the year's months in order as they are named, built from `traditional_leap_month/1` and `months_in_year/1`. |
 | `solar_term/2` | Returns the day of a solar term of a Gregorian year at the Chinese calendar's meridian. **Override** in a calendar reckoned at a place of its own. |
 
@@ -183,7 +183,6 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 | `days_in_month/2` | Computes the difference between the start of the month and the start of the next month. **Override** for any non-trivial calendar (this is one of the most commonly overridden callbacks). |
 | `month_numbers/1` | Returns `[1..months_in_year(year)]`, the months a year has as runs of their numbers, and `[]` for a year the calendar does not have. |
 | `day_numbers/2` | Returns `[1..days_in_month(year, month)]`, the days a month has as runs of their numbers, and `[]` for a month the year does not have. |
-| `weeks_in_month/2` | Returns the number of weeks `week_of_month/3` names for the month. |
 | `years_in_cycle/0` | Returns `{:error, :undefined}`. **Override** with the number of years after which the calendar's years repeat, their days and their weekdays alike, where its rule has one. |
 | `leap_year?/1` | **Not provided by default.** Every calendar must define its own `leap_year?/1`. |
 
@@ -197,8 +196,7 @@ After `use Calendrical.Behaviour, ...`, the following functions are available in
 | `semester/2` | Returns six traditional months, placed as `quarter/2` places them. |
 | `month/2` | Returns a `Date.Range` covering the first to last day of the given month. |
 | `week/2` | Returns a `Date.Range` of the week's days, cut to the year. |
-| `month_week/3` | Returns a `Date.Range` of the days of the nth week of a month, as `week_of_month/3` numbers them. |
-| `weeks_of_month/2` | Returns the weeks of a month in order, `month_week/3` of 1 up to `weeks_in_month/2`, and `{:error, exception}` for a month the year does not have. |
+| `weeks_of_month/2` | Returns the weeks of a month in order, each a `Date.Range` of the days `week_of_month/3` names for it, and `{:error, exception}` for a month the year does not have. |
 | `named_month/2` | Returns one `Date.Range` for each month of the year that carries the name, in order: two where a year begins within a month. |
 | `date_from_day_of_year/2` | Returns the date of a day of the year, counted from the year's first day: the inverse of `day_of_year/3`. |
 
