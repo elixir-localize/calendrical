@@ -74,6 +74,16 @@ The format is based on
 
 ### Added
 
+* `traditional_month/2` and `month_from_traditional/2` are callbacks every calendar Calendrical builds answers, a month of a year as the calendar names it (`3`, or `{2, :leap}`) and back, answered for a month the year has and `{:error, exception}` for one it does not, where `lunar_month_of_year/2` answered a place beyond a lunisolar year with a month of the next.
+
+* `weeks_of_month/2` is a callback every calendar Calendrical builds answers, the weeks of a month in order as `week_of_month/3` numbers them, each a `Date.Range`, and `{:error, exception}` for a month the year does not have.
+
+* `months_in_year_bounds/0` and `days_in_month_bounds/1` are callbacks every calendar Calendrical builds answers, the fewest and the most months a year has and days a month has in any year as `{fewest, most}`, read from `months_in_year/0` and `days_in_month/1`. A composite calendar, which answered `{:error, :undefined}` to both, answers from its members and the years its changes cut short: `Calendrical.Reform.England` has `{10, 13}` months and `{19, 30}` days in month 9.
+
+* `Calendrical.InvalidMonthError` is the error the four callbacks above return for a month a calendar, or a year of it, does not have. The five new callbacks are required of every calendar, as `Localize.Calendar.ISO` answers them for `Calendar.ISO`.
+
+* `test/calendrical/laws_test.exs` asserts the seven laws of the calendar contract for every calendar of the library over a handful of its years: the day scale round-trips, the fields order the days, the months and the weeks tile the year, the labels agree with the periods, an absent period is an error, the bounds bound the years, and a shift of nothing is nothing. A law an existing calendar breaks is tagged `known_failure` with its reason.
+
 * `Calendrical.traditional_months/1` and `/2` list a year's months in order, named traditionally, with any leap month among them, and the lunisolar `lunar_month_of_year/2`, `ordinal_month_from_traditional/2`, `leap_month/1` and `traditional_leap_month/1` are declared optional callbacks.
 
 * The callbacks `weeks_in_month/2` and `month_week/3` give the number of weeks in a month and the dates of its nth week, as `week_of_month/3` numbers them. Every calendar answers both, and one written by hand defines them.

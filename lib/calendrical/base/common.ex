@@ -378,6 +378,44 @@ defmodule Calendrical.Base.Common do
   defp with_leap_month_after(month, month), do: [month, {month, :leap}]
   defp with_leap_month_after(month, _follows), do: [month]
 
+  # A month as the calendar names it, and the inverse: the calendar's own
+  # `lunar_month_of_year/2` and `ordinal_month_from_traditional/2`, asked
+  # only for a month the year has (`month_numbers/1`), since a lunisolar
+  # calendar answers a place beyond its year with a month of the next, and
+  # answered with the month or an error naming the month.
+  def traditional_month(calendar, year, month) when is_integer(year) and is_integer(month) do
+    if month_of_year?(calendar, year, month),
+      do: named_month(calendar.lunar_month_of_year(year, month), calendar, year, month),
+      else: {:error, no_such_month(calendar, year, month)}
+  end
+
+  def traditional_month(calendar, year, month), do: {:error, no_such_month(calendar, year, month)}
+
+  def month_from_traditional(calendar, year, traditional_month) when is_integer(year) do
+    with {:ok, month} <- calendar.ordinal_month_from_traditional(year, traditional_month),
+         true <- month_of_year?(calendar, year, month) do
+      month
+    end
+    |> named_month(calendar, year, traditional_month)
+  end
+
+  def month_from_traditional(calendar, year, traditional_month),
+    do: {:error, no_such_month(calendar, year, traditional_month)}
+
+  defp named_month(month, _calendar, _year, _asked) when is_integer(month), do: month
+  defp named_month({month, :leap}, _calendar, _year, _asked), do: {month, :leap}
+
+  defp named_month(_no_month, calendar, year, asked),
+    do: {:error, no_such_month(calendar, year, asked)}
+
+  defp month_of_year?(calendar, year, month) do
+    Enum.any?(calendar.month_numbers(year), &(month in &1))
+  end
+
+  defp no_such_month(calendar, year, month) do
+    Calendrical.InvalidMonthError.exception(calendar: calendar, year: year, month: month)
+  end
+
   # The months a year has, which is none for a year the calendar lacks.
   defp months_in(calendar, year) do
     case calendar.months_in_year(year) do

@@ -130,7 +130,64 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       def month_week(year, month, week),
         do: Calendrical.Base.MonthWeeks.month_week(__MODULE__, year, month, week)
 
-      defoverridable weeks_in_month: 2, month_week: 3
+      @doc """
+      Returns the weeks of a month of a year in order, each a
+      `t:Date.Range.t/0` of the days `week_of_month/3` names for it.
+
+      """
+      unquote(impl)
+
+      def weeks_of_month(year, month),
+        do: Calendrical.Base.MonthWeeks.weeks_of_month(__MODULE__, year, month)
+
+      defoverridable weeks_in_month: 2, month_week: 3, weeks_of_month: 2
+
+      @doc """
+      Returns a month of a year as this calendar names it: the month
+      itself, in a calendar whose months are their own numbering, and
+      `lunar_month_of_year/2`'s answer in a lunisolar calendar.
+
+      """
+      unquote(impl)
+
+      def traditional_month(year, month),
+        do: Calendrical.Base.Common.traditional_month(__MODULE__, year, month)
+
+      @doc """
+      Returns the ordinal month of a year a traditional month names: the
+      month itself, in a calendar whose months are their own numbering,
+      and `ordinal_month_from_traditional/2`'s answer in a lunisolar
+      calendar.
+
+      """
+      unquote(impl)
+
+      def month_from_traditional(year, traditional_month),
+        do: Calendrical.Base.Common.month_from_traditional(__MODULE__, year, traditional_month)
+
+      defoverridable traditional_month: 2, month_from_traditional: 2
+
+      @doc """
+      Returns the fewest and the most months a year has, as
+      `months_in_year/0` answers them, as `{fewest, most}`.
+
+      """
+      unquote(impl)
+
+      def months_in_year_bounds,
+        do: Calendrical.Base.Bounds.months_in_year_bounds(__MODULE__)
+
+      @doc """
+      Returns the fewest and the most days a month has in any year, as
+      `days_in_month/1` answers them, as `{fewest, most}`.
+
+      """
+      unquote(impl)
+
+      def days_in_month_bounds(month),
+        do: Calendrical.Base.Bounds.days_in_month_bounds(__MODULE__, month)
+
+      defoverridable months_in_year_bounds: 0, days_in_month_bounds: 1
 
       @doc """
       Returns the months a year has, as runs of their numbers.

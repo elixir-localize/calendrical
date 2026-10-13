@@ -57,12 +57,14 @@ defmodule Calendrical do
     gives the number its month is written with in figures.
 
   * **Traditional months** — `c:traditional_months/1` lists a year's
-    months as they are named, `c:lunar_month_of_year/2` and
-    `c:ordinal_month_from_traditional/2` turn a month's place into its
-    name and back, and `c:leap_month/1` and `c:traditional_leap_month/1`
-    say which month of a year is its leap month. A lunisolar calendar
-    answers with its own months; any other calendar's months are their
-    own numbering, and it has no leap month.
+    months as they are named, `c:traditional_month/2` and
+    `c:month_from_traditional/2` turn a month the year has into its
+    name and back (`c:lunar_month_of_year/2` and
+    `c:ordinal_month_from_traditional/2` are the pair beneath them,
+    answering in atoms), and `c:leap_month/1` and
+    `c:traditional_leap_month/1` say which month of a year is its leap
+    month. A lunisolar calendar answers with its own months; any other
+    calendar's months are their own numbering, and it has no leap month.
 
   * **Weeks** — `c:week_of_year/3`, `c:iso_week_of_year/3`,
     `c:week_of_month/3` and `c:days_in_week/0`; and the week dates ISO
@@ -73,9 +75,11 @@ defmodule Calendrical do
     `c:days_in_year/1`,
     `c:month_numbers/1`, `c:day_numbers/2`, `c:weeks_in_year/1`,
     `c:weeks_in_month/2`,
-    `c:dates_in_gregorian_year/3` and the ranges `c:year/1`,
+    `c:dates_in_gregorian_year/3`, the ranges `c:year/1`,
     `c:semester/2`, `c:quadrimester/2`, `c:quarter/2`, `c:month/2`,
-    `c:week/2` and, for a week of a month, `c:month_week/3`.
+    `c:week/2` and, for the weeks of a month, `c:weeks_of_month/2` and
+    `c:month_week/3`; and the bounds no year is given for,
+    `c:months_in_year_bounds/0` and `c:days_in_month_bounds/1`.
 
   * **Arithmetic** — `c:plus/6`, `c:diff/3` and the day-count pair
     `c:date_to_iso_days/3` and `c:date_from_iso_days/1` that every
@@ -552,6 +556,22 @@ defmodule Calendrical do
               | {:error, :undefined | Exception.t()}
 
   @doc """
+  Returns the fewest and the most days a month has in any year, without
+  a year, as `{fewest, most}`.
+
+  The pair is `c:days_in_month/1` read as bounds: `{31, 31}` for a
+  Gregorian January and `{28, 29}` for its February, and `{19, 30}` for
+  `Calendrical.Reform.England`'s September, which 1752 cut to nineteen
+  days. A day within the fewest exists in every year that has the
+  month. The answer is `{:error, :undefined}` where the calendar
+  cannot say without a year, and `{:error, exception}` for a month the
+  calendar has in no year.
+
+  """
+  @callback days_in_month_bounds(month :: month()) ::
+              {Calendar.day(), Calendar.day()} | {:error, :undefined | Exception.t()}
+
+  @doc """
   Returns the dates in this calendar, of a given `month` and `day`, that
   fall within a given Gregorian year.
 
@@ -643,6 +663,21 @@ defmodule Calendrical do
               month() | {:ambiguous, Range.t() | [pos_integer()]} | {:error, :undefined}
 
   @doc """
+  Returns the fewest and the most months a year has, without a year, as
+  `{fewest, most}`.
+
+  The pair is `c:months_in_year/0` read as bounds: `{12, 12}` in the
+  Gregorian calendar, `{12, 13}` in the Hebrew, and `{10, 13}` in
+  `Calendrical.Reform.England`, whose 1751 has the months 3 to 12 and
+  whose years before 1752 count a thirteenth. A month within the fewest
+  exists in every year. The answer is `{:error, :undefined}` only where
+  the calendar cannot say without a year.
+
+  """
+  @callback months_in_year_bounds() ::
+              {Calendar.month(), Calendar.month()} | {:error, :undefined}
+
+  @doc """
   Returns the number of months in a leap year (without a year).
 
   A calendar whose leap year holds more months than its ordinary year
@@ -713,6 +748,38 @@ defmodule Calendrical do
 
   """
   @callback traditional_months(year :: Calendar.year()) :: [traditional_month()]
+
+  @doc """
+  Returns a month of a year as the calendar names it: its traditional
+  number, or `{month, :leap}` for a leap month.
+
+  The month is the ordinal month a date of this calendar carries, and
+  the answer is `c:lunar_month_of_year/2`'s for a month the year has:
+  in a Chinese year whose leap month follows month 2, ordinal month 3 is
+  `{2, :leap}` and ordinal month 4 is `3`. A calendar whose months are
+  their own numbering answers the month itself. A month the year does
+  not have (`c:month_numbers/1`) is `{:error, exception}`, never a month
+  of another year.
+
+  """
+  @callback traditional_month(year :: Calendar.year(), month :: Calendar.month()) ::
+              traditional_month() | {:error, Exception.t()}
+
+  @doc """
+  Returns the ordinal month of a year that a traditional month names:
+  the inverse of `c:traditional_month/2`.
+
+  The answer is `c:ordinal_month_from_traditional/2`'s month, for a
+  month the year has: in a Chinese year whose leap month follows month
+  2, `{2, :leap}` is ordinal month 3 and `3` is ordinal month 4. A
+  traditional month the year does not have, a leap month in a year
+  without one among them, is `{:error, exception}`.
+
+  """
+  @callback month_from_traditional(
+              year :: Calendar.year(),
+              traditional_month :: traditional_month()
+            ) :: Calendar.month() | {:error, Exception.t()}
 
   @doc """
   Returns the days of a named month in a year, in the order of time.
@@ -911,6 +978,20 @@ defmodule Calendrical do
   """
   @callback weeks_in_month(year :: year(), month :: month()) ::
               pos_integer() | {:error, :not_defined} | date_error()
+
+  @doc """
+  Returns the weeks of a month of a calendar year in order, each the
+  `t:Date.Range.t/0` of its days.
+
+  The weeks are those `c:week_of_month/3` names for the month, as many
+  as `c:weeks_in_month/2` counts and each the days `c:month_week/3`
+  gives: the first may begin in the month before and the last run into
+  the month after. A month the year does not have is
+  `{:error, exception}`.
+
+  """
+  @callback weeks_of_month(year :: year(), month :: month()) ::
+              [Date.Range.t()] | {:error, Exception.t()}
 
   @doc """
   Returns the date a specified positive or negative integer number of

@@ -34,6 +34,20 @@ defmodule Calendrical.Base.MonthWeeks do
 
   def month_week(_calendar, _year, _month, _nth), do: {:error, :invalid_date}
 
+  # The weeks of a month in order, each the days `month_week/4` gives its
+  # nth week, or an error naming the month where the year does not have
+  # it.
+  def weeks_of_month(calendar, year, month) do
+    case weeks_in_month(calendar, year, month) do
+      weeks when is_integer(weeks) ->
+        Enum.map(1..weeks//1, &month_week(calendar, year, month, &1))
+
+      {:error, _reason} ->
+        {:error,
+         Calendrical.InvalidMonthError.exception(calendar: calendar, year: year, month: month)}
+    end
+  end
+
   defp nth_week(nth, {_first, _second, _end_of_weeks, weeks}, _calendar) when nth > weeks do
     {:error, :invalid_date}
   end

@@ -54,6 +54,14 @@ defmodule Calendrical.Composite.Compiler do
       @change_days segments |> Enum.map(& &1.first) |> Enum.reject(&is_nil/1)
       @change_reach 800
 
+      # The years a change of calendar falls in, as each member labels
+      # them: the only years with other months, or other days of a month,
+      # than a member's own years have.
+      @transition_years segments
+                        |> Enum.flat_map(&[&1.first_year, &1.last_year])
+                        |> Enum.reject(&is_nil/1)
+                        |> Enum.uniq()
+
       import Localize.Macros
 
       @doc false
@@ -650,6 +658,40 @@ defmodule Calendrical.Composite.Compiler do
       """
       @impl true
       def months_in_year, do: {:error, :undefined}
+
+      @doc """
+      Returns the fewest and the most months a year has, as
+      `{fewest, most}`: the member calendars' bounds, widened by the
+      years a change of calendar cuts short. England's 1751 has the
+      months 3 to 12, so `Calendrical.Reform.England` answers `{10, 13}`.
+
+      """
+      @impl true
+      def months_in_year_bounds do
+        Calendrical.Base.Bounds.months_in_year_bounds(
+          __MODULE__,
+          @member_calendars,
+          @transition_years
+        )
+      end
+
+      @doc """
+      Returns the fewest and the most days a month has in any year, as
+      `{fewest, most}`: the member calendars' bounds, widened by the
+      months a change of calendar cuts short. England's September 1752
+      has nineteen days, so `Calendrical.Reform.England` answers
+      `{19, 30}` for month 9.
+
+      """
+      @impl true
+      def days_in_month_bounds(month) do
+        Calendrical.Base.Bounds.days_in_month_bounds(
+          __MODULE__,
+          @member_calendars,
+          @transition_years,
+          month
+        )
+      end
 
       @doc """
       Returns the months a year has, as runs of their numbers: those

@@ -106,3 +106,15 @@ msgstr ""
 msgctxt "date"
 msgid "The {$calendar} calendar supports only the dates the installed JPL ephemeris covers. Found {$value}"
 msgstr ""
+
+#: lib/calendrical/exception/invalid_month_error.ex:37
+#, elixir-autogen, icu-format
+msgctxt "calendar"
+msgid "The {$calendar} calendar has no month {$month}"
+msgstr ""
+
+#: lib/calendrical/exception/invalid_month_error.ex:45
+#, elixir-autogen, icu-format
+msgctxt "calendar"
+msgid "The {$calendar} calendar has no month {$month} in the year {$year}"
+msgstr ""
