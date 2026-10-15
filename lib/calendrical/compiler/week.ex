@@ -170,8 +170,14 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
-      Returns the related gregorian year as displayed
+      Returns the related Gregorian year as displayed
       on rendered calendars.
+
+      Per TR35 this is the Gregorian year in which this calendar's year
+      begins, so it is the same for every date of the calendar year. A week
+      calendar's year can begin in the Gregorian year before the one it is
+      labelled with: ISO 8601's week year 2026 begins on 29 December 2025, so
+      its related Gregorian year is 2025.
 
       """
       @spec related_gregorian_year(
@@ -183,11 +189,16 @@ defmodule Calendrical.Compiler.Week do
 
       @impl true
       def related_gregorian_year(year, _week, _day) when is_integer(year) do
-        year
+        {gregorian_year, _month, _day} =
+          year
+          |> date_to_iso_days(1, 1)
+          |> Calendar.ISO.date_from_iso_days()
+
+        gregorian_year
       end
 
       def related_gregorian_year(year, _week, _day) do
-        {:error, missing_year_error("calendar_year", year)}
+        {:error, missing_year_error("related_gregorian_year", year)}
       end
 
       @doc """

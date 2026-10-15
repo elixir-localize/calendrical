@@ -4,12 +4,20 @@ defmodule Calendrical.FiscalYear do
 
   Many jurisdictions use a fiscal (financial, accounting, tax) year that does
   not start on 1 January. For example, the United States federal fiscal year
-  begins on 1 October, and the United Kingdom tax year begins on 6 April.
+  begins on 1 October, and the United Kingdom government financial year on
+  1 April.
 
-  This module embeds the fiscal-year start month for ~50 territories at
+  This module embeds the fiscal-year start *month* for ~50 territories at
   compile time (sourced from `priv/fiscal_years_by_territory.csv`) and
   provides a factory, `calendar_for/1`, that returns a Calendrical month-based
   calendar configured for that territory.
+
+  Only the start month is modelled, so a fiscal year that begins part-way
+  through a month is not one of these calendars. The United Kingdom has one of
+  each: its government financial year begins on 1 April, which `:GB` is, and
+  its personal tax year on 6 April, which no calendar here expresses. The two
+  are commonly written alike — "2026/27", "2026-27" or "tax year 2026 to
+  2027" — so a label naming which year is meant is worth carrying.
 
   The returned calendar is a fully-fledged `Calendar` implementation: it can be
   used with `Date.new/4`, `Date.shift/2`, `Calendrical.Interval`,
