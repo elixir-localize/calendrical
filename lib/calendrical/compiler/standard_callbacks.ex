@@ -287,6 +287,35 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       defoverridable solar_term: 2
 
+      @doc """
+      Returns the position of a year's leap month, or `nil` where the
+      year has none.
+
+      """
+      unquote(impl)
+      def leap_month(year), do: Calendrical.Month.leap_month(__MODULE__, year)
+
+      @doc """
+      Returns the figures a date is written with: its own fields, in a
+      calendar whose dates are written as its own.
+
+      """
+      unquote(impl)
+      def written_date(year, month, day), do: {year, month, day}
+
+      @doc """
+      Returns the date of this calendar that written figures name: the
+      inverse of `written_date/3`, the fields themselves where they are a
+      date.
+
+      """
+      unquote(impl)
+
+      def date_from_written_date(year, month, day),
+        do: Calendrical.Base.Written.own_date(__MODULE__, year, month, day)
+
+      defoverridable leap_month: 1, written_date: 3, date_from_written_date: 3
+
       defoverridable cardinal_day: 3,
                      cardinal_year: 3,
                      cldr_calendar_type: 3,

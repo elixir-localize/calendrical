@@ -58,6 +58,26 @@ defmodule Calendrical.Compiler.Month do
       end
 
       @doc """
+      Returns the figures a date is written with: the Gregorian date it
+      is, since its months are the Gregorian months they are named for.
+
+      """
+      @impl true
+      def written_date(year, month, day) do
+        Calendrical.Base.Written.cardinal_written_date(__MODULE__, year, month, day)
+      end
+
+      @doc """
+      Returns the date of this calendar that a written Gregorian date
+      names: the inverse of `written_date/3`.
+
+      """
+      @impl true
+      def date_from_written_date(year, month, day) do
+        Calendrical.Base.Written.date_from_cardinal_written_date(__MODULE__, year, month, day)
+      end
+
+      @doc """
       Identifies that the calendar is month based.
       """
       @impl true

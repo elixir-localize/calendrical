@@ -341,6 +341,7 @@ defmodule Calendrical.Chinese do
 
   """
   @spec leap_month(date_or_year :: Date.t() | Calendar.year()) :: Calendar.month() | nil
+  @impl true
   def leap_month(%Date{year: year, calendar: __MODULE__}) do
     leap_month(year)
   end
@@ -1013,4 +1014,29 @@ defmodule Calendrical.Chinese do
   @impl true
   def solar_term(index, gregorian_year),
     do: Calendrical.Lunisolar.solar_term(index, gregorian_year, &location/1)
+
+  @doc """
+  Returns the figures a date is written with: its year, its traditional
+  month, `{month, :leap}` for a leap month, and its day.
+
+  """
+  @impl true
+  def written_date(year, month, day) do
+    Calendrical.Base.Written.lunisolar_written_date(__MODULE__, year, month, day)
+  end
+
+  @doc """
+  Returns the date that written figures name: the inverse of
+  `written_date/3`.
+
+  """
+  @impl true
+  def date_from_written_date(year, lunar_month, day) do
+    Calendrical.Base.Written.date_from_lunisolar_written_date(
+      __MODULE__,
+      year,
+      lunar_month,
+      day
+    )
+  end
 end

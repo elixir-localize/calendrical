@@ -411,6 +411,44 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
+      Returns the figures a date is written with: the member calendar's.
+
+      """
+      @impl true
+      def written_date(year, month, day) do
+        calendar_for_date(year, month, day).written_date(year, month, day)
+      end
+
+      @doc """
+      Returns the date of this calendar that written figures name: the
+      date of the member calendar in effect on the day they name, in this
+      calendar's own fields.
+
+      """
+      @impl true
+      def date_from_written_date(year, month, day) do
+        Enum.find_value(@member_calendars, {:error, :invalid_date}, fn member ->
+          written_in(member, year, month, day)
+        end)
+      end
+
+      # The date, in this calendar's fields, of the day a member reads the
+      # written figures as, where that member is the one in effect on it.
+      defp written_in(member, year, month, day) do
+        case member.date_from_written_date(year, month, day) do
+          {:ok, {member_year, member_month, member_day}} ->
+            iso_days = member.date_to_iso_days(member_year, member_month, member_day)
+
+            if calendar_for_iso_days(iso_days) == member,
+              do: {:ok, date_from_iso_days(iso_days)},
+              else: nil
+
+          {:error, :invalid_date} ->
+            nil
+        end
+      end
+
+      @doc """
       Calculates the week of the year for the given date: the member
       calendar's week in a year one member governs throughout, and in a
       year a transition falls in, the composite's own calendar-aligned

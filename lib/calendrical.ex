@@ -1056,6 +1056,51 @@ defmodule Calendrical do
   @callback info() :: Calendrical.Info.t()
 
   @doc """
+  Returns the position of a year's leap month, or `nil` where the year
+  has none.
+
+  It is the one fact the traditional numbering of months rests on: a
+  month before the leap month keeps its number, the leap month is
+  `{number, :leap}` of the month it follows, and a month after it is
+  one less than its position. In a Chinese year whose leap month follows
+  month 2 it is 3, so position 3 is `{2, :leap}` and position 4 is 3; in
+  a Hebrew leap year it is 6, Adar I, `{5, :leap}`.
+
+  """
+  @callback leap_month(year :: year()) :: Calendar.month() | nil
+
+  @doc """
+  Returns the figures a date is written with: the year, the month and
+  the day a format prints with `y`, `M` and `d`.
+
+  A calendar whose dates are written as its own fields answers them
+  unchanged, which is the default every calendar has and what the
+  Hebrew calendar answers, as ICU writes a Hebrew month by its place in
+  the year. A calendar whose dates are written as another calendar's
+  answers that calendar's: a fiscal year that begins in July writes its
+  month 1 as `{gregorian_year, 7, day}`, and `Calendrical.Julian.March25`
+  writes its month 1 day 1 as `{label_year, 3, 25}`. A lunisolar calendar
+  writes a month by its traditional number, `{number, :leap}` for a leap
+  month, so that CLDR's numeric leap pattern applies.
+
+  """
+  @callback written_date(year :: year(), month :: month(), day :: day()) ::
+              {Calendar.year(), traditional_month(), Calendar.day()}
+
+  @doc """
+  Returns the date of this calendar that written figures name: the
+  inverse of `c:written_date/3`.
+
+  """
+  @callback date_from_written_date(
+              year :: Calendar.year(),
+              month :: traditional_month(),
+              day :: Calendar.day()
+            ) ::
+              {:ok, {Calendar.year(), Calendar.month(), Calendar.day()}}
+              | {:error, :invalid_date}
+
+  @doc """
   Returns the ISO day number of a date of this calendar: the count of
   days from Calendrical's epoch that `date_from_iso_days/1` reverses.
 

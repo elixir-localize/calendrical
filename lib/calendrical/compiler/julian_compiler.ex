@@ -42,6 +42,24 @@ defmodule Calendrical.Julian.Compiler do
         )
       end
 
+      @doc """
+      Returns the figures a date is written with: its label year and the
+      Julian month and day that name it.
+
+      """
+      def written_date(year, month, day) do
+        Calendrical.Base.Written.cardinal_written_date(__MODULE__, year, month, day)
+      end
+
+      @doc """
+      Returns the date of this calendar that a written date names: the
+      inverse of `written_date/3`.
+
+      """
+      def date_from_written_date(year, month, day) do
+        Calendrical.Base.Written.date_from_cardinal_written_date(__MODULE__, year, month, day)
+      end
+
       {start_month, start_day} = Keyword.get(options, :new_year_starting_month_and_day, {1, 1})
 
       @new_year_starting_month start_month
