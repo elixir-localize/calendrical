@@ -42,25 +42,48 @@ defmodule Calendrical.CompositeArithmetic.Test do
                ~D[1700-02-28 Calendrical.Reform.Sweden]
     end
 
-    test "months are the segments' own counted months" do
-      # England's 1750 counts thirteen months from Lady Day: its month
-      # 10 is the Julian December 1750 and its month 11 the Julian
-      # January, both carrying the year 1750.
+    test "months are the Julian months that name the dates, across the change of new-year day" do
+      # England's 1750 counts thirteen months from Lady Day, but its dates
+      # are named by the twelve Julian months, and a month is walked as one
+      # of them: its month 10 is December 1750 and its month 11 January 1751,
+      # both written 1750.
       assert Date.shift(~D[1750-10-10 Calendrical.Reform.England], month: 1) ==
                ~D[1750-11-10 Calendrical.Reform.England]
 
-      # Twelve months on from month 11 pass through 1750's month 13 and
-      # into the short year 1751, whose months are the Julian calendar's.
+      # Twelve months on from 10 January 1751 is 10 January 1752.
       assert Date.shift(~D[1750-11-10 Calendrical.Reform.England], month: 12) ==
-               ~D[1751-12-10 Calendrical.Reform.England]
+               ~D[1752-01-10 Calendrical.Reform.England]
 
+      # Two months back from 10 April 1751 is 10 February 1751, written 1750.
       assert Date.shift(~D[1751-04-10 Calendrical.Reform.England], month: -2) ==
-               ~D[1750-13-10 Calendrical.Reform.England]
+               ~D[1750-12-10 Calendrical.Reform.England]
 
-      # A month on from 1750's month 13 lands in 1751, which begins on
-      # 25 March, its first day.
+      # A month on from 10 March 1751, written 1750 (its month 13), is
+      # 10 April 1751, the year 1751 having begun on 25 March.
       assert Date.shift(~D[1750-13-10 Calendrical.Reform.England], month: 1) ==
-               ~D[1751-03-25 Calendrical.Reform.England]
+               ~D[1751-04-10 Calendrical.Reform.England]
+    end
+
+    # The Calendar (New Style) Act 1750, section 1: the year 1751 ends on
+    # 31 December and the next day is the first of 1752. A year on keeps a
+    # date's month and day as they are named, so the Lady Day of one year
+    # is the Lady Day of the next, through the short year 1751.
+    test "a year is the same named day a year on, across the change of new-year day" do
+      for {from, years, to} <- [
+            {{1750, 1, 1}, 1, {1751, 3, 25}},
+            {{1750, 1, 1}, 2, {1752, 3, 25}},
+            {{1750, 1, 1}, 4, {1754, 3, 25}},
+            {{1751, 3, 25}, -1, {1750, 1, 1}},
+            {{1751, 3, 25}, -4, {1747, 1, 1}},
+            # 15 January 1751, written 1750, a year on is 15 January 1752.
+            {{1750, 11, 15}, 1, {1752, 1, 15}},
+            # 29 February 1748, written 1747, a year on is the last day of
+            # February 1749, written 1748.
+            {{1747, 12, 29}, 1, {1748, 12, 28}}
+          ] do
+        {year, month, day} = from
+        assert England.plus(year, month, day, :years, years, []) == to, inspect({from, years})
+      end
     end
 
     test "a lunisolar segment gives way to the Gregorian calendar" do

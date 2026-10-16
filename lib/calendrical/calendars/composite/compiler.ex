@@ -1172,7 +1172,7 @@ defmodule Calendrical.Composite.Compiler do
              valid_date?(new_year, new_month, new_day) do
           {new_year, new_month, new_day}
         else
-          months = Calendrical.Composite.Shift.months(calendar, year, month, duration)
+          months = civil_months(year, month, day, duration)
           date_from_iso_days(reach_across_segments(year, month, day, months))
         end
       end
@@ -1199,17 +1199,43 @@ defmodule Calendrical.Composite.Compiler do
              valid_date?(new_year, new_month, new_day) do
           calendar.date_to_iso_days(new_year, new_month, new_day)
         else
-          months = Calendrical.Composite.Shift.months(calendar, year, month, date_part, increment)
+          months = civil_months(year, month, day, date_part, increment)
           reach_across_segments(year, month, day, months)
         end
       end
 
+      # The months are walked from the date's civil month, and the day
+      # reached is its civil day: a Julian year-start variant's 25 March is
+      # its month 1 day 1, and is walked as the Julian 25 March.
       defp reach_across_segments(year, month, day, months) do
         index = segment_index(date_to_iso_days(year, month, day))
         segment = Enum.at(@segments, index)
-        {civil_year, civil_month, _day} = to_civil(segment, year, month, day)
+        {civil_year, civil_month, civil_day} = to_civil(segment, year, month, day)
         {index, civil_month} = walk_months(index, {civil_year, civil_month}, months)
-        resolve_day(index, civil_month, day)
+        resolve_day(index, civil_month, civil_day)
+      end
+
+      # The months a shift of years and months walks, counted as the
+      # segment's civil calendar counts them: twelve to a year reckoned
+      # from 25 March, which names twelve months, not the thirteen it
+      # counts.
+      defp civil_months(year, month, day, duration_or_part, increment \\ nil) do
+        segment = Enum.at(@segments, segment_index(date_to_iso_days(year, month, day)))
+        {civil_year, civil_month, _day} = to_civil(segment, year, month, day)
+
+        case duration_or_part do
+          %Duration{} = duration ->
+            Calendrical.Composite.Shift.months(segment.civil, civil_year, civil_month, duration)
+
+          date_part ->
+            Calendrical.Composite.Shift.months(
+              segment.civil,
+              civil_year,
+              civil_month,
+              date_part,
+              increment
+            )
+        end
       end
 
       # A month is walked in the civil numbering of its segment's
@@ -1318,11 +1344,21 @@ defmodule Calendrical.Composite.Compiler do
         end)
       end
 
-      # Every member is its own civil calendar, so a member date needs
-      # no translation to walk its months.
-      defp to_civil(_segment, year, month, day), do: {year, month, day}
+      # A member whose civil calendar is another — a Julian year-start
+      # variant, walked in Julian months — has its date given as the
+      # Julian date it is, and read back from one. Any other member is its
+      # own civil calendar.
+      defp to_civil(%{civil: civil, calendar: civil}, year, month, day), do: {year, month, day}
 
-      defp from_civil(_segment, year, month, day), do: {year, month, day}
+      defp to_civil(%{civil: civil, calendar: calendar}, year, month, day) do
+        civil.date_from_iso_days(calendar.date_to_iso_days(year, month, day))
+      end
+
+      defp from_civil(%{civil: civil, calendar: civil}, year, month, day), do: {year, month, day}
+
+      defp from_civil(%{calendar: calendar}, year, month, day) do
+        calendar.date_from_julian_date(year, month, day)
+      end
 
       @doc false
       @impl Calendar

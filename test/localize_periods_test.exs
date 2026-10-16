@@ -78,6 +78,9 @@ defmodule Calendrical.LocalizePeriodsTest do
     # A year reckoned from 25 March counts thirteen months: its month
     # 10 is the Julian December and its month 11 the Julian January,
     # and its month 13 day 24 is the day before the next year's first.
+    # Its two parts of March are one month, the month the year turns in:
+    # 24 and 25 March are in this month, the next year and the next
+    # quarter.
     test "where a year turns after its first month, and within one" do
       calendar = Calendrical.Julian.March25
       december = Date.new!(2022, 10, 31, calendar)
@@ -95,7 +98,7 @@ defmodule Calendrical.LocalizePeriodsTest do
             {december, january, nil, "yesterday"},
             {december, january, :month, "last month"},
             {new_year, last_day, nil, "tomorrow"},
-            {new_year, last_day, :month, "next month"},
+            {new_year, last_day, :month, "this month"},
             {new_year, last_day, :quarter, "next quarter"},
             {new_year, last_day, :year, "next year"},
             {last_day, new_year, :year, "last year"}
@@ -120,9 +123,10 @@ defmodule Calendrical.LocalizePeriodsTest do
       for calendar <- @astronomical, do: assert_durations_add_back(calendar)
     end
 
-    # The year 2022 of a calendar reckoned from 25 March runs from its
-    # month 1 day 1 to its month 13 day 24: twelve whole months and 23
-    # days, and one day more turns the year.
+    # The year 2022 of a calendar reckoned from 25 March runs from 25
+    # March 2022, its month 1 day 1, to 24 March 2023, its month 13 day
+    # 24: eleven months to 25 February and 27 days, 2023 being no leap
+    # year, and one day more turns the year.
     test "across the turn of a year of thirteen counted months" do
       calendar = Calendrical.Julian.March25
 
@@ -132,7 +136,7 @@ defmodule Calendrical.LocalizePeriodsTest do
                  Date.new!(2023, 1, 1, calendar)
                )
 
-      assert {:ok, %{year: 0, month: 12, day: 23}} =
+      assert {:ok, %{year: 0, month: 11, day: 27}} =
                Localize.Duration.new(
                  Date.new!(2022, 1, 1, calendar),
                  Date.new!(2022, 13, 24, calendar)
@@ -282,10 +286,12 @@ defmodule Calendrical.LocalizePeriodsTest do
     end
   end
 
-  # A month is the month field, which counts a calendar's months in the
-  # order of time.
-  defp month_position(_calendar, date) do
-    date.month
+  # A month is the month that names a date, its `cardinal_month/1` of its
+  # month of the year: a Julian year-start variant counts thirteen months a
+  # year, its March in two, and names twelve, and the two parts of its March
+  # are one month.
+  defp month_position(calendar, date) do
+    calendar.cardinal_month(calendar.month_of_year(date.year, date.month, date.day))
   end
 
   # The week of its year a day is in, in a calendar.

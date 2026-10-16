@@ -208,11 +208,17 @@ defmodule Calendrical.Composite.Config do
     end)
   end
 
-  # Every member counts its own months from its year's first day — a
-  # Julian year-start variant's are its counted months — so each member
-  # is its own civil calendar and its quarters are the months in label
-  # order.
-  defp civil_calendar(calendar), do: calendar
+  # The calendar whose months a segment's months and years are walked in.
+  # A Julian year-start variant counts its months from its new-year day,
+  # so a year reckoned from 25 March has thirteen, its March split in two,
+  # where it names twelve: its months are walked as the Julian months
+  # that name them, from January, and its days as their Julian days. Any
+  # other calendar walks its own.
+  defp civil_calendar(calendar) do
+    if Code.ensure_loaded?(calendar) and function_exported?(calendar, :date_from_julian_date, 3),
+      do: Calendrical.Julian,
+      else: calendar
+  end
 
   defp label_year(calendar, iso_days) do
     {year, _month, _day} = calendar.date_from_iso_days(iso_days)

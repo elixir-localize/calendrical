@@ -32,19 +32,21 @@ defmodule Calendrical.CompositeDiffTest do
 
     # The Julian 20 December 1154, a date of the base calendar, to 10
     # April 1156, the Lady Day year 1156's month 2 day 10: 477 days
-    # through the dateless stretch, and seventeen months — the months
-    # of the stretch are walked too, and 1155 holds thirteen.
+    # through the dateless stretch, and fifteen months, counted as the
+    # Julian months that name the dates — 20 March 1156 is fifteen on, and
+    # a sixteenth would pass 10 April.
     test "counts through them to a date after them" do
-      assert England.diff({1154, 12, 20}, {1156, 2, 10}, :months) == 17
-      assert England.diff({1156, 2, 10}, {1154, 12, 20}, :months) == -17
+      assert England.diff({1154, 12, 20}, {1156, 2, 10}, :months) == 15
+      assert England.diff({1156, 2, 10}, {1154, 12, 20}, :months) == -15
       assert England.diff({1154, 12, 20}, {1156, 2, 10}, :quarters) == 5
       assert England.diff({1154, 12, 20}, {1156, 2, 10}, :years) == 1
       assert England.diff({1154, 12, 20}, {1156, 2, 10}, :days) == 477
       assert England.diff({1154, 12, 20}, {1156, 2, 10}, :weeks) == 68
 
-      # A year of thirteen counted months, and the month before it.
-      assert England.diff({1155, 4, 15}, {1156, 4, 15}, :months) == 13
-      assert England.diff({1155, 4, 15}, {1156, 4, 14}, :months) == 12
+      # 15 June 1155 to 15 June 1156 is a year of twelve months, though the
+      # Lady Day year counts thirteen, and to the day before it eleven.
+      assert England.diff({1155, 4, 15}, {1156, 4, 15}, :months) == 12
+      assert England.diff({1155, 4, 15}, {1156, 4, 14}, :months) == 11
       assert England.diff({1155, 4, 15}, {1156, 4, 15}, :years) == 1
       assert England.diff({1155, 4, 15}, {1156, 4, 14}, :years) == 0
     end

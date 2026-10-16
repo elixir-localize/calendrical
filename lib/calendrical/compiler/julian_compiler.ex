@@ -217,23 +217,26 @@ defmodule Calendrical.Julian.Compiler do
 
       def plus(year, month, day, date_part, increment, options \\ [])
 
-      def plus(year, month, day, :years, years, options) do
-        new_year = skip_year_zero(year + years, year)
-        {new_year, month, coerce_day(options, day, new_year, month)}
-      end
+      # Years, quarters and months are the Julian calendar's on the Julian
+      # date, relabelled: a date's months are counted from the new-year day,
+      # but they are named by the twelve Julian months, so a month on from
+      # 20 March is 20 April and a year on from 25 March 1750 is 25 March
+      # 1751, whichever month of the year each is counted as.
+      def plus(year, month, day, date_part, increment, options)
+          when date_part in [:years, :quarters, :months] do
+        {julian_year, julian_month, julian_day} = julian_date(year, month, day)
 
-      def plus(year, month, day, :quarters, quarters, options) do
-        plus(year, month, day, :months, quarters * 3, options)
-      end
+        {new_year, new_month, new_day} =
+          Calendrical.Julian.plus(
+            julian_year,
+            julian_month,
+            julian_day,
+            date_part,
+            increment,
+            options
+          )
 
-      # Months count on through the years, every year holding the same
-      # number, with no year 0: the months index collapses the gap and
-      # the new year expands it again.
-      def plus(year, month, day, :months, months, options) do
-        months_index = collapse_year(year) * @counted_months + (month - 1) + months
-        new_year = expand_year(Integer.floor_div(months_index, @counted_months))
-        new_month = Integer.mod(months_index, @counted_months) + 1
-        {new_year, new_month, coerce_day(options, day, new_year, new_month)}
+        date_from_julian_date(new_year, new_month, new_day)
       end
 
       def plus(year, month, day, :weeks, weeks, options) do
@@ -245,16 +248,15 @@ defmodule Calendrical.Julian.Compiler do
         date_from_iso_days(iso_days)
       end
 
-      defp coerce_day(options, day, year, month) do
-        if Keyword.get(options, :coerce, false) do
-          min(day, days_in_month(year, month))
-        else
-          day
-        end
-      end
-
-      def diff(from, to, date_part) do
-        Calendrical.Base.Common.diff(__MODULE__, from, to, date_part)
+      # `plus/6` is the plain Julian calendar's on the Julian date,
+      # relabelled, so the count between two dates is the Julian calendar's
+      # between their Julian dates: the same days, the same months.
+      def diff({year, month, day}, {to_year, to_month, to_day}, date_part) do
+        Calendrical.Julian.diff(
+          julian_date(year, month, day),
+          julian_date(to_year, to_month, to_day),
+          date_part
+        )
       end
 
       def days_in_year(year) do
@@ -450,28 +452,6 @@ defmodule Calendrical.Julian.Compiler do
 
       defp previous_year(1), do: -1
       defp previous_year(year), do: year - 1
-
-      defp skip_year_zero(new_year, original_year)
-           when new_year >= 0 and original_year < 0 do
-        new_year + 1
-      end
-
-      defp skip_year_zero(new_year, original_year)
-           when new_year <= 0 and original_year > 0 do
-        new_year - 1
-      end
-
-      defp skip_year_zero(new_year, _original_year) do
-        new_year
-      end
-
-      # The label years without the gap at 0, for month arithmetic: label
-      # year 1 is 1 and label year -1 is 0.
-      defp collapse_year(year) when year < 0, do: year + 1
-      defp collapse_year(year), do: year
-
-      defp expand_year(year) when year < 1, do: year - 1
-      defp expand_year(year), do: year
 
       # No year is numbered 0, whichever Julian year a label year 0 would
       # stand for.

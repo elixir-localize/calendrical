@@ -145,10 +145,13 @@ defmodule Calendrical.Composite do
       iex> Date.shift(~D[1752-08-05 Calendrical.Reform.England], month: 1)
       ~D[1752-09-14 Calendrical.Reform.England]
 
-  A change of calendar can begin a month part of the way through it, as England's year 1751 began on 25 March. The month before it is the Lady Day year 1750's month 13, whose last day is the Julian 24 March 1751:
+  A change of calendar can begin a month part of the way through it, as England's year 1751 began on 25 March. Months and years are walked as the months that name the dates — a year reckoned from 25 March counts thirteen, its March split in two, and names twelve — so a month before 25 March 1751 is 25 February 1751, which the Lady Day year 1750 counted as its month 12, and a year after 25 March 1750 is 25 March 1751:
 
       iex> Date.shift(~D[1751-03-25 Calendrical.Reform.England], month: -1)
-      ~D[1750-13-24 Calendrical.Reform.England]
+      ~D[1750-12-25 Calendrical.Reform.England]
+
+      iex> Date.shift(~D[1750-01-01 Calendrical.Reform.England], year: 2)
+      ~D[1752-03-25 Calendrical.Reform.England]
 
   ## Eras
 

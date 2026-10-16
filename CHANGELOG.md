@@ -158,6 +158,8 @@ The format is based on
 
 ### Fixed
 
+* A Julian year-start variant's years and months, and a composite's across a change of new-year day, are counted in the Julian months that name the dates: two years on from 25 March 1750 in England is 25 March 1752, where it was 1 April 1752, and a month on from 20 March is 20 April. A year holds twelve months, though a year reckoned from 25 March counts thirteen.
+
 * A solar term of a year before 0 is the day its moment is in: `Calendrical.Chinese.solar_term(5, -3000)` is 6 April, where rounding the moment towards zero gave 7 April.
 
 * A month a change of calendar began after its 1st is named from its year and month: the questions that need no day (a month of the year, a quarter, a year's numbers) take the month's 1st as its first day, so England's March 1751, which began on the 25th, is written "Mar 1751" where Localize returned an `InvalidValueError`. A question about a day, and every other day the calendar does not have, is still an error.

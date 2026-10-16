@@ -450,17 +450,37 @@ defmodule Calendrical.JulianVariantsTest do
       end
     end
 
-    test "a split variant's month shifts walk its thirteen months" do
-      # A month on from month 13 lands in month 1, whose seven days cap
-      # the day, and thirteen months are a whole year.
+    # A split variant counts thirteen months a year, but its dates are named
+    # by the twelve Julian months, and a month is one of those: a month on
+    # from 20 March is 20 April, whichever month of the year each is
+    # counted as, and twelve months are a year.
+    test "a split variant's month shifts walk the Julian months that name its dates" do
+      # 20 March 2024, its month 13, a month on is 20 April 2024.
       assert Date.shift(~D[2023-13-20 Calendrical.Julian.March25], month: 1) ==
-               ~D[2024-01-07 Calendrical.Julian.March25]
+               ~D[2024-02-20 Calendrical.Julian.March25]
 
-      assert Date.shift(~D[2023-05-10 Calendrical.Julian.March25], month: 13) ==
+      # 10 July 2023 twelve months on is 10 July 2024.
+      assert Date.shift(~D[2023-05-10 Calendrical.Julian.March25], month: 12) ==
                ~D[2024-05-10 Calendrical.Julian.March25]
 
+      # 27 December 2023, Dec25's year 2024, a month back is 27 November
+      # 2023, the year 2023's month 12.
       assert Date.shift(~D[2024-01-03 Calendrical.Julian.Dec25], month: -1) ==
-               ~D[2023-13-03 Calendrical.Julian.Dec25]
+               ~D[2023-12-27 Calendrical.Julian.Dec25]
+
+      durations =
+        [month: -13, month: -1, month: 1, month: 11, month: 13] ++
+          [[year: 1, month: 1], [year: -1, month: 13], [year: 2, month: -1]]
+
+      for variant <- [March25, Dec25],
+          {julian, in_variant} <- day_pairs(variant),
+          duration <- durations do
+        duration = duration |> List.wrap() |> Duration.new!()
+
+        assert Date.convert!(Date.shift(in_variant, duration), Calendar.ISO) ==
+                 Date.convert!(Date.shift(julian, duration), Calendar.ISO),
+               "#{inspect(in_variant)} + #{inspect(duration)}"
+      end
     end
 
     test "plain Julian shifts by weeks" do
