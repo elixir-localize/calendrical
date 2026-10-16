@@ -47,6 +47,43 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       def cardinal_year(year, month, day), do: calendar_year(year, month, day)
 
       @doc """
+      Returns the date of this calendar that a written date names: the
+      year and the day as written, and the month of the year the named
+      month is, in a calendar whose dates are written as its own.
+
+      """
+      unquote(impl)
+
+      def date_from_cardinal_date(year, month, day),
+        do: Calendrical.Base.Common.date_from_cardinal_date(__MODULE__, year, month, day)
+
+      @doc """
+      Returns the CLDR calendar type whose data names a date's months and
+      days: this calendar's own, in a calendar named by one CLDR calendar
+      throughout.
+
+      """
+      unquote(impl)
+      def cldr_calendar_type(_year, _month, _day), do: cldr_calendar_type()
+
+      @doc """
+      Returns the calendars a date written for this calendar may be
+      written in: this calendar alone, in a calendar whose dates are
+      written in one notation.
+
+      """
+      unquote(impl)
+      def parsing_calendars, do: [__MODULE__]
+
+      @doc """
+      Returns the number of months in a leap year: the most months a year
+      of this calendar has.
+
+      """
+      unquote(impl)
+      def months_in_leap_year, do: elem(months_in_year_bounds(), 1)
+
+      @doc """
       Returns the traditional month at a position in a year: the month
       itself, in a calendar whose months are their own numbering.
 
@@ -252,6 +289,10 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       defoverridable cardinal_day: 3,
                      cardinal_year: 3,
+                     cldr_calendar_type: 3,
+                     date_from_cardinal_date: 3,
+                     months_in_leap_year: 0,
+                     parsing_calendars: 0,
                      date_from_day_of_year: 2,
                      named_month: 2,
                      numeric_month: 3,

@@ -312,6 +312,34 @@ defmodule Calendrical.Base.Common do
 
   def named_month(_calendar, _year, _named_month), do: []
 
+  # The date a written date names in a calendar whose dates are written as
+  # its own: the year and the day as written, and the month of the year
+  # whose name, its `cardinal_month/1` of its month of the year, is the one
+  # written. A leap month's name is its own (`{month, :leap}`), so the
+  # month written alone is the year's other month of that number, where it
+  # has one.
+  def date_from_cardinal_date(calendar, year, named_month, day)
+      when is_integer(year) and is_integer(named_month) and is_integer(day) do
+    month =
+      Enum.find(
+        1..months_in(calendar, year)//1,
+        &(written_month(calendar, year, &1) == named_month)
+      )
+
+    if month && calendar.valid_date?(year, month, day),
+      do: {year, month, day},
+      else: {:error, :invalid_date}
+  end
+
+  def date_from_cardinal_date(_calendar, _year, _named_month, _day), do: {:error, :invalid_date}
+
+  defp written_month(calendar, year, month) do
+    case calendar.month_of_year(year, month, 1) do
+      month_of_year when is_integer(month_of_year) -> calendar.cardinal_month(month_of_year)
+      _leap_or_no_month -> nil
+    end
+  end
+
   defp month_named(calendar, %Date{year: year, month: month, day: day}) do
     case calendar.month_of_year(year, month, day) do
       {month_of_year, :leap} -> calendar.cardinal_month(month_of_year)

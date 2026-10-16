@@ -57,7 +57,7 @@ defmodule Calendrical do
     the number its month is written with in figures, and
     `c:cardinal_year/3` the year it is written with, so a fiscal date is
     written as the Gregorian date it is; `c:date_from_cardinal_date/3`
-    (optional) reads a written date back.
+    reads a written date back.
 
   * **Traditional months** — `c:traditional_months/1` lists a year's
     months as they are named, `c:traditional_month/2` and
@@ -86,12 +86,16 @@ defmodule Calendrical do
     `c:date_to_iso_days/3` and `c:date_from_iso_days/1` that every
     conversion runs through.
 
-  The optional callbacks are those a calendar answers only where the
-  question arises: a leap year's year-less month count
+  Every callback is required, and every calendar answers each of them,
+  so a consumer asks any calendar any question and never whether it can.
+  The callbacks a calendar answers by a rule common to most calendars
+  have that rule as their default, which a calendar overrides where its
+  answer differs: a leap year's year-less month count
   (`c:months_in_leap_year/0`), a per-date CLDR type
   (`c:cldr_calendar_type/3`), the calendars a composite's dates are
-  written in (`c:parsing_calendars/0`) and the family resolver
-  (`c:calendar_from_cldr_calendar_type/1`).
+  written in (`c:parsing_calendars/0`), reading a written date back
+  (`c:date_from_cardinal_date/3`) and the family resolver
+  (`c:calendar_from_cldr_calendar_type/1`) among them.
 
   Localize validates a calendar against the callbacks it asks —
   identity, the year notions, months, weeks and arithmetic — before
@@ -444,9 +448,10 @@ defmodule Calendrical do
   :invalid_date}` when they name no date of the calendar. A fiscal
   calendar whose year begins in July reads 10 August 2026 as its year
   2027, month 2, day 10, and a Julian year-start variant reads its
-  label year with the Julian month and day. A calendar whose dates are
-  written as its own fields need not implement it, and a reader places
-  their months itself.
+  label year with the Julian month and day. Every calendar answers it:
+  one whose dates are written as its own fields keeps the year and the
+  day and finds the month of the year the named month is, which is the
+  default.
 
   """
   @callback date_from_cardinal_date(
@@ -455,10 +460,6 @@ defmodule Calendrical do
               day :: Calendar.day()
             ) ::
               {Calendar.year(), Calendar.month(), Calendar.day()} | {:error, :invalid_date}
-
-  # Only a calendar that writes its dates by other fields than its own —
-  # a fiscal calendar, a Julian year-start variant — answers it.
-  @optional_callbacks date_from_cardinal_date: 3
 
   @doc """
   Returns a tuple of `{year, week_in_year}` for a given `year`, `month` or `week`, and `day`
@@ -733,13 +734,11 @@ defmodule Calendrical do
   Returns the number of months in a leap year (without a year).
 
   A calendar whose leap year holds more months than its ordinary year
-  answers the leap year's count: 13 in the Hebrew calendar. Callers
-  fall back to `months_in_year/1` where it is absent.
+  answers the leap year's count: 13 in the Hebrew calendar. Every
+  calendar answers it, the most months one of its years has by default.
 
   """
   @callback months_in_leap_year() :: Calendar.month()
-
-  @optional_callbacks months_in_leap_year: 0
 
   @doc """
   Returns the traditional lunisolar month at a position in a year.
@@ -861,14 +860,11 @@ defmodule Calendrical do
   calendar defines it: a composite calendar answers with the calendar
   in effect on the date, so `Calendrical.Reform.Japan` names its
   lunisolar months before 1873 from the Chinese CLDR calendar and its
-  months after from the Japanese one. Localize and `Calendrical.localize/3`
-  ask it where a calendar defines it, and `cldr_calendar_type/0`
-  otherwise.
+  months after from the Japanese one. Every calendar answers it, its
+  `cldr_calendar_type/0` by default.
 
   """
   @callback cldr_calendar_type(Calendar.year(), Calendar.month(), Calendar.day()) :: atom()
-
-  @optional_callbacks cldr_calendar_type: 3
 
   @doc """
   Returns the calendar module for a CLDR calendar type, as a locale's
@@ -882,8 +878,6 @@ defmodule Calendrical do
   """
   @callback calendar_from_cldr_calendar_type(calendar_type :: atom() | String.t()) ::
               {:ok, module()} | {:error, Exception.t()}
-
-  @optional_callbacks calendar_from_cldr_calendar_type: 1
 
   @doc """
   Returns the CLDR calendar type that names the calendar's eras.
@@ -915,13 +909,11 @@ defmodule Calendrical do
   written in, for a reader to try in turn.
 
   A composite calendar names its member calendars, since a date of a
-  past segment is written as that member writes it. A calendar whose
-  dates are its own notation alone need not implement it.
+  past segment is written as that member writes it. Every calendar
+  answers it, itself alone by default.
 
   """
   @callback parsing_calendars() :: [module(), ...]
-
-  @optional_callbacks parsing_calendars: 0
 
   @doc """
   Returns a the year in a calendar year.

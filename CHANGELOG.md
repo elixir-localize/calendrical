@@ -10,6 +10,8 @@ The format is based on
 
 ### Breaking changes
 
+* Every callback of the behaviour is required: `cldr_calendar_type/3`, `parsing_calendars/0`, `months_in_leap_year/0`, `date_from_cardinal_date/3` and `calendar_from_cldr_calendar_type/1` were optional. A calendar built with `use Calendrical.Behaviour` or a compiler has a default for each; one that declares `@behaviour Calendrical` by hand must implement them.
+
 * A fiscal calendar's dates are written as the Gregorian dates they are: `numeric_month/3` answers the Gregorian month (`07` for a July-start year's month 1, where it was `01`) and `strftime/3` writes `%Y` and `%y` from the new `cardinal_year/3`. The fiscal year and its `year/1`, `month/2` and `quarter/2` ranges are unchanged.
 
 * A date of a calendar of weeks (`Calendrical.ISOWeek`, `Calendrical.NRF`, one made with `Calendrical.new/3`) is a year, a month of its pattern of weeks and a day of that month, as `Date.new/4` takes a date of any calendar, where its month field held the week and its day field the day of the week: the second day of week 25 is `~D[2026-06-16 Calendrical.NRF]`, and `Date.new(2026, 25, 2, Calendrical.NRF)` is an error. The week is asked for (`week_of_year/3`, `week_date_from_date/3`) and given (`date_from_week_date/3`, and `parse_date/1` and `~D` still read `2026-W25-2`); a date is written `2026-06-16`, and `days_in_month/2` counts a month's 28 or 35 days.
