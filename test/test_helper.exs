@@ -9,6 +9,16 @@ if File.dir?(localize_locales) do
   Application.put_env(:localize, :locale_cache_dir, localize_locales)
 end
 
+# Every territory's reform calendar is a composite compiled at runtime
+# through the one `Calendrical.Compiler` server, which compiles one module
+# at a time. Building them here, before any test runs, keeps the tests
+# that sweep every reform from queueing on the server inside their
+# timeout; `Calendrical.Reform.calendar_for/1` then returns the loaded
+# module.
+for {territory, _reform} <- Calendrical.Reform.reforms() do
+  {:ok, _calendar} = Calendrical.Reform.calendar_for(territory)
+end
+
 # The :full tag marks exhaustive sweeps (the lunisolar round trips
 # cover every day from 1800 to 2025, ~2.5 minutes of CPU). They are
 # excluded from default runs so the suite stays fast and other tests
