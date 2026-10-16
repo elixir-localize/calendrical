@@ -2,6 +2,29 @@ defmodule Calendrical.WeekInMonth.Test do
   use ExUnit.Case, async: true
   import Calendrical.Helper
 
+  # A calendar for every first day of the week and minimum days in the
+  # first week, built once for the module. Each is compiled through the
+  # one `Calendrical.Compiler` server, which other tests' calendars queue
+  # on too, so building 49 of them inside a test can outlast its timeout
+  # on a loaded machine; `setup_all` has none, and each compilation keeps
+  # the server's own.
+  setup_all do
+    calendars =
+      for first_day <- 1..7, min_days <- 1..7 do
+        {:ok, calendar} =
+          Calendrical.new(
+            Module.concat(__MODULE__, "Day#{first_day}Min#{min_days}"),
+            :month,
+            day_of_week: first_day,
+            min_days_in_first_week: min_days
+          )
+
+        {calendar, first_day, min_days}
+      end
+
+    %{week_calendars: calendars}
+  end
+
   # `Calendar.ISO` dates are counted in `Calendrical.Gregorian`, whose weeks
   # begin on Monday and whose week 1 of a month is the week holding the
   # month's first day, so the days before it in that week are in the new
@@ -69,16 +92,11 @@ defmodule Calendrical.WeekInMonth.Test do
   end
 
   describe "TR35's weeks of a month" do
-    test "for every first day of the week and minimum days in the first week" do
-      for first_day <- 1..7, min_days <- 1..7 do
-        {:ok, calendar} =
-          Calendrical.new(
-            Module.concat(__MODULE__, "Day#{first_day}Min#{min_days}"),
-            :month,
-            day_of_week: first_day,
-            min_days_in_first_week: min_days
-          )
+    test "for every first day of the week and minimum days in the first week",
+         %{week_calendars: calendars} do
+      assert length(calendars) == 49
 
+      for {calendar, first_day, min_days} <- calendars do
         assert misnumbered(calendar, first_day, min_days, ~D[2020-01-01], ~D[2020-12-31]) == []
       end
     end
