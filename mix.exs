@@ -175,7 +175,9 @@ defmodule Calendrical.MixProject do
 
   defp deps do
     [
-      {:localize, github: "elixir-localize/localize", branch: "main"},
+      # Calendrical 2.0 is developed beside Localize's `calendrical-2.0`
+      # branch; the path returns to the published package at release.
+      {:localize, path: "../localize"},
       {:astro, "~> 2.7"},
       {:tz_world, "~> 2.3", optional: true},
       {:tz, "~> 0.26", optional: true},

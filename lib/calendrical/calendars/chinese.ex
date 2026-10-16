@@ -66,8 +66,10 @@ defmodule Calendrical.Chinese do
   use Calendrical.Behaviour,
     epoch: Application.compile_env(:calendrical, :chinese_epoch, ~D[-2636-02-15]),
     cldr_calendar_type: :chinese,
-    months_in_normal_year: 12,
-    months_in_leap_year: 13
+    months_in_ordinary_year: 12,
+    months_in_leap_year: 13,
+    year_cycle: 60,
+    location: &__MODULE__.location/1
 
   import Astro.Math,
     only: [

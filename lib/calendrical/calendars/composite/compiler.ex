@@ -68,6 +68,26 @@ defmodule Calendrical.Composite.Compiler do
       def __config__, do: @calendar_config
 
       @doc """
+      Returns the static facts about this calendar, as
+      `t:Calendrical.Info.t/0`: its members, each with the first day it
+      is in effect on, its base member's year 0 and the weeks of the
+      member in effect last.
+
+      """
+      @impl true
+      def info do
+        base = elem(@segment_calendars, 0)
+        last = elem(@segment_calendars, tuple_size(@segment_calendars) - 1)
+
+        Calendrical.Info.gather(__MODULE__,
+          epoch: nil,
+          year_zero?: base.info().year_zero?,
+          weeks: last.info().weeks,
+          members: Enum.map(@segments, &{&1.first, &1.calendar})
+        )
+      end
+
+      @doc """
       Identifies that the calendar is month based.
 
       This may not always be true for all dates in a composite

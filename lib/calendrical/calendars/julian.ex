@@ -80,6 +80,21 @@ defmodule Calendrical.Julian do
   """
   @impl true
   def years_in_cycle, do: 28
+
+  @doc """
+  Returns the static facts about this calendar, as
+  `t:Calendrical.Info.t/0`: the Julian calendar has no year 0.
+
+  """
+  @impl true
+  def info do
+    Calendrical.Info.gather(__MODULE__,
+      epoch: epoch(),
+      year_zero?: false,
+      weeks: Calendrical.Info.week_rule(1, 1)
+    )
+  end
+
   @before_compile Calendrical.Compiler.DateCheck
 
   @type year :: -9999..-1 | 1..9999

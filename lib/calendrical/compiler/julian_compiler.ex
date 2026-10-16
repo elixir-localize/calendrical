@@ -29,6 +29,19 @@ defmodule Calendrical.Julian.Compiler do
       # alike, after 28: seven of its cycles of four years.
       def years_in_cycle, do: 28
 
+      @doc """
+      Returns the static facts about this calendar, as
+      `t:Calendrical.Info.t/0`: a Julian calendar has no year 0.
+
+      """
+      def info do
+        Calendrical.Info.gather(__MODULE__,
+          epoch: date_to_iso_days(1, 1, 1),
+          year_zero?: false,
+          weeks: Calendrical.Info.week_rule(1, 1)
+        )
+      end
+
       {start_month, start_day} = Keyword.get(options, :new_year_starting_month_and_day, {1, 1})
 
       @new_year_starting_month start_month

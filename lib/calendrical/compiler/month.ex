@@ -43,6 +43,21 @@ defmodule Calendrical.Compiler.Month do
       end
 
       @doc """
+      Returns the static facts about this calendar, as
+      `t:Calendrical.Info.t/0`.
+
+      """
+      @impl true
+      def info do
+        config = __config__()
+
+        Calendrical.Info.gather(__MODULE__,
+          epoch: date_to_iso_days(1, 1, 1),
+          weeks: Calendrical.Info.week_rule(config.day_of_week, config.min_days_in_first_week)
+        )
+      end
+
+      @doc """
       Identifies that the calendar is month based.
       """
       @impl true

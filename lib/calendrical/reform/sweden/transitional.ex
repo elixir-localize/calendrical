@@ -23,7 +23,8 @@ defmodule Calendrical.Reform.Sweden.Transitional do
 
   use Calendrical.Behaviour,
     epoch: ~D[0001-01-01 Calendrical.Julian],
-    cldr_calendar_type: :gregorian
+    cldr_calendar_type: :gregorian,
+    year_zero?: false
 
   # The one physical day that the Swedish calendar labelled 30 February 1712.
   # In the (proleptic) Julian calendar that day is 29 February 1712.

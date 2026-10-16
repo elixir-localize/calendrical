@@ -134,6 +134,9 @@ defmodule Calendrical.Behaviour do
     epoch_day_of_week = date |> Date.convert!(Calendar.ISO) |> Date.day_of_week()
     days_in_week = Keyword.get(options, :days_in_week, 7)
     first_day_of_week = Keyword.get(options, :first_day_of_week, 1)
+    year_zero? = Keyword.get(options, :year_zero?, true)
+    year_cycle = Keyword.get(options, :year_cycle)
+    location = Keyword.get(options, :location)
 
     cldr_calendar_type = Keyword.get(options, :cldr_calendar_type, :gregorian)
     cldr_calendar_base = Keyword.get(options, :cldr_calendar_base, :month)
@@ -167,6 +170,7 @@ defmodule Calendrical.Behaviour do
         months_in_ordinary_year,
         months_in_leap_year
       ),
+      facts(year_zero?, year_cycle, location),
       identity_and_validity(cldr_calendar_type, cldr_calendar_base),
       era_functions(cldr_calendar_type),
       period_functions(cldr_calendar_type),
@@ -209,6 +213,33 @@ defmodule Calendrical.Behaviour do
 
       @months_in_ordinary_year unquote(months_in_ordinary_year)
       @months_in_leap_year unquote(months_in_leap_year)
+    end
+  end
+
+  # The facts a calendar states in its options beyond what the prelude
+  # keeps, and the `info/0` that gathers every fact into one struct. The
+  # week rule is the day the calendar's weeks begin on, or
+  # `:first_day_of_year` where they are counted from the year's first day.
+  defp facts(year_zero?, year_cycle, location) do
+    quote location: :keep do
+      @year_zero? unquote(year_zero?)
+      @year_cycle unquote(year_cycle)
+      @location unquote(location)
+      @doc """
+      Returns the static facts about this calendar, as
+      `t:Calendrical.Info.t/0`.
+
+      """
+      @impl Calendrical
+      def info do
+        Calendrical.Info.gather(__MODULE__,
+          epoch: @epoch,
+          year_zero?: @year_zero?,
+          weeks: Calendrical.Info.week_rule(@first_day_of_week, 1),
+          year_cycle: @year_cycle,
+          location: @location
+        )
+      end
     end
   end
 
@@ -1107,6 +1138,7 @@ defmodule Calendrical.Behaviour do
 
   defp overridable_declarations do
     quote location: :keep do
+      defoverridable info: 0
       defoverridable valid_date?: 3
       defoverridable valid_time?: 4
       defoverridable naive_datetime_to_string: 7

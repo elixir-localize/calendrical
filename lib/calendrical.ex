@@ -1042,6 +1042,20 @@ defmodule Calendrical do
             ) :: integer()
 
   @doc """
+  Returns the static facts about this calendar, as `t:Calendrical.Info.t/0`.
+
+  The facts are what a calendar is: the CLDR calendars that name its
+  months and its eras, its epoch, whether it has a year 0, what its year
+  is built of, the fewest and most months a year has, the rule its own
+  weeks follow, its cycles, the place it is reckoned at, the lengths its
+  months can have, the calendar its dates are parsed in and, for a
+  composite, its member calendars. Every calendar Calendrical builds
+  answers it.
+
+  """
+  @callback info() :: Calendrical.Info.t()
+
+  @doc """
   Returns the ISO day number of a date of this calendar: the count of
   days from Calendrical's epoch that `date_from_iso_days/1` reverses.
 
