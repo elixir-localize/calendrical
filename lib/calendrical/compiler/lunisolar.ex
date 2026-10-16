@@ -875,7 +875,7 @@ defmodule Calendrical.Lunisolar do
     longitude = rem(300 + index * 15, 360)
     start = Calendrical.Gregorian.date_to_iso_days(gregorian_year, 1, 1)
     moment = solar_longitude_on_or_after(longitude, start, location_fun)
-    {year, month, day} = Calendrical.Gregorian.date_from_iso_days(trunc(moment))
+    {year, month, day} = Calendrical.Gregorian.date_from_iso_days(floor(moment))
     Date.new(year, month, day, Calendrical.Gregorian)
   end
 

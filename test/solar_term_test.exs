@@ -38,6 +38,27 @@ defmodule Calendrical.SolarTermTest do
                {:ok, ~D[2026-02-04 Calendrical.Gregorian]}
     end
 
+    # A term's day is the day its moment is in, before the epoch too: Qingming
+    # in -3000 falls at day -1095631.11, which is 6 April. Rounding the moment
+    # towards zero gave the day after it, 7 April.
+    test "is the day its moment is in, in a year before 0" do
+      assert Calendrical.Chinese.solar_term(5, -3000) ==
+               {:ok, ~D[-3000-04-06 Calendrical.Gregorian]}
+
+      location = &Calendrical.Chinese.location/1
+
+      for year <- [-3000, -1, 1, 2025], index <- 1..24 do
+        start = Calendrical.Gregorian.date_to_iso_days(year, 1, 1)
+
+        moment =
+          Lunisolar.solar_longitude_on_or_after(rem(300 + index * 15, 360), start, location)
+
+        {:ok, date} = Lunisolar.solar_term(index, year, location)
+
+        assert Date.to_gregorian_days(date) == floor(moment), "term #{index} of #{year}"
+      end
+    end
+
     test "is reckoned at a lunisolar calendar's own meridian" do
       for calendar <- @lunisolar, index <- [1, 7, 13, 19, 24] do
         assert calendar.solar_term(index, 2002) ==
