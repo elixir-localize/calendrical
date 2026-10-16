@@ -8,7 +8,12 @@ defmodule Calendrical.NumericMonthTest do
   had, and `strftime/3` asked whether a calendar exported it to know whether
   to write the named day and month. Every calendar answers both now: its
   fields, unless it counts its months from a new-year day and writes its
-  dates by the months that name them.
+  dates by the months that name them. A fiscal calendar's months are named
+  as the Gregorian months they are, so its dates are written as the
+  Gregorian dates they are (user, 2026-10-16): the fiscal year from July
+  whose year 2026 begins in July 2025 writes its month 1 day 15 as
+  15/07/2025, while its `calendar_year/3` and its ranges stay the fiscal
+  year's.
 
   The dates are worked out by hand. The Lady Day year 1750 begins on 25
   March, so its month 1 day 1 is 25 March, its month 2 is April, and its
@@ -32,9 +37,24 @@ defmodule Calendrical.NumericMonthTest do
       assert written(~D[1750-06-05 Calendrical.Julian]) == {5, 6}
       assert written(~D[5785-09-20 Calendrical.Hebrew]) == {20, 9}
       assert written(~D[1404-03-26 Calendrical.Persian]) == {26, 3}
+    end
 
-      # The first month of a fiscal year from July is its period 1.
-      assert written(Date.new!(2026, 1, 15, fiscal)) == {15, 1}
+    # The fiscal year 2026 from July begins on 1 July 2025: its month 1 is
+    # July, written with the Gregorian year it falls in.
+    test "are the Gregorian day and month in a fiscal calendar, with the Gregorian year" do
+      {:ok, fiscal} =
+        Calendrical.new(Calendrical.NumericMonthTest.FiscalFromJuly, :month, month_of_year: 7)
+
+      assert written(Date.new!(2026, 1, 15, fiscal)) == {15, 7}
+      assert fiscal.cardinal_year(2026, 1, 15) == 2025
+      assert fiscal.calendar_year(2026, 1, 15) == 2026
+
+      assert written(Date.new!(2026, 7, 15, fiscal)) == {15, 1}
+      assert fiscal.cardinal_year(2026, 7, 15) == 2026
+
+      assert fiscal.date_from_cardinal_date(2025, 7, 15) == {2026, 1, 15}
+      assert fiscal.date_from_cardinal_date(2026, 1, 15) == {2026, 7, 15}
+      assert fiscal.date_from_cardinal_date(2025, 2, 30) == {:error, :invalid_date}
     end
 
     # Week 25's first day is the fifteenth of the sixth month of the pattern.
@@ -80,13 +100,18 @@ defmodule Calendrical.NumericMonthTest do
              ) == {:ok, "25/03/1750, 25 March"}
     end
 
-    test "writes %d and %m from the fields of a calendar that numbers its months as it writes them" do
+    test "writes a fiscal date as the Gregorian date it is" do
       {:ok, fiscal} =
         Calendrical.new(Calendrical.NumericMonthTest.FiscalFromJuly, :month, month_of_year: 7)
 
       assert Calendrical.strftime(Date.new!(2026, 1, 15, fiscal), "%d/%m/%Y, %-d %B", locale: :en) ==
-               {:ok, "15/01/2026, 15 July"}
+               {:ok, "15/07/2025, 15 July"}
 
+      assert Calendrical.strftime(Date.new!(2026, 1, 15, fiscal), "%y|%_6Y|%-Y") ==
+               {:ok, "25|  2025|2025"}
+    end
+
+    test "writes %d and %m from the fields of a calendar that numbers its months as it writes them" do
       assert Calendrical.strftime(~D[5785-09-20 Calendrical.Hebrew], "%d/%m/%Y, %-d %B",
                locale: :en
              ) == {:ok, "20/09/5785, 20 Sivan"}

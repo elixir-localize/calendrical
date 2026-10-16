@@ -382,6 +382,15 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
+      Returns the year a date is written with: the member calendar's.
+
+      """
+      @impl true
+      def cardinal_year(year, month, day) do
+        calendar_for_date(year, month, day).cardinal_year(year, month, day)
+      end
+
+      @doc """
       Calculates the week of the year for the given date: the member
       calendar's week in a year one member governs throughout, and in a
       year a transition falls in, the composite's own calendar-aligned

@@ -53,8 +53,11 @@ defmodule Calendrical do
   * **Months** — `c:month_of_year/3` is a date's month of the year and
     `c:cardinal_month/1` names the CLDR month it stands for, so the two
     compose: a fiscal year beginning in July names its month 1 July.
-    `c:cardinal_day/3` names a date's day, and `c:numeric_month/3`
-    gives the number its month is written with in figures.
+    `c:cardinal_day/3` names a date's day, `c:numeric_month/3` gives
+    the number its month is written with in figures, and
+    `c:cardinal_year/3` the year it is written with, so a fiscal date is
+    written as the Gregorian date it is; `c:date_from_cardinal_date/3`
+    (optional) reads a written date back.
 
   * **Traditional months** — `c:traditional_months/1` lists a year's
     months as they are named, `c:traditional_month/2` and
@@ -391,14 +394,15 @@ defmodule Calendrical do
   Returns the number a date's month is written with in figures.
 
   It is the month field in a calendar whose months are numbered as they
-  are written, which is the default every calendar has: the first month
-  of a fiscal year beginning in July is written `01`, and the ninth
-  month of a Hebrew year `09`. A calendar that counts its months from a
-  new-year day and writes its dates by the months that name them answers
-  the month that names the date: `Calendrical.Julian.March25`'s month 1
-  is written `03`, as `c:cardinal_day/3` writes its first day `25`, so
-  the date in figures and the date in words are one date.
-  `Calendrical.strftime/3` writes `%d` and `%m` from this pair.
+  are written, which is the default every calendar has: the ninth month
+  of a Hebrew year is written `09`. A calendar whose dates are written
+  by the months that name them answers the month that names the date:
+  `Calendrical.Julian.March25`'s month 1 is written `03`, as
+  `c:cardinal_day/3` writes its first day `25`, and the first month of a
+  fiscal year beginning in July is written `07`, so the date in figures
+  and the date in words are one date. `Calendrical.strftime/3` writes
+  `%d`, `%m` and `%Y` from this callback, `c:cardinal_day/3` and
+  `c:cardinal_year/3`.
 
   """
   @callback numeric_month(
@@ -407,6 +411,54 @@ defmodule Calendrical do
               day :: Calendar.day()
             ) ::
               Calendar.month()
+
+  @doc """
+  Returns the year a date is written with.
+
+  It is the year of the month and day that name the date, as
+  `c:cardinal_month/1` and `c:cardinal_day/3` name them. In a calendar
+  whose dates are written as its own it is `c:calendar_year/3`, which is
+  the default every calendar has. That includes a Julian year-start
+  variant, whose dates are written with their label year, as the Old
+  Style wrote them. A fiscal calendar's months are named as the
+  Gregorian months they are, so its dates are written as the Gregorian
+  dates they are: year 2027 of a fiscal year that begins in July holds
+  10 August 2026, which is written with 2026. The fiscal year itself is
+  still `c:calendar_year/3`, and the ranges of `c:year/1`, `c:month/2`
+  and `c:quarter/2` are still the fiscal year's.
+
+  """
+  @callback cardinal_year(
+              year :: Calendar.year(),
+              month :: Calendar.month(),
+              day :: Calendar.day()
+            ) ::
+              Calendar.year()
+
+  @doc """
+  Returns the date of this calendar that a written date names.
+
+  It inverts `c:cardinal_year/3`, `c:cardinal_month/1` and
+  `c:cardinal_day/3`: given the year, the month and the day a date is
+  written with, it answers the date's own fields, or `{:error,
+  :invalid_date}` when they name no date of the calendar. A fiscal
+  calendar whose year begins in July reads 10 August 2026 as its year
+  2027, month 2, day 10, and a Julian year-start variant reads its
+  label year with the Julian month and day. A calendar whose dates are
+  written as its own fields need not implement it, and a reader places
+  their months itself.
+
+  """
+  @callback date_from_cardinal_date(
+              year :: Calendar.year(),
+              month :: Calendar.month(),
+              day :: Calendar.day()
+            ) ::
+              {Calendar.year(), Calendar.month(), Calendar.day()} | {:error, :invalid_date}
+
+  # Only a calendar that writes its dates by other fields than its own —
+  # a fiscal calendar, a Julian year-start variant — answers it.
+  @optional_callbacks date_from_cardinal_date: 3
 
   @doc """
   Returns a tuple of `{year, week_in_year}` for a given `year`, `month` or `week`, and `day`
@@ -1688,14 +1740,16 @@ defmodule Calendrical do
     exception -> {:error, exception}
   end
 
-  # `Calendar.strftime/3` writes `%d` and `%m` from the date's fields,
-  # which name the day and month only where the calendar's months are the
-  # named ones. Every calendar says which day names a date
-  # (`cardinal_day/3`) and which number its month is written with
-  # (`numeric_month/3`): the fields themselves in most, and the named day
-  # and month in a Julian year-start variant, whose months are counted from
-  # the new-year day, so `%d %B` stays one date. `%%` is kept literal, and
-  # the padding modifiers (`%-d`, `%_m`, `%03d`) are honoured.
+  # `Calendar.strftime/3` writes `%d`, `%m`, `%Y` and `%y` from the date's
+  # fields, which name the date only where the calendar's dates are written
+  # as its own. Every calendar says which day names a date
+  # (`cardinal_day/3`), which number its month is written with
+  # (`numeric_month/3`) and which year (`cardinal_year/3`): the fields
+  # themselves in most; the named day and month in a Julian year-start
+  # variant, whose months are counted from the new-year day; and the
+  # Gregorian date in a fiscal calendar, so `%d %B %Y` stays one date. `%%`
+  # is kept literal, and the padding modifiers (`%-d`, `%_m`, `%03d`) are
+  # honoured.
   defp named_numeric_format(format, %{year: year, month: month, day: day} = value)
        when is_binary(format) and is_integer(year) and is_integer(month) and is_integer(day) do
     case validate_calendar(Map.get(value, :calendar)) do
@@ -1707,41 +1761,58 @@ defmodule Calendrical do
   defp named_numeric_format(format, _value), do: format
 
   defp numeric_fields_as_written(format, calendar, year, month, day) do
-    case {calendar.cardinal_day(year, month, day), calendar.numeric_month(year, month, day)} do
-      {^day, ^month} ->
-        format
+    written = %{
+      "d" => calendar.cardinal_day(year, month, day),
+      "m" => calendar.numeric_month(year, month, day),
+      "Y" => calendar.cardinal_year(year, month, day)
+    }
 
-      {named_day, named_month} ->
-        format
-        |> String.split("%%")
-        |> Enum.map_join("%%", &replace_numeric_fields(&1, named_day, named_month))
+    if written == %{"d" => day, "m" => month, "Y" => year} do
+      format
+    else
+      format
+      |> String.split("%%")
+      |> Enum.map_join("%%", &replace_numeric_fields(&1, written))
     end
   end
 
-  defp replace_numeric_fields(format, named_day, named_month) do
-    Regex.replace(~r/%([-_0]?\d*)([dm])/, format, fn _full, modifiers, field ->
-      number = if field == "d", do: named_day, else: named_month
-      pad_numeric_field(number, modifiers)
+  # `%y` is the last two digits of the year `%Y` writes, as
+  # `Calendar.strftime/3` writes them.
+  defp replace_numeric_fields(format, written) do
+    Regex.replace(~r/%([-_0]?\d*)([dmYy])/, format, fn _full, modifiers, field ->
+      case field do
+        "y" -> pad_numeric_field(written["Y"] |> rem(100) |> abs(), modifiers, 2)
+        "Y" -> pad_numeric_field(written["Y"], modifiers, 4)
+        field -> pad_numeric_field(written[field], modifiers, 2)
+      end
     end)
   end
 
-  defp pad_numeric_field(number, "-" <> _width), do: Integer.to_string(number)
+  defp pad_numeric_field(number, "-" <> _width, _default_width), do: Integer.to_string(number)
 
-  defp pad_numeric_field(number, "_" <> width) do
-    String.pad_leading(Integer.to_string(number), field_width(width), " ")
+  defp pad_numeric_field(number, "_" <> width, default_width) do
+    pad_signed(number, field_width(width, default_width), " ")
   end
 
-  defp pad_numeric_field(number, width) do
-    String.pad_leading(Integer.to_string(number), field_width(width), "0")
+  defp pad_numeric_field(number, width, default_width) do
+    pad_signed(number, field_width(width, default_width), "0")
   end
 
-  defp field_width(""), do: 2
-  defp field_width("0" <> width), do: field_width(width)
+  defp pad_signed(number, width, padding) when number < 0 do
+    "-" <> String.pad_leading(Integer.to_string(-number), width, padding)
+  end
 
-  defp field_width(width) do
+  defp pad_signed(number, width, padding) do
+    String.pad_leading(Integer.to_string(number), width, padding)
+  end
+
+  defp field_width("", default_width), do: default_width
+  defp field_width("0" <> width, default_width), do: field_width(width, default_width)
+
+  defp field_width(width, default_width) do
     case Integer.parse(width) do
       {parsed, ""} -> parsed
-      _not_a_width -> 2
+      _not_a_width -> default_width
     end
   end
 

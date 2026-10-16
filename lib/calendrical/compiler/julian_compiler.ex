@@ -177,6 +177,19 @@ defmodule Calendrical.Julian.Compiler do
         {label_year, counted_month, counted_day}
       end
 
+      # A date is written with its label year and the Julian month and day
+      # that name it, so the year is kept and the month and day counted.
+      def date_from_cardinal_date(year, month, day)
+          when is_integer(year) and month in 1..@julian_months_in_year and is_integer(day) do
+        {counted_month, counted_day} = named_to_counted(month, day)
+
+        if valid_date?(year, counted_month, counted_day),
+          do: {year, counted_month, counted_day},
+          else: {:error, :invalid_date}
+      end
+
+      def date_from_cardinal_date(_year, _month, _day), do: {:error, :invalid_date}
+
       def date_to_iso_days(year, month, day) do
         {julian_year, julian_month, julian_day} = julian_date(year, month, day)
         Calendrical.Julian.date_to_iso_days(julian_year, julian_month, julian_day)

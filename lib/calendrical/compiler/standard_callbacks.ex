@@ -39,6 +39,14 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       def numeric_month(_year, month, _day), do: month
 
       @doc """
+      Returns the year a date is written with: its calendar year, in a
+      calendar whose dates are written as its own.
+
+      """
+      unquote(impl)
+      def cardinal_year(year, month, day), do: calendar_year(year, month, day)
+
+      @doc """
       Returns the traditional month at a position in a year: the month
       itself, in a calendar whose months are their own numbering.
 
@@ -243,6 +251,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       defoverridable solar_term: 2
 
       defoverridable cardinal_day: 3,
+                     cardinal_year: 3,
                      date_from_day_of_year: 2,
                      named_month: 2,
                      numeric_month: 3,

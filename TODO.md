@@ -30,6 +30,8 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Done
 
+* [x] **A fiscal date is written as the Gregorian date it is** — `Calendrical.FiscalYear.AU`'s year 2027 month 2 day 10 was written "Aug 10, 2027", its Gregorian month with its fiscal year; it is now "August 10, 2026" in Localize, `strftime/3` and an interval, and reads back. `cardinal_year/3` gives the year a date is written with and `date_from_cardinal_date/3` inverts a written date; `numeric_month/3` of a fiscal month is its Gregorian month (user, 2026-10-16: "Calendar date"). The fiscal year and its ranges are unchanged, held by `test/fiscal_calendar_test.exs`. Found from Tempo through Localize's TODO. 2026-10-16, v1.4.0.
+
 * [x] **Week dates in the calendar's own weeks** — decided by the user on 2026-10-16: `date_from_week_date/3`, `week_date_from_date/3` and `weeks_in_week_year/1` count the weeks `week_of_year/3` and `week/2` count, each day numbered from the calendar's first day of the week; `Calendrical.Gregorian`'s are no longer ISO 8601's. 2026-10-16, v1.4.0.
 
 * [x] **A calendar of weeks names `Calendar.ISO` for parsing** — its `parsing_calendar/0` is `Calendar.ISO` again, where it was the calendar itself for a day and "Feb 1, 2024" an error: Localize reads the calendar's own formats first ("M02 1, 2024 AD") and only what none of them reads as a Gregorian date, converted. 2026-10-13.

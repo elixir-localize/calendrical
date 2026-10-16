@@ -91,6 +91,43 @@ defmodule Calendrical.Base.Month do
     Math.amod(month + month_of_year - 1, @months_in_gregorian_year)
   end
 
+  # A month calendar's months are named as the Gregorian months they are,
+  # so a date is written as the Gregorian date it is: its year is the
+  # Gregorian year the day falls in, and its month in figures the Gregorian
+  # month. In a year that begins in January these are the fields themselves.
+  def cardinal_year(year, _month, _day, %Config{month_of_year: 1}) do
+    year
+  end
+
+  def cardinal_year(year, month, day, config) when is_date(year, month, day) do
+    {gregorian_year, _month, _day} =
+      year
+      |> date_to_iso_days(month, day, config)
+      |> ISO.date_from_iso_days()
+
+    gregorian_year
+  end
+
+  def numeric_month(_year, month, _day, config) do
+    cardinal_month(month, config)
+  end
+
+  # The inverse: a written date is the Gregorian date it names, so its day
+  # is found in the Gregorian calendar and read back in this one.
+  def date_from_cardinal_date(year, month, day, config)
+      when is_integer(year) and is_integer(month) and is_integer(day) do
+    if ISO.valid_date?(year, month, day) do
+      {iso_days, _day_fraction} =
+        ISO.naive_datetime_to_iso_days(year, month, day, 0, 0, 0, {0, 0})
+
+      date_from_iso_days(iso_days, config)
+    else
+      {:error, :invalid_date}
+    end
+  end
+
+  def date_from_cardinal_date(_year, _month, _day, _config), do: {:error, :invalid_date}
+
   def week_of_year(year, month, day, %Config{day_of_week: :first} = config)
       when is_date(year, month, day) do
     this_day = date_to_iso_days(year, month, day, config)

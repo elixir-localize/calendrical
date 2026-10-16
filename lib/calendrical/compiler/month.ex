@@ -285,6 +285,36 @@ defmodule Calendrical.Compiler.Month do
       end
 
       @doc """
+      Returns the year a date is written with: the Gregorian year its day
+      falls in, as its months are named as the Gregorian months they are.
+
+      """
+      @impl true
+      def cardinal_year(year, month, day) do
+        Month.cardinal_year(year, month, day, __config__())
+      end
+
+      @doc """
+      Returns the number a date's month is written with in figures: the
+      Gregorian month that names it.
+
+      """
+      @impl true
+      def numeric_month(year, month, day) do
+        Month.numeric_month(year, month, day, __config__())
+      end
+
+      @doc """
+      Returns the date of this calendar that a written date names: the
+      Gregorian date it is, in this calendar's fields.
+
+      """
+      @impl true
+      def date_from_cardinal_date(year, month, day) do
+        Month.date_from_cardinal_date(year, month, day, __config__())
+      end
+
+      @doc """
       Calculates the week of the year from the given `year`, `month`, and `day`.
       It is an integer from 1 to 53.
 
