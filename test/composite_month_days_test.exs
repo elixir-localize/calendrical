@@ -70,4 +70,48 @@ defmodule Calendrical.CompositeMonthDaysTest do
     |> Enum.flat_map(&[&1 - 1, &1, &1 + 1])
     |> Enum.uniq()
   end
+
+  # A question that needs no day takes the 1st of a month the year holds as
+  # the month's first day, as a date without a day is asked about, where a
+  # change of calendar began the month after its 1st: England's 1751 began
+  # on 25 March, and Russia's February 1918 on the 14th. A year and a month
+  # are written from the month's 1st, so Localize writes these months.
+  describe "a month that begins after its 1st" do
+    test "answers the questions that need no day through its 1st" do
+      {:ok, russia} = Calendrical.Reform.calendar_for(:RU)
+
+      refute England.valid_date?(1751, 3, 1)
+      assert England.month_of_year(1751, 3, 1) == 3
+      assert England.quarter_of_year(1751, 3, 1) == 1
+      assert England.calendar_year(1751, 3, 1) == 1751
+
+      refute russia.valid_date?(1918, 2, 1)
+      assert russia.month_of_year(1918, 2, 1) == 2
+    end
+
+    test "is still no date for a question about a day" do
+      assert England.day_of_week(1751, 3, 1, :default) == {:error, :invalid_date}
+      assert England.day_of_year(1751, 3, 1) == {:error, :invalid_date}
+      assert England.month_of_year(1751, 3, 5) == {:error, :invalid_date}
+    end
+
+    # England's February 1751 holds no day: the year ran from 25 March.
+    test "is no month where the month holds no day" do
+      assert England.month_of_year(1751, 2, 1) == {:error, :invalid_date}
+    end
+
+    test "is written from its year and month" do
+      {:ok, russia} = Calendrical.Reform.calendar_for(:RU)
+
+      assert Localize.Date.to_string(%{year: 1751, month: 3, calendar: England},
+               format: :yMMM,
+               locale: :en
+             ) == {:ok, "Mar 1751"}
+
+      assert Localize.Date.to_string(%{year: 1918, month: 2, calendar: russia},
+               format: :yMMM,
+               locale: :en
+             ) == {:ok, "Feb 1918"}
+    end
+  end
 end

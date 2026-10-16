@@ -56,6 +56,7 @@ defmodule Calendrical.Compiler.DateCheck do
         arguments = Macro.generate_arguments(arity, __MODULE__)
         [year, month, day | _rest] = arguments
         needed = Map.get(needed_fields, name, @whole_date)
+        dayless? = Map.has_key?(@partial_dates, name)
         function = Atom.to_string(name)
 
         quote do
@@ -63,7 +64,8 @@ defmodule Calendrical.Compiler.DateCheck do
             case Calendrical.Compiler.DateCheck.check(
                    __MODULE__,
                    unquote(needed),
-                   {unquote(year), unquote(month), unquote(day)}
+                   {unquote(year), unquote(month), unquote(day)},
+                   unquote(dayless?)
                  ) do
               :ok ->
                 super(unquote_splicing(arguments))
@@ -97,14 +99,25 @@ defmodule Calendrical.Compiler.DateCheck do
   # have. A year and a month without the day are checked as the month's
   # first day; a field that is neither an integer nor missing, and a month
   # or a day below 1, are no calendar's.
-  @spec check(module(), [:year | :month | :day], {term(), term(), term()}) ::
+  #
+  # A question that needs no day (`dayless?`: a year's numbers, a month's
+  # quarter and its month of the year) takes the 1st of a month the year
+  # holds as the month's first day, as a date without a day is asked about,
+  # where the month begins after its 1st: a reform began England's 1751 on
+  # 25 March, so that March holds the 25th to the 31st and its 1st names
+  # the month. Every other day the calendar does not have is an error.
+  @spec check(module(), [:year | :month | :day], {term(), term(), term()}, boolean()) ::
           :ok | :missing | :invalid
-  def check(calendar, _needed, {year, month, day})
+  def check(calendar, _needed, {year, month, day}, dayless?)
       when is_integer(year) and is_integer(month) and is_integer(day) do
-    if calendar.valid_date?(year, month, day), do: :ok, else: :invalid
+    cond do
+      calendar.valid_date?(year, month, day) -> :ok
+      dayless? and day == 1 -> first_day(calendar, year, month)
+      true -> :invalid
+    end
   end
 
-  def check(calendar, needed, {year, month, day}) do
+  def check(calendar, needed, {year, month, day}, _dayless?) do
     cond do
       not (field?(year) and field?(month) and field?(day)) -> :invalid
       not (ordinal?(month) and ordinal?(day)) -> :invalid
@@ -114,9 +127,31 @@ defmodule Calendrical.Compiler.DateCheck do
     end
   end
 
+  # The month's first day is the 1st, or where a change of calendar began
+  # the month after it, the first day the month holds: the month is one the
+  # year has, and the calendar counts days in it.
   defp first_day(calendar, year, month) do
-    if calendar.valid_date?(year, month, 1), do: :ok, else: :invalid
+    cond do
+      calendar.valid_date?(year, month, 1) -> :ok
+      month_holds_days?(calendar, year, month) -> :ok
+      true -> :invalid
+    end
   end
+
+  defp month_holds_days?(calendar, year, month) do
+    month >= 1 and month <= months_in_year(calendar, year) and
+      days_held(calendar.days_in_month(year, month)) > 0
+  end
+
+  defp months_in_year(calendar, year) do
+    case calendar.months_in_year(year) do
+      months when is_integer(months) -> months
+      _no_count -> 0
+    end
+  end
+
+  defp days_held(days) when is_integer(days), do: days
+  defp days_held(_no_count), do: 0
 
   defp missing?(needed, year, month, day) do
     (:year in needed and is_nil(year)) or (:month in needed and is_nil(month)) or

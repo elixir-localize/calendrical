@@ -158,6 +158,8 @@ The format is based on
 
 ### Fixed
 
+* A month a change of calendar began after its 1st is named from its year and month: the questions that need no day (a month of the year, a quarter, a year's numbers) take the month's 1st as its first day, so England's March 1751, which began on the 25th, is written "Mar 1751" where Localize returned an `InvalidValueError`. A question about a day, and every other day the calendar does not have, is still an error.
+
 * `Calendrical.Interval.day/3` answers for every calendar, counting through the year's own range, where it raised for a calendar without `first_gregorian_day_of_year/1` — the Julian, lunisolar and composite calendars among them.
 
 * `Calendrical.dates_in_gregorian_year/4` dispatches the calendar's own `dates_in_gregorian_year/3`, so a calendar that overrides the default implementation answers there too.
