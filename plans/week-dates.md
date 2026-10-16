@@ -1,6 +1,8 @@
 # Week dates in a calendar's own year
 
-**Status:** implemented (v1.4.0), 2026-10-12
+**Status:** implemented (v1.4.0), 2026-10-16
+
+Revised on 2026-10-16: a week date is now counted in the calendar's own weeks (`week_of_year/3`, `week/2`), its day numbered from the day those weeks begin on, where this plan had ISO 8601's rule over the calendar's year. The user's reason: "A year, month, week, day and day of week are all the calendar's", as RFC 7529 reads a rule's weeks, and as Tempo now numbers a day of the week (Tempo's decisions 80 and 81). `Calendrical.Gregorian`'s week dates are therefore no longer ISO 8601's (31 December 2026 is `2027-W01-4`); ISO 8601's are `Calendar.ISO`'s and `Calendrical.ISOWeek`'s. What follows records the earlier rule and how it was measured.
 
 The user chose "the calendar's own year" on 2026-10-10 and parked the work ("We will go back and discuss week dates (iso or calendar) later"), then on 2026-10-12, asked how Tempo was to stop asking whether a calendar is of weeks or of months, chose "Add the callbacks": the three below are in the behaviour, with the implementation that was built on 2026-10-10 and kept as a patch.
 

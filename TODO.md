@@ -30,6 +30,8 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Done
 
+* [x] **Week dates in the calendar's own weeks** — decided by the user on 2026-10-16: `date_from_week_date/3`, `week_date_from_date/3` and `weeks_in_week_year/1` count the weeks `week_of_year/3` and `week/2` count, each day numbered from the calendar's first day of the week; `Calendrical.Gregorian`'s are no longer ISO 8601's. 2026-10-16, v1.4.0.
+
 * [x] **A calendar of weeks names `Calendar.ISO` for parsing** — its `parsing_calendar/0` is `Calendar.ISO` again, where it was the calendar itself for a day and "Feb 1, 2024" an error: Localize reads the calendar's own formats first ("M02 1, 2024 AD") and only what none of them reads as a Gregorian date, converted. 2026-10-13.
 
 * [x] **A calendar of weeks holds a month and a day** — decided by the user on 2026-10-13: a date of `Calendrical.ISOWeek`, `Calendrical.NRF` or a week calendar made with `Calendrical.new/3` is a year, a month of its pattern of weeks and a day of that month, where the month field held the week, and the week goes through the week-date callbacks. Every answer about a day is as it was, by a dump of 42,455 days of five calendars before and after. Design in [plans/week-calendar-dates.md](plans/week-calendar-dates.md). 2026-10-13.

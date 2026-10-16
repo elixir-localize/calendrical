@@ -180,8 +180,8 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       defoverridable month_numbers: 1, day_numbers: 2
 
       @doc """
-      Returns the date of a day of a week of a week-year, by ISO 8601's
-      rule over this calendar's own year.
+      Returns the date of a day of a week of a week-year, in this
+      calendar's own weeks.
 
       """
       unquote(impl)
@@ -192,7 +192,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       @doc """
       Returns the week-year, the week and the day of the week of a date,
-      by ISO 8601's rule over this calendar's own year.
+      in this calendar's own weeks.
 
       """
       unquote(impl)
@@ -202,8 +202,8 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       end
 
       @doc """
-      Returns the number of weeks in a week-year, by ISO 8601's rule over
-      this calendar's own year.
+      Returns the number of weeks in a week-year, as many as
+      `weeks_in_year/1` counts.
 
       """
       unquote(impl)

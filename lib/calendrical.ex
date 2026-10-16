@@ -440,14 +440,16 @@ defmodule Calendrical do
   Returns the date of a day of a week of a week-year: the inverse of
   `c:week_date_from_date/3`.
 
-  A week date is counted by ISO 8601's rule over this calendar's own
-  year: a week begins on Monday, day 1, and week 1 of a year is the
-  week that holds the year's fourth day. In the Gregorian calendar
-  these are ISO 8601's week dates (`2026-W10-1` is 2 March 2026), and
-  in any other calendar of months the weeks RFC 7529 counts for a rule
-  in that calendar. A calendar of weeks counts a week date in the weeks
-  it is built of: the week is a week of its own year, and the day is
-  counted from the day its weeks begin on.
+  A week date is counted in the calendar's own weeks, as
+  `c:week_of_year/3` and `c:week/2` count them, with the day numbered
+  from the day its weeks begin on, as `c:Calendar.day_of_week/4` numbers
+  it: a year, a month, a week, a day and a day of the week are all the
+  calendar's own, as RFC 7529 reads a rule's weeks. In a calendar of
+  months week 1 is the week that holds the year's first day: the Hebrew
+  calendar's weeks begin on Sunday, so 1 Tishri 5786, a Tuesday, is
+  `5786-W01-3`. A calendar of weeks counts a week date in the weeks it is
+  built of. ISO 8601's week dates are those of `Calendar.ISO` and of
+  `Calendrical.ISOWeek`.
 
   This is not the week `c:iso_week_of_year/3` gives, which is the week
   of the Gregorian year a day is in, whichever calendar names the day.
