@@ -2,21 +2,13 @@ defmodule Calendrical.PeriodSequenceTest do
   use ExUnit.Case, async: true
 
   defmodule C454 do
-    use Calendrical.Base.Week,
-      day_of_week: 7,
-      first_or_last: :first,
-      min_days_in_first_week: 7,
-      month_of_year: 2,
-      weeks_in_month: [4, 5, 4]
+    use Calendrical.Calendar.Weeks, year_begins: {:sunday, :on_or_before, {2, 7}}
   end
 
   defmodule C544 do
-    use Calendrical.Base.Week,
-      day_of_week: 1,
-      first_or_last: :first,
-      min_days_in_first_week: 7,
-      month_of_year: 1,
-      weeks_in_month: [5, 4, 4]
+    use Calendrical.Calendar.Weeks,
+      pattern: [5, 4, 4],
+      year_begins: {:monday, :on_or_before, {1, 7}}
   end
 
   for calendar <- [C454, C544] do

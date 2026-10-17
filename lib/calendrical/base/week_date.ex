@@ -55,8 +55,8 @@ defmodule Calendrical.Base.WeekDate do
     {:error, :invalid_date}
   end
 
-  # A calendar's weeks in a year, a calendar of months' as a calendar of
-  # weeks' (`Calendrical.Base.Week.date_from_week_date/4`).
+  # A calendar's weeks in a year, as a count or as the pair an older
+  # calendar answers with.
   def weeks_in_own_year(calendar, year) do
     case calendar.weeks_in_year(year) do
       {weeks, _days_in_last_week} when is_integer(weeks) -> weeks

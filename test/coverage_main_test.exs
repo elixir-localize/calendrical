@@ -768,7 +768,7 @@ defmodule Calendrical.CoverageMainTest do
     end
   end
 
-  describe "month_day/5 and start_end_gregorian_years/2" do
+  describe "month_day/5 and the Gregorian year a year of weeks is anchored in" do
     # The day is brought into the month it is clamped to: December has 31
     # days, and Elul, the last of the twelve months of 5785, 29.
     test "month_day with and without clamping" do
@@ -777,12 +777,11 @@ defmodule Calendrical.CoverageMainTest do
       assert Calendrical.month_day(5785, 13, 30, Calendrical.Hebrew, true) == {12, 29}
     end
 
-    test "start_end_gregorian_years for January-first and December-last" do
-      first = %Calendrical.Config{first_or_last: :first, month_of_year: 1}
-      last = %Calendrical.Config{first_or_last: :last, month_of_year: 12}
-
-      assert Calendrical.start_end_gregorian_years(2026, first) == {2026, 2026}
-      assert Calendrical.start_end_gregorian_years(2026, last) == {2026, 2026}
+    test "a year begun in January or ended in December is anchored in its own year" do
+      assert Calendrical.Calendar.Weeks.anchor_year_offset(:begins, 1, :ending) == 0
+      assert Calendrical.Calendar.Weeks.anchor_year_offset(:ends, 12, :beginning) == 0
+      assert Calendrical.Calendar.Weeks.anchor_year_offset(:begins, 10, :majority) == -1
+      assert Calendrical.Calendar.Weeks.anchor_year_offset(:ends, 1, :majority) == 1
     end
   end
 

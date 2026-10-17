@@ -2,8 +2,7 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
   @moduledoc """
   Coverage tests for `Calendrical.Formatter.Options`,
   `Calendrical.Formatter.HTML.Week`, `Calendrical.Composite`,
-  `Calendrical.Composite.Config`, `Calendrical.FiscalYear` and
-  `Calendrical.Config`.
+  `Calendrical.Composite.Config` and `Calendrical.FiscalYear`.
 
   All expected values in this file were probed by executing the functions
   on the development toolchain before being asserted here.
@@ -310,7 +309,7 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
       assert {:error, %ArgumentError{message: message}} =
                Calendrical.new(Coverage.BadWeeks, :week, pattern: [3, 3, 3])
 
-      assert message =~ "[4,4,5], [4,5,4] or [5,4,4]"
+      assert message =~ ":pattern must be [4, 4, 5], [4, 5, 4] or [5, 4, 4]"
     end
 
     test "rejects a :year_begins month outside the base calendar's" do

@@ -1,7 +1,11 @@
 defmodule Calendrical.Ends.Test do
   use ExUnit.Case, async: true
 
-  test "that anchor: :last returns the last gregorian day of year for a range of days of the week" do
+  @weekdays [:monday, :tuesday, :wednesday, :thursday, :friday, :saturday, :sunday]
+
+  # A year that ends on a weekday on or after 25 July ends on the first such
+  # weekday of the month's last seven days.
+  test "the last gregorian day of year for a year that ends on each day of the week" do
     days = %{
       {2019, 7, 25} => 4,
       {2019, 7, 26} => 5,
@@ -33,20 +37,19 @@ defmodule Calendrical.Ends.Test do
       {1949, 7, 31} => 7
     }
 
-    config = %Calendrical.Config{
-      first_or_last: :last,
-      min_days_in_first_week: 7,
-      year: :ending,
-      month_of_year: 7,
-      day_of_week: 6
-    }
-
     for {expected_date, day_of_week} <- days do
-      config = Map.put(config, :day_of_week, day_of_week)
+      weekday = Enum.at(@weekdays, day_of_week - 1)
+      name = Module.concat([__MODULE__, "EndsJuly#{weekday}"])
+
+      {:ok, calendar} =
+        Calendrical.new(name, :week,
+          year_ends: {weekday, :on_or_after, {7, 25}},
+          year_number: :ending
+        )
+
       {year, _, _} = expected_date
-      last_day = Calendrical.Base.Week.last_gregorian_day_of_year(year, config)
-      calculated_date = Calendar.ISO.date_from_iso_days(last_day)
-      assert expected_date == calculated_date
+      last_day = calendar.last_gregorian_day_of_year(year)
+      assert Calendar.ISO.date_from_iso_days(last_day) == expected_date
     end
   end
 
@@ -71,39 +74,32 @@ defmodule Calendrical.Ends.Test do
       {2029, 8, 25}
     ]
 
-    config = %Calendrical.Config{
-      first_or_last: :last,
-      day_of_week: 6,
-      min_days_in_first_week: 7,
-      month_of_year: 8
-    }
+    {:ok, calendar} =
+      Calendrical.new(__MODULE__.LastSaturdayOfAugust, :week,
+        year_ends: {:saturday, :on_or_after, {8, 25}}
+      )
 
-    for {date} <- days do
-      {year, _, _} = date
-      last_day = Calendrical.Base.Week.last_gregorian_day_of_year(year, config)
-      last_date = Calendar.ISO.date_from_iso_days(last_day)
-      assert last_date == date
+    for {year, _, _} = date <- days do
+      last_day = calendar.last_gregorian_day_of_year(year)
+      assert Calendar.ISO.date_from_iso_days(last_day) == date
     end
   end
 
-  test "that anchor: :last returns the first gregorian day of year for a set of years" do
+  test "a year that ends by its rule begins the day after the year before ends" do
     days = %{
       2019 => {2018, 7, 29},
       2000 => {1999, 8, 1}
     }
 
-    config = %Calendrical.Config{
-      first_or_last: :last,
-      day_of_week: 6,
-      min_days_in_first_week: 7,
-      month_of_year: 7,
-      year: :ending
-    }
+    {:ok, calendar} =
+      Calendrical.new(__MODULE__.EndsJulyEnding, :week,
+        year_ends: {:saturday, :on_or_after, {7, 25}},
+        year_number: :ending
+      )
 
     for {year, date} <- days do
-      first_day = Calendrical.Base.Week.first_gregorian_day_of_year(year, config)
-      first_date = Calendar.ISO.date_from_iso_days(first_day)
-      assert first_date == date
+      first_day = calendar.first_gregorian_day_of_year(year)
+      assert Calendar.ISO.date_from_iso_days(first_day) == date
     end
   end
 end

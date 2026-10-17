@@ -1,46 +1,18 @@
 defmodule Calendrical.Base.Common do
   @moduledoc false
 
-  # Logic shared verbatim by Calendrical.Base.Month and
-  # Calendrical.Base.Week, plus the calendar-aligned week numbering
-  # every calendar without compiled weeks shares. Only functions whose semantics are
-  # identical across their users belong here; unit-specific
-  # arithmetic stays in the respective base module. See
+  # Logic shared by the makers and the derived API: the week every
+  # calendar's weeks have, the calendar-aligned week numbering every
+  # calendar without its own weeks shares, and `diff/5`. See
   # ARCHITECTURE.md for the division of labour between the layers.
 
   @days_in_week 7
 
   # The middle field is a month where the three are the fields of a date,
-  # and a week where `Calendrical.Base.Week` counts in its own year, week
-  # and day of the week.
+  # and a week where a caller counts in its own year, week and day of the
+  # week.
   defguard is_date(year, month_or_week, day)
            when is_integer(year) and is_integer(month_or_week) and is_integer(day)
-
-  # Maps a calendar year to its era year via the Gregorian year the
-  # configuration designates: the :beginning year, the :ending year,
-  # or for :majority the year containing most of the calendar year
-  # (the beginning year when the year starts in January..June, the
-  # ending year otherwise).
-  def year_of_era(year, %{year: :ending} = config) when is_integer(year) do
-    {_, year} = Calendrical.start_end_gregorian_years(year, config)
-    Calendar.ISO.year_of_era(year)
-  end
-
-  def year_of_era(year, %{year: :beginning} = config) when is_integer(year) do
-    {year, _} = Calendrical.start_end_gregorian_years(year, config)
-    Calendar.ISO.year_of_era(year)
-  end
-
-  def year_of_era(year, %{year: :majority, month_of_year: starts} = config)
-      when is_integer(year) and starts <= 6 do
-    {year, _} = Calendrical.start_end_gregorian_years(year, config)
-    Calendar.ISO.year_of_era(year)
-  end
-
-  def year_of_era(year, %{year: :majority} = config) do
-    {_, year} = Calendrical.start_end_gregorian_years(year, config)
-    Calendar.ISO.year_of_era(year)
-  end
 
   def days_in_week do
     @days_in_week

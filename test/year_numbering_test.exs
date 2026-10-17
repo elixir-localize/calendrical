@@ -16,53 +16,79 @@ defmodule Calendrical.YearNumberingTest do
 
   use ExUnit.Case, async: true
 
-  alias Calendrical.Base.Week
-  alias Calendrical.Config
-
   @years 1999..2002
-
-  defp config(month, first_or_last, year_option) do
-    %Config{
-      month_of_year: month,
-      first_or_last: first_or_last,
-      year: year_option,
-      day_of_week: 1,
-      min_days_in_first_week: 4
-    }
-  end
+  @month_lengths %{
+    1 => 31,
+    2 => 28,
+    3 => 31,
+    4 => 30,
+    5 => 31,
+    6 => 30,
+    7 => 31,
+    8 => 31,
+    9 => 30,
+    10 => 31,
+    11 => 30,
+    12 => 31
+  }
 
   defp gregorian_year(iso_days), do: iso_days |> Calendar.ISO.date_from_iso_days() |> elem(0)
 
+  # A calendar of weeks anchored by a Monday of a month: begun on the Monday
+  # on or before its 4th, or ended on the Monday on or after its fourth-last
+  # day, and numbered by `year_number`.
+  defp week_calendar(:begins, month, year_number) do
+    name = Module.concat([__MODULE__, "Begins#{month}#{year_number}"])
+
+    {:ok, calendar} =
+      Calendrical.new(name, :week,
+        year_begins: {:monday, :on_or_before, {month, 4}},
+        year_number: year_number
+      )
+
+    calendar
+  end
+
+  defp week_calendar(:ends, month, year_number) do
+    name = Module.concat([__MODULE__, "Ends#{month}#{year_number}"])
+    day = Map.fetch!(@month_lengths, month) - 3
+
+    {:ok, calendar} =
+      Calendrical.new(name, :week,
+        year_ends: {:monday, :on_or_after, {month, day}},
+        year_number: year_number
+      )
+
+    calendar
+  end
+
   # The Gregorian years holding the first and the last week of `year`.
-  defp beginning_and_ending(kind, year, config) do
-    first = kind.first_gregorian_day_of_year(year, config)
-    last = kind.last_gregorian_day_of_year(year, config)
+  defp beginning_and_ending(calendar, year) do
+    first = calendar.first_gregorian_day_of_year(year)
+    last = calendar.last_gregorian_day_of_year(year)
     {gregorian_year(first + 6), gregorian_year(last - 6)}
   end
 
-  # The Gregorian year that `:year` numbers the calendar year by.
+  # The Gregorian year that `:year_number` numbers the calendar year by.
   defp named_year(:beginning, beginning, _ending), do: beginning
   defp named_year(:ending, _beginning, ending), do: ending
 
-  for kind <- [Week],
-      first_or_last <- [:first, :last],
-      year_option <- [:beginning, :ending] do
-    test "#{inspect(kind)} with first_or_last: #{first_or_last}, year: #{year_option}" do
-      kind = unquote(kind)
+  for anchor <- [:begins, :ends], year_option <- [:beginning, :ending] do
+    test "a calendar of weeks that #{anchor} by its rule, year_number: #{year_option}" do
       year_option = unquote(year_option)
 
       for month <- 1..12, year <- @years do
-        config = config(month, unquote(first_or_last), year_option)
-        {beginning, ending} = beginning_and_ending(kind, year, config)
+        calendar = week_calendar(unquote(anchor), month, year_option)
+        {beginning, ending} = beginning_and_ending(calendar, year)
         named = named_year(year_option, beginning, ending)
-        context = "month_of_year #{month}, year #{year}"
+        context = "#{inspect(calendar)}, year #{year}"
 
-        assert kind.last_gregorian_day_of_year(year, config) + 1 ==
-                 kind.first_gregorian_day_of_year(year + 1, config),
+        assert calendar.last_gregorian_day_of_year(year) + 1 ==
+                 calendar.first_gregorian_day_of_year(year + 1),
                "year does not end the day before the next begins: #{context}"
 
         assert named == year, "named #{named}, not #{year}: #{context}"
-        assert kind.year_of_era(year, config) == {year, 1}, "year_of_era: #{context}"
+        assert calendar.year_of_era(year) == {year, 1}, "year_of_era: #{context}"
       end
     end
   end

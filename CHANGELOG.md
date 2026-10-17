@@ -102,6 +102,8 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 ### Changed
 
+* `Calendrical.Calendar.Weeks` implements the kernel from its options alone: the year's first day from the weekday rule and each month from the weeks of the pattern before it, with month arithmetic a count of months and a clamped day. `Calendrical.Base.Week`, `Calendrical.Config` and `Calendrical.Compiler.Week` are gone, and with them `__config__/0` on a calendar of weeks and `Calendrical.start_end_gregorian_years/2`.
+
 * `Calendrical.Gregorian` and `Calendrical.ISO` are hand-written calendars over `Calendar.ISO`, and the base of the fiscal years and of the month calendars `Calendrical.new/3` makes.
 
 * A composite calendar finds a shifted member's civil calendar through the member's `base/0`.

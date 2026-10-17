@@ -1,19 +1,15 @@
 defmodule Calendrical.ISOWeek.Test do
   use ExUnit.Case, async: true
 
-  test "the configuration of ISOWeek calendar" do
-    config = %Calendrical.Config{
-      begins_or_ends: :begins,
-      calendar: Calendrical.ISOWeek,
-      day_of_week: 1,
-      first_or_last: :first,
-      min_days_in_first_week: 4,
-      month_of_year: 1,
-      weeks_in_month: [4, 5, 4],
-      year: :majority
-    }
+  test "the facts of the ISOWeek calendar" do
+    info = Calendrical.ISOWeek.info()
 
-    assert Calendrical.ISOWeek.__config__() == config
+    assert info.structure == :weeks
+    assert info.weeks == %{first_day: 1, min_days_in_first_week: 4}
+    assert info.cldr_calendar_type == :generic
+    assert info.era_calendar_type == :gregorian
+    assert info.months_in_year == {12, 12}
+    assert info.parsing_calendar == Calendar.ISO
   end
 
   # A calendar of weeks' months are the unnamed periods of its pattern of

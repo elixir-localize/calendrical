@@ -1,9 +1,6 @@
 defmodule Calendrical.Nearest.Test do
   use ExUnit.Case, async: true
 
-  # Setting min_days to 4 will deliver the
-  # "nearest" result.
-
   # Examples from https://en.wikipedia.org/wiki/4–4–5_calendar
   test "year end on the Saturday nearest the end of August" do
     days = [
@@ -25,18 +22,14 @@ defmodule Calendrical.Nearest.Test do
       {2029, 9, 1}
     ]
 
-    config = %Calendrical.Config{
-      first_or_last: :last,
-      day_of_week: 6,
-      min_days_in_first_week: 4,
-      month_of_year: 8
-    }
+    {:ok, calendar} =
+      Calendrical.new(__MODULE__.NearestSaturdayOfAugust, :week,
+        year_ends: {:saturday, :nearest, {8, 31}}
+      )
 
-    for {date} <- days do
-      {year, _, _} = date
-      last_day = Calendrical.Base.Week.last_gregorian_day_of_year(year, config)
-      last_date = Calendar.ISO.date_from_iso_days(last_day)
-      assert last_date == date
+    for {year, _, _} = date <- days do
+      last_day = calendar.last_gregorian_day_of_year(year)
+      assert Calendar.ISO.date_from_iso_days(last_day) == date
     end
   end
 end

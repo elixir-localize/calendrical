@@ -1,7 +1,11 @@
 defmodule Calendrical.Starts.Test do
   use ExUnit.Case, async: true
 
-  test "that anchor: :first returns the first gregorian day of year for a range of days of the week" do
+  @weekdays [:monday, :tuesday, :wednesday, :thursday, :friday, :saturday, :sunday]
+
+  # A year that begins on a weekday on or before 7 February begins on the
+  # last such weekday of the month's first seven days.
+  test "the first gregorian day of year for a year that begins on each day of the week" do
     days = %{
       {2019, 2, 7} => 4,
       {2019, 2, 1} => 5,
@@ -33,19 +37,16 @@ defmodule Calendrical.Starts.Test do
       {1949, 2, 6} => 7
     }
 
-    config = %Calendrical.Config{
-      first_or_last: :first,
-      min_days_in_first_week: 7,
-      month_of_year: 2,
-      day_of_week: 6
-    }
-
     for {expected_date, day_of_week} <- days do
-      config = Map.put(config, :day_of_week, day_of_week)
+      weekday = Enum.at(@weekdays, day_of_week - 1)
+      name = Module.concat([__MODULE__, "BeginsFebruary#{weekday}"])
+
+      {:ok, calendar} =
+        Calendrical.new(name, :week, year_begins: {weekday, :on_or_before, {2, 7}})
+
       {year, _, _} = expected_date
-      last_day = Calendrical.Base.Week.first_gregorian_day_of_year(year, config)
-      calculated_date = Calendar.ISO.date_from_iso_days(last_day)
-      assert expected_date == calculated_date
+      first_day = calendar.first_gregorian_day_of_year(year)
+      assert Calendar.ISO.date_from_iso_days(first_day) == expected_date
     end
   end
 end

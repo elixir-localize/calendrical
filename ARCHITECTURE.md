@@ -20,7 +20,7 @@ Every other answer is computed from the kernel by plain functions that take the 
 |---|---|---|
 | `use Calendrical.Calendar` | the hand-written calendars: Gregorian and ISO (over `Calendar.ISO`), Julian, Coptic, Ethiopic, Persian, Hebrew, the Islamic calendars, Buddhist, Roc, Indian, Japanese, Sweden's transitional calendar | the author's spine and primitives; `shift/6` from `Calendrical.Shift` |
 | `use Calendrical.Calendar.Shifted` | a year begun elsewhere in a base calendar's year: the fiscal years, `Calendrical.new/3` month calendars, the locale's Gregorian calendars, the Julian year-start variants | the base's date relabelled, with a split month where the year begins within a base month |
-| `use Calendrical.Calendar.Weeks` | a year of whole weeks cut into months by a pattern: ISOWeek, NRF, `Calendrical.new/3` week calendars | the week engine in `Calendrical.Base.Week`, driven by `Calendrical.Config` |
+| `use Calendrical.Calendar.Weeks` | a year of whole weeks cut into months by a pattern: ISOWeek, NRF, `Calendrical.new/3` week calendars | the year's first day from the weekday rule, and the weeks of the pattern before each month, both worked out once from the options |
 | `use Calendrical.Calendar.Lunisolar` | Chinese, Korean, Vietnamese, LunarJapanese | `Calendrical.Lunisolar`, parametrised by epoch and location |
 | `use Calendrical.Composite` | calendars in sequence: England, Sweden, Japan | the member in effect, from the segment table in `info().members` |
 
@@ -44,6 +44,4 @@ Each maker refuses an option it does not read at compile time. The options are t
 
 ## Known debt
 
-* The week engine, `Calendrical.Base.Week` with `Calendrical.Config`, still carries the week calendars' arithmetic in the pre-2.0 shape behind `Calendrical.Calendar.Weeks`; its collapse onto the kernel is the one piece of the redesign left for after 2.0.
-
-* Multi-month arithmetic on week calendars is O(n): the engine adds months one at a time because leap-week accounting across long years has no closed form in the current implementation.
+* None of the redesign's: the week engine that stood behind `Calendrical.Calendar.Weeks` was collapsed onto the kernel after 2.0's makers landed, so a calendar of weeks is its options and nothing else, and month arithmetic on it is a count of months and a clamped day rather than a walk.

@@ -187,15 +187,15 @@ defmodule Calendrical.Week.Test do
   # Without a year a month has the days of its weeks, and the last month
   # one week more in a long year.
   test "days in a month without its year" do
-    config = %Calendrical.Config{weeks_in_month: [4, 4, 5]}
+    {:ok, calendar} = Calendrical.new(__MODULE__.FourFourFive, :week, pattern: [4, 4, 5])
 
     for {month, days} <- [{1, 28}, {2, 28}, {3, 35}, {10, 28}, {11, 28}] do
-      assert Calendrical.Base.Week.days_in_month(month, config) == days
+      assert calendar.days_in_month(month) == days
     end
 
-    assert Calendrical.Base.Week.days_in_month(12, config) == {:ambiguous, [35, 42]}
-    assert Calendrical.Base.Week.days_in_month(13, config) == {:error, :undefined}
-    assert Calendrical.Base.Week.days_in_month(0, config) == {:error, :undefined}
+    assert calendar.days_in_month(12) == {:ambiguous, [35, 42]}
+    assert calendar.days_in_month(13) == {:error, :undefined}
+    assert calendar.days_in_month(0) == {:error, :undefined}
     assert Calendrical.ISOWeek.days_in_month(6) == 28
     assert Calendrical.ISOWeek.days_in_month(12) == {:ambiguous, [28, 35]}
   end

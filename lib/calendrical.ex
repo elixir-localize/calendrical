@@ -66,7 +66,6 @@ defmodule Calendrical do
   """
 
   alias Calendrical.Compiler
-  alias Calendrical.Config
   alias Calendrical.Interval
 
   import Kernel, except: [inspect: 1, inspect: 2]
@@ -422,7 +421,6 @@ defmodule Calendrical do
   @valid_precision [:years, :quarters, :months, :weeks, :days]
   @default_calendar Calendrical.Gregorian
 
-  alias Calendrical.Config
   alias Localize.LanguageTag
 
   @doc false
@@ -4789,74 +4787,6 @@ defmodule Calendrical do
   @doc false
   def invalid_calendar_error(calendar_module) do
     Calendrical.InvalidCalendarModuleError.exception(module: calendar_module)
-  end
-
-  ## January starts end the same year, December ends starts the same year
-  @doc false
-  @spec start_end_gregorian_years(Calendar.year(), Config.t()) ::
-          {Calendar.year(), Calendar.year()}
-  def start_end_gregorian_years(year, %Config{first_or_last: :first, month_of_year: 1})
-      when is_integer(year) do
-    {year, year}
-  end
-
-  @doc false
-  def start_end_gregorian_years(year, %Config{first_or_last: :last, month_of_year: 12})
-      when is_integer(year) do
-    {year, year}
-  end
-
-  ## Majority years
-  @doc false
-  def start_end_gregorian_years(year, %Config{
-        first_or_last: :first,
-        year: :majority,
-        month_of_year: month
-      })
-      when is_integer(year) and month <= 6 do
-    {year, year + 1}
-  end
-
-  @doc false
-  def start_end_gregorian_years(year, %Config{
-        first_or_last: :first,
-        year: :majority,
-        month_of_year: month
-      })
-      when is_integer(year) and month > 6 do
-    {year - 1, year}
-  end
-
-  @doc false
-  def start_end_gregorian_years(year, %Config{
-        first_or_last: :last,
-        year: :majority,
-        month_of_year: month
-      })
-      when is_integer(year) and month > 6 do
-    {year - 1, year}
-  end
-
-  @doc false
-  def start_end_gregorian_years(year, %Config{
-        first_or_last: :last,
-        year: :majority,
-        month_of_year: month
-      })
-      when is_integer(year) and month <= 6 do
-    {year, year + 1}
-  end
-
-  ## A year numbered by the Gregorian year it begins in
-  @doc false
-  def start_end_gregorian_years(year, %Config{year: :beginning}) when is_integer(year) do
-    {year, year + 1}
-  end
-
-  ## A year numbered by the Gregorian year it ends in
-  @doc false
-  def start_end_gregorian_years(year, %Config{year: :ending}) when is_integer(year) do
-    {year - 1, year}
   end
 
   @doc false
