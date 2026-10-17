@@ -1,70 +1,49 @@
-# Calendrical Architecture — the calendar harness
+# Calendrical Architecture — the kernel and the derived API
 
-This document describes how Calendrical's calendars are constructed: the `Calendrical.Behaviour` macro, the month and week compilers, the runtime calendar-creation path, and the conventions that hold the system together. It is a maintainer document; the user-facing guide for defining calendars is [guides/calendar_behaviour.md](guides/calendar_behaviour.md). Line references are indicative and drift with edits; function names are the stable anchors.
+This document describes how Calendrical's calendars are constructed in 2.0: the kernel every calendar implements, the derived API that computes every other answer from it, the five makers that build calendars, and the conventions that hold the system together. It is a maintainer's map, not user documentation; the guides and module docs cover usage.
 
-## The four construction mechanisms
+## The kernel
 
-Every calendar module in Calendrical is built by exactly one of four mechanisms:
+A calendar is a module that implements Elixir's `Calendar` behaviour and the eight callbacks of the `Calendrical` behaviour. Six `Calendar` callbacks are the primitives a calendar states for itself: `leap_year?/1`, `months_in_year/1`, `days_in_month/2`, `valid_date?/3`, `year_of_era/3` and `day_of_era/3`. The `Calendrical` kernel is `info/0`, the static facts about the calendar as a `Calendrical.Info` struct; `date_to_iso_days/3` and `date_from_iso_days/1`, the spine every conversion runs through; `leap_month/1`, the position of a year's leap month; `written_date/3` and `date_from_written_date/3`, the figures a date is written with and the date those figures name; and `shift/6` and `diff/3`, positional arithmetic under one clamping contract.
 
-| Mechanism | Entry point | Calendars | Extension model |
-|---|---|---|---|
-| Behaviour template | `use Calendrical.Behaviour` | Gregorian, Coptic, Ethiopic (+ AmeteAlem), Buddhist, Indian, Persian, ROC, Hebrew, Islamic variants, Chinese, Korean, LunarJapanese | Open: every generated function is `defoverridable`; the module supplies `date_to_iso_days/3` and `date_from_iso_days/1` and overrides what it needs |
-| Month compiler | `use Calendrical.Base.Month` → `@before_compile Calendrical.Compiler.Month` | Calendrical.Gregorian, Calendrical.ISO, fiscal/territory month calendars created at runtime | Closed: behaviour is driven entirely by the `%Calendrical.Config{}` captured at compile time; no `defoverridable` |
-| Week compiler | `use Calendrical.Base.Week` → `@before_compile Calendrical.Compiler.Week` | Calendrical.ISOWeek, Calendrical.NRF, fiscal/territory week calendars created at runtime | Closed, as for the month compiler |
-| Specialised compilers | `Calendrical.Julian.Compiler`, `Calendrical.Composite.Compiler` | Julian year-start variants (March1, March25, Sept1, Dec25), composite (era-switching) calendars | Closed: generated delegation with variant-specific normalization |
+`info/0` is where a fact lives rather than a function: the CLDR calendars that name the months and the eras, the epoch, whether there is a year 0, the fewest and most months a year has, the rule the calendar's own weeks follow, the cycles its years run in, the place an astronomical calendar is reckoned at, the lengths its months can have, the calendar its dates are parsed in, and a composite's members. Every maker builds the struct once, at compile time, from its options.
 
-The lunisolar calendars are Behaviour calendars that delegate their conversion mathematics to `Calendrical.Lunisolar` (parametrized by epoch and an observation-location function), the same way Coptic and Ethiopic delegate to `Calendrical.Base.Egyptian`.
+## The derived API
 
-## The Behaviour template
+Every other answer is computed from the kernel by plain functions that take the calendar module first: `Calendrical.Month` (CLDR months from the leap month and the written date, traditional months, month and day numbers, lengths declared or sampled and cached), `Calendrical.Week` (TR35 whole weeks from `info().weeks` and the year's bounds, the day of the week, week dates), `Calendrical.Period` (the days of a year and a month, quarters, quadrimesters and semesters, the day of the year, the days in a year), `Calendrical.Era` (the year and day of era by the era calendar and the year-zero rule, the extended, related Gregorian and cyclic years) and `Calendrical.Shift` (the positional arithmetic `use Calendrical.Calendar` supplies). `Calendrical.Info` answers the composite questions from the member table: the calendar in effect on a date, its CLDR type and its parsing calendars.
 
-`Calendrical.Behaviour.__using__/1` accepts `:epoch` (mandatory), `:cldr_calendar_type`, `:cldr_calendar_base`, `:days_in_week`, `:first_day_of_week`, `:months_in_ordinary_year` and `:months_in_leap_year`. It sets `@behaviour Calendar` and `@behaviour Calendrical`, stores the options as module attributes, and generates roughly 48 functions in one quoted block: identity accessors, validity checks, year/era functions, period queries, counts, `Date.Range` builders, arithmetic (`plus`, `diff`, `shift_*`), iso-days conversion plumbing, and parse/format delegates. Everything generated is `defoverridable`.
+`Calendrical.Compiler.StandardCallbacks` is the one generator that puts those answers on a calendar module as one-line delegations, so Localize, which can only call a calendar by `calendar.function(...)`, asks any calendar any question. Every delegation is final; only the kernel trio with defaults there (`leap_month/1`, `written_date/3`, `date_from_written_date/3`), the two era primitives and `diff/3` may be overridden, and `Calendrical.Compiler.DateCheck` guards the era primitives so an override answers `{:error, :invalid_date}` for a date the calendar lacks and a `Calendrical.MissingFieldsError` for a missing field, as every derived function does itself. A question that needs no day is answered for a month's 1st where the month has days but begins later, as England's March 1751 does.
 
-Two functions are deliberately not generated and must be supplied by the using module: `date_to_iso_days/3` and `date_from_iso_days/1`. They are the only calendar-specific mathematics the template needs; every default implementation is written against them.
+## The makers
 
-Weeks apply everywhere. `week_of_year/3`, `weeks_in_year/1`, `week/2` and `week_of_month/3` default to the calendar-aligned weeks in `Calendrical.Base.Common`: a week turns over on the calendar's own week boundary (the day `day_of_week/4` numbers 1), week 1 is the week holding the first day of the year (or month), and a week is cut short at either end of the year rather than spilling into its neighbour's numbering, so every date numbers within its own year. The year is the calendar's own `year/1`, which lets a Julian year counted from 25 March number its weeks from that day. `iso_week_of_year/3` defaults to the ISO 8601 week of the day, as a week-based calendar gives it. A calendar with week rules of its own (the compiled Gregorian and week-based calendars) overrides them, and the Julian calendars share the same functions. A composite calendar keeps its member calendar's weeks in a year one member governs throughout, and numbers a year a transition falls in or cuts short with the same calendar-aligned weeks over its own year, so the week holding England's dropped days of September 1752 runs from 31 August to 17 September. Consumers that lay out whole weeks (`localize(date, :days_of_week)`, `Calendrical.Format`) widen a short week to its seven days, and `next/3` and `previous/3` step a week range to the week holding the day after or before it, so a short week is never stepped over.
+| Maker | Builds | Kernel from |
+|---|---|---|
+| `use Calendrical.Calendar` | the hand-written calendars: Gregorian and ISO (over `Calendar.ISO`), Julian, Coptic, Ethiopic, Persian, Hebrew, the Islamic calendars, Buddhist, Roc, Indian, Japanese, Sweden's transitional calendar | the author's spine and primitives; `shift/6` from `Calendrical.Shift` |
+| `use Calendrical.Calendar.Shifted` | a year begun elsewhere in a base calendar's year: the fiscal years, `Calendrical.new/3` month calendars, the locale's Gregorian calendars, the Julian year-start variants | the base's date relabelled, with a split month where the year begins within a base month |
+| `use Calendrical.Calendar.Weeks` | a year of whole weeks cut into months by a pattern: ISOWeek, NRF, `Calendrical.new/3` week calendars | the week engine in `Calendrical.Base.Week`, driven by `Calendrical.Config` |
+| `use Calendrical.Calendar.Lunisolar` | Chinese, Korean, Vietnamese, LunarJapanese | `Calendrical.Lunisolar`, parametrised by epoch and location |
+| `use Calendrical.Composite` | calendars in sequence: England, Sweden, Japan | the member in effect, from the segment table in `info().members` |
 
-The other defaults are conservative: `days_in_month/1` without a year returns `{:error, :undefined}` when month lengths vary, and `months_in_year/0` returns `{:ambiguous, first..last}` for calendars with leap months. `related_gregorian_year/3` computes the Gregorian year containing the calendar year's first day, which is generically correct for every calendar built on the template.
+Each maker refuses an option it does not read at compile time. The options are the facts of `info/0` in the words the plan settled: `months_in_year: {12, 13}`, `weeks: [first_day: 7, min_days_in_first_week: 1]` or `:from_first_day`, `year_begins: {10, 1}`, `year_number: :majority`, `written_year: :label`, `pattern: [4, 5, 4]`, `year_ends: {:saturday, :nearest, {1, 31}}`.
 
-The `Calendrical` behaviour contract itself (the `@callback` declarations) lives in `lib/calendrical.ex`, with `months_in_year/0` and `era_calendar_type/0` declared `@optional_callbacks`.
+## Data conventions
 
-## The month and week compiler stacks
+* **A date is its calendar's own fields.** A week calendar's date is a year, a month of its pattern and a day of that month; a shifted calendar's a label year, a counted month and a day; a lunisolar calendar's a year, a position and a day. `written_date/3` is the one place a date's figures differ from its fields: a fiscal date writes the Gregorian month and year, a Julian year-start variant its label year with the Julian month, a lunisolar calendar its traditional month.
 
-The compiled stacks have three layers with a strict division of labour:
+* **Names are CLDR's index; figures are the calendar's.** `Calendrical.Month.cldr_month/3` derives the name of a month from its traditional number, which is the identity in every CLDR calendar but the Hebrew, where CLDR numbers Adar I on its own and ICU writes the figure as the position in the year.
 
-1. **`use Calendrical.Base.{Month,Week}`** stores the options in `@options` and registers the compiler as a `@before_compile` hook. That is all it does at `use` time.
+* **`iso_days` is a bare integer day number**, the proleptic Gregorian count `Calendar.ISO` uses, except in the `naive_datetime_*` plumbing where it is the stdlib's `{days, day_fraction}` pair.
 
-2. **`Calendrical.Compiler.{Month,Week}.__before_compile__/1`** runs `Calendrical.Config.extract_options/1` and `validate_config!/2` at compile time, stores the validated `%Config{}` as `@calendar_config`, and emits a `quote location: :keep` block of ~65 thin delegates. Each delegate passes `__config__()` (the compile-time config snapshot) as the final argument to the runtime base. A handful of time-of-day functions delegate straight to `Calendar.ISO`.
+* **Lengths without a year are declared or sampled.** `info().month_lengths` states them where a calendar's months are expensive, as the sighting calendars'; otherwise `Calendrical.Month.lengths/1` samples one cycle of years, or thirty, once, and the laws test holds every declared table to the sampler.
 
-3. **`Calendrical.Base.{Month,Week}`** contains all real logic as plain runtime functions taking the `%Config{}` as their last parameter. Config is read-only; nothing mutates or caches it.
-
-The consequence for navigation: to find the implementation of `Calendrical.Gregorian.week_of_year/3` you traverse gregorian.ex (`use` line) → base/month.ex (`__using__`) → compiler/month.ex (the delegate) → base/month.ex (the logic). Four hops, two of them macro-mediated. This is the price of the design; the compensation is that the runtime logic is ordinary, testable, breakpointable code rather than quoted AST.
-
-`%Calendrical.Config{}` fields: `calendar`, `cldr_calendar_type`, `weeks_in_month` (the 4-4-5 family), `begins_or_ends`, `first_or_last`, `day_of_week` (1..7 or `:first`), `month_of_year`, `year` (`:majority`/`:beginning`/`:ending`), `min_days_in_first_week`. Validation happens once, at compile time (or at `Calendrical.new/3` time for runtime calendars); the base modules assume a valid config throughout.
-
-## Data conventions (read before touching anything)
-
-* **A week calendar's date is a year, a month and a day of the month, as every calendar's is.** The month is one of the twelve of its pattern of weeks (4-4-5 and its kin) and has 28 or 35 days, so `~D[2026-06-16 Calendrical.ISOWeek]` is the second day of week 25. The week is not a field: it is asked for (`week_of_year/3`, `week_date_from_date/3`) and given (`date_from_week_date/3`, and `parse_date/1` reads `2026-W25-2`). Inside `Calendrical.Base.Week` the arithmetic still counts in weeks: the compiler turns a date into its year, week and day of the week on the way in (`week_date/4`) and back on the way out (`month_date/4`). Until 1.4 the week and the day of the week were the fields themselves.
-
-* **`iso_days` is a bare integer day number** (proleptic Gregorian day count as used by `Calendar.ISO.date_to_iso_days/3`), except in the `naive_datetime_*` plumbing where it is the stdlib's `{days, day_fraction}` pair. Functions named `*_iso_days` operate on the integer form.
-
-* **Lunisolar calendars have two month numberings.** `Date` structs carry ordinal months (1..13, leap month folded into the sequence); the traditional form (1..12 with `{n, :leap}` for the intercalary) is accepted only by each calendar's `new/3`. The moduledocs of Chinese, Korean and LunarJapanese document the mapping; mixing the conventions is the classic off-by-one source after a leap month.
-
-* **Era data is runtime-resolved.** `Calendrical.Era` reads CLDR era data on first use and caches it in `:persistent_term`; calendars reach it through the generated `year_of_era/3` and the optional `era_calendar_type/0` callback (used by LunarJapanese to borrow the Japanese era table while keeping `cldr_calendar_type/0` as `:chinese`).
+* **Era data is runtime-resolved.** `Calendrical.Era` reads CLDR era data on first use and caches it in `:persistent_term`.
 
 ## Runtime calendar creation
 
-`Calendrical.new/3` (and `Calendrical.FiscalYear.calendar_for/1`, `calendar_from_territory/1`) create month/week calendars at runtime, and `Calendrical.Composite.new/2` (and `Calendrical.Reform.calendar_for/1`) composite calendars. The path is: check `Code.ensure_loaded?/1` for idempotency, validate the config, then send the quoted `use Calendrical.Base.<Type>` or `use Calendrical.Composite` form to the `Calendrical.Compiler` GenServer through `Calendrical.Compiler.create_module/3`. The GenServer serializes all module creation (one `Module.create/3` at a time) and re-checks `Code.ensure_loaded?/1` inside `handle_call`, so concurrent creation of the same module is race-free: the first caller compiles and is answered `{:ok, module}`, and later callers are answered `{:module_already_exists, module}` from the recheck. `Calendrical.Compiler.create_calendar/3` turns that into `{:ok, module}` for the month/week functions, which are idempotent, and `Calendrical.Composite.new/2` returns it as it is. A configuration that does not compile is answered `{:error, exception}`, and the server goes on to the next.
+`Calendrical.new/3`, `Calendrical.FiscalYear.calendar_for/1` and `Calendrical.calendar_for_territory/1` create month and week calendars at runtime by `use`ing the Shifted or Weeks maker in a module created through the `Calendrical.Compiler` server, which serialises creation so concurrent callers get one module; `Calendrical.Composite.new/2` and `Calendrical.Reform.calendar_for/1` do the same for composites. An invalid option is the maker's `ArgumentError`, returned as `{:error, exception}`.
 
-Two properties of this path to be aware of: module names come from `Module.concat/2` on validated input (territory codes are checked against the CLDR territory list before an atom is created), and each creation macro-expands the full compiler quote block at runtime, so creating a calendar costs a visible fraction of a second — callers should treat calendar modules as create-once values, which the idempotency check encourages.
+## Known debt
 
-## Known debt and invariants
+* The week engine, `Calendrical.Base.Week` with `Calendrical.Config`, still carries the week calendars' arithmetic in the pre-2.0 shape behind `Calendrical.Calendar.Weeks`; its collapse onto the kernel is the one piece of the redesign left for after 2.0.
 
-* `behaviour.ex` generates from twelve per-concern quoted sections (prelude, identity/validity, eras, periods, weeks, shifts, counts, ranges, arithmetic, conversion, parse/format, overridable declarations) concatenated in order by `__using__` — the order matters because later sections read the prelude's attributes and the overridable declarations must follow every definition, and imports are lexical to each section's own quote. The month/week compiler modules still generate from single large quoted blocks; `.credo.exs` documents the exclusions (Credo measures quoted AST as if it were the enclosing function's complexity).
-
-* `Calendrical.Base.Month` and `Calendrical.Base.Week` are structurally parallel (roughly 27 shared function names). The verbatim-identical pieces — the era-year mapping, `days_in_week`, the date guards — live in `Calendrical.Base.Common`, beside the calendar-aligned week numbering every Behaviour calendar shares; everything else that shares a name differs in substance because month arithmetic and week arithmetic genuinely differ, and further merging would obscure rather than deduplicate. Keep new shared logic in `Base.Common`; keep unit-specific logic in the respective base.
-
-* Multi-month arithmetic on week calendars is O(n): `Calendrical.Base.Week.plus/7` adds months one at a time because leap-week accounting across long years has no closed form in the current implementation. The limitation is commented at the site.
-
-* Week-53 handling in the week base is special-cased at each site that maps weeks to months or quarters (`month_of_year`, `month_in_quarter`, `quarter_of_year`, `days_in_pattern_month`, `maybe_extra_week_for_long_year`) rather than centralized.
-
-* Compiled (month/week) calendars cannot override generated functions — configuration is their only extension point. Behaviour calendars are the opposite: everything is overridable. This asymmetry is intentional: a compiled calendar is a *parameterization*, a Behaviour calendar is an *implementation*.
+* Multi-month arithmetic on week calendars is O(n): the engine adds months one at a time because leap-week accounting across long years has no closed form in the current implementation.

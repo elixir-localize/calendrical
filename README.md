@@ -8,7 +8,7 @@ Calendrical extends Elixir's standard `Calendar` and `Date` modules with compreh
 
 * **18 CLDR-aligned calendar implementations** — Gregorian, Persian, Coptic, Ethiopic (two eras), Japanese, Chinese, Korean (Dangi), Lunar Japanese, Vietnamese, four Islamic variants (Civil, TBLA, Umm al-Qura, observational), Hebrew, Buddhist, Republic of China (Minguo), Indian National (Saka), and Julian.
 
-* **`Calendrical.Behaviour`** — a `defmacro __using__` template that supplies default implementations of every `Calendar` and `Calendrical` callback. Users can define a new calendar in 60–200 lines by overriding only the parts that differ from the defaults.
+* **Five makers** — `use Calendrical.Calendar` for a hand-written calendar, `Calendrical.Calendar.Shifted` for a year begun elsewhere in a base calendar's year, `Calendrical.Calendar.Weeks` for a year of whole weeks, `Calendrical.Calendar.Lunisolar` for a calendar reckoned from the sky and `Calendrical.Composite` for calendars in sequence. Each implements a kernel of eight callbacks from its options, and every other answer is derived from the kernel, so a new calendar is its spine and a handful of facts.
 
 * **Composite calendars** — `Calendrical.Composite` lets you build a calendar that uses one base calendar before a specified date and another after, supporting historical Julian-to-Gregorian transitions and similar splices.
 
@@ -112,28 +112,33 @@ Calendrical implements every calendar system exposed by CLDR, plus lunisolar var
 
 ## Defining your own calendar
 
-Calendrical exposes the same `Calendrical.Behaviour` macro that the built-in calendars use. A custom calendar typically needs to define its own `date_to_iso_days/3` and `date_from_iso_days/1`, plus override one or two callbacks (`leap_year?/1`, `days_in_month/2`, etc.) when its rules differ from the defaults.
+A calendar is a kernel of eight callbacks and the facts its `info/0` states; everything else is derived. `use Calendrical.Calendar` makes a hand-written calendar from its spine, `date_to_iso_days/3` and `date_from_iso_days/1`, and the six primitive `Calendar` callbacks:
 
 ```elixir
 defmodule MyApp.MyCalendar do
-  use Calendrical.Behaviour,
+  use Calendrical.Calendar,
     epoch: ~D[0001-01-01 Calendar.ISO],
-    cldr_calendar_type: :gregorian
+    cldr_calendar_type: :gregorian,
+    weeks: [first_day: 7]
 
-  @impl true
+  @impl Calendar
   def leap_year?(year), do: rem(year, 4) == 0
 
+  @impl true
   def date_to_iso_days(year, month, day) do
     # ... calendar-specific calculation
   end
 
+  @impl true
   def date_from_iso_days(iso_days) do
     # ... calendar-specific calculation
   end
 end
 ```
 
-See [`guides/calendar_behaviour.md`](https://hexdocs.pm/calendrical/calendar_behaviour.html) for the full list of options, generated functions, and overridable callbacks.
+A year begun elsewhere in a base calendar's year, as a fiscal year is, needs no code at all: `use Calendrical.Calendar.Shifted, year_begins: {7, 1}`. A year of whole weeks is `use Calendrical.Calendar.Weeks, pattern: [4, 5, 4], year_ends: {:saturday, :nearest, {1, 31}}`, and `Calendrical.new/3` makes either at runtime.
+
+See [`guides/calendar_behaviour.md`](https://hexdocs.pm/calendrical/calendar_behaviour.html) for the kernel, every option of the five makers, and what a calendar may override.
 
 ## Localization
 
@@ -200,7 +205,7 @@ For Calendrical's underlying locale, default-locale, and locale-cache configurat
 
 * [`guides/calendar_summary.md`](https://hexdocs.pm/calendrical/calendar_summary.html) — every supported calendar grouped by family, with month structure, era information, leap-year rules, and reference dates.
 
-* [`guides/calendar_behaviour.md`](https://hexdocs.pm/calendrical/calendar_behaviour.html) — how to define your own calendar by `use`ing `Calendrical.Behaviour`, including every option, every overridable callback, and worked examples.
+* [`guides/calendar_behaviour.md`](https://hexdocs.pm/calendrical/calendar_behaviour.html) — how to make your own calendar with the five makers: the kernel, every option, what may be overridden, and worked examples.
 
 * [`guides/migration.md`](https://hexdocs.pm/calendrical/migration.html) — migrating from `ex_cldr_calendars` and the related `cldr_calendars_*` libraries.
 

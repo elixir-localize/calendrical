@@ -2,6 +2,24 @@
 
 This guide covers the changes needed when migrating from [ex_cldr_calendars](https://hex.pm/packages/ex_cldr_calendars) (and its companion calendar libraries) to Calendrical.
 
+## Migrating to Calendrical 2.0
+
+Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and derives the rest. What a consumer of 1.x changes:
+
+* `use Calendrical.Behaviour` is `use Calendrical.Calendar`. `months_in_ordinary_year: 12, months_in_leap_year: 13` is `months_in_year: {12, 13}`, and `first_day_of_week: 7` is `weeks: [first_day: 7]`; `:cldr_calendar_base` and `:days_in_week` are gone. An option the maker does not read is refused.
+
+* `use Calendrical.Base.Month, month_of_year: 7` is `use Calendrical.Calendar.Shifted, year_begins: {7, 1}`, with `:year` as `:year_number` and the week options as `:weeks`. `use Calendrical.Julian, new_year_starting_month_and_day: {3, 25}, year: :beginning` is `use Calendrical.Calendar.Shifted, base: Calendrical.Julian, year_begins: {3, 25}, year_number: :beginning, written_year: :label`.
+
+* `use Calendrical.Base.Week, day_of_week: 1, month_of_year: 1, min_days_in_first_week: 4` is `use Calendrical.Calendar.Weeks, year_begins: {:monday, :on_or_before, {1, 4}}`; a year that ends on the last Saturday of January is `year_ends: {:saturday, :nearest, {1, 31}}`, and `:weeks_in_month` is `:pattern`. `Calendrical.new/3` takes the same options.
+
+* `plus/6` is `shift/6` and `:coerce` is `:clamp`, `true` by default in every calendar.
+
+* A calendar implementing the behaviour by hand implements `info/0`, `date_to_iso_days/3`, `date_from_iso_days/1`, `leap_month/1`, `written_date/3`, `date_from_written_date/3`, `shift/6` and `diff/3`, and the six primitive `Calendar` callbacks. Every other function a calendar module answered in 1.x it still answers, derived from those, but it is no longer a callback and cannot be overridden.
+
+* `month_of_year/3` is the CLDR month a date's month is named by, which `cardinal_month/1` used to add. Every calendar numbers whole weeks from its own first day of the week, and a Hebrew date is written with its month's place in the year while its name stays CLDR's.
+
+* `calendar_year/3`, `cardinal_year/3`, `date_from_cardinal_date/3`, `__config__/0`, the identity functions `first_day_of_week/0`, `last_day_of_week/0` and `epoch_day_of_week/0`, and the forms of `leap_year?/1`, `leap_month/1`, `leap_month?/2`, `cyclic_year/3`, `lunar_month_of_year/2` and `date_to_iso_days/3` that took a `Date` or a tuple are gone. A Julian year-start variant's `julian_date/3` is `base_date/3`.
+
 ## Overview
 
 Calendrical consolidates the following ex_cldr packages into a single library:
@@ -190,7 +208,7 @@ The localized `Duration.to_string/2` function which used `Cldr.Unit` and `Cldr.L
 ```elixir
 # Old
 duration = Cldr.Calendar.Duration.new!(~D[2020-01-01], ~D[2020-03-15])
-Cldr.Calendar.plus(~D[2025-01-01], duration)
+Cldr.Calendar.shift(~D[2025-01-01], duration)
 
 # New — use Date.shift with a Duration
 Date.shift(~D[2025-01-01], %Duration{month: 2, day: 14})
@@ -204,11 +222,11 @@ The public `Calendrical.plus/2,3,4` and `Calendrical.minus/3,4` functions have b
 
 ```elixir
 # Old
-Cldr.Calendar.plus(date, :years, 1)
-Cldr.Calendar.plus(date, :months, 3)
-Cldr.Calendar.plus(date, :quarters, 1)
-Cldr.Calendar.plus(date, :weeks, 2)
-Cldr.Calendar.plus(date, :days, 10)
+Cldr.Calendar.shift(date, :years, 1)
+Cldr.Calendar.shift(date, :months, 3)
+Cldr.Calendar.shift(date, :quarters, 1)
+Cldr.Calendar.shift(date, :weeks, 2)
+Cldr.Calendar.shift(date, :days, 10)
 Cldr.Calendar.minus(date, :months, 1)
 
 # New
@@ -224,14 +242,14 @@ Date.shift(date, month: -1)
 
 ### Coercion
 
-The old `plus/4` accepted a `:coerce` option that controlled whether invalid dates (such as February 30) would be clamped to valid dates or return `{:error, :invalid_date}`. `Date.shift/2` always coerces to valid dates, matching the `coerce: true` default behaviour.
+The old `plus/4` accepted a `:clamp` option that controlled whether invalid dates (such as February 30) would be clamped to valid dates or return `{:error, :invalid_date}`. `Date.shift/2` always clamps to valid dates, matching the `clamp: true` default behaviour.
 
 ```elixir
-# Old — could disable coercion
-Cldr.Calendar.plus(~D[2024-01-31], :months, 1, coerce: false)
+# Old — could disable clamping
+Cldr.Calendar.shift(~D[2024-01-31], :months, 1, clamp: false)
 # => {:error, :invalid_date}
 
-# New — always coerces
+# New — always clamps
 Date.shift(~D[2024-01-31], month: 1)
 # => ~D[2024-02-29]
 ```
@@ -242,7 +260,7 @@ Date.shift(~D[2024-01-31], month: 1)
 
 ```elixir
 # Old
-Cldr.Calendar.plus(date, :quarters, 2)
+Cldr.Calendar.shift(date, :quarters, 2)
 
 # New
 Date.shift(date, month: 6)
@@ -523,4 +541,4 @@ Calendrical.new(MyCalendar, :week, [
 
 ## Unit application order
 
-A subtle but important semantic difference: `Date.shift/2` applies duration units in order from largest to smallest (years → months → weeks → days), matching the Elixir stdlib convention. The old `Cldr.Calendar.plus(date, %Duration{})` applied units in the opposite order (days → months → years). In most cases the results are identical, but they can differ when date clamping occurs at intermediate steps.
+A subtle but important semantic difference: `Date.shift/2` applies duration units in order from largest to smallest (years → months → weeks → days), matching the Elixir stdlib convention. The old `Cldr.Calendar.shift(date, %Duration{})` applied units in the opposite order (days → months → years). In most cases the results are identical, but they can differ when date clamping occurs at intermediate steps.
