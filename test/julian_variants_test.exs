@@ -33,7 +33,11 @@ defmodule Calendrical.JulianVariantsTest do
   # 25 March before 1 January of the same number.
   defmodule Pisan do
     @moduledoc false
-    use Calendrical.Julian, new_year_starting_month_and_day: {3, 25}, year: :ending
+    use Calendrical.Calendar.Shifted,
+      base: Calendrical.Julian,
+      year_begins: {3, 25},
+      year_number: :ending,
+      written_year: :label
   end
 
   # Years numbered by the Julian year most of them fall in: the one a year
@@ -41,24 +45,40 @@ defmodule Calendrical.JulianVariantsTest do
   # ends in.
   defmodule MajorityFromJune do
     @moduledoc false
-    use Calendrical.Julian, new_year_starting_month_and_day: {6, 24}, year: :majority
+    use Calendrical.Calendar.Shifted,
+      base: Calendrical.Julian,
+      year_begins: {6, 24},
+      year_number: :majority,
+      written_year: :label
   end
 
   defmodule MajorityFromJuly do
     @moduledoc false
-    use Calendrical.Julian, new_year_starting_month_and_day: {7, 1}, year: :majority
+    use Calendrical.Calendar.Shifted,
+      base: Calendrical.Julian,
+      year_begins: {7, 1},
+      year_number: :majority,
+      written_year: :label
   end
 
   # No `:year`: the Julian year the year begins in.
   defmodule FromOctober do
     @moduledoc false
-    use Calendrical.Julian, new_year_starting_month_and_day: {10, 1}
+    use Calendrical.Calendar.Shifted,
+      base: Calendrical.Julian,
+      year_begins: {10, 1},
+      year_number: :beginning,
+      written_year: :label
   end
 
   # A year that begins on 1 January begins and ends in the same year.
   defmodule JanuaryEnding do
     @moduledoc false
-    use Calendrical.Julian, new_year_starting_month_and_day: {1, 1}, year: :ending
+    use Calendrical.Calendar.Shifted,
+      base: Calendrical.Julian,
+      year_begins: {1, 1},
+      year_number: :ending,
+      written_year: :label
   end
 
   @variants [
@@ -239,7 +259,7 @@ defmodule Calendrical.JulianVariantsTest do
       assert Date.convert!(~D[1100-06-30 Calendrical.Julian], MajorityFromJuly).year == 1100
     end
 
-    test "without it a year takes the number of the Julian year it begins in" do
+    test "with `:beginning` a year takes the number of the Julian year it begins in" do
       assert Date.convert!(~D[1100-10-01 Calendrical.Julian], FromOctober).year == 1100
       assert Date.convert!(~D[1100-09-30 Calendrical.Julian], FromOctober).year == 1099
     end
@@ -255,12 +275,13 @@ defmodule Calendrical.JulianVariantsTest do
 
     test "any other value does not compile" do
       assert_raise ArgumentError,
-                   ":year must be either :beginning, :ending or :majority. Found :first.",
+                   ":year_number must be one of [:beginning, :ending, :majority], found :first",
                    fn ->
                      defmodule Unknown do
-                       use Calendrical.Julian,
-                         new_year_starting_month_and_day: {3, 1},
-                         year: :first
+                       use Calendrical.Calendar.Shifted,
+                         base: Calendrical.Julian,
+                         year_begins: {3, 1},
+                         year_number: :first
                      end
                    end
     end
@@ -318,10 +339,10 @@ defmodule Calendrical.JulianVariantsTest do
         {:ok, in_variant} = Date.convert(date, variant)
         %{year: year, month: month, day: day} = in_variant
 
-        assert variant.julian_date(year, month, day) ==
+        assert variant.base_date(year, month, day) ==
                  {julian.year, julian.month, julian.day}
 
-        assert variant.month_of_year(year, month, day) == month
+        assert variant.month_of_year(year, month, day) == julian.month
         assert variant.cardinal_month(month) == julian.month
         assert variant.cardinal_day(year, month, day) == julian.day
         assert variant.numeric_month(year, month, day) == julian.month
@@ -487,7 +508,7 @@ defmodule Calendrical.JulianVariantsTest do
       assert Date.shift(~D[2025-01-01 Calendrical.Julian], week: 1) ==
                ~D[2025-01-08 Calendrical.Julian]
 
-      assert Calendrical.Julian.plus(2025, 1, 1, :weeks, 2) == {2025, 1, 15}
+      assert Calendrical.Julian.shift(2025, 1, 1, :weeks, 2) == {2025, 1, 15}
     end
   end
 
@@ -498,8 +519,8 @@ defmodule Calendrical.JulianVariantsTest do
         first = Date.to_gregorian_days(Enum.at(ranges, 0).first)
         last = Date.to_gregorian_days(List.last(ranges).last)
 
-        assert first == variant.first_iso_day_of_year(year)
-        assert last == variant.last_iso_day_of_year(year)
+        assert first == Date.to_gregorian_days(variant.year(year).first)
+        assert last == Date.to_gregorian_days(variant.year(year).last)
 
         ranges
         |> Enum.zip(tl(ranges))
@@ -509,7 +530,7 @@ defmodule Calendrical.JulianVariantsTest do
 
         # A date's month of the year is the Julian month that names it
         for range <- ranges, date <- [range.first, range.last] do
-          assert Calendrical.month_of_year(date) == date.month
+          assert Calendrical.month_of_year(date) == date.calendar.cardinal_month(date.month)
         end
       end
     end
@@ -518,13 +539,7 @@ defmodule Calendrical.JulianVariantsTest do
       for variant <- @variants, {_julian, date} <- day_pairs(variant) do
         assert variant.extended_year(date.year, date.month, date.day) == date.year
 
-        {:ok, first} =
-          Date.new(
-            date.year,
-            variant.first_day_of_year(date.year) |> elem(1),
-            variant.first_day_of_year(date.year) |> elem(2),
-            variant
-          )
+        first = variant.year(date.year).first
 
         assert variant.related_gregorian_year(date.year, date.month, date.day) ==
                  Date.convert!(first, Calendar.ISO).year
@@ -568,7 +583,7 @@ defmodule Calendrical.JulianVariantsTest do
       for variant <- @variants, iso <- Date.range(~D[-0002-12-01], ~D[0002-04-30]) do
         %{year: year, month: month, day: day} = Date.convert!(iso, variant)
         {year_of_era, era} = variant.year_of_era(year, month, day)
-        calendar_year = variant.calendar_year(year, month, day)
+        calendar_year = year
 
         assert calendar_year == if(era == 1, do: year_of_era, else: -year_of_era),
                "#{inspect(variant)} #{iso}"
@@ -654,7 +669,7 @@ defmodule Calendrical.JulianVariantsTest do
 
         for {step, months} <- Enum.with_index(interval) do
           {year, month, day} =
-            variant.plus(from.year, from.month, from.day, :months, months, coerce: true)
+            variant.shift(from.year, from.month, from.day, :months, months, clamp: true)
 
           assert {step.year, step.month, step.day} == {year, month, day}
         end

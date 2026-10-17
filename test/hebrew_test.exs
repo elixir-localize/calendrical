@@ -312,7 +312,6 @@ defmodule Calendrical.HebrewTest do
 
       assert Hebrew.lunar_month_of_year(5785, 13) == {:error, :invalid_month}
       assert Hebrew.lunar_month_of_year(5785, 0) == {:error, :invalid_month}
-      assert Hebrew.lunar_month_of_year(~D[2024-01-01]) == {:error, :invalid_month}
     end
   end
 

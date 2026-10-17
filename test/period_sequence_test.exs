@@ -25,7 +25,7 @@ defmodule Calendrical.PeriodSequenceTest do
       m = Calendrical.Interval.quarter(d)
 
       Enum.reduce(1..5000, m, fn _i, m ->
-        m2 = Calendrical.next(m, :quarter, coerce: true)
+        m2 = Calendrical.next(m, :quarter, clamp: true)
 
         assert Calendrical.date_to_iso_days(m.last) + 1 ==
                  Calendrical.date_to_iso_days(m2.first)
@@ -39,7 +39,7 @@ defmodule Calendrical.PeriodSequenceTest do
       m = Calendrical.Interval.month(d)
 
       Enum.reduce(1..5000, m, fn _i, m ->
-        m2 = Calendrical.next(m, :month, coerce: true)
+        m2 = Calendrical.next(m, :month, clamp: true)
 
         assert Calendrical.date_to_iso_days(m.last) + 1 ==
                  Calendrical.date_to_iso_days(m2.first)
@@ -53,7 +53,7 @@ defmodule Calendrical.PeriodSequenceTest do
       m = Calendrical.Interval.week(d)
 
       Enum.reduce(1..5000, m, fn _i, m ->
-        m2 = Calendrical.next(m, :week, coerce: true)
+        m2 = Calendrical.next(m, :week, clamp: true)
 
         assert Calendrical.date_to_iso_days(m.last) + 1 ==
                  Calendrical.date_to_iso_days(m2.first)
@@ -67,7 +67,7 @@ defmodule Calendrical.PeriodSequenceTest do
       m = Calendrical.Interval.quarter(d)
 
       Enum.reduce(1..5000, m, fn _i, m ->
-        m2 = Calendrical.previous(m, :quarter, coerce: true)
+        m2 = Calendrical.previous(m, :quarter, clamp: true)
 
         assert Calendrical.date_to_iso_days(m2.last) + 1 ==
                  Calendrical.date_to_iso_days(m.first)
@@ -81,7 +81,7 @@ defmodule Calendrical.PeriodSequenceTest do
       m = Calendrical.Interval.month(d)
 
       Enum.reduce(1..5000, m, fn _i, m ->
-        m2 = Calendrical.previous(m, :month, coerce: true)
+        m2 = Calendrical.previous(m, :month, clamp: true)
 
         assert Calendrical.date_to_iso_days(m2.last) + 1 ==
                  Calendrical.date_to_iso_days(m.first)
@@ -95,7 +95,7 @@ defmodule Calendrical.PeriodSequenceTest do
       m = Calendrical.Interval.week(d)
 
       Enum.reduce(1..5000, m, fn _i, m ->
-        m2 = Calendrical.previous(m, :week, coerce: true)
+        m2 = Calendrical.previous(m, :week, clamp: true)
 
         assert Calendrical.date_to_iso_days(m2.last) + 1 ==
                  Calendrical.date_to_iso_days(m.first)
@@ -118,7 +118,7 @@ defmodule Calendrical.PeriodSequenceTest do
       m = Calendrical.Interval.week(Date.convert!(~D[2000-01-01], unquote(calendar)))
 
       Enum.reduce(1..1000, m, fn _i, m ->
-        m2 = Calendrical.next(m, :week, coerce: true)
+        m2 = Calendrical.next(m, :week, clamp: true)
 
         assert Calendrical.date_to_iso_days(m.last) + 1 ==
                  Calendrical.date_to_iso_days(m2.first)
@@ -131,7 +131,7 @@ defmodule Calendrical.PeriodSequenceTest do
       m = Calendrical.Interval.week(Date.convert!(~D[2020-01-01], unquote(calendar)))
 
       Enum.reduce(1..1000, m, fn _i, m ->
-        m2 = Calendrical.previous(m, :week, coerce: true)
+        m2 = Calendrical.previous(m, :week, clamp: true)
 
         assert Calendrical.date_to_iso_days(m2.last) + 1 ==
                  Calendrical.date_to_iso_days(m.first)

@@ -20,9 +20,9 @@ defmodule Calendrical.CalendarArithmetic.Test do
   describe "lunisolar months and years" do
     test "a month shift walks each year's own months" do
       # Y4660 has 13 months, Y4661 has 12
-      assert Chinese.plus(4660, 13, 1, :months, 13) == {4662, 1, 1}
-      assert Chinese.plus(4661, 12, 1, :months, 1) == {4662, 1, 1}
-      assert Chinese.plus(4662, 1, 1, :months, -13) == {4660, 13, 1}
+      assert Chinese.shift(4660, 13, 1, :months, 13) == {4662, 1, 1}
+      assert Chinese.shift(4661, 12, 1, :months, 1) == {4662, 1, 1}
+      assert Chinese.shift(4662, 1, 1, :months, -13) == {4660, 13, 1}
 
       assert Date.shift(~D[4660-13-01 Calendrical.Chinese], month: 13) ==
                ~D[4662-01-01 Calendrical.Chinese]
@@ -40,34 +40,34 @@ defmodule Calendrical.CalendarArithmetic.Test do
 
     test "a leap month the new year lacks becomes the ordinary month of its number" do
       # Y4660 (= AD 2023) has a leap 2nd month at ordinal 3; Y4661 has none
-      assert Chinese.plus(4660, 3, 10, :years, 1) == {4661, 2, 10}
+      assert Chinese.shift(4660, 3, 10, :years, 1) == {4661, 2, 10}
     end
   end
 
   describe "Hebrew months and years" do
     test "a month shift steps through the months of the year, Adar I only in a leap year" do
       # Shevat to Adar in the ordinary year 5785, and to Adar I in the leap year 5784
-      assert Hebrew.plus(5785, 5, 1, :months, 1) == {5785, 6, 1}
-      assert Hebrew.plus(5785, 6, 1, :months, -1) == {5785, 5, 1}
-      assert Hebrew.plus(5784, 5, 1, :months, 1) == {5784, 6, 1}
-      assert Hebrew.plus(5784, 6, 1, :months, 13) == {5785, 6, 1}
-      assert Hebrew.plus(5785, 12, 1, :months, 1) == {5786, 1, 1}
+      assert Hebrew.shift(5785, 5, 1, :months, 1) == {5785, 6, 1}
+      assert Hebrew.shift(5785, 6, 1, :months, -1) == {5785, 5, 1}
+      assert Hebrew.shift(5784, 5, 1, :months, 1) == {5784, 6, 1}
+      assert Hebrew.shift(5784, 6, 1, :months, 13) == {5785, 6, 1}
+      assert Hebrew.shift(5785, 12, 1, :months, 1) == {5786, 1, 1}
     end
 
     test "a long month shift is exact over whole Metonic cycles" do
-      assert Hebrew.plus(5784, 6, 1, :months, 235) == {5803, 6, 1}
-      assert Hebrew.plus(5803, 6, 1, :months, -235) == {5784, 6, 1}
+      assert Hebrew.shift(5784, 6, 1, :months, 235) == {5803, 6, 1}
+      assert Hebrew.shift(5803, 6, 1, :months, -235) == {5784, 6, 1}
     end
 
     test "a year shift keeps the traditional month, Adar I becoming Adar in an ordinary year" do
       # Elul, Adar I and Adar II of the leap year 5784 in the ordinary year 5785
-      assert Hebrew.plus(5784, 13, 1, :years, 1) == {5785, 12, 1}
-      assert Hebrew.plus(5784, 6, 10, :years, 1) == {5785, 6, 10}
-      assert Hebrew.plus(5784, 7, 10, :years, 1) == {5785, 6, 10}
+      assert Hebrew.shift(5784, 13, 1, :years, 1) == {5785, 12, 1}
+      assert Hebrew.shift(5784, 6, 10, :years, 1) == {5785, 6, 10}
+      assert Hebrew.shift(5784, 7, 10, :years, 1) == {5785, 6, 10}
 
       # Adar and Nisan of 5785 in the leap year 5787
-      assert Hebrew.plus(5785, 6, 10, :years, 2) == {5787, 7, 10}
-      assert Hebrew.plus(5785, 7, 15, :years, 2) == {5787, 8, 15}
+      assert Hebrew.shift(5785, 6, 10, :years, 2) == {5787, 7, 10}
+      assert Hebrew.shift(5785, 7, 15, :years, 2) == {5787, 8, 15}
     end
 
     test "every shifted date is a Hebrew date" do

@@ -32,7 +32,7 @@ defmodule Calendrical.LunisolarLeapYear.Test do
       assert Enum.all?(days, &(&1 in 29..30))
       assert Enum.sum(days) == 383
 
-      # The default Calendrical.Behaviour days_in_year/1 counted one
+      # The default Calendrical.Calendar days_in_year/1 counted one
       # day too many (`next_year_start - this_year_start + 1`).
       assert LunarJapanese.days_in_year(569) == 383
     end

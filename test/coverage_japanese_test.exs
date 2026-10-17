@@ -36,11 +36,6 @@ defmodule Calendrical.Coverage.JapaneseTest do
       assert Japanese.day_of_era(2019, 5, 1) == {1, 236}
       assert Japanese.day_of_era(2019, 4, 30) == {11_070, 235}
     end
-
-    test "calendar_year/3 is the era year" do
-      assert Japanese.calendar_year(2019, 5, 1) == 1
-      assert Japanese.calendar_year(2019, 4, 30) == 31
-    end
   end
 
   describe "gregorian behaviour" do

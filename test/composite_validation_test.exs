@@ -62,7 +62,7 @@ defmodule Calendrical.CompositeValidationTest do
   # implements the `Calendar` and `Calendrical` behaviours.
   defmodule Unreached do
     @moduledoc false
-    use Calendrical.Behaviour,
+    use Calendrical.Calendar,
       epoch: ~D[0001-01-01 Calendar.ISO],
       cldr_calendar_type: :gregorian
 

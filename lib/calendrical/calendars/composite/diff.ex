@@ -2,12 +2,12 @@ defmodule Calendrical.Composite.Diff do
   @moduledoc false
 
   # The whole number of years, quarters, months, weeks or days from one date
-  # of a composite calendar to another: the inverse of its `plus/6`, the
+  # of a composite calendar to another: the inverse of its `shift/6`, the
   # largest count it can add to the earlier date without passing the later,
   # and negative when `to` is before `from`.
   #
   # The day a count reaches is compared as a day, the composite's `reach/5`,
-  # and not as the date `plus/6` writes for it: where two stretches of days
+  # and not as the date `shift/6` writes for it: where two stretches of days
   # carry the same dates the later has none of its own, and the date written
   # for one of its days names a day a year before it. And the count is
   # bracketed from the days between the two dates and then halved, not

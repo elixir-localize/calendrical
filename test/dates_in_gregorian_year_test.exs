@@ -57,27 +57,4 @@ defmodule Calendrical.DatesInGregorianYearTest do
     assert Calendrical.dates_in_gregorian_year(Calendrical.Islamic.Civil, 2000, 9, 29) ==
              Calendrical.Islamic.Civil.dates_in_gregorian_year(2000, 9, 29)
   end
-
-  test "the callback is overridable on Behaviour calendars" do
-    assert {:dates_in_gregorian_year, 3} in Calendrical.Hebrew.__info__(:functions)
-
-    defmodule OverridingCalendar do
-      use Calendrical.Behaviour,
-        epoch: ~D[0001-01-01 Calendar.ISO],
-        cldr_calendar_type: :gregorian
-
-      def date_to_iso_days(year, month, day),
-        do: Calendar.ISO.date_to_iso_days(year, month, day)
-
-      def date_from_iso_days(iso_days), do: Calendar.ISO.date_from_iso_days(iso_days)
-
-      @impl true
-      def leap_year?(year), do: Calendar.ISO.leap_year?(year)
-
-      @impl true
-      def dates_in_gregorian_year(_gregorian_year, _month, _day), do: []
-    end
-
-    assert OverridingCalendar.dates_in_gregorian_year(2026, 7, 25) == []
-  end
 end

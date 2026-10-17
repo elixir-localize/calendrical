@@ -11,13 +11,12 @@ defmodule Calendrical.CardinalMonth.Test do
   use ExUnit.Case, async: true
 
   setup_all do
-    {:ok, july} = Calendrical.new(Calendrical.CardinalMonth.Test.July, :month, month_of_year: 7)
+    {:ok, july} =
+      Calendrical.new(Calendrical.CardinalMonth.Test.July, :month, year_begins: {7, 1})
 
     {:ok, april} =
       Calendrical.new(Calendrical.CardinalMonth.Test.April, :week,
-        month_of_year: 4,
-        min_days_in_first_week: 4,
-        day_of_week: 1
+        year_begins: {:monday, :on_or_before, {4, 4}}
       )
 
     {:ok, july: july, april: april}
@@ -46,7 +45,7 @@ defmodule Calendrical.CardinalMonth.Test do
     date = Date.convert!(~D[2025-07-01], july)
 
     assert {date.year, date.month, date.day} == {2026, 1, 1}
-    assert july.cardinal_month(july.month_of_year(date.year, date.month, date.day)) == 7
+    assert july.month_of_year(date.year, date.month, date.day) == 7
     assert Calendrical.localize(date, :month) == "Jul"
   end
 end

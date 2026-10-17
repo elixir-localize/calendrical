@@ -15,8 +15,7 @@ defmodule Calendrical.WeekInMonth.Test do
           Calendrical.new(
             Module.concat(__MODULE__, "Day#{first_day}Min#{min_days}"),
             :month,
-            day_of_week: first_day,
-            min_days_in_first_week: min_days
+            weeks: [first_day: first_day, min_days_in_first_week: min_days]
           )
 
         {calendar, first_day, min_days}
@@ -159,12 +158,12 @@ defmodule Calendrical.WeekInMonth.Test do
     end
 
     test "a month whose first week is cut short at the month's start" do
-      # Julian weeks do not cross its months: February 2019 begins on a
-      # Thursday of its Monday-started weeks, so week 1 is four days.
+      # February 2019 begins on a Thursday of the Julian calendar's
+      # Monday-started weeks, so week 1 begins on the Monday before, 29 January.
       assert [first, second | _rest] = Calendrical.Julian.weeks_of_month(2019, 2)
 
       assert first ==
-               Date.range(~D[2019-02-01 Calendrical.Julian], ~D[2019-02-04 Calendrical.Julian])
+               Date.range(~D[2019-01-29 Calendrical.Julian], ~D[2019-02-04 Calendrical.Julian])
 
       assert second ==
                Date.range(~D[2019-02-05 Calendrical.Julian], ~D[2019-02-11 Calendrical.Julian])

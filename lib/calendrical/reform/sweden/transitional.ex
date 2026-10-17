@@ -21,7 +21,21 @@ defmodule Calendrical.Reform.Sweden.Transitional do
 
   """
 
-  use Calendrical.Behaviour,
+  use Calendrical.Calendar,
+    month_lengths: %{
+      1 => 31,
+      2 => 28..30,
+      3 => 31,
+      4 => 30,
+      5 => 31,
+      6 => 30,
+      7 => 31,
+      8 => 31,
+      9 => 30,
+      10 => 31,
+      11 => 30,
+      12 => 31
+    },
     epoch: ~D[0001-01-01 Calendrical.Julian],
     cldr_calendar_type: :gregorian,
     year_zero?: false
@@ -141,7 +155,7 @@ defmodule Calendrical.Reform.Sweden.Transitional do
   end
 
   # Outside its window the calendar is the Julian calendar, whose years have
-  # no zero: the year after 1 BC, year -1, is AD 1. `Calendrical.Behaviour`
+  # no zero: the year after 1 BC, year -1, is AD 1. `Calendrical.Calendar`
   # numbers a calendar's years one after another, so everything that steps
   # from one year to the next, and the eras either side of the missing year,
   # is answered here as the Julian calendar answers it.
@@ -182,33 +196,6 @@ defmodule Calendrical.Reform.Sweden.Transitional do
   end
 
   @doc """
-  Returns the number of days in `year`: 365 or 366, as in the Julian
-  calendar, except in 1700, which lost its leap day, and 1712, which has 367.
-
-  ### Arguments
-
-  * `year` is any year but 0.
-
-  ### Returns
-
-  * The number of days in the year.
-
-  ### Examples
-
-      iex> Calendrical.Reform.Sweden.Transitional.days_in_year(1712)
-      367
-
-      iex> Calendrical.Reform.Sweden.Transitional.days_in_year(-1)
-      366
-
-  """
-  @impl true
-  @spec days_in_year(Calendar.year()) :: Calendar.day()
-  def days_in_year(year) do
-    date_to_iso_days(next_year(year), 1, 1) - date_to_iso_days(year, 1, 1)
-  end
-
-  @doc """
   Returns the number of days in `month` of `year`: the Julian month's, except
   in February of 1700, which has 28, and of 1712, which has 30.
 
@@ -240,70 +227,6 @@ defmodule Calendrical.Reform.Sweden.Transitional do
 
   def days_in_month(year, month) do
     super(year, month)
-  end
-
-  @doc """
-  Adds an `increment` number of `date_part`s to a `year`, `month` and `day`.
-
-  Years, quarters and months step over the year 0 the calendar does not have,
-  so a year after 15 June 1 BC is 15 June AD 1.
-
-  ### Arguments
-
-  * `year`, `month` and `day` are the parts of a date.
-
-  * `date_part` is `:years`, `:quarters`, `:months`, `:weeks` or `:days`.
-
-  * `increment` is the integer number of `date_part`s to add, which may be
-    negative.
-
-  * `options` is a keyword list of options.
-
-  ### Options
-
-  * `:coerce`, when `true`, brings a day the month reached does not have to
-    that month's last day. The default is `false`.
-
-  ### Returns
-
-  * A `{year, month, day}` tuple.
-
-  ### Examples
-
-      iex> Calendrical.Reform.Sweden.Transitional.plus(-1, 6, 15, :years, 1)
-      {1, 6, 15}
-
-      iex> Calendrical.Reform.Sweden.Transitional.plus(1, 1, 31, :months, -1)
-      {-1, 12, 31}
-
-      iex> Calendrical.Reform.Sweden.Transitional.plus(1712, 2, 30, :years, 1, coerce: true)
-      {1713, 2, 28}
-
-  """
-  @impl true
-  @spec plus(
-          Calendar.year(),
-          Calendar.month(),
-          Calendar.day(),
-          :years | :quarters | :months | :weeks | :days,
-          integer(),
-          Keyword.t()
-        ) :: {Calendar.year(), Calendar.month(), Calendar.day()}
-  def plus(year, month, day, :years, years, options) do
-    super(year, month, day, :years, skip_year_zero(year + years, year) - year, options)
-  end
-
-  # The month reached is the same whichever year it is in, so a count that
-  # crosses the missing year goes twelve months further.
-  def plus(year, month, day, :months, months, options) do
-    {year_reached, _month, _day} = super(year, month, 1, :months, months, [])
-    year_skipped = skip_year_zero(year_reached, year) - year_reached
-
-    super(year, month, day, :months, months + year_skipped * @months_in_ordinary_year, options)
-  end
-
-  def plus(year, month, day, date_part, increment, options) do
-    super(year, month, day, date_part, increment, options)
   end
 
   @doc """
@@ -391,76 +314,6 @@ defmodule Calendrical.Reform.Sweden.Transitional do
     if era == 1, do: {iso_days - epoch() + 1, era}, else: {epoch() - iso_days, era}
   end
 
-  @doc """
-  Returns the extended year of the date `year`, `month` and `day`: one number
-  for the year through both eras, in which 1 BC, year -1, is 0.
-
-  ### Arguments
-
-  * `year`, `month` and `day` are the parts of a date.
-
-  ### Returns
-
-  * The extended year, or `{:error, :invalid_date}`.
-
-  ### Examples
-
-      iex> Calendrical.Reform.Sweden.Transitional.extended_year(1712, 2, 30)
-      1712
-
-      iex> Calendrical.Reform.Sweden.Transitional.extended_year(-1, 6, 15)
-      0
-
-  """
-  @impl true
-  @spec extended_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
-          Calendar.year() | Calendrical.date_error()
-  def extended_year(year, _month, _day) when year < 0 do
-    year + 1
-  end
-
-  def extended_year(year, _month, _day) do
-    year
-  end
-
   defp next_year(-1), do: 1
   defp next_year(year), do: year + 1
-
-  # A count of years that reaches or crosses the missing year 0 goes one
-  # year further the way it was going.
-  defp skip_year_zero(year, from_year) when year >= 0 and from_year < 0, do: year + 1
-  defp skip_year_zero(year, from_year) when year <= 0 and from_year > 0, do: year - 1
-  defp skip_year_zero(year, _from_year), do: year
-
-  @doc """
-  Returns the number of days in the given month, whatever its year.
-
-  Its months are the Julian calendar's, but for February, which had 28 days in 1700, 30 in 1712, and 28 or 29 in the years between and outside them.
-
-  ### Arguments
-
-  * `month` is a month number, 1..12.
-
-  ### Returns
-
-  * The number of days, where the month has as many in every year.
-
-  * `{:ambiguous, range}` where the month's length depends on the year.
-
-  * `{:error, :undefined}` for any other value.
-
-  ### Examples
-
-      iex> Calendrical.Reform.Sweden.Transitional.days_in_month(1)
-      31
-
-      iex> Calendrical.Reform.Sweden.Transitional.days_in_month(2)
-      {:ambiguous, 28..30}
-
-  """
-  @impl true
-  def days_in_month(2), do: {:ambiguous, 28..30}
-  def days_in_month(month) when month in [4, 6, 9, 11], do: 30
-  def days_in_month(month) when month in 1..12, do: 31
-  def days_in_month(_month), do: {:error, :undefined}
 end

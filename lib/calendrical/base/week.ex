@@ -2,7 +2,6 @@ defmodule Calendrical.Base.Week do
   @moduledoc false
 
   alias Calendar.ISO
-  alias Calendrical.Base.Month
   alias Calendrical.Config
   alias Localize.Utils.Math
 
@@ -19,16 +18,16 @@ defmodule Calendrical.Base.Week do
   @weeks_in_normal_year 52
   @quarters_in_year 4
 
-  # Whether to coerce valid date with plus/3 for
+  # Whether to clamp valid date with plus/3 for
   # years and months (days, weeks dont ever require
-  # coercion).
-  @default_coercion Calendrical.default_coercion()
+  # clamping).
+  @default_clamp Calendrical.default_clamp()
 
   defmacro __using__(options \\ []) do
     quote bind_quoted: [options: options] do
       @options options
       @before_compile Calendrical.Compiler.Week
-      @before_compile {Calendrical.Compiler.DateCheck, :partial_dates}
+      @before_compile Calendrical.Compiler.DateCheck
     end
   end
 
@@ -160,7 +159,38 @@ defmodule Calendrical.Base.Week do
     months_in_prior_quarters + month_in_quarter
   end
 
-  defdelegate cardinal_month(month, config), to: Month
+  # A year that begins in another month than the first numbers its months
+  # from there, so its first month is the Gregorian month it begins in.
+  def cardinal_month(month, %Config{month_of_year: 1}), do: month
+
+  def cardinal_month(month, %Config{month_of_year: month_of_year}),
+    do: Math.amod(month + month_of_year - 1, @months_in_year)
+
+  # The day of the week of an ISO day number from a day weeks begin on:
+  # day 0 of the ISO days is a Saturday, so the offset carries it to 6.
+  defp iso_days_to_day_of_week(iso_days, starting_on, config),
+    do: Integer.mod(iso_days + day_of_week_offset(starting_on, config), 7) + 1
+
+  defp day_of_week_offset(:default, config), do: 6 - config.day_of_week
+  defp day_of_week_offset(:monday, _config), do: 5
+  defp day_of_week_offset(:tuesday, _config), do: 4
+  defp day_of_week_offset(:wednesday, _config), do: 3
+  defp day_of_week_offset(:thursday, _config), do: 2
+  defp day_of_week_offset(:friday, _config), do: 1
+  defp day_of_week_offset(:saturday, _config), do: 0
+  defp day_of_week_offset(:sunday, _config), do: 6
+
+  defp day_of_week_offset(starting_on, _config),
+    do: raise(ArgumentError, "starting_on #{inspect(starting_on)} is not supported")
+
+  # The month of the year a Gregorian month names: the inverse of
+  # `cardinal_month/2`.
+  def month_from_cardinal_month(named_month, %Config{month_of_year: month_of_year})
+      when is_integer(named_month) and named_month in 1..@months_in_year do
+    Math.amod(named_month - month_of_year + 1, @months_in_year)
+  end
+
+  def month_from_cardinal_month(named_month, _config), do: named_month
 
   def week_of_year(year, week, _day, _config) when is_integer(year) and is_integer(week) do
     {year, week}
@@ -225,7 +255,7 @@ defmodule Calendrical.Base.Week do
 
   def day_of_week(year, week, day, starting_on, config) when is_date(year, week, day) do
     iso_days = date_to_iso_days(year, week, day, config)
-    Month.iso_days_to_day_of_week(iso_days, starting_on, config)
+    iso_days_to_day_of_week(iso_days, starting_on, config)
   end
 
   def day_of_week(_year, _week, day, _starting_on, _config) do
@@ -372,7 +402,7 @@ defmodule Calendrical.Base.Week do
   def month(year, month, %{weeks_in_month: weeks_in_month} = config) do
     if month in 1..months_in_year(year, month) do
       months_prior_in_quarter = rem(month - 1, @months_in_quarter)
-      prior_quarters = Month.quarter_of_year(year, month, 1, config) - 1
+      prior_quarters = ceil(month / (months_in_year(year, config) / @quarters_in_year)) - 1
       quarter_weeks_prior = prior_quarters * @weeks_in_quarter
 
       weeks_prior_in_quarter =
@@ -406,10 +436,10 @@ defmodule Calendrical.Base.Week do
   # A year on, a day keeps its week and its day of the week, and a day of a
   # fifty-third week is brought into the last week of a year that has
   # fifty-two.
-  def plus(year, week, day, config, :years, years, options) do
+  def shift(year, week, day, config, :years, years, options) do
     new_year = year + years
 
-    if Keyword.get(options, :coerce, @default_coercion) do
+    if Keyword.get(options, :clamp, @default_clamp) do
       {weeks_in_year, _days_in_last_week} = weeks_in_year(new_year, config)
       {new_year, min(week, weeks_in_year), day}
     else
@@ -417,11 +447,11 @@ defmodule Calendrical.Base.Week do
     end
   end
 
-  def plus(year, week, day, config, :quarters, quarters, options) do
-    plus(year, week, day, config, :months, quarters * @months_in_quarter, options)
+  def shift(year, week, day, config, :quarters, quarters, options) do
+    shift(year, week, day, config, :months, quarters * @months_in_quarter, options)
   end
 
-  def plus(year, week, day, _config, :months, 0, _options) do
+  def shift(year, week, day, _config, :months, 0, _options) do
     {year, week, day}
   end
 
@@ -431,8 +461,8 @@ defmodule Calendrical.Base.Week do
   # 3. Add the number of days in that month leaving us
   #    with the first day of the next month
   # 4. Add back the day of the month, potentially
-  #    coercing the last day of the month
-  def plus(year, week, day, config, :months, 1 = n, options) do
+  #    clamping the last day of the month
+  def shift(year, week, day, config, :months, 1 = n, options) do
     day_of_month = day_of_month(year, week, day, config)
     {year, week, day} = first_day_of_month(year, week, day, config)
 
@@ -454,9 +484,9 @@ defmodule Calendrical.Base.Week do
   # 3. Subtract the number of days in the month, leaving us with
   #    the last day of the previous month
   # 4. Get the first day of the previous month
-  # 5. Add back the day of the month capture earlier - potentially coercing
+  # 5. Add back the day of the month capture earlier - potentially clamping
   #    the last day of the month
-  def plus(year, week, day, config, :months, -1 = n, options) do
+  def shift(year, week, day, config, :months, -1 = n, options) do
     day_of_month = day_of_month(year, week, day, config)
     {year, week, day} = last_day_of_month(year, week, day, config)
     month_of_year = month_of_year(year, week, day, config)
@@ -485,27 +515,27 @@ defmodule Calendrical.Base.Week do
   # next, and the day of the month is placed once, in the month reached. A
   # shorter month on the way does not take the day with it: the last day of
   # a five-week month is the last day of a five-week month three months on.
-  def plus(year, week, day, config, :months, months, options) when abs(months) > 1 do
+  def shift(year, week, day, config, :months, months, options) when abs(months) > 1 do
     increment = if months > 0, do: 1, else: -1
     day_of_month = day_of_month(year, week, day, config)
     first_day = first_day_of_month(year, week, day, config)
 
     {year, week, day} =
       Enum.reduce(1..abs(months), first_day, fn _i, {year, week, day} ->
-        plus(year, week, day, config, :months, increment, coerce: @default_coercion)
+        shift(year, week, day, config, :months, increment, clamp: @default_clamp)
       end)
 
     add_days(year, week, day, day_of_month - 1, config, options)
   end
 
-  def plus(year, month, day, config, :weeks, weeks, _options) do
+  def shift(year, month, day, config, :weeks, weeks, _options) do
     year
     |> date_to_iso_days(month, day, config)
     |> Kernel.+(Calendrical.weeks_to_days(weeks))
     |> date_from_iso_days(config)
   end
 
-  def plus(year, month, day, config, :days, days, _options) do
+  def shift(year, month, day, config, :days, days, _options) do
     year
     |> date_to_iso_days(month, day, config)
     |> Kernel.+(days)
@@ -534,7 +564,7 @@ defmodule Calendrical.Base.Week do
 
   def add_days(year, week, day, days, config, options) do
     days_to_add =
-      if Keyword.get(options, :coerce, @default_coercion) do
+      if Keyword.get(options, :clamp, @default_clamp) do
         month = month_of_year(year, week, day, config)
         min(days_in_pattern_month(year, month, config) - 1, days)
       else

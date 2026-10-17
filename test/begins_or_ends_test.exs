@@ -1,10 +1,8 @@
 defmodule Calendrical.BeginsOrEndsTest do
   @moduledoc """
-  `:begins_or_ends` names the choice `:first_or_last` makes for a calendar
-  of weeks: its year begins on the first `:day_of_week` of `:month_of_year`
-  or ends on the last (user, 2026-10-03). A pairing that names the other
-  choice is an error, where it was accepted and ignored; left out, it
-  follows `:first_or_last`. A month calendar uses neither.
+  A calendar of weeks begins or ends its year by one rule, a weekday near
+  a day of a Gregorian month, given as `:year_begins` or `:year_ends`; a
+  month calendar takes neither.
 
   """
 
@@ -12,51 +10,61 @@ defmodule Calendrical.BeginsOrEndsTest do
 
   alias __MODULE__, as: T
 
-  test "a calendar of weeks takes the two pairings it can keep" do
+  test "a calendar of weeks takes a rule for the year's beginning or its end" do
     assert {:ok, begins} =
-             Calendrical.new(T.WeekBeginsFirst, :week,
-               begins_or_ends: :begins,
-               first_or_last: :first
-             )
+             Calendrical.new(T.WeekBegins, :week, year_begins: {:monday, :on_or_before, {1, 4}})
 
     assert {:ok, ends} =
-             Calendrical.new(T.WeekEndsLast, :week, begins_or_ends: :ends, first_or_last: :last)
+             Calendrical.new(T.WeekEnds, :week, year_ends: {:saturday, :nearest, {1, 31}})
 
-    assert %{begins_or_ends: :begins, first_or_last: :first} = begins.__config__()
-    assert %{begins_or_ends: :ends, first_or_last: :last} = ends.__config__()
+    assert begins.info().weeks.first_day == 1
+    assert ends.info().weeks.first_day == 7
+    assert Calendrical.NRF.info().weeks.first_day == 7
   end
 
-  test "a calendar of weeks refuses the two it cannot" do
-    assert Calendrical.new(T.WeekBeginsLast, :week, begins_or_ends: :begins, first_or_last: :last) ==
-             {:error, ":begins_or_ends :begins needs first_or_last: :first. Found :last."}
-
-    assert Calendrical.new(T.WeekEndsFirst, :week, begins_or_ends: :ends, first_or_last: :first) ==
-             {:error, ":begins_or_ends :ends needs first_or_last: :last. Found :first."}
-  end
-
-  test "left out, it follows :first_or_last" do
-    assert {:ok, last} = Calendrical.new(T.WeekLast, :week, first_or_last: :last)
-    assert {:ok, first} = Calendrical.new(T.WeekDefault, :week, [])
-
-    assert last.__config__().begins_or_ends == :ends
-    assert first.__config__().begins_or_ends == :begins
-    assert Calendrical.NRF.__config__().begins_or_ends == :ends
-  end
-
-  test "a month calendar uses neither" do
-    assert {:ok, _calendar} =
-             Calendrical.new(T.MonthEndsFirst, :month,
-               begins_or_ends: :ends,
-               first_or_last: :first,
-               month_of_year: 7
+  test "a calendar of weeks refuses both rules at once, and a rule it cannot keep" do
+    assert {:error, %ArgumentError{message: both}} =
+             Calendrical.new(T.WeekBoth, :week,
+               year_begins: {:monday, :on_or_before, {1, 4}},
+               year_ends: {:saturday, :nearest, {1, 31}}
              )
+
+    assert both =~ ":year_begins or :year_ends, not both"
+
+    assert {:error, %ArgumentError{message: beyond}} =
+             Calendrical.new(T.WeekBeyond, :week, year_begins: {:monday, :on_or_before, {1, 9}})
+
+    assert beyond =~ ":year_begins must be"
+
+    assert {:error, %ArgumentError{message: early}} =
+             Calendrical.new(T.WeekEarly, :week, year_ends: {:saturday, :on_or_after, {1, 10}})
+
+    assert early =~ ":year_ends must be"
   end
 
-  test "use Calendrical.Base.Week refuses a pairing it cannot keep" do
-    assert_raise ArgumentError, ~r/:begins_or_ends :begins needs first_or_last: :first/, fn ->
+  test "left out, the year begins on the Monday on or before 1 January" do
+    assert {:ok, default} = Calendrical.new(T.WeekDefault, :week, [])
+    assert default.info().weeks.first_day == 1
+    assert default.date_from_iso_days(Date.to_gregorian_days(~D[2026-01-01])) == {2026, 1, 4}
+  end
+
+  test "a month calendar refuses them" do
+    assert {:error, %ArgumentError{message: message}} =
+             Calendrical.new(T.MonthEndsFirst, :month,
+               year_ends: {:saturday, :nearest, {1, 31}},
+               year_begins: {7, 1}
+             )
+
+    assert message =~ "unknown options [:year_ends]"
+  end
+
+  test "use Calendrical.Calendar.Weeks refuses a rule it cannot keep" do
+    assert_raise ArgumentError, ~r/:year_begins or :year_ends, not both/, fn ->
       Code.compile_string("""
-      defmodule Calendrical.BeginsOrEndsTest.UseBeginsLast do
-        use Calendrical.Base.Week, begins_or_ends: :begins, first_or_last: :last
+      defmodule Calendrical.BeginsOrEndsTest.UseBoth do
+        use Calendrical.Calendar.Weeks,
+          year_begins: {:monday, :on_or_before, {1, 4}},
+          year_ends: {:saturday, :nearest, {1, 31}}
       end
       """)
     end

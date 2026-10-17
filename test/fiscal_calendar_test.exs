@@ -133,7 +133,7 @@ defmodule Calendrical.FiscalCalendar.Test do
     end
 
     test "while its year stays the fiscal year", %{au: au, august: august} do
-      assert Calendrical.calendar_year(august) == 2027
+      assert august.year == 2027
       assert au.cardinal_year(2027, 2, 10) == 2026
       assert Calendrical.Interval.year(august) == au.year(2027)
     end

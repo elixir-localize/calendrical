@@ -35,8 +35,8 @@ defmodule Calendrical.Chinese.RoundTrip.Test do
 
   property "Date Round Trip" do
     check all(iso_days <- Chinese.DateGenerator.generate_iso_days(), max_runs: @max_runs) do
-      date = Chinese.date_from_iso_days(iso_days)
-      assert Chinese.date_to_iso_days(date) == iso_days
+      {year, month, day} = Chinese.date_from_iso_days(iso_days)
+      assert Chinese.date_to_iso_days(year, month, day) == iso_days
     end
   end
 

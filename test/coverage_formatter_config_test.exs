@@ -243,9 +243,9 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
     test "known_fiscal_years/0 returns configurations keyed by territory" do
       fiscal_years = FiscalYear.known_fiscal_years()
 
-      assert fiscal_years[:US] == [calendar: Calendrical.Gregorian, month_of_year: 10]
-      assert fiscal_years[:GB] == [calendar: Calendrical.Gregorian, month_of_year: 4]
-      assert fiscal_years[:AU] == [calendar: Calendrical.Gregorian, month_of_year: 7]
+      assert fiscal_years[:US] == [base: Calendrical.Gregorian, year_begins: {10, 1}]
+      assert fiscal_years[:GB] == [base: Calendrical.Gregorian, year_begins: {4, 1}]
+      assert fiscal_years[:AU] == [base: Calendrical.Gregorian, year_begins: {7, 1}]
     end
 
     test "known_fiscal_calendars/0 lists every configured territory" do
@@ -261,7 +261,7 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
     test "returns a configured calendar module for a known territory" do
       assert {:ok, calendar} = FiscalYear.calendar_for(:AU)
       assert calendar == Calendrical.FiscalYear.AU
-      assert calendar.__config__().month_of_year == 7
+      assert calendar.base_date(2027, 1, 1) == {2026, 7, 1}
     end
 
     test "is idempotent and accepts string territory codes" do
@@ -283,75 +283,62 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
   # ── Config validation via Calendrical.new/3 ─────────────────────
 
   describe "Calendrical.new/3 config validation" do
-    test "rejects a :day_of_week outside 1..7" do
-      assert Calendrical.new(Coverage.BadDay, :week, day_of_week: 9) ==
-               {:error, ":day_of_week must be in the range 1..7. Found 9."}
+    test "rejects a weekday the rule does not name" do
+      assert {:error, %ArgumentError{message: message}} =
+               Calendrical.new(Coverage.BadDay, :week,
+                 year_begins: {:funday, :on_or_before, {1, 4}}
+               )
+
+      assert message =~ ":year_begins must be"
     end
 
-    test "rejects :day_of_week :first for week calendars" do
-      assert Calendrical.new(Coverage.BadFirst, :week, day_of_week: :first) ==
-               {:error, ":day_of_week must be in the range 1..7. Found :first."}
-    end
-
-    test "accepts :day_of_week :first for month calendars" do
+    test "accepts weeks counted from the first day of the year for month calendars" do
       assert {:ok, Coverage.MonthFirst} =
-               Calendrical.new(Coverage.MonthFirst, :month, day_of_week: :first)
+               Calendrical.new(Coverage.MonthFirst, :month, weeks: :from_first_day)
     end
 
-    test "rejects a :min_days_in_first_week outside 1..7" do
-      assert Calendrical.new(Coverage.BadMinDays, :week, min_days_in_first_week: 9) ==
-               {:error, ":min_days_in_first_week must be in the range 1..7. Found 9."}
+    test "rejects a day beyond the first week of the year" do
+      assert {:error, %ArgumentError{message: message}} =
+               Calendrical.new(Coverage.BadMinDays, :week,
+                 year_begins: {:monday, :on_or_before, {1, 9}}
+               )
+
+      assert message =~ ":year_begins must be"
     end
 
-    test "rejects an unknown :weeks_in_month layout" do
-      assert Calendrical.new(Coverage.BadWeeks, :week, weeks_in_month: [3, 3, 3]) ==
-               {:error, ":weeks_in_month must be [4,4,5], [4,5,4] or [5,4,4]. Found [3, 3, 3]"}
+    test "rejects an unknown :pattern" do
+      assert {:error, %ArgumentError{message: message}} =
+               Calendrical.new(Coverage.BadWeeks, :week, pattern: [3, 3, 3])
+
+      assert message =~ "[4,4,5], [4,5,4] or [5,4,4]"
     end
 
-    test "rejects a :month_of_year outside 1..12" do
-      assert Calendrical.new(Coverage.BadMonth, :month, month_of_year: 15) ==
-               {:error, ":month_of_year must be in the range 1..12. Found 15."}
+    test "rejects a :year_begins month outside the base calendar's" do
+      assert {:error, %ArgumentError{message: message}} =
+               Calendrical.new(Coverage.BadMonth, :month, year_begins: {15, 1})
+
+      assert message =~ ":year_begins must be {month, day} of the base calendar"
     end
 
-    test "rejects an unknown :year policy" do
-      assert Calendrical.new(Coverage.BadYear, :week, year: :bogus) ==
-               {:error, ":year must be either :beginning, :ending or :majority. Found :bogus."}
+    test "rejects an unknown :year_number policy" do
+      assert {:error, %ArgumentError{message: message}} =
+               Calendrical.new(Coverage.BadYear, :week, year_number: :bogus)
+
+      assert message =~ ":beginning, :ending or :majority"
     end
 
     test "rejects an unknown :cldr_calendar_type" do
-      assert Calendrical.new(Coverage.BadType, :week, cldr_calendar_type: :hebrew) ==
-               {:error,
-                ":cldr_calendar_type must be either :gregorian or :japanese. Found :hebrew."}
+      assert {:error, %ArgumentError{message: message}} =
+               Calendrical.new(Coverage.BadType, :week, cldr_calendar_type: :hebrew)
+
+      assert message =~ ":cldr_calendar_type must be"
     end
 
-    test "rejects an unknown :first_or_last" do
-      assert Calendrical.new(Coverage.BadFirstOrLast, :week, first_or_last: :middle) ==
-               {:error, ":first_or_last must be :first or :last. Found :middle."}
-    end
+    test "refuses unrecognised options" do
+      assert {:error, %ArgumentError{message: message}} =
+               Calendrical.new(Coverage.BogusOption, :week, bogus_option: 1)
 
-    test "rejects an unknown :begins_or_ends" do
-      assert Calendrical.new(Coverage.BadBeginsOrEnds, :week, begins_or_ends: :maybe) ==
-               {:error, ":begins_or_ends must be :begins or :ends. Found :maybe."}
-    end
-
-    test "raises for the retired :day, :month and :min_days options" do
-      assert_raise ArgumentError, "Option :day is replaced with :day_of_week", fn ->
-        Calendrical.new(Coverage.OldDay, :week, day: 1)
-      end
-
-      assert_raise ArgumentError, "Option :month is replaced with :month_of_year", fn ->
-        Calendrical.new(Coverage.OldMonth, :week, month: 1)
-      end
-
-      assert_raise ArgumentError,
-                   "Option :min_days is replaced with :min_days_in_first_week",
-                   fn -> Calendrical.new(Coverage.OldMinDays, :week, min_days: 4) end
-    end
-
-    test "raises for unrecognised options" do
-      assert_raise ArgumentError, ~r/Invalid options \[bogus_option: 1\] found/, fn ->
-        Calendrical.new(Coverage.BogusOption, :week, bogus_option: 1)
-      end
+      assert message =~ "unknown options [:bogus_option]"
     end
 
     test "returns an already-loaded module without recreating it" do

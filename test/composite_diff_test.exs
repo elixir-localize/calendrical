@@ -1,7 +1,7 @@
 defmodule Calendrical.CompositeDiffTest do
   @moduledoc """
   The count of years, quarters, months, weeks and days between two dates of
-  a composite calendar: the inverse of its `plus/6`, the largest count it can
+  a composite calendar: the inverse of its `shift/6`, the largest count it can
   add to the earlier date without passing the later.
 
   The counts expected here are worked by hand from the days themselves. Where
@@ -89,10 +89,10 @@ defmodule Calendrical.CompositeDiffTest do
     end
   end
 
-  # The count is the inverse of `plus/6`: the largest count that does not
+  # The count is the inverse of `shift/6`: the largest count that does not
   # pass the later date. About the changes of calendar below every day has a
-  # date of its own, so the day `plus/6` reaches is the day its date names.
-  describe "is the largest count plus/6 can add without passing the later date" do
+  # date of its own, so the day `shift/6` reaches is the day its date names.
+  describe "is the largest count shift/6 can add without passing the later date" do
     test "about each change of calendar" do
       {:ok, russia} = Calendrical.Reform.calendar_for(:RU)
 
@@ -187,7 +187,7 @@ defmodule Calendrical.CompositeDiffTest do
   end
 
   defp reached(calendar, {year, month, day}, date_part, count) do
-    {year, month, day} = calendar.plus(year, month, day, date_part, count)
+    {year, month, day} = calendar.shift(year, month, day, date_part, count)
     calendar.date_to_iso_days(year, month, day)
   end
 end

@@ -53,12 +53,12 @@ defmodule Calendrical.Islamic.Observational do
 
   """
 
-  use Calendrical.Behaviour,
+  use Calendrical.Calendar,
     epoch: ~D[0622-07-19 Calendrical.Gregorian],
     cldr_calendar_type: :islamic,
-    months_in_ordinary_year: 12,
-    months_in_leap_year: 12,
-    first_day_of_week: 7
+    months_in_year: 12,
+    weeks: [first_day: 7],
+    month_lengths: Map.new(1..12, &{&1, 29..30//1})
 
   alias Calendrical.Islamic.Visibility
 
@@ -167,96 +167,6 @@ defmodule Calendrical.Islamic.Observational do
   @spec leap_year?(year) :: boolean()
   def leap_year?(year) do
     days_in_year(year) > 354
-  end
-
-  @doc """
-  Returns the number of days in the given Hijri `year`.
-
-  ### Arguments
-
-  * `year` is any Hijri year as an integer.
-
-  ### Returns
-
-  * `354` for an ordinary year or `355` for a leap year.
-
-  ### Examples
-
-      iex> Calendrical.Islamic.Observational.days_in_year(1446)
-      355
-
-  """
-  @impl true
-  @spec days_in_year(year) :: 354..355
-  def days_in_year(year) do
-    date_to_iso_days(year + 1, 1, 1) - date_to_iso_days(year, 1, 1)
-  end
-
-  @doc """
-  Returns `{year, week_in_year}` for the given Islamic date.
-
-  Weeks run Sunday (al-Ahad, “the first”) through Saturday, the
-  calendar's own week boundary. Week 1 is the week containing
-  1 Muharram, so a year that opens mid-week has a short
-  first week. Every date numbers within its own year; weeks do
-  not spill into the adjacent year's numbering.
-
-  ### Arguments
-
-  * `year` is any Islamic year as an integer.
-
-  * `month` is a Islamic month number.
-
-  * `day` is a Islamic day-of-month.
-
-  ### Returns
-
-  * A two-tuple `{year, week_in_year}`, or
-
-  * `{:error, :invalid_date}` if the date is not valid.
-
-  ### Examples
-
-      iex> Calendrical.Islamic.Observational.week_of_year(1447, 1, 1)
-      {1447, 1}
-
-      iex> Calendrical.Islamic.Observational.week_of_year(1447, 9, 1)
-      {1447, 35}
-
-  """
-  @impl true
-  @spec week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
-          {Calendar.year(), Calendar.week()} | Calendrical.date_error()
-  def week_of_year(year, month, day) do
-    Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
-  end
-
-  @doc """
-  Returns the number of weeks in the given Islamic `year`.
-
-  ### Arguments
-
-  * `year` is any Islamic year as an integer.
-
-  ### Returns
-
-  * A two-tuple `{weeks_in_year, days_in_last_week}` where the
-    final week is short when the year does not end on the last
-    day of the calendar's week, or
-
-  * `{:error, :invalid_date}` if `year` is not valid.
-
-  ### Examples
-
-      iex> Calendrical.Islamic.Observational.weeks_in_year(1447)
-      {52, 2}
-
-  """
-  @impl true
-  @spec weeks_in_year(Calendar.year()) ::
-          {Calendrical.week(), Calendar.day()} | {:error, :invalid_date}
-  def weeks_in_year(year) do
-    Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
   end
 
   @doc """
@@ -427,77 +337,4 @@ defmodule Calendrical.Islamic.Observational do
     months_elapsed = (year - 1) * 12 + (month - 1)
     epoch() + floor((months_elapsed + 0.5) * @mean_synodic_month)
   end
-
-  @doc """
-  Returns the number of days in the given month, whatever its year.
-
-  Every month has 29 or 30 days, as the crescent is first seen.
-
-  ### Arguments
-
-  * `month` is a month number, 1..12.
-
-  ### Returns
-
-  * `{:ambiguous, 29..30}` for months 1..12.
-
-  * `{:error, :undefined}` for any other value.
-
-  ### Examples
-
-      iex> Calendrical.Islamic.Observational.days_in_month(9)
-      {:ambiguous, 29..30}
-
-  """
-  @impl true
-  def days_in_month(month) when month in 1..12, do: {:ambiguous, 29..30}
-  def days_in_month(_month), do: {:error, :undefined}
-
-  @doc """
-  Returns the months a year has, as runs of their numbers: the twelve,
-  and none for a year the ephemeris does not cover, which this calendar
-  cannot reckon and so does not have.
-
-  ### Examples
-
-      iex> Calendrical.Islamic.Observational.month_numbers(1446)
-      [1..12]
-
-      iex> Calendrical.Islamic.Observational.month_numbers(1750)
-      []
-
-  """
-  @impl true
-  def month_numbers(year) when is_integer(year) and year >= 1 do
-    case month_length(year, 1) do
-      {:ok, _days} -> [1..12//1]
-      {:error, _date} -> []
-    end
-  end
-
-  def month_numbers(_year), do: []
-
-  @doc """
-  Returns the days a month of a year has, as runs of their numbers, and
-  none for a month the year does not have or the ephemeris does not
-  cover.
-
-  ### Examples
-
-      iex> Calendrical.Islamic.Observational.day_numbers(1446, 1)
-      [1..30]
-
-      iex> Calendrical.Islamic.Observational.day_numbers(1750, 1)
-      []
-
-  """
-  @impl true
-  def day_numbers(year, month) when is_integer(year) and year >= 1 and month in 1..12 do
-    case month_length(year, month) do
-      {:ok, days} -> [1..days//1]
-      {:error, _date} -> []
-    end
-  end
-
-  def day_numbers(_year, _month), do: []
 end

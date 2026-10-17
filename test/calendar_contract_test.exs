@@ -145,8 +145,8 @@ defmodule Calendrical.CalendarContract.Test do
 
         named =
           case calendar.month_of_year(date.year, date.month, date.day) do
-            {month, _leap} -> calendar.cardinal_month(month)
-            month -> calendar.cardinal_month(month)
+            {month, _leap} -> month
+            month -> month
           end
 
         spans = calendar.named_month(date.year, named)
@@ -251,20 +251,20 @@ defmodule Calendrical.CalendarContract.Test do
                  Date.to_gregorian_days(date) + 7
 
         {year, month, day} =
-          calendar.plus(date.year, date.month, date.day, :quarters, 1, coerce: true)
+          calendar.shift(date.year, date.month, date.day, :quarters, 1, clamp: true)
 
         assert calendar.valid_date?(year, month, day)
       end
 
       # A sighting calendar's every date costs a crescent search, so it counts
       # back a single period; its arithmetic is the tabular calendars'.
-      test "diff/3 counts back what plus/6 adds", %{date: date} do
+      test "diff/3 counts back what shift/6 adds", %{date: date} do
         calendar = unquote(calendar)
         from = {date.year, date.month, date.day}
         counts = if calendar in @sighting_calendars, do: [0, 1], else: [0, 1, 13]
 
         for date_part <- [:years, :quarters, :months, :weeks, :days], count <- counts do
-          to = calendar.plus(date.year, date.month, date.day, date_part, count, coerce: true)
+          to = calendar.shift(date.year, date.month, date.day, date_part, count, clamp: true)
 
           assert calendar.diff(from, to, date_part) == count
           assert calendar.diff(to, from, date_part) == -count
@@ -318,7 +318,7 @@ defmodule Calendrical.CalendarContract.Test do
             assert first <= iso_days and iso_days <= last
           end
 
-          {weeks, _days_in_last_week} = calendar.weeks_in_year(date.year)
+          weeks = calendar.weeks_in_year(date.year)
 
           1..weeks
           |> Enum.map(&Calendrical.Interval.week(date.year, &1, calendar))

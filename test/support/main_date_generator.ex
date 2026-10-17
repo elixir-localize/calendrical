@@ -22,7 +22,7 @@ defmodule Calendrical.Test.DateGenerator do
                            day <- StreamData.integer(1..7),
                            calendar <- StreamData.member_of(@week_calendars)
                          ) do
-      {weeks_in_year, _days_in_last_week} = Calendrical.weeks_in_year(year, calendar)
+      weeks_in_year = Calendrical.weeks_in_year(year, calendar)
       week = min(week, weeks_in_year)
       %Date{} = date = calendar.date_from_week_date(year, week, day)
       date

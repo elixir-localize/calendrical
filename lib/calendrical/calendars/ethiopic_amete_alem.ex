@@ -28,12 +28,12 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
 
   """
 
-  use Calendrical.Behaviour,
+  use Calendrical.Calendar,
     epoch: Date.new!(-5492, 7, 17, Calendrical.Gregorian),
     cldr_calendar_type: :ethiopic_amete_alem,
-    months_in_ordinary_year: 13,
-    months_in_leap_year: 13,
-    first_day_of_week: 7
+    months_in_year: 13,
+    weeks: [first_day: 7],
+    years_in_cycle: 28
 
   @type year :: integer()
   @type month :: 1..13
@@ -171,132 +171,6 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
   end
 
   @doc """
-  Returns the number of days in the given Amete Alem `year`.
-
-  ### Arguments
-
-  * `year` is any Amete Alem year as an integer.
-
-  ### Returns
-
-  * `365` for an ordinary year or `366` for a leap year.
-
-  ### Examples
-
-      iex> Calendrical.Ethiopic.AmeteAlem.days_in_year(7518)
-      365
-
-      iex> Calendrical.Ethiopic.AmeteAlem.days_in_year(7519)
-      366
-
-  """
-  @impl true
-  @spec days_in_year(year) :: 365..366
-  def days_in_year(year) do
-    Calendrical.Ethiopic.days_in_year(amete_mihret_year(year))
-  end
-
-  @doc """
-  Returns `{year, week_in_year}` for the given Amete Alem date.
-
-  Weeks run Sunday (እሁድ, Ehud — “the first”) through Saturday, the
-  calendar's own week boundary. Week 1 is the week containing
-  1 Meskerem, so a year that opens mid-week has a short
-  first week. Every date numbers within its own year; weeks do
-  not spill into the adjacent year's numbering.
-
-  ### Arguments
-
-  * `year` is any Amete Alem year as an integer.
-
-  * `month` is a Amete Alem month number.
-
-  * `day` is a Amete Alem day-of-month.
-
-  ### Returns
-
-  * A two-tuple `{year, week_in_year}`, or
-
-  * `{:error, :invalid_date}` if the date is not valid.
-
-  ### Examples
-
-      iex> Calendrical.Ethiopic.AmeteAlem.week_of_year(7518, 1, 1)
-      {7518, 1}
-
-      iex> Calendrical.Ethiopic.AmeteAlem.week_of_year(7518, 7, 1)
-      {7518, 27}
-
-  """
-  @impl true
-  @spec week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
-          {Calendar.year(), Calendar.week()} | Calendrical.date_error()
-  def week_of_year(year, month, day) do
-    Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
-  end
-
-  @doc """
-  Returns the number of weeks in the given Amete Alem `year`.
-
-  ### Arguments
-
-  * `year` is any Amete Alem year as an integer.
-
-  ### Returns
-
-  * A two-tuple `{weeks_in_year, days_in_last_week}` where the
-    final week is short when the year does not end on the last
-    day of the calendar's week, or
-
-  * `{:error, :invalid_date}` if `year` is not valid.
-
-  ### Examples
-
-      iex> Calendrical.Ethiopic.AmeteAlem.weeks_in_year(7518)
-      {53, 5}
-
-  """
-  @impl true
-  @spec weeks_in_year(Calendar.year()) ::
-          {Calendrical.week(), Calendar.day()} | {:error, :invalid_date}
-  def weeks_in_year(year) do
-    Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
-  end
-
-  @doc """
-  Returns the quarter of the Amete Alem year that holds the given
-  `year`, `month`, and `day`: three months each, with the thirteenth
-  month (Pagume) in the fourth.
-
-  ### Arguments
-
-  * `year` is any Amete Alem year as an integer.
-
-  * `month` is an Ethiopic month in the range `1..13`.
-
-  * `day` is an Ethiopic day-of-month.
-
-  ### Returns
-
-  * The quarter, `1..4`, or
-
-  * `{:error, :invalid_date}` for a month the year does not have.
-
-  ### Examples
-
-      iex> Calendrical.Ethiopic.AmeteAlem.quarter_of_year(7518, 1, 1)
-      1
-
-      iex> Calendrical.Ethiopic.AmeteAlem.quarter_of_year(7518, 13, 1)
-      4
-
-  """
-  @impl true
-  def quarter_of_year(year, month, _day) do
-    Calendrical.Period.period_number_of_month(__MODULE__, year, month, 3)
-  end
-
-  @doc """
   Returns whether the given `year`, `month`, and `day` form a valid
   Amete Alem date.
 
@@ -333,47 +207,6 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
   end
 
   def valid_date?(_year, _month, _day), do: false
-
-  @doc """
-  Returns the day of the week for the given Amete Alem `year`,
-  `month`, and `day`.
-
-  The Ethiopic week begins on Sunday (እሁድ, Ehud — literally "the
-  first"), so days number Sunday = 1 through Saturday = 7.
-
-  ### Arguments
-
-  * `year` is any Amete Alem year as an integer.
-
-  * `month` is an Ethiopic month in the range `1..13`.
-
-  * `day` is an Ethiopic day-of-month.
-
-  * `starting_on` is `:default` for the calendar's natural
-    Sunday-first numbering, or an explicit weekday
-    (`:monday` .. `:sunday`) to renumber the week relative to
-    that start.
-
-  ### Returns
-
-  * A three-tuple `{day_of_week, first_day_of_week, last_day_of_week}`.
-
-  ### Examples
-
-      iex> Calendrical.Ethiopic.AmeteAlem.day_of_week(7518, 1, 1, :default)
-      {5, 1, 7}
-
-  """
-  @impl true
-  @spec day_of_week(
-          year,
-          month,
-          day,
-          :default | :monday | :tuesday | :wednesday | :thursday | :friday | :saturday | :sunday
-        ) :: {1..7, 1, 7}
-  def day_of_week(year, month, day, starting_on) do
-    Calendrical.Ethiopic.day_of_week(amete_mihret_year(year), month, day, starting_on)
-  end
 
   # ── Calendar conversion ──────────────────────────────────────────────────
 
@@ -430,43 +263,4 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
     {am_year, month, day} = Calendrical.Ethiopic.date_from_iso_days(iso_days)
     {amete_alem_year(am_year), month, day}
   end
-
-  @doc """
-  Returns the number of days in the given month, whatever its year.
-
-  Twelve months have 30 days; the thirteenth has 6 in a leap year and 5 otherwise.
-
-  ### Arguments
-
-  * `month` is a month number, 1..13.
-
-  ### Returns
-
-  * The number of days, where the month has as many in every year.
-
-  * `{:ambiguous, range}` where the month's length depends on the year.
-
-  * `{:error, :undefined}` for any other value.
-
-  ### Examples
-
-      iex> Calendrical.Ethiopic.AmeteAlem.days_in_month(1)
-      30
-
-      iex> Calendrical.Ethiopic.AmeteAlem.days_in_month(13)
-      {:ambiguous, 5..6}
-
-  """
-  @impl true
-  def days_in_month(month) when month in 1..12, do: 30
-  def days_in_month(13), do: {:ambiguous, 5..6}
-  def days_in_month(_month), do: {:error, :undefined}
-
-  @doc """
-  Returns the number of years after which this calendar's years repeat,
-  their days and their weekdays alike: 28, seven of its cycles of four years.
-
-  """
-  @impl true
-  def years_in_cycle, do: 28
 end

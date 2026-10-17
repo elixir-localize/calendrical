@@ -30,9 +30,13 @@ defmodule Calendrical.Info do
 
   @typedoc """
   The lengths a month can have, by month: a count of days where the
-  month has as many in every year, or the range of its lengths.
+  month has as many in every year, the range of its lengths where every
+  length between the fewest and the most occurs, and otherwise the list
+  of the lengths that do.
   """
-  @type month_lengths :: %{optional(Calendar.month()) => Calendar.day() | Range.t()}
+  @type month_lengths :: %{
+          optional(Calendar.month()) => Calendar.day() | Range.t() | [Calendar.day(), ...]
+        }
 
   @typedoc """
   The place an astronomical calendar is reckoned at, as a function of the
@@ -62,6 +66,7 @@ defmodule Calendrical.Info do
           location: location() | nil,
           month_lengths: month_lengths() | nil,
           parsing_calendar: module(),
+          family: module() | nil,
           members: [member(), ...] | nil
         }
 
@@ -78,11 +83,17 @@ defmodule Calendrical.Info do
             location: nil,
             month_lengths: nil,
             parsing_calendar: nil,
+            family: Calendrical,
             members: nil
 
   @doc """
   Builds the facts about a calendar from the fields given, with the
   defaults a calendar leaves unsaid.
+
+  `:family` names the module that answers `calendar_from_cldr_calendar_type/1`
+  for the calendars of this calendar's family, `Calendrical` for every
+  calendar Calendrical builds: Localize asks it for the calendar a locale's
+  `-u-ca-` names, without asking the calendar module itself.
 
   ### Arguments
 
@@ -116,43 +127,239 @@ defmodule Calendrical.Info do
     |> Map.update!(:parsing_calendar, &(&1 || calendar))
   end
 
-  @doc false
-  # The facts a calendar answers through the callbacks every maker
-  # generates today, gathered into a struct, with the fields a maker knows
-  # on its own (`:epoch`, `:year_zero?`, `:weeks`, `:year_cycle`,
-  # `:location`, `:members`) given alongside. While the callbacks are the
-  # source of the facts, a calendar's overrides of them are reflected here;
-  # once the facts live here, the callbacks read them instead.
-  @spec gather(module(), keyword()) :: t()
-  def gather(calendar, fields) when is_atom(calendar) and is_list(fields) do
-    new(
-      calendar,
-      Keyword.merge(
-        [
-          cldr_calendar_type: calendar.cldr_calendar_type(),
-          era_calendar_type: calendar.era_calendar_type(),
-          structure: structure(calendar.calendar_base()),
-          months_in_year: months_in_year(calendar),
-          years_in_cycle: cycle(calendar.years_in_cycle()),
-          parsing_calendar: calendar.parsing_calendar(),
-          month_lengths: month_lengths(calendar)
-        ],
-        fields
-      )
-    )
+  @doc """
+  Returns what a calendar's year is built of, `:month` or `:week`, as its
+  `info/0` states.
+
+  ### Arguments
+
+  * `calendar` is a calendar module.
+
+  ### Returns
+
+  * `:week` where the calendar's structure is `:weeks`, `:month` otherwise.
+
+  ### Examples
+
+      iex> Calendrical.Info.calendar_base(Calendrical.Gregorian)
+      :month
+
+      iex> Calendrical.Info.calendar_base(Calendrical.ISOWeek)
+      :week
+
+  """
+  @spec calendar_base(module()) :: :month | :week
+  def calendar_base(calendar) do
+    if calendar.info().structure == :weeks, do: :week, else: :month
   end
 
-  defp structure(:week), do: :weeks
-  defp structure(:month), do: :months
+  @doc """
+  Returns the number of years after which a calendar's years repeat, as
+  its `info/0` states.
 
-  defp cycle({:error, :undefined}), do: nil
-  defp cycle(years) when is_integer(years), do: years
+  ### Arguments
 
-  defp months_in_year(calendar) do
-    case calendar.months_in_year_bounds() do
-      {:error, :undefined} -> {1, 13}
-      {fewest, most} -> {fewest, most}
+  * `calendar` is a calendar module.
+
+  ### Returns
+
+  * The number of years in the cycle, or `{:error, :undefined}` where the
+    calendar states none.
+
+  ### Examples
+
+      iex> Calendrical.Info.years_in_cycle(Calendrical.Gregorian)
+      400
+
+      iex> Calendrical.Info.years_in_cycle(Calendrical.Chinese)
+      {:error, :undefined}
+
+  """
+  @spec years_in_cycle(module()) :: pos_integer() | {:error, :undefined}
+  def years_in_cycle(calendar) do
+    calendar.info().years_in_cycle || {:error, :undefined}
+  end
+
+  @doc """
+  Returns the place a calendar is reckoned at, as its `info/0` states, or
+  the Chinese calendar's meridian, the traditional reference, where it
+  names none.
+
+  ### Arguments
+
+  * `calendar` is a calendar module.
+
+  ### Returns
+
+  * A `t:location/0` function.
+
+  ### Examples
+
+      iex> Calendrical.Info.location(Calendrical.Chinese) == (&Calendrical.Chinese.location/1)
+      true
+
+      iex> Calendrical.Info.location(Calendrical.Gregorian) == (&Calendrical.Chinese.location/1)
+      true
+
+  """
+  @spec location(module()) :: location()
+  def location(calendar) do
+    calendar.info().location || (&Calendrical.Chinese.location/1)
+  end
+
+  @doc """
+  Returns the number of months in a calendar's year without a year, as
+  its `info/0` states.
+
+  ### Arguments
+
+  * `calendar` is a calendar module.
+
+  ### Returns
+
+  * The count where every year has as many months,
+    `{:ambiguous, fewest..most}` where a leap year has more, or
+    `{:error, :undefined}` for a composite calendar, whose years change
+    calendar and so are not alike enough to count without a year;
+    `Calendrical.Month.months_in_year_bounds/1` gives its bounds.
+
+  ### Examples
+
+      iex> Calendrical.Info.months_in_year(Calendrical.Gregorian)
+      12
+
+      iex> Calendrical.Info.months_in_year(Calendrical.Hebrew)
+      {:ambiguous, 12..13}
+
+      iex> Calendrical.Info.months_in_year(Calendrical.Reform.England)
+      {:error, :undefined}
+
+  """
+  @spec months_in_year(module()) ::
+          pos_integer() | {:ambiguous, Range.t()} | {:error, :undefined}
+  def months_in_year(calendar) do
+    case calendar.info() do
+      %{members: [_ | _]} -> {:error, :undefined}
+      %{months_in_year: {months, months}} -> months
+      %{months_in_year: {fewest, most}} -> {:ambiguous, fewest..most//1}
     end
+  end
+
+  @doc """
+  Returns the CLDR calendar type whose data names a date's months and
+  days: that of the member calendar in effect on the date in a composite
+  calendar, by the order of the date's fields, and the calendar's own
+  otherwise.
+
+  ### Arguments
+
+  * `calendar` is a calendar module.
+
+  * `year`, `month` and `day` are a date of the calendar.
+
+  ### Returns
+
+  * A CLDR calendar type.
+
+  ### Examples
+
+      iex> Calendrical.Info.cldr_calendar_type(Calendrical.Gregorian, 2026, 1, 1)
+      :gregorian
+
+      iex> Calendrical.Info.cldr_calendar_type(Calendrical.Reform.Japan, 1870, 1, 1)
+      :chinese
+
+      iex> Calendrical.Info.cldr_calendar_type(Calendrical.Reform.Japan, 1900, 1, 1)
+      :japanese
+
+  """
+  @spec cldr_calendar_type(module(), Calendar.year(), Calendar.month(), Calendar.day()) :: atom()
+  def cldr_calendar_type(calendar, year, month, day) do
+    case member_in_effect(calendar, year, month, day) do
+      nil -> calendar.info().cldr_calendar_type
+      member -> member.info().cldr_calendar_type
+    end
+  end
+
+  @doc """
+  Returns the calendars a date written for a calendar may be written in:
+  the members of a composite calendar, in the order they take effect, and
+  the calendar itself otherwise.
+
+  ### Arguments
+
+  * `calendar` is a calendar module.
+
+  ### Returns
+
+  * A list of calendar modules.
+
+  ### Examples
+
+      iex> Calendrical.Info.parsing_calendars(Calendrical.Gregorian)
+      [Calendrical.Gregorian]
+
+      iex> Calendrical.Info.parsing_calendars(Calendrical.Reform.Japan)
+      [Calendrical.LunarJapanese, Calendrical.Japanese]
+
+  """
+  @spec parsing_calendars(module()) :: [module(), ...]
+  def parsing_calendars(calendar) do
+    case calendar.info().members do
+      nil -> [calendar]
+      members -> members |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
+    end
+  end
+
+  # The member of a composite calendar in effect on a date: the last whose
+  # first day, as the composite labels it, is on or before the date in the
+  # order of its fields, so a date the composite lacks is still read in the
+  # member its year falls in; `nil` for a calendar with no members.
+  defp member_in_effect(calendar, year, month, day)
+       when is_integer(year) and is_integer(month) and is_integer(day) do
+    case calendar.info().members do
+      nil ->
+        nil
+
+      members ->
+        members
+        |> Enum.take_while(fn {first, _member} ->
+          is_nil(first) or calendar.date_from_iso_days(first) <= {year, month, day}
+        end)
+        |> List.last()
+        |> elem(1)
+    end
+  end
+
+  defp member_in_effect(_calendar, _year, _month, _day), do: nil
+
+  @doc """
+  Returns the calendar whose facts govern a date: the member of a
+  composite calendar in effect on it, by the order of the date's fields,
+  and the calendar itself otherwise.
+
+  ### Arguments
+
+  * `calendar` is a calendar module.
+
+  * `year`, `month` and `day` are a date of the calendar.
+
+  ### Returns
+
+  * A calendar module.
+
+  ### Examples
+
+      iex> Calendrical.Info.in_effect(Calendrical.Reform.England, 1700, 1, 1)
+      Calendrical.Julian.March25
+
+      iex> Calendrical.Info.in_effect(Calendrical.Hebrew, 5786, 1, 1)
+      Calendrical.Hebrew
+
+  """
+  @spec in_effect(module(), Calendar.year(), Calendar.month(), Calendar.day()) :: module()
+  def in_effect(calendar, year, month, day) do
+    member_in_effect(calendar, year, month, day) || calendar
   end
 
   @doc false
@@ -164,24 +371,4 @@ defmodule Calendrical.Info do
     first_day = if first_day == :first, do: :first_day_of_year, else: first_day
     %{first_day: first_day, min_days_in_first_week: min_days_in_first_week}
   end
-
-  # The lengths a calendar states for its months without a year, as
-  # `days_in_month/1` answers them: a count, or the range of an
-  # ambiguous answer. A month the calendar cannot answer for is left out,
-  # and a calendar that answers for none states no lengths.
-  defp month_lengths(calendar) do
-    {_fewest, most} = months_in_year(calendar)
-
-    lengths =
-      for month <- 1..most, length = month_length(calendar.days_in_month(month)), into: %{} do
-        {month, length}
-      end
-
-    if map_size(lengths) == 0, do: nil, else: lengths
-  end
-
-  defp month_length(days) when is_integer(days), do: days
-  defp month_length({:ambiguous, first..last//1}), do: first..last//1
-  defp month_length({:ambiguous, [_ | _] = lengths}), do: Enum.min(lengths)..Enum.max(lengths)//1
-  defp month_length({:error, _reason}), do: nil
 end

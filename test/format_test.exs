@@ -83,7 +83,7 @@ defmodule Calendrical.Format.Test do
       This is the same as a gregorian calendar, but with Sunday starting the week.
       """
 
-      use Calendrical.Base.Month, day_of_week: Calendrical.sunday()
+      use Calendrical.Calendar.Shifted, weeks: [first_day: Calendrical.sunday()]
     end
 
     options = [

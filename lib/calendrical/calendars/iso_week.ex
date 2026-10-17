@@ -1,5 +1,3 @@
-require Calendrical.Compiler.Week
-
 defmodule Calendrical.ISOWeek do
   @moduledoc """
   Implements the ISO Week calendar.
@@ -14,7 +12,5 @@ defmodule Calendrical.ISOWeek do
   `~D[2026-W25-2 Calendrical.ISOWeek]` is `~D[2026-06-16 Calendrical.ISOWeek]`).
 
   """
-  use Calendrical.Base.Week,
-    day_of_week: 1,
-    min_days_in_first_week: 4
+  use Calendrical.Calendar.Weeks, year_begins: {:monday, :on_or_before, {1, 4}}
 end

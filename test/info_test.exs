@@ -20,7 +20,7 @@ defmodule Calendrical.Info.Test do
   for calendar <- @calendars do
     describe "#{inspect(calendar)}" do
       test "info/0 answers the facts about the calendar" do
-        calendar = unquote(calendar)
+        calendar = calendar_named(unquote(inspect(calendar)))
         info = calendar.info()
 
         assert %Calendrical.Info{calendar: ^calendar} = info
@@ -108,9 +108,16 @@ defmodule Calendrical.Info.Test do
     assert Enum.all?(changes, fn {first, _calendar} -> is_integer(first) end)
   end
 
-  test "month lengths are gathered from days_in_month/1" do
-    assert %{1 => 31, 2 => 28..29//1} = Calendrical.Gregorian.info().month_lengths
-    assert %{1 => 30, 4 => 29, 2 => 29..30//1} = Calendrical.Hebrew.info().month_lengths
-    assert is_nil(Calendrical.Reform.England.info().month_lengths)
+  test "month lengths are declared or sampled, never gathered from a callback" do
+    assert is_nil(Calendrical.Gregorian.info().month_lengths)
+    assert %{1 => 31, 2 => 28..29//1} = Calendrical.Month.lengths(Calendrical.Gregorian)
+    assert %{1 => 30, 4 => 29, 2 => 29..30//1} = Calendrical.Month.lengths(Calendrical.Hebrew)
+    assert %{1 => 29..30//1} = Calendrical.Islamic.Rgsa.info().month_lengths
+    assert %{9 => [19, 30]} = Calendrical.Month.lengths(Calendrical.Reform.England)
   end
+
+  # The calendar found by its name at runtime, so that the type checker
+  # holds the test to the behaviour's types and not to the literal facts
+  # of one calendar's `info/0`, which make every assertion a tautology.
+  defp calendar_named(name), do: Enum.find(@calendars, &(inspect(&1) == name))
 end

@@ -16,7 +16,7 @@ defmodule Calendrical.YearNumberingTest do
 
   use ExUnit.Case, async: true
 
-  alias Calendrical.Base.{Month, Week}
+  alias Calendrical.Base.Week
   alias Calendrical.Config
 
   @years 1999..2002
@@ -44,7 +44,7 @@ defmodule Calendrical.YearNumberingTest do
   defp named_year(:beginning, beginning, _ending), do: beginning
   defp named_year(:ending, _beginning, ending), do: ending
 
-  for kind <- [Month, Week],
+  for kind <- [Week],
       first_or_last <- [:first, :last],
       year_option <- [:beginning, :ending] do
     test "#{inspect(kind)} with first_or_last: #{first_or_last}, year: #{year_option}" do
@@ -67,24 +67,39 @@ defmodule Calendrical.YearNumberingTest do
     end
   end
 
-  for first_or_last <- [:first, :last] do
-    test "Calendrical.Base.Month with first_or_last: #{first_or_last}, year: :majority" do
-      # A month calendar beginning in month `m` has 13 - m months in its first
-      # Gregorian year. A tie, six and six, follows the existing convention and
-      # is not asserted here.
-      for month <- 1..12, month != 7, year <- @years do
-        config = config(month, unquote(first_or_last), :majority)
-        {beginning, ending} = beginning_and_ending(Month, year, config)
-        named = if 13 - month >= 7, do: beginning, else: ending
-        context = "month_of_year #{month}, year #{year}"
+  # A month calendar begun in month `m` is a `Calendrical.Calendar.Shifted`
+  # calendar; its year is numbered by the Gregorian year it begins in, ends
+  # in, or holds seven or more of its months. A tie, six and six, follows the
+  # existing convention and is not asserted here. The body is a function of
+  # the rule, so that the type checker holds it to every rule and not to the
+  # one each test names.
+  test "a month calendar with year_number: beginning", do: assert_year_number(:beginning)
+  test "a month calendar with year_number: ending", do: assert_year_number(:ending)
+  test "a month calendar with year_number: majority", do: assert_year_number(:majority)
 
-        assert Month.last_gregorian_day_of_year(year, config) + 1 ==
-                 Month.first_gregorian_day_of_year(year + 1, config),
-               "year does not end the day before the next begins: #{context}"
+  defp assert_year_number(year_number) do
+    for month <- 1..12, {month, year_number} != {7, :majority} do
+      name = Module.concat([__MODULE__, "Month#{month}#{year_number}"])
 
+      {:ok, calendar} =
+        Calendrical.new(name, :month, year_begins: {month, 1}, year_number: year_number)
+
+      for year <- @years do
+        first = Date.to_gregorian_days(calendar.year(year).first)
+        last = Date.to_gregorian_days(calendar.year(year).last)
+        {beginning, ending} = {gregorian_year(first + 6), gregorian_year(last - 6)}
+        named = named_year(year_number, month, beginning, ending)
+
+        context = "year_begins {#{month}, 1}, year #{year}"
+        assert last + 1 == Date.to_gregorian_days(calendar.year(year + 1).first), context
         assert named == year, "named #{named}, not #{year}: #{context}"
-        assert Month.year_of_era(year, config) == {year, 1}, "year_of_era: #{context}"
+        assert calendar.year_of_era(year) == {year, 1}, "year_of_era: #{context}"
       end
     end
   end
+
+  defp named_year(:majority, month, beginning, ending),
+    do: if(13 - month >= 7, do: beginning, else: ending)
+
+  defp named_year(rule, _month, beginning, ending), do: named_year(rule, beginning, ending)
 end

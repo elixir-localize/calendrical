@@ -696,7 +696,7 @@ defmodule Calendrical.CoverageMainTest do
   describe "defaults and module introspection" do
     test "default calendar accessors" do
       assert Calendrical.default_calendar() == Calendrical.Gregorian
-      assert Calendrical.default_coercion() == true
+      assert Calendrical.default_clamp() == true
       assert Calendrical.default_cldr_calendar() == :gregorian
       assert Calendrical.cldr_backend_provider(nil) == nil
     end
@@ -761,7 +761,7 @@ defmodule Calendrical.CoverageMainTest do
       Code.ensure_loaded!(Calendrical.Test.Calendars.Sunday)
 
       assert Calendrical.cardinal_day_of_week(2, Calendrical.ISOWeek) == 2
-      assert Calendrical.cardinal_day_of_week(1, Calendrical.NRF) == 6
+      assert Calendrical.cardinal_day_of_week(1, Calendrical.NRF) == 7
       assert Calendrical.cardinal_day_of_week(1, Calendrical.Test.Calendars.Sunday) == 7
       # A module without __config__/0 returns the day unchanged.
       assert Calendrical.cardinal_day_of_week(3, Enum) == 3
@@ -769,9 +769,9 @@ defmodule Calendrical.CoverageMainTest do
   end
 
   describe "month_day/5 and start_end_gregorian_years/2" do
-    # The day is brought into the month it is coerced to: December has 31
+    # The day is brought into the month it is clamped to: December has 31
     # days, and Elul, the last of the twelve months of 5785, 29.
-    test "month_day with and without coercion" do
+    test "month_day with and without clamping" do
       assert Calendrical.month_day(2026, 2, 31, Calendrical.Gregorian, false) == {2, 31}
       assert Calendrical.month_day(2026, 14, 31, Calendrical.Gregorian, true) == {12, 31}
       assert Calendrical.month_day(5785, 13, 30, Calendrical.Hebrew, true) == {12, 29}

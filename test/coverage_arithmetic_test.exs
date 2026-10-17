@@ -4,7 +4,11 @@ defmodule Calendrical.CoverageTest.JulianFeb1 do
   # Defined at test-load time (rather than in test/support) so that the
   # `Calendrical.Julian.__using__/1` macro executes while the module is
   # cover-compiled, exercising the macro entry point.
-  use Calendrical.Julian, new_year_starting_month_and_day: {2, 1}
+  use Calendrical.Calendar.Shifted,
+    base: Calendrical.Julian,
+    year_begins: {2, 1},
+    written_year: :label,
+    parsing_calendar: __MODULE__
 end
 
 defmodule CoverageArithmeticTest do
@@ -143,9 +147,11 @@ defmodule CoverageArithmeticTest do
     end
 
     test "13-month calendars have week ranges, ISO weeks and weeks of the month" do
+      # 1 Meskerem 2018 is a Thursday of the Ethiopic calendar's Sunday-started
+      # weeks, so its week begins on the Sunday before, in Pagume 2017
       assert Ethiopic.week(2018, 1) ==
                Date.range(
-                 ~D[2018-01-01 Calendrical.Ethiopic],
+                 ~D[2017-13-02 Calendrical.Ethiopic],
                  ~D[2018-01-03 Calendrical.Ethiopic]
                )
 
@@ -154,19 +160,19 @@ defmodule CoverageArithmeticTest do
       assert Ethiopic.week_of_month(2018, 5, 1) == {5, 1}
     end
 
-    test "calendar-aligned weeks are defined for 13-month calendars" do
+    test "whole weeks are defined for 13-month calendars" do
       assert Ethiopic.week_of_year(2018, 5, 1) == {2018, 18}
-      assert Ethiopic.weeks_in_year(2018) == {53, 5}
+      assert Ethiopic.weeks_in_year(2018) == 52
     end
   end
 
-  describe "Ethiopic and Coptic plus/6 and shift functions" do
-    test "plus :months wraps into the epagomenal month and the next year" do
-      assert Ethiopic.plus(2018, 12, 30, :months, 1) == {2018, 13, 30}
-      assert Ethiopic.plus(2018, 12, 30, :months, 1, coerce: true) == {2018, 13, 5}
-      assert Ethiopic.plus(2018, 13, 5, :months, 1, coerce: true) == {2019, 1, 5}
-      assert Ethiopic.plus(2018, 1, 1, :months, -1, coerce: true) == {2017, 13, 1}
-      assert Coptic.plus(1742, 12, 30, :months, 2, coerce: true) == {1743, 1, 30}
+  describe "Ethiopic and Coptic shift/6 and shift functions" do
+    test "shift :months wraps into the epagomenal month and the next year, clamping the day" do
+      assert Ethiopic.shift(2018, 12, 30, :months, 1) == {2018, 13, 5}
+      assert Ethiopic.shift(2018, 12, 30, :months, 1, clamp: false) == {2018, 13, 30}
+      assert Ethiopic.shift(2018, 13, 5, :months, 1, clamp: true) == {2019, 1, 5}
+      assert Ethiopic.shift(2018, 1, 1, :months, -1, clamp: true) == {2017, 13, 1}
+      assert Coptic.shift(1742, 12, 30, :months, 2, clamp: true) == {1743, 1, 30}
     end
 
     test "shift_date by months" do
@@ -191,7 +197,6 @@ defmodule CoverageArithmeticTest do
     end
 
     test "calendar identity functions" do
-      assert Ethiopic.calendar_year(2018, 1, 1) == 2018
       assert Ethiopic.extended_year(2018, 1, 1) == 2018
       assert Ethiopic.cyclic_year(2018, 1, 1) == 2018
       assert Ethiopic.month_of_year(2018, 5, 1) == 5
@@ -204,8 +209,7 @@ defmodule CoverageArithmeticTest do
       assert Ethiopic.days_in_week() == 7
       assert Ethiopic.cldr_calendar_type() == :ethiopic
       assert Ethiopic.calendar_base() == :month
-      assert Ethiopic.first_day_of_week() == 7
-      assert Ethiopic.last_day_of_week() == 6
+      assert Ethiopic.info().weeks.first_day == 7
       assert Coptic.days_in_year(1742) == 365
       assert Coptic.days_in_year(1743) == 366
     end
@@ -213,7 +217,6 @@ defmodule CoverageArithmeticTest do
     test "epoch values" do
       assert Ethiopic.epoch() == 3161
       assert Coptic.epoch() == 103_970
-      assert Ethiopic.epoch_day_of_week() == 3
     end
 
     test "parsing via the Calendar behaviour" do
@@ -264,13 +267,12 @@ defmodule CoverageArithmeticTest do
   describe "Julian calendar structure" do
     test "calendar identity" do
       assert Julian.calendar_base() == :month
-      assert Julian.calendar_year(2025, 1, 1) == 2025
       assert Julian.extended_year(2025, 1, 1) == 2025
       assert Julian.cyclic_year(2025, 1, 1) == 2025
       assert Julian.periods_in_year(2025) == 12
       assert Julian.months_in_year(2025) == 12
       assert Julian.days_in_week() == 7
-      assert Julian.weeks_in_year(2025) == {53, 2}
+      assert Julian.weeks_in_year(2025) == 52
       assert Julian.week_of_year(2025, 1, 1) == {2025, 1}
       assert Julian.day_rollover_relative_to_midnight_utc() == {0, 1}
     end
@@ -322,41 +324,43 @@ defmodule CoverageArithmeticTest do
       assert range.last == ~D[2024-02-29 Calendrical.Julian]
     end
 
-    test "week/2 is the calendar week, cut to the year" do
+    test "week/2 is the whole calendar week, which may begin in the year before" do
       assert Julian.week(2025, 1) ==
-               Date.range(~D[2025-01-01 Calendrical.Julian], ~D[2025-01-06 Calendrical.Julian])
+               Date.range(~D[2024-12-31 Calendrical.Julian], ~D[2025-01-06 Calendrical.Julian])
 
-      assert Julian.week(2025, 53) ==
-               Date.range(~D[2025-12-30 Calendrical.Julian], ~D[2025-12-31 Calendrical.Julian])
+      assert Julian.week(2025, 52) ==
+               Date.range(~D[2025-12-23 Calendrical.Julian], ~D[2025-12-29 Calendrical.Julian])
+
+      assert Julian.week(2025, 53) == {:error, :invalid_date}
 
       assert Julian.week(2025, 54) == {:error, :invalid_date}
     end
   end
 
-  describe "Julian plus/6 arithmetic" do
-    test "plus :years without coerce keeps the day" do
-      assert Julian.plus(2024, 2, 29, :years, 1) == {2025, 2, 29}
+  describe "Julian shift/6 arithmetic" do
+    test "plus :years without clamp keeps the day" do
+      assert Julian.shift(2024, 2, 29, :years, 1) == {2025, 2, 29}
     end
 
-    test "plus :months with and without coerce" do
-      assert Julian.plus(2025, 1, 31, :months, 1) == {2025, 2, 31}
-      assert Julian.plus(2025, 1, 31, :months, 1, coerce: true) == {2025, 2, 28}
+    test "plus :months with and without clamp" do
+      assert Julian.shift(2025, 1, 31, :months, 1) == {2025, 2, 31}
+      assert Julian.shift(2025, 1, 31, :months, 1, clamp: true) == {2025, 2, 28}
     end
 
     test "plus :years crossing year zero skips it" do
-      assert Julian.plus(-1, 1, 1, :years, 1) == {1, 1, 1}
-      assert Julian.plus(1, 1, 1, :years, -1) == {-1, 1, 1}
-      assert Julian.plus(-1, 2, 3, :years, 2) == {2, 2, 3}
+      assert Julian.shift(-1, 1, 1, :years, 1) == {1, 1, 1}
+      assert Julian.shift(1, 1, 1, :years, -1) == {-1, 1, 1}
+      assert Julian.shift(-1, 2, 3, :years, 2) == {2, 2, 3}
     end
 
     test "plus :months crossing year zero skips it" do
-      assert Julian.plus(1, 1, 15, :months, -1) == {-1, 12, 15}
+      assert Julian.shift(1, 1, 15, :months, -1) == {-1, 12, 15}
     end
 
     test "plus :quarters and :days" do
-      assert Julian.plus(2025, 1, 1, :quarters, 1) == {2025, 4, 1}
-      assert Julian.plus(2025, 10, 1, :quarters, -2) == {2025, 4, 1}
-      assert Julian.plus(2025, 12, 25, :days, 10) == {2026, 1, 4}
+      assert Julian.shift(2025, 1, 1, :quarters, 1) == {2025, 4, 1}
+      assert Julian.shift(2025, 10, 1, :quarters, -2) == {2025, 4, 1}
+      assert Julian.shift(2025, 12, 25, :days, 10) == {2026, 1, 4}
     end
   end
 
@@ -398,21 +402,6 @@ defmodule CoverageArithmeticTest do
     test "string conversions" do
       assert Julian.datetime_to_string(2025, 1, 1, 1, 2, 3, {0, 0}, "Etc/UTC", "UTC", 0, 0) ==
                "2025-01-01 01:02:03Z"
-
-      assert Julian.datetime_to_string(
-               2025,
-               1,
-               1,
-               1,
-               2,
-               3,
-               {0, 0},
-               "Etc/UTC",
-               "UTC",
-               0,
-               0,
-               :extended
-             ) == "2025-01-01 01:02:03Z"
 
       assert Julian.naive_datetime_to_string(2025, 1, 1, 1, 2, 3, {0, 0}) == "2025-01-01 01:02:03"
       assert Julian.time_to_string(1, 2, 3, {0, 0}) == "01:02:03"
@@ -465,7 +454,7 @@ defmodule CoverageArithmeticTest do
       end
     end
 
-    test "year/1 with a Calendar.ISO date coerces back to Calendar.ISO" do
+    test "year/1 with a Calendar.ISO date clamps back to Calendar.ISO" do
       assert Interval.year(~D[2025-06-15]) == Date.range(~D[2025-01-01], ~D[2025-12-31])
     end
 

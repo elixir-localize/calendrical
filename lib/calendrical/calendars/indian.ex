@@ -48,11 +48,11 @@ defmodule Calendrical.Indian do
 
   """
 
-  use Calendrical.Behaviour,
+  use Calendrical.Calendar,
     epoch: ~D[0079-03-22 Calendrical.Gregorian],
     cldr_calendar_type: :indian,
-    months_in_ordinary_year: 12,
-    months_in_leap_year: 12
+    months_in_year: 12,
+    years_in_cycle: 400
 
   @type year :: integer()
   @type month :: 1..12
@@ -188,32 +188,6 @@ defmodule Calendrical.Indian do
   def days_in_month(year, month) when month in 1..12 do
     table = if leap_year?(year), do: @month_lengths_leap, else: @month_lengths_ordinary
     elem(table, month - 1)
-  end
-
-  @doc """
-  Returns the number of days in the given Saka `year`.
-
-  ### Arguments
-
-  * `year` is any Saka year as an integer.
-
-  ### Returns
-
-  * `365` for an ordinary year or `366` for a leap year.
-
-  ### Examples
-
-      iex> Calendrical.Indian.days_in_year(1947)
-      365
-
-      iex> Calendrical.Indian.days_in_year(1946)
-      366
-
-  """
-  @impl true
-  @spec days_in_year(year) :: 365..366
-  def days_in_year(year) do
-    if leap_year?(year), do: 366, else: 365
   end
 
   @doc """
@@ -370,47 +344,4 @@ defmodule Calendrical.Indian do
       end
     end)
   end
-
-  @doc """
-  Returns the number of days in the given month, whatever its year.
-
-  The first month, Chaitra, has 31 days in a leap year and 30 otherwise; the next five have 31 and the last six 30.
-
-  ### Arguments
-
-  * `month` is a month number, 1..12.
-
-  ### Returns
-
-  * The number of days, where the month has as many in every year.
-
-  * `{:ambiguous, range}` where the month's length depends on the year.
-
-  * `{:error, :undefined}` for any other value.
-
-  ### Examples
-
-      iex> Calendrical.Indian.days_in_month(1)
-      {:ambiguous, 30..31}
-
-      iex> Calendrical.Indian.days_in_month(2)
-      31
-
-      iex> Calendrical.Indian.days_in_month(12)
-      30
-
-  """
-  @impl true
-  def days_in_month(1), do: {:ambiguous, 30..31}
-  def days_in_month(month) when month in 2..6, do: 31
-  def days_in_month(month) when month in 7..12, do: 30
-  def days_in_month(_month), do: {:error, :undefined}
-
-  @doc """
-  Returns the number of years after which this calendar's years repeat,
-  their days and their weekdays alike: 400, the Gregorian calendar's cycle of leap years, whose rule it follows.
-
-  """
-  @impl true
-  def years_in_cycle, do: 400
 end

@@ -475,10 +475,10 @@ defmodule Calendrical.Base.Common do
   end
 
   # The whole number of `date_part`s from `from` to `to` in `calendar`: the
-  # inverse of the calendar's own `plus/6` (coercing the day into a shorter
+  # inverse of the calendar's own `shift/6` (clamping the day into a shorter
   # month), the largest count it can add to the earlier date without passing
   # the later, negative when `to` is before `from`. A first guess from the
-  # dates' positions is corrected against `plus/6`, so each calendar's own
+  # dates' positions is corrected against `shift/6`, so each calendar's own
   # arithmetic — a skipped year zero, a leap month, a reform's missing days —
   # is honoured. A calendar with a faster month count (a leap-month formula,
   # a lunisolar calendar's new moons) passes it as `months_between`.
@@ -505,14 +505,14 @@ defmodule Calendrical.Base.Common do
   defp count(calendar, {year_from, _, _} = from, {year_to, _, _} = to, :years, _months_between),
     do: fit(calendar, from, to, :years, year_to - year_from)
 
-  # The largest count `plus/6` can add to `from` without passing `to`, stepped
+  # The largest count `shift/6` can add to `from` without passing `to`, stepped
   # to from a guess near it.
   defp fit(calendar, from, to, date_part, count) when is_integer(count) do
     cond do
-      count > 0 and past?(calendar, plus(calendar, from, date_part, count), to) ->
+      count > 0 and past?(calendar, shift(calendar, from, date_part, count), to) ->
         fit(calendar, from, to, date_part, count - 1)
 
-      not past?(calendar, plus(calendar, from, date_part, count + 1), to) ->
+      not past?(calendar, shift(calendar, from, date_part, count + 1), to) ->
         fit(calendar, from, to, date_part, count + 1)
 
       true ->
@@ -520,8 +520,8 @@ defmodule Calendrical.Base.Common do
     end
   end
 
-  defp plus(calendar, {year, month, day}, date_part, count),
-    do: calendar.plus(year, month, day, date_part, count, coerce: true)
+  defp shift(calendar, {year, month, day}, date_part, count),
+    do: calendar.shift(year, month, day, date_part, count, clamp: true)
 
   defp past?(calendar, date, limit), do: iso_days(calendar, date) > iso_days(calendar, limit)
 

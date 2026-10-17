@@ -67,6 +67,26 @@ defmodule Calendrical.Composite.Compiler do
       @doc false
       def __config__, do: @calendar_config
 
+      # The CLDR calendar that names the eras: the one the members share,
+      # and otherwise the one that names the months and days.
+      defp era_of_members do
+        @member_calendars
+        |> Enum.map(& &1.info().era_calendar_type)
+        |> Enum.uniq()
+        |> case do
+          [era_calendar_type] -> era_calendar_type
+          _era_calendar_types -> @cldr_calendar_type
+        end
+      end
+
+      # The fewest and the most months a year of any member has.
+      defp months_of_members do
+        bounds = Enum.map(@member_calendars, & &1.info().months_in_year)
+
+        {bounds |> Enum.map(&elem(&1, 0)) |> Enum.min(),
+         bounds |> Enum.map(&elem(&1, 1)) |> Enum.max()}
+      end
+
       @doc """
       Returns the static facts about this calendar, as
       `t:Calendrical.Info.t/0`: its members, each with the first day it
@@ -79,102 +99,17 @@ defmodule Calendrical.Composite.Compiler do
         base = elem(@segment_calendars, 0)
         last = elem(@segment_calendars, tuple_size(@segment_calendars) - 1)
 
-        Calendrical.Info.gather(__MODULE__,
+        Calendrical.Info.new(__MODULE__,
+          cldr_calendar_type: @cldr_calendar_type,
+          era_calendar_type: era_of_members(),
+          structure: :months,
+          months_in_year: months_of_members(),
+          parsing_calendar: __MODULE__,
           epoch: nil,
           year_zero?: base.info().year_zero?,
           weeks: last.info().weeks,
           members: Enum.map(@segments, &{&1.first, &1.calendar})
         )
-      end
-
-      @doc """
-      Identifies that the calendar is month based.
-
-      This may not always be true for all dates in a composite
-      calendar but only a single value per calendar is supported.
-
-      """
-      @impl true
-      def calendar_base, do: :month
-
-      @doc """
-      Returns the CLDR calendar type whose data names the calendar's
-      months and days where no date is given: the type the member
-      calendars share, and otherwise the last member's. A date's own is
-      `cldr_calendar_type/3`'s.
-
-      """
-      @impl true
-      def cldr_calendar_type, do: @cldr_calendar_type
-
-      @doc """
-      Returns the calendars a date of this calendar may be read in: its
-      member calendars, the base calendar first and the rest in the
-      order they take effect.
-
-      A composite writes a date with the formats of the calendar in
-      effect on it, which `cldr_calendar_type/3` answers. A date before
-      the first change is therefore written as the base calendar writes
-      it, which the formats of `cldr_calendar_type/0` do not read back:
-      `Calendrical.Reform.Japan` writes 1872-06-16 as its lunisolar
-      member does, "Mo5 11, 1872" at `en`'s medium format, where its
-      own type is the Japanese calendar's. Naming the members lets a reader take the date in each
-      in turn and convert the one it finds.
-
-      """
-      @spec parsing_calendars() :: [Calendrical.calendar(), ...]
-      @impl Calendrical
-      def parsing_calendars, do: @member_calendars
-
-      @doc """
-      Returns the calendar module of this calendar's family whose CLDR
-      calendar type is the one given.
-
-      Localize asks a calendar for the calendars of its family: a CLDR
-      calendar type names no module of its own, and a locale's `-u-ca-`
-      names a type rather than a calendar.
-
-      """
-      @impl Calendrical
-      defdelegate calendar_from_cldr_calendar_type(calendar_type), to: Calendrical
-
-      @doc """
-      Returns the CLDR calendar type whose data names the months and
-      days of the given date: that of the calendar in effect on it.
-
-      """
-      @impl Calendrical
-      def cldr_calendar_type(year, month, day)
-          when is_integer(year) and is_integer(month) and is_integer(day) do
-        calendar_for_date(year, month, day).cldr_calendar_type()
-      end
-
-      def cldr_calendar_type(_year, _month, _day), do: @cldr_calendar_type
-
-      # The CLDR calendar whose era names the member calendars share:
-      # `Calendrical.Reform.Japan`'s lunisolar and Gregorian members both
-      # name their eras from the Japanese calendar. Members that name
-      # them from different calendars leave `cldr_calendar_type/0`.
-      @doc false
-      @impl Calendrical
-      def era_calendar_type do
-        @member_calendars
-        |> Enum.map(& &1.era_calendar_type())
-        |> Enum.uniq()
-        |> case do
-          [era_calendar_type] -> era_calendar_type
-          _era_calendar_types -> cldr_calendar_type()
-        end
-      end
-
-      @doc """
-      Returns the calendar module a date written for this calendar
-      is parsed in: the calendar itself.
-
-      """
-      @impl Calendrical
-      def parsing_calendar do
-        __MODULE__
       end
 
       # The place among `@segments` of the segment a date is read in. A
@@ -273,6 +208,16 @@ defmodule Calendrical.Composite.Compiler do
 
       def valid_date?(_year, _month, _day), do: false
 
+      defp member_cardinal_month(calendar, {month, :leap}) when is_integer(month) do
+        {calendar.cardinal_month(month), :leap}
+      end
+
+      defp member_cardinal_month(calendar, month) when is_integer(month) do
+        calendar.cardinal_month(month)
+      end
+
+      defp member_cardinal_month(_calendar, other), do: other
+
       @doc """
       Calculates the year and era from the given `year`, `month`,
       and `day`. The result is in the context of the calendar in
@@ -287,127 +232,31 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
-      Returns the calendar year as displayed on rendered calendars,
-      as the calendar in effect on the date gives it.
+      Calculates the day and era for the given date.
+
+      The era is the one the calendar in effect on the date gives, and
+      its days are counted in one count through every change of calendar
+      the era runs through: that of the calendar in effect where the era
+      begins, or where it ends for an era whose days are counted back from
+      its last. So the day after 2 September 1752 in England, 14
+      September, is the next day of the era.
 
       """
-      @spec calendar_year(Calendar.year(), Calendar.month(), Calendar.day()) :: Calendar.year()
       @impl true
-      def calendar_year(year, month, day) do
-        calendar = calendar_for_date(year, month, day)
-        calendar.calendar_year(year, month, day)
+      def day_of_era(year, month, day) do
+        index = segment_for_date(year, month, day)
+        Calendrical.Composite.Era.day_of_era(@segments, index, year, month, day)
       end
 
       @doc """
-      Returns the related Gregorian year, as the calendar in effect
-      on the date gives it.
-
-      """
-      @spec related_gregorian_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
-              Calendar.year()
-      @impl true
-      def related_gregorian_year(year, month, day) do
-        calendar = calendar_for_date(year, month, day)
-        calendar.related_gregorian_year(year, month, day)
-      end
-
-      @doc """
-      Returns the extended year, as the calendar in effect on the
-      date gives it.
-
-      """
-      @spec extended_year(Calendar.year(), Calendar.month(), Calendar.day()) :: Calendar.year()
-      @impl true
-      def extended_year(year, month, day) do
-        calendar = calendar_for_date(year, month, day)
-        calendar.extended_year(year, month, day)
-      end
-
-      @doc """
-      Returns the cyclic year, as the calendar in effect on the date
-      gives it.
-
-      """
-      @spec cyclic_year(Calendar.year(), Calendar.month(), Calendar.day()) :: Calendar.year()
-      @impl true
-      def cyclic_year(year, month, day) do
-        calendar = calendar_for_date(year, month, day)
-        calendar.cyclic_year(year, month, day)
-      end
-
-      @doc """
-      Calculates the quarter of the year (1..4) for the given date, as
-      the calendar in effect on the date counts it.
+      Returns the whole number of `date_part`s from one
+      `{year, month, day}` to another, the inverse of `shift/6`,
+      counted through each calendar a span crosses.
 
       """
       @impl true
-      def quarter_of_year(year, month, day) do
-        calendar = calendar_for_date(year, month, day)
-        calendar.quarter_of_year(year, month, day)
-      end
-
-      @doc """
-      Calculates the month of the year for the given date: the member
-      calendar's month of the year named as the member's
-      `cardinal_month/1` names it, since the composite's own
-      `cardinal_month/1` cannot know the member without the year.
-
-      """
-      @impl true
-      def month_of_year(year, month, day) do
-        calendar = calendar_for_date(year, month, day)
-        member_cardinal_month(calendar, calendar.month_of_year(year, month, day))
-      end
-
-      defp member_cardinal_month(calendar, {month, :leap}) when is_integer(month) do
-        {calendar.cardinal_month(month), :leap}
-      end
-
-      defp member_cardinal_month(calendar, month) when is_integer(month) do
-        calendar.cardinal_month(month)
-      end
-
-      defp member_cardinal_month(_calendar, other), do: other
-
-      @doc """
-      Returns the month of the CLDR calendar that a month of
-      the year names: `month_of_year/3` already names its member's
-      month, so the composite's own mapping is the identity.
-
-      """
-      @impl true
-      def cardinal_month(month) do
-        month
-      end
-
-      @doc """
-      Returns the day of the month that names a date's day: the member
-      calendar's where it renumbers its days, as a Julian year-start
-      variant's counted months do, and the day itself otherwise.
-
-      """
-      @impl true
-      def cardinal_day(year, month, day) do
-        calendar_for_date(year, month, day).cardinal_day(year, month, day)
-      end
-
-      @doc """
-      Returns the number a date's month is written with in figures: the
-      member calendar's.
-
-      """
-      @impl true
-      def numeric_month(year, month, day) do
-        calendar_for_date(year, month, day).numeric_month(year, month, day)
-      end
-
-      @doc """
-      Returns the year a date is written with: the member calendar's.
-
-      """
-      @impl true
-      def cardinal_year(year, month, day) do
-        calendar_for_date(year, month, day).cardinal_year(year, month, day)
+      def diff(from, to, date_part) do
+        Calendrical.Composite.Diff.diff(__MODULE__, from, to, date_part)
       end
 
       @doc """
@@ -446,113 +295,6 @@ defmodule Calendrical.Composite.Compiler do
           {:error, :invalid_date} ->
             nil
         end
-      end
-
-      @doc """
-      Calculates the week of the year for the given date: the member
-      calendar's week in a year one member governs throughout, and in a
-      year a transition falls in, the composite's own calendar-aligned
-      week, cut to the year.
-
-      """
-      @impl true
-      def week_of_year(year, month, day) do
-        case year_calendar(year) do
-          nil -> Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
-          calendar -> calendar.week_of_year(year, month, day)
-        end
-      end
-
-      @doc """
-      Calculates the ISO week of the year for the given date.
-
-      """
-      @impl true
-      def iso_week_of_year(year, month, day) do
-        calendar = calendar_for_date(year, month, day)
-        calendar.iso_week_of_year(year, month, day)
-      end
-
-      @doc """
-      Calculates the week of the month for the given date, as the
-      calendar in effect on that date numbers it, or in a month a
-      transition cuts short or splits, as the composite's own
-      calendar-aligned weeks number it.
-
-      """
-      @impl true
-      def week_of_month(year, month, day) do
-        if transition_month?(year, month) do
-          Calendrical.Base.Common.week_of_month(__MODULE__, year, month, day)
-        else
-          calendar = calendar_for_date(year, month, day)
-          calendar.week_of_month(year, month, day)
-        end
-      end
-
-      @doc """
-      Calculates the day and era for the given date.
-
-      The era is the one the calendar in effect on the date gives, and
-      its days are counted in one count through every change of calendar
-      the era runs through: that of the calendar in effect where the era
-      begins, or where it ends for an era whose days are counted back from
-      its last. So the day after 2 September 1752 in England, 14
-      September, is the next day of the era.
-
-      """
-      @impl true
-      def day_of_era(year, month, day) do
-        index = segment_for_date(year, month, day)
-        Calendrical.Composite.Era.day_of_era(@segments, index, year, month, day)
-      end
-
-      @doc """
-      Calculates the day of the year for the given date, counting from
-      the first day that carries the date's year — which, in a year a
-      transition shortens or lengthens, need not be 1 January.
-
-      """
-      @impl true
-      def day_of_year(year, month, day) do
-        case year_bounds(year) do
-          {first, _last} -> date_to_iso_days(year, month, day) - first + 1
-          nil -> {:error, :invalid_date}
-        end
-      end
-
-      @doc """
-      Calculates the day of the week for the given date.
-
-      """
-      @impl true
-      def day_of_week(year, month, day, starting_on) do
-        calendar = calendar_for_date(year, month, day)
-        calendar.day_of_week(year, month, day, starting_on)
-      end
-
-      @doc """
-      Returns the number of periods in the given year.
-
-      """
-      def periods_in_year(year), do: months_in_year(year)
-
-      @doc """
-      Returns the number of days that carry the given year, which is
-      `0` for a year no segment of the calendar labels.
-
-      """
-      @impl true
-      def days_in_year(year) do
-        case year_bounds(year) do
-          {first, last} -> last - first + 1
-          nil -> 0
-        end
-      end
-
-      @impl true
-      def dates_in_gregorian_year(gregorian_year, month, day) do
-        Calendrical.generic_dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
       end
 
       # The ISO days of the first and last days labelled `year`, or nil
@@ -607,49 +349,6 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
-      Returns the number of weeks in the given year, as
-      `week_of_year/3` counts them.
-
-      """
-      @impl true
-      def weeks_in_year(year) do
-        case year_calendar(year) do
-          nil -> Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
-          calendar -> calendar.weeks_in_year(year)
-        end
-      end
-
-      # The member calendar that governs every day of `year`, or nil for
-      # a year a transition falls in or cuts short, whose weeks are the
-      # composite's own.
-      defp year_calendar(year) when is_integer(year) do
-        case year_bounds(year) do
-          {first, last} ->
-            whole_year_calendar(
-              calendar_for_iso_days(first),
-              calendar_for_iso_days(last),
-              year,
-              first,
-              last
-            )
-
-          nil ->
-            nil
-        end
-      end
-
-      defp year_calendar(_year), do: nil
-
-      defp whole_year_calendar(calendar, calendar, year, first, last) do
-        case calendar.year(year) do
-          %Date.Range{first_in_iso_days: ^first, last_in_iso_days: ^last} -> calendar
-          _cut_short -> nil
-        end
-      end
-
-      defp whole_year_calendar(_calendar, _other_calendar, _year, _first, _last), do: nil
-
-      @doc """
       Returns the number of days in the given year and month.
 
       A month a transition cuts short, or splits between two calendars,
@@ -684,6 +383,7 @@ defmodule Calendrical.Composite.Compiler do
 
       """
       @impl true
+      @impl true
       def months_in_year(year) do
         year
         |> year_calendars()
@@ -704,147 +404,6 @@ defmodule Calendrical.Composite.Compiler do
           do: month,
           else: last_month_with_days(month - 1, year)
       end
-
-      @doc """
-      Returns the number of days in the given month.
-
-      Composite calendars cannot answer this without a year so the
-      default implementation returns `{:error, :undefined}`.
-
-      """
-      @impl true
-      def days_in_month(_month), do: {:error, :undefined}
-
-      @doc """
-      Returns the number of months in a year.
-
-      Composite calendars cannot answer this without a year, since a
-      year a change of calendar cuts short has fewer, so it is
-      `{:error, :undefined}`.
-
-      """
-      @impl true
-      def months_in_year, do: {:error, :undefined}
-
-      @doc """
-      Returns the fewest and the most months a year has, as
-      `{fewest, most}`: the member calendars' bounds, widened by the
-      years a change of calendar cuts short. England's 1751 has the
-      months 3 to 12, so `Calendrical.Reform.England` answers `{10, 13}`.
-
-      """
-      @impl true
-      def months_in_year_bounds do
-        Calendrical.Base.Bounds.months_in_year_bounds(
-          __MODULE__,
-          @member_calendars,
-          @transition_years
-        )
-      end
-
-      @doc """
-      Returns the fewest and the most days a month has in any year, as
-      `{fewest, most}`: the member calendars' bounds, widened by the
-      months a change of calendar cuts short. England's September 1752
-      has nineteen days, so `Calendrical.Reform.England` answers
-      `{19, 30}` for month 9.
-
-      """
-      @impl true
-      def days_in_month_bounds(month) do
-        Calendrical.Base.Bounds.days_in_month_bounds(
-          __MODULE__,
-          @member_calendars,
-          @transition_years,
-          month
-        )
-      end
-
-      @doc """
-      Returns the months a year has, as runs of their numbers: those
-      that have days, so a year a change of calendar cut short has the
-      months that are left.
-
-      """
-      @impl true
-      def month_numbers(year), do: Calendrical.Base.Common.dated_month_numbers(__MODULE__, year)
-
-      @doc """
-      Returns the days a month of a year has, as runs of their numbers:
-      those of its dates, so a month a change of calendar took days from
-      has the days that are left.
-
-      """
-      @impl true
-      def day_numbers(year, month),
-        do: Calendrical.Base.Common.dated_day_numbers(__MODULE__, year, month)
-
-      @doc """
-      Returns the number of days in a week.
-
-      """
-      @impl true
-      def days_in_week, do: 7
-
-      @doc """
-      Returns a `Date.Range` representing a given year: from the first
-      to the last of its days that has a date of its own, from whichever
-      day it begins on.
-
-      Where a change of the day a year begins on gives two stretches of a
-      year's days the same dates, one of them has no dates of its own and
-      the range runs between the dates of the other: England's 1155 is 1
-      January to 31 December, although its days ran on to 24 March 1156.
-      `days_in_year/1` counts every day of the year.
-
-      """
-      @impl true
-      def year(year) do
-        with {first, last} <- year_bounds(year),
-             {first, last} <- Calendrical.Base.Common.dated_days(__MODULE__, first, last) do
-          Date.range(date_at(first), date_at(last))
-        else
-          nil -> {:error, :invalid_date}
-        end
-      end
-
-      @doc """
-      Returns a `Date.Range` representing a given quarter of a year,
-      from the first day of its first month to the last day of its last.
-      A year whose months do not divide into four quarters, or that
-      begins on a day other than 1 January, has none.
-
-      """
-      @impl true
-      def quarter(year, quarter) when quarter in 1..@quarters_in_year do
-        period_of_year(year, quarter, @quarters_in_year)
-      end
-
-      def quarter(_year, _quarter), do: {:error, :invalid_date}
-
-      @doc """
-      Returns a `Date.Range` representing a given quadrimester (third)
-      of a year, on the rules `quarter/2` follows.
-
-      """
-      @impl true
-      def quadrimester(year, quadrimester) when quadrimester in 1..3 do
-        period_of_year(year, quadrimester, 3)
-      end
-
-      def quadrimester(_year, _quadrimester), do: {:error, :invalid_date}
-
-      @doc """
-      Returns a `Date.Range` representing a given semester (half) of a
-      year, on the rules `quarter/2` follows.
-
-      """
-      @impl true
-      def semester(year, semester) when semester in 1..2 do
-        period_of_year(year, semester, 2)
-      end
-
-      def semester(_year, _semester), do: {:error, :invalid_date}
 
       # A year whose months do not divide evenly into the periods — a
       # split Julian year-start variant's thirteen, or a year a reform
@@ -870,29 +429,6 @@ defmodule Calendrical.Composite.Compiler do
       defp quarter_range([%Date.Range{first: first} | _] = months) do
         %Date.Range{last: last} = List.last(months)
         Date.range(first, last)
-      end
-
-      @doc """
-      Returns a `Date.Range` representing a given month of a year.
-
-      A month a transition cuts short starts or ends on the transition,
-      and September 1752 in England runs from the 1st to the 30th across
-      the eleven dropped days. In a Julian year-start segment the month
-      the year begins in carries its label twice, a year apart (25 to 31
-      March 1600 and 1 to 24 March 1601 are both March 1600 in England);
-      the range is then the part that holds the month's 1st.
-
-      """
-      @impl true
-      def month(year, month) do
-        case first_day_of_month(year, month) do
-          nil ->
-            {:error, :invalid_date}
-
-          day ->
-            first = date_to_iso_days(year, month, day)
-            Date.range(date_at(first), date_at(month_end(first, year, month)))
-        end
       end
 
       defp first_day_of_month(year, month) do
@@ -935,39 +471,6 @@ defmodule Calendrical.Composite.Compiler do
       defp date_at(iso_days) do
         {year, month, day} = date_from_iso_days(iso_days)
         %Date{year: year, month: month, day: day, calendar: __MODULE__}
-      end
-
-      @doc """
-      Returns a `Date.Range` representing a given week of a year, as
-      `week_of_year/3` numbers weeks.
-
-      """
-      @impl true
-      def week(year, week) do
-        case year_calendar(year) do
-          nil -> Calendrical.Base.Common.week(__MODULE__, year, week)
-          calendar -> calendar |> member_week(year, week) |> week_in_composite()
-        end
-      end
-
-      defp week_in_composite(%Date.Range{
-             first_in_iso_days: first_days,
-             last_in_iso_days: last_days
-           }),
-           do: Date.range(date_at(first_days), date_at(last_days))
-
-      defp week_in_composite(other), do: other
-
-      # Dispatches `week/2` to the member calendar in effect. The widening
-      # spec keeps the `Date.Range` clause in `week/2` reachable for the type
-      # checker whatever week support the member calendars have: a
-      # composite of calendars that return `{:error, :not_defined}` (a
-      # consumer's calendar without weeks) would otherwise have that clause
-      # flagged as unreachable.
-      @spec member_week(module(), Calendar.year(), non_neg_integer()) ::
-              Date.Range.t() | {:error, :not_defined | :invalid_date}
-      defp member_week(calendar, year, week) do
-        calendar.week(year, week)
       end
 
       @doc """
@@ -1032,102 +535,6 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
-      Returns the `t:Calendar.iso_days/0` form of the specified
-      datetime.
-
-      """
-      @impl true
-      @spec naive_datetime_to_iso_days(
-              Calendar.year(),
-              Calendar.month(),
-              Calendar.day(),
-              Calendar.hour(),
-              Calendar.minute(),
-              Calendar.second(),
-              Calendar.microsecond()
-            ) :: Calendar.iso_days()
-      def naive_datetime_to_iso_days(year, month, day, hour, minute, second, microsecond) do
-        iso_days = date_to_iso_days(year, month, day)
-        day_fraction = time_to_day_fraction(hour, minute, second, microsecond)
-        {iso_days, day_fraction}
-      end
-
-      @doc """
-      Converts a `t:Calendar.iso_days/0` to the datetime form for
-      this calendar.
-
-      """
-      @impl true
-      def naive_datetime_from_iso_days({days, day_fraction}) do
-        {year, month, day} = date_from_iso_days(days)
-        {hour, minute, second, microsecond} = time_from_day_fraction(day_fraction)
-        {year, month, day, hour, minute, second, microsecond}
-      end
-
-      @doc false
-      @impl true
-      def date_to_string(year, month, day) do
-        Calendar.ISO.date_to_string(year, month, day)
-      end
-
-      @doc false
-      @impl true
-      def datetime_to_string(
-            year,
-            month,
-            day,
-            hour,
-            minute,
-            second,
-            microsecond,
-            time_zone,
-            zone_abbr,
-            utc_offset,
-            std_offset
-          ) do
-        Calendar.ISO.datetime_to_string(
-          year,
-          month,
-          day,
-          hour,
-          minute,
-          second,
-          microsecond,
-          time_zone,
-          zone_abbr,
-          utc_offset,
-          std_offset
-        )
-      end
-
-      @doc false
-      @impl true
-      def naive_datetime_to_string(year, month, day, hour, minute, second, microsecond) do
-        Calendar.ISO.naive_datetime_to_string(year, month, day, hour, minute, second, microsecond)
-      end
-
-      @doc false
-      calendar_impl()
-
-      def parse_date(string) do
-        Calendrical.Parse.parse_date(string, __MODULE__)
-      end
-
-      @doc false
-      calendar_impl()
-
-      def parse_utc_datetime(string) do
-        Calendrical.Parse.parse_utc_datetime(string, __MODULE__)
-      end
-
-      @doc false
-      calendar_impl()
-
-      def parse_naive_datetime(string) do
-        Calendrical.Parse.parse_naive_datetime(string, __MODULE__)
-      end
-
-      @doc """
       Adds an `increment` number of `date_part`s to the given
       `year-month-day`, always returning a date of this calendar.
 
@@ -1143,64 +550,26 @@ defmodule Calendrical.Composite.Compiler do
 
       """
       @impl true
-      def plus(year, month, day, date_part, increment, options \\ [])
+      def shift(year, month, day, date_part, increment, options \\ [])
 
-      def plus(year, month, day, :years, years, _options) do
+      def shift(year, month, day, :years, years, _options) do
         shift_by(year, month, day, :years, years)
       end
 
-      def plus(year, month, day, :quarters, quarters, _options) do
+      def shift(year, month, day, :quarters, quarters, _options) do
         shift_by(year, month, day, :months, quarters * 3)
       end
 
-      def plus(year, month, day, :months, months, _options) do
+      def shift(year, month, day, :months, months, _options) do
         shift_by(year, month, day, :months, months)
       end
 
-      def plus(year, month, day, :weeks, weeks, _options) do
+      def shift(year, month, day, :weeks, weeks, _options) do
         shift_days({year, month, day}, weeks * days_in_week())
       end
 
-      def plus(year, month, day, :days, days, _options) do
+      def shift(year, month, day, :days, days, _options) do
         shift_days({year, month, day}, days)
-      end
-
-      @doc """
-      Returns the whole number of `date_part`s from one
-      `{year, month, day}` to another — the inverse of `plus/6`,
-      counted through each calendar a span crosses.
-
-      """
-      @impl true
-      def diff(from, to, date_part) do
-        Calendrical.Composite.Diff.diff(__MODULE__, from, to, date_part)
-      end
-
-      @doc """
-      Shifts a date by the given duration: the years and months
-      together, as `plus/6` adds months, and then the weeks and days.
-
-      """
-      @impl true
-      @spec shift_date(year, month, day, Duration.t()) :: {year, month, day}
-      def shift_date(year, month, day, duration) do
-        Calendrical.shift_date(year, month, day, __MODULE__, duration)
-      end
-
-      @doc false
-      @impl Calendar
-      def shift_naive_datetime(year, month, day, hour, minute, second, microsecond, duration) do
-        Calendrical.shift_naive_datetime(
-          year,
-          month,
-          day,
-          hour,
-          minute,
-          second,
-          microsecond,
-          __MODULE__,
-          duration
-        )
       end
 
       @doc false
@@ -1243,7 +612,7 @@ defmodule Calendrical.Composite.Compiler do
       # Within the segment of the calendar in effect the calendar's own
       # arithmetic is the answer. Otherwise the months are walked across
       # the segments, a year being as many of them as that calendar counts.
-      # `plus/6` writes the day as a date; `Calendrical.Composite.Diff`
+      # `shift/6` writes the day as a date; `Calendrical.Composite.Diff`
       # compares it as a day, since the date of a day with none of its own
       # names another day.
       @doc false
@@ -1251,7 +620,7 @@ defmodule Calendrical.Composite.Compiler do
         calendar = calendar_for_date(year, month, day)
 
         {new_year, new_month, new_day} =
-          calendar.plus(year, month, day, date_part, increment, coerce: true)
+          calendar.shift(year, month, day, date_part, increment, clamp: true)
 
         if calendar_for_date(new_year, new_month, new_day) == calendar and
              valid_date?(new_year, new_month, new_day) do
@@ -1331,7 +700,7 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       defp civil_plus(civil, {year, month}, months) do
-        {year, month, _day} = civil.plus(year, month, 1, :months, months, coerce: true)
+        {year, month, _day} = civil.shift(year, month, 1, :months, months, clamp: true)
         {year, month}
       end
 
@@ -1415,44 +784,8 @@ defmodule Calendrical.Composite.Compiler do
       defp from_civil(%{civil: civil, calendar: civil}, year, month, day), do: {year, month, day}
 
       defp from_civil(%{calendar: calendar}, year, month, day) do
-        calendar.date_from_julian_date(year, month, day)
+        calendar.date_from_base_date(year, month, day)
       end
-
-      @doc false
-      @impl Calendar
-      defdelegate shift_time(hour, minute, second, microsecond, duration), to: Calendar.ISO
-
-      @doc false
-      @impl Calendar
-      defdelegate parse_time(string), to: Calendar.ISO
-
-      @doc false
-      @impl Calendar
-      defdelegate iso_days_to_beginning_of_day(iso_days), to: Calendar.ISO
-
-      @doc false
-      @impl Calendar
-      defdelegate iso_days_to_end_of_day(iso_days), to: Calendar.ISO
-
-      @doc false
-      @impl Calendar
-      defdelegate day_rollover_relative_to_midnight_utc, to: Calendar.ISO
-
-      @doc false
-      @impl Calendar
-      defdelegate time_from_day_fraction(day_fraction), to: Calendar.ISO
-
-      @doc false
-      @impl Calendar
-      defdelegate time_to_day_fraction(hour, minute, second, microsecond), to: Calendar.ISO
-
-      @doc false
-      @impl Calendar
-      defdelegate time_to_string(hour, minute, second, microsecond), to: Calendar.ISO
-
-      @doc false
-      @impl Calendar
-      defdelegate valid_time?(hour, minute, second, microsecond), to: Calendar.ISO
     end
   end
 end

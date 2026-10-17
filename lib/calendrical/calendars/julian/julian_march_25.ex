@@ -17,13 +17,17 @@ defmodule Calendrical.Julian.March25 do
       ~D[1751-01-01 Calendrical.Julian.March25]
 
   Pisa began its year on the 25 March before, a year ahead of Florence.
-  That reckoning is `use Calendrical.Julian,
-  new_year_starting_month_and_day: {3, 25}, year: :ending`.
+  That reckoning is `use Calendrical.Calendar.Shifted, base: Calendrical.Julian,
+  year_begins: {3, 25}, year_number: :ending`.
 
   See `Calendrical.Julian` for the calendar's structure, leap-year
   rule and the full public API.
 
   """
 
-  use Calendrical.Julian, new_year_starting_month_and_day: {3, 25}, year: :beginning
+  use Calendrical.Calendar.Shifted,
+    base: Calendrical.Julian,
+    year_begins: {3, 25},
+    year_number: :beginning,
+    written_year: :label
 end

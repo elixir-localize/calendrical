@@ -25,5 +25,9 @@ defmodule Calendrical.Julian.Sept1 do
 
   """
 
-  use Calendrical.Julian, new_year_starting_month_and_day: {9, 1}, year: :ending
+  use Calendrical.Calendar.Shifted,
+    base: Calendrical.Julian,
+    year_begins: {9, 1},
+    year_number: :ending,
+    written_year: :label
 end

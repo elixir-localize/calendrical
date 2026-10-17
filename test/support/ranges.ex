@@ -1,14 +1,10 @@
-require Calendrical.Compiler.Month
-
 defmodule Calendrical.Range do
   defmodule Feb do
-    use Calendrical.Base.Month,
-      month_of_year: 2
+    use Calendrical.Calendar.Shifted, year_begins: {2, 1}
   end
 
   defmodule Jan do
-    use Calendrical.Base.Month,
-      month_of_year: 1
+    use Calendrical.Calendar.Shifted, year_begins: {1, 1}
   end
 
   def daterange_periods(calendar \\ Calendrical.Range.Feb) do

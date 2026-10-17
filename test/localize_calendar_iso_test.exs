@@ -42,6 +42,19 @@ defmodule Calendrical.LocalizeCalendarISOTest do
       assert missing == []
     end
 
+    test "answers every function Localize asks of a calendar module beside the callbacks" do
+      Code.ensure_loaded!(@localize)
+
+      asked = [cldr_month: 2, written_month_from_cldr_month: 2, cardinal_month: 1]
+
+      missing =
+        for {name, arity} <- asked,
+            not function_exported?(@localize, name, arity),
+            do: {name, arity}
+
+      assert missing == []
+    end
+
     test "answers every callback of the Calendar behaviour" do
       Code.ensure_loaded!(@localize)
 
@@ -63,7 +76,6 @@ defmodule Calendrical.LocalizeCalendarISOTest do
         :week_of_year,
         :iso_week_of_year,
         :week_of_month,
-        :calendar_year,
         :extended_year,
         :related_gregorian_year,
         :cyclic_year
@@ -175,10 +187,10 @@ defmodule Calendrical.LocalizeCalendarISOTest do
         for date <- Enum.take_every(@days, 5),
             date_part <- @date_parts,
             count <- [-400, -25, -13, -12, -1, 0, 1, 2, 11, 12, 13, 25, 400],
-            coerce <- [true, false],
-            arguments = [date.year, date.month, date.day, date_part, count, [coerce: coerce]],
-            localize = apply(@localize, :plus, arguments),
-            calendrical = apply(@calendrical, :plus, arguments),
+            clamp <- [true, false],
+            arguments = [date.year, date.month, date.day, date_part, count, [clamp: clamp]],
+            localize = apply(@localize, :shift, arguments),
+            calendrical = apply(@calendrical, :shift, arguments),
             localize != calendrical,
             do: {arguments, localize, calendrical}
 

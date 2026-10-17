@@ -10,7 +10,7 @@ defmodule Calendrical.ValidateCalendarTest do
   type and implements neither behaviour was a calendar.
 
   The calendars are listed by hand, one of each way a calendar is made: by
-  `use Calendrical.Behaviour`, by the month, the week and the Julian
+  `use Calendrical.Calendar`, by the month, the week and the Julian
   compilers, as a composite, and at runtime.
 
   """
@@ -50,7 +50,9 @@ defmodule Calendrical.ValidateCalendarTest do
 
     test "is a calendar when it is created at runtime" do
       {:ok, fiscal} =
-        Calendrical.new(Calendrical.ValidateCalendarTest.FiscalFromJuly, :month, month_of_year: 7)
+        Calendrical.new(Calendrical.ValidateCalendarTest.FiscalFromJuly, :month,
+          year_begins: {7, 1}
+        )
 
       {:ok, composite} =
         Composite.new(Calendrical.ValidateCalendarTest.FromMarch1700,

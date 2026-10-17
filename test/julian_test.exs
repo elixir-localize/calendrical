@@ -98,7 +98,7 @@ defmodule Calendrical.JulianTest do
       assert Julian.week(2026, 2) ==
                Date.range(~D[2026-01-06 Calendrical.Julian], ~D[2026-01-12 Calendrical.Julian])
 
-      assert Julian.weeks_in_year(2026) == {53, 3}
+      assert Julian.weeks_in_year(2026) == 52
     end
 
     test "the ISO 8601 week is the one the same day has in the Gregorian calendar" do
@@ -110,7 +110,7 @@ defmodule Calendrical.JulianTest do
       assert Julian.week_of_year(2025, 13, 1) == {:error, :invalid_date}
       assert Julian.week_of_month(2025, 2, 30) == {:error, :invalid_date}
       assert Julian.iso_week_of_year(2025, 2, 30) == {:error, :invalid_date}
-      assert Julian.weeks_in_year(nil) == {:error, :invalid_date}
+      assert {:error, %Calendrical.MissingFieldsError{}} = Julian.weeks_in_year(nil)
       assert Julian.week(2025, 0) == {:error, :invalid_date}
     end
 
@@ -127,14 +127,14 @@ defmodule Calendrical.JulianTest do
   end
 
   describe "arithmetic" do
-    test "plus with coercion clamps to the end of the month" do
-      assert Julian.plus(2024, 2, 29, :years, 1, coerce: true) == {2025, 2, 28}
-      assert Julian.plus(2026, 1, 31, :months, 1, coerce: true) == {2026, 2, 28}
-      assert Julian.plus(2026, 1, 15, :quarters, 2, coerce: true) == {2026, 7, 15}
+    test "plus with clamping clamps to the end of the month" do
+      assert Julian.shift(2024, 2, 29, :years, 1, clamp: true) == {2025, 2, 28}
+      assert Julian.shift(2026, 1, 31, :months, 1, clamp: true) == {2026, 2, 28}
+      assert Julian.shift(2026, 1, 15, :quarters, 2, clamp: true) == {2026, 7, 15}
     end
 
     test "plus days crosses month and year boundaries" do
-      assert Julian.plus(2026, 12, 30, :days, 5, []) == {2027, 1, 4}
+      assert Julian.shift(2026, 12, 30, :days, 5, []) == {2027, 1, 4}
     end
 
     test "Date.shift clamps year and month shifts like Calendar.ISO" do

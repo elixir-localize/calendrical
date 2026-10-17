@@ -11,24 +11,27 @@ defmodule Calendrical.Parse do
     return_date({"", year}, month, day, calendar)
   end
 
-  def parse_date(_string, _calendar) do
-    {:error, :invalid_date}
-  end
-
   # A calendar of weeks reads a date written as a week date ("2026-W25-2")
   # as the date its week-date callback gives it, as well as one written as
   # a year, a month and a day. It wrote its dates as week dates until 1.4.
-  def parse_week_date(<<"-", year::bytes-4, "-W", week::bytes-2, "-", day::bytes-1>>, calendar) do
+  def parse_date(string, calendar) do
+    if calendar.info().structure == :weeks,
+      do: week_notation(string, calendar),
+      else: {:error, :invalid_date}
+  end
+
+  @doc false
+  def parse_week_date(string, calendar), do: parse_date(string, calendar)
+
+  defp week_notation(<<"-", year::bytes-4, "-W", week::bytes-2, "-", day::bytes-1>>, calendar) do
     return_week_date({"-", year}, week, day, calendar)
   end
 
-  def parse_week_date(<<year::bytes-4, "-W", week::bytes-2, "-", day::bytes-1>>, calendar) do
+  defp week_notation(<<year::bytes-4, "-W", week::bytes-2, "-", day::bytes-1>>, calendar) do
     return_week_date({"", year}, week, day, calendar)
   end
 
-  def parse_week_date(string, calendar) do
-    parse_date(string, calendar)
-  end
+  defp week_notation(_string, _calendar), do: {:error, :invalid_date}
 
   defp return_week_date({sign, year}, week, day, calendar) do
     if digits?(year) and digits?(week) and digits?(day) do

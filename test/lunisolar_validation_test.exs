@@ -8,7 +8,7 @@ defmodule Calendrical.LunisolarValidation.Test do
     Calendrical.LunarJapanese
   ]
 
-  # Calendars whose `valid_date?/3` comes from `Calendrical.Behaviour`, or from
+  # Calendars whose `valid_date?/3` comes from `Calendrical.Calendar`, or from
   # a component calendar whose does.
   @behaviour_calendars [
     Calendrical.Persian,

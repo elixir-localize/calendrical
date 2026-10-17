@@ -2,7 +2,6 @@ defmodule Calendrical.Compiler do
   @moduledoc false
 
   use GenServer
-  alias Calendrical.Config
 
   # Creating a calendar macro-expands the full month, week or composite
   # compiler quote block, which can take well over the 5-second
@@ -13,31 +12,21 @@ defmodule Calendrical.Compiler do
     GenServer.start_link(__MODULE__, state, name: __MODULE__)
   end
 
-  def create_calendar(calendar_module, calendar_type, config) do
-    config = Keyword.put(config, :calendar, calendar_module)
-    structured_config = Config.extract_options(config)
+  def create_calendar(calendar_module, calendar_type, options)
+      when calendar_type in [:month, :week] do
+    maker =
+      if calendar_type == :month,
+        do: Calendrical.Calendar.Shifted,
+        else: Calendrical.Calendar.Weeks
 
-    with {:ok, config} <- Config.validate_config(structured_config, calendar_type) do
-      calendar_type =
-        calendar_type
-        |> to_string
-        |> String.capitalize()
-
-      config =
-        config
-        |> Map.from_struct()
-        |> Map.to_list()
-
-      contents =
-        quote do
-          use unquote(Module.concat(Calendrical.Base, calendar_type)),
-              unquote(Macro.escape(config))
-        end
-
-      case create_module(calendar_module, contents, Macro.Env.location(__ENV__)) do
-        {:module_already_exists, module} -> {:ok, module}
-        other -> other
+    contents =
+      quote do
+        use unquote(maker), unquote(Macro.escape(options))
       end
+
+    case create_module(calendar_module, contents, Macro.Env.location(__ENV__)) do
+      {:module_already_exists, module} -> {:ok, module}
+      other -> other
     end
   end
 
@@ -69,7 +58,7 @@ defmodule Calendrical.Compiler do
       {:reply, {:module_already_exists, module}, state}
     else
       try do
-        {:module, ^module, _binary, :ok} = Module.create(module, contents, env)
+        {:module, ^module, _binary, _last} = Module.create(module, contents, env)
         {:reply, {:ok, module}, state}
       rescue
         error -> {:reply, {:error, error}, state}

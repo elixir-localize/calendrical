@@ -34,12 +34,12 @@ defmodule Calendrical.Islamic.Civil do
 
   """
 
-  use Calendrical.Behaviour,
+  use Calendrical.Calendar,
     epoch: ~D[0622-07-19 Calendrical.Gregorian],
     cldr_calendar_type: :islamic_civil,
-    months_in_ordinary_year: 12,
-    months_in_leap_year: 12,
-    first_day_of_week: 7
+    months_in_year: 12,
+    weeks: [first_day: 7],
+    years_in_cycle: 210
 
   alias Calendrical.Islamic.Tabular
 
@@ -109,99 +109,6 @@ defmodule Calendrical.Islamic.Civil do
   def days_in_month(year, month), do: Tabular.days_in_month(year, month)
 
   @doc """
-  Returns the number of days in the given Hijri `year`.
-
-  ### Arguments
-
-  * `year` is any Hijri year as an integer.
-
-  ### Returns
-
-  * `354` for an ordinary year or `355` for a leap year.
-
-  ### Examples
-
-      iex> Calendrical.Islamic.Civil.days_in_year(1446)
-      354
-
-      iex> Calendrical.Islamic.Civil.days_in_year(1447)
-      355
-
-  """
-  @impl true
-  @spec days_in_year(year) :: 354..355
-  def days_in_year(year) do
-    if leap_year?(year), do: 355, else: 354
-  end
-
-  @doc """
-  Returns `{year, week_in_year}` for the given Islamic civil date.
-
-  Weeks run Sunday (al-Ahad, “the first”) through Saturday, the
-  calendar's own week boundary. Week 1 is the week containing
-  1 Muharram, so a year that opens mid-week has a short
-  first week. Every date numbers within its own year; weeks do
-  not spill into the adjacent year's numbering.
-
-  ### Arguments
-
-  * `year` is any Islamic civil year as an integer.
-
-  * `month` is a Islamic civil month number.
-
-  * `day` is a Islamic civil day-of-month.
-
-  ### Returns
-
-  * A two-tuple `{year, week_in_year}`, or
-
-  * `{:error, :invalid_date}` if the date is not valid.
-
-  ### Examples
-
-      iex> Calendrical.Islamic.Civil.week_of_year(1447, 1, 1)
-      {1447, 1}
-
-      iex> Calendrical.Islamic.Civil.week_of_year(1447, 9, 1)
-      {1447, 35}
-
-  """
-  @impl true
-  @spec week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
-          {Calendar.year(), Calendar.week()} | Calendrical.date_error()
-  def week_of_year(year, month, day) do
-    Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
-  end
-
-  @doc """
-  Returns the number of weeks in the given Islamic civil `year`.
-
-  ### Arguments
-
-  * `year` is any Islamic civil year as an integer.
-
-  ### Returns
-
-  * A two-tuple `{weeks_in_year, days_in_last_week}` where the
-    final week is short when the year does not end on the last
-    day of the calendar's week, or
-
-  * `{:error, :invalid_date}` if `year` is not valid.
-
-  ### Examples
-
-      iex> Calendrical.Islamic.Civil.weeks_in_year(1447)
-      {52, 3}
-
-  """
-  @impl true
-  @spec weeks_in_year(Calendar.year()) ::
-          {Calendrical.week(), Calendar.day()} | {:error, :invalid_date}
-  def weeks_in_year(year) do
-    Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
-  end
-
-  @doc """
   Returns the number of ISO days for the given civil Islamic
   `year`, `month`, and `day`.
 
@@ -253,47 +160,4 @@ defmodule Calendrical.Islamic.Civil do
   def date_from_iso_days(iso_days) do
     Tabular.date_from_iso_days(iso_days, epoch())
   end
-
-  @doc """
-  Returns the number of days in the given month, whatever its year.
-
-  Odd months have 30 days and even months 29; the twelfth has 30 in a leap year.
-
-  ### Arguments
-
-  * `month` is a month number, 1..12.
-
-  ### Returns
-
-  * The number of days, where the month has as many in every year.
-
-  * `{:ambiguous, range}` where the month's length depends on the year.
-
-  * `{:error, :undefined}` for any other value.
-
-  ### Examples
-
-      iex> Calendrical.Islamic.Civil.days_in_month(1)
-      30
-
-      iex> Calendrical.Islamic.Civil.days_in_month(2)
-      29
-
-      iex> Calendrical.Islamic.Civil.days_in_month(12)
-      {:ambiguous, 29..30}
-
-  """
-  @impl true
-  def days_in_month(12), do: {:ambiguous, 29..30}
-  def days_in_month(month) when month in [1, 3, 5, 7, 9, 11], do: 30
-  def days_in_month(month) when month in [2, 4, 6, 8, 10], do: 29
-  def days_in_month(_month), do: {:error, :undefined}
-
-  @doc """
-  Returns the number of years after which this calendar's years repeat,
-  their days and their weekdays alike: 210, seven of its cycles of thirty years.
-
-  """
-  @impl true
-  def years_in_cycle, do: 210
 end

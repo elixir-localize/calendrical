@@ -194,7 +194,7 @@ defmodule Calendrical.CompositeShiftTest do
   end
 
   # A duration through `shift_date/4`, as `Date.shift/2` asks, and through
-  # `plus/6` as months, and as years where it is whole years.
+  # `shift/6` as months, and as years where it is whole years.
   defp shifts(calendar, year, month, day, duration) do
     years = Keyword.get(duration, :year, 0)
     months = Keyword.get(duration, :month, 0)
@@ -202,10 +202,10 @@ defmodule Calendrical.CompositeShiftTest do
     [
       {duration, calendar.shift_date(year, month, day, Duration.new!(duration))},
       {{:months, years * 12 + months},
-       calendar.plus(year, month, day, :months, years * 12 + months)}
+       calendar.shift(year, month, day, :months, years * 12 + months)}
     ] ++
       if months == 0,
-        do: [{{:years, years}, calendar.plus(year, month, day, :years, years)}],
+        do: [{{:years, years}, calendar.shift(year, month, day, :years, years)}],
         else: []
   end
 
@@ -349,11 +349,11 @@ defmodule Calendrical.CompositeShiftTest do
 
       assert Egypt.shift_date(year - 1, month, last, a_year) == {year, month, last}
       assert Egypt.shift_date(year - 1, month, last + 1, a_year) == {year, month, last}
-      assert Egypt.plus(year - 1, month, last + 1, :years, 1) == {year, month, last}
-      assert Egypt.plus(year - 1, month, last + 1, :months, 13) == {year, month, last}
+      assert Egypt.shift(year - 1, month, last + 1, :years, 1) == {year, month, last}
+      assert Egypt.shift(year - 1, month, last + 1, :months, 13) == {year, month, last}
 
       assert Egypt.shift_date(year - 1, month + 1, 10, a_year) == {julian_year, julian_month, 10}
-      assert Egypt.plus(year - 1, month + 1, 10, :years, 1) == {julian_year, julian_month, 10}
+      assert Egypt.shift(year - 1, month + 1, 10, :years, 1) == {julian_year, julian_month, 10}
 
       assert Egypt.shift_date(year - 1, month - 1, 10, a_year) == {year, month - 1, 10}
     end
@@ -405,7 +405,7 @@ defmodule Calendrical.CompositeShiftTest do
       assert Shift.months(england, 1751, 3, Duration.new!(year: -1)) == -12
     end
 
-    test "is the count itself for plus/6 by months, and a year's months by years" do
+    test "is the count itself for shift/6 by months, and a year's months by years" do
       assert Shift.months(Calendrical.Coptic, 1742, 5, :months, 7) == 7
       assert Shift.months(Calendrical.Coptic, 1742, 5, :years, 2) == 26
       assert Shift.months(Calendrical.Gregorian, 2026, 6, :years, -3) == -36

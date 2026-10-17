@@ -21,7 +21,7 @@ defmodule Calendrical.Composite.Shift do
     end
   end
 
-  # The months `plus/6` walks for a count of years, or of months.
+  # The months `shift/6` walks for a count of years, or of months.
   @doc false
   def months(calendar, year, month, :years, years) do
     months(calendar, year, month, Duration.new!(year: years))

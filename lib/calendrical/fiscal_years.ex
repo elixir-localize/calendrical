@@ -75,7 +75,7 @@ defmodule Calendrical.FiscalYear do
                                 {:ok, territory} = Localize.validate_territory(territory)
                                 calendar = Calendrical.Gregorian
                                 month = String.to_integer(month)
-                                {territory, [calendar: calendar, month_of_year: month]}
+                                {territory, [base: calendar, year_begins: {month, 1}]}
 
                               _other ->
                                 nil
@@ -89,8 +89,9 @@ defmodule Calendrical.FiscalYear do
   Returns the map of all known fiscal-year configurations keyed by ISO 3166
   territory code.
 
-  Each value is a keyword list with `:calendar` and `:month_of_year` keys
-  describing the base calendar and the starting month of the fiscal year.
+  Each value is a keyword list with `:base` and `:year_begins` keys, the
+  options of `Calendrical.Calendar.Shifted` that build the fiscal year: its
+  base calendar and the month and day it begins on.
 
   ### Returns
 

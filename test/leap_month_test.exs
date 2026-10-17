@@ -17,10 +17,12 @@ defmodule Calendrical.Chinese.LeapMonth.Test do
       assert year_a == cyclic_year
       assert day_a == day
 
+      year = Chinese.elapsed_years(cycle, cyclic_year)
+
       if leap_month? do
-        assert Chinese.leap_month?(cycle, cyclic_year, month)
+        assert Chinese.leap_month?(year, month)
       else
-        refute Chinese.leap_month?(cycle, cyclic_year, month)
+        refute Chinese.leap_month?(year, month)
       end
     end
   end

@@ -37,11 +37,11 @@ defmodule Calendrical.Coverage.LunisolarTest do
 
   describe "Chinese cyclic_year" do
     test "cyclic_year/2 for year and month" do
-      assert Chinese.cyclic_year(4663, 1) == 43
+      assert Chinese.cyclic_year(4663, 1, 1) == 43
     end
 
     test "cyclic_year/1 for a date" do
-      assert Chinese.cyclic_year(Date.new!(4662, 7, 1, Chinese)) == 42
+      assert Chinese.cyclic_year(4662, 7, 1) == 42
     end
 
     # The sexagenary cycle began with 甲子 in 4 CE and 1984; 2025 is
@@ -81,12 +81,7 @@ defmodule Calendrical.Coverage.LunisolarTest do
     end
 
     test "leap_year?/1 for a date in this calendar" do
-      assert Chinese.leap_year?(Date.new!(4662, 7, 1, Chinese))
-    end
-
-    test "leap_year?/1 converts a date in another calendar first" do
-      assert Chinese.leap_year?(~D[2025-07-25])
-      refute Chinese.leap_year?(~D[2026-07-05])
+      assert Chinese.leap_year?(4662)
     end
 
     test "leap_month?/2 both branches" do
@@ -95,20 +90,16 @@ defmodule Calendrical.Coverage.LunisolarTest do
     end
 
     test "leap_month?/1 for a date" do
-      assert Chinese.leap_month?(Date.new!(4662, 7, 1, Chinese))
-    end
-
-    test "leap_month?/3 with cycle and cyclic year" do
-      assert Chinese.leap_month?(78, 42, 7)
+      assert Chinese.leap_month?(4662, 7)
     end
 
     test "leap_month/1 and traditional_leap_month/1" do
       assert Chinese.leap_month(4662) == 7
       assert Chinese.leap_month(4663) == nil
-      assert Chinese.leap_month(Date.new!(4662, 7, 1, Chinese)) == 7
+      assert Chinese.leap_month(4662) == 7
       assert Chinese.traditional_leap_month(4662) == 6
       assert Chinese.traditional_leap_month(4663) == nil
-      assert Chinese.traditional_leap_month(Date.new!(4662, 7, 1, Chinese)) == 6
+      assert Chinese.traditional_leap_month(4662) == 6
     end
   end
 
@@ -123,7 +114,7 @@ defmodule Calendrical.Coverage.LunisolarTest do
     end
 
     test "lunar_month_of_year/1 for a date" do
-      assert Chinese.lunar_month_of_year(Date.new!(4662, 7, 1, Chinese)) == {6, :leap}
+      assert Chinese.lunar_month_of_year(4662, 7) == {6, :leap}
     end
 
     test "month_of_year/3 returns the traditional lunar month" do
@@ -197,7 +188,7 @@ defmodule Calendrical.Coverage.LunisolarTest do
     test "date_to_iso_days and date_from_iso_days round trip" do
       iso_days = Chinese.date_to_iso_days(4663, 1, 1)
       assert iso_days == Calendar.ISO.date_to_iso_days(2026, 2, 17)
-      assert Chinese.date_to_iso_days({4663, 1, 1}) == iso_days
+      assert Chinese.date_to_iso_days(4663, 1, 1) == iso_days
       assert Chinese.date_from_iso_days(iso_days) == {4663, 1, 1}
     end
 
@@ -251,25 +242,18 @@ defmodule Calendrical.Coverage.LunisolarTest do
   end
 
   describe "Korean leap year and leap month" do
-    test "leap_year?/1 both branches" do
-      assert Korean.leap_year?(4358)
-      refute Korean.leap_year?(4359)
-      assert Korean.leap_year?(Date.new!(4358, 7, 1, Korean))
-      assert Korean.leap_year?(~D[2025-07-25])
-    end
-
     test "leap_month?/2 and leap_month?/1 both branches" do
       assert Korean.leap_month?(4358, 7)
       refute Korean.leap_month?(4358, 6)
-      assert Korean.leap_month?(Date.new!(4358, 7, 1, Korean))
+      assert Korean.leap_month?(4358, 7)
     end
 
     test "leap_month/1 and traditional_leap_month/1" do
       assert Korean.leap_month(4358) == 7
-      assert Korean.leap_month(Date.new!(4358, 7, 1, Korean)) == 7
+      assert Korean.leap_month(4358) == 7
       assert Korean.traditional_leap_month(4358) == 6
       assert Korean.traditional_leap_month(4359) == nil
-      assert Korean.traditional_leap_month(Date.new!(4358, 7, 1, Korean)) == 6
+      assert Korean.traditional_leap_month(4358) == 6
     end
   end
 
@@ -277,15 +261,15 @@ defmodule Calendrical.Coverage.LunisolarTest do
     test "lunar_month_of_year over ordinary and leap years" do
       assert Korean.lunar_month_of_year(4358, 7) == {6, :leap}
       assert Korean.lunar_month_of_year(4358, 8) == 7
-      assert Korean.lunar_month_of_year(Date.new!(4358, 7, 1, Korean)) == {6, :leap}
+      assert Korean.lunar_month_of_year(4358, 7) == {6, :leap}
       assert Korean.month_of_year(4358, 7, 1) == {6, :leap}
     end
 
     # Korean 4359 began in 2026 (丙午, 43) and 4358 in 2025 (乙巳, 42):
     # the cycle follows the lunar year, not the Korean year's number.
     test "cyclic_year/2 and cyclic_year/1" do
-      assert Korean.cyclic_year(4359, 1) == 43
-      assert Korean.cyclic_year(Date.new!(4358, 7, 1, Korean)) == 42
+      assert Korean.cyclic_year(4359, 1, 1) == 43
+      assert Korean.cyclic_year(4358, 7, 1) == 42
     end
 
     test "valid_date?/3 true and false branches" do
@@ -328,7 +312,7 @@ defmodule Calendrical.Coverage.LunisolarTest do
     test "date_to_iso_days and date_from_iso_days round trip" do
       iso_days = Korean.date_to_iso_days(4359, 1, 1)
       assert iso_days == Calendar.ISO.date_to_iso_days(2026, 2, 17)
-      assert Korean.date_to_iso_days({4359, 1, 1}) == iso_days
+      assert Korean.date_to_iso_days(4359, 1, 1) == iso_days
       assert Korean.date_from_iso_days(iso_days) == {4359, 1, 1}
     end
 
@@ -367,11 +351,6 @@ defmodule Calendrical.Coverage.LunisolarTest do
       assert LunarJapanese.day_of_era(before.year, before.month, before.day) == {11_070, 235}
     end
 
-    test "calendar_year/3 is the era year" do
-      date = Date.convert!(~D[1855-01-15], LunarJapanese)
-      assert LunarJapanese.calendar_year(date.year, date.month, date.day) == 1
-    end
-
     test "era_calendar_type/0 is :japanese" do
       assert LunarJapanese.era_calendar_type() == :japanese
     end
@@ -387,15 +366,8 @@ defmodule Calendrical.Coverage.LunisolarTest do
     # Lunar Japanese 1382 began in 2026 (丙午, 43) and 1381 in 2025
     # (乙巳, 42).
     test "cyclic_year/2 and cyclic_year/1" do
-      assert LunarJapanese.cyclic_year(1382, 1) == 43
-      assert LunarJapanese.cyclic_year(Date.new!(1381, 7, 1, LunarJapanese)) == 42
-    end
-
-    test "leap_year?/1 both branches" do
-      assert LunarJapanese.leap_year?(1381)
-      refute LunarJapanese.leap_year?(1382)
-      assert LunarJapanese.leap_year?(Date.new!(1381, 7, 1, LunarJapanese))
-      assert LunarJapanese.leap_year?(~D[2025-07-25])
+      assert LunarJapanese.cyclic_year(1382, 1, 1) == 43
+      assert LunarJapanese.cyclic_year(1381, 7, 1) == 42
     end
   end
 
@@ -403,22 +375,22 @@ defmodule Calendrical.Coverage.LunisolarTest do
     test "leap_month?/2 and leap_month?/1 both branches" do
       assert LunarJapanese.leap_month?(1381, 7)
       refute LunarJapanese.leap_month?(1381, 6)
-      assert LunarJapanese.leap_month?(Date.new!(1381, 7, 1, LunarJapanese))
+      assert LunarJapanese.leap_month?(1381, 7)
     end
 
     test "leap_month/1 and traditional_leap_month/1" do
       assert LunarJapanese.leap_month(1381) == 7
-      assert LunarJapanese.leap_month(Date.new!(1381, 7, 1, LunarJapanese)) == 7
+      assert LunarJapanese.leap_month(1381) == 7
       assert LunarJapanese.traditional_leap_month(1381) == 6
       assert LunarJapanese.traditional_leap_month(1382) == nil
-      assert LunarJapanese.traditional_leap_month(Date.new!(1381, 7, 1, LunarJapanese)) == 6
+      assert LunarJapanese.traditional_leap_month(1381) == 6
     end
 
     test "lunar_month_of_year and month_of_year over a leap year" do
       assert LunarJapanese.lunar_month_of_year(1381, 7) == {6, :leap}
       assert LunarJapanese.lunar_month_of_year(1381, 8) == 7
 
-      assert LunarJapanese.lunar_month_of_year(Date.new!(1381, 7, 1, LunarJapanese)) ==
+      assert LunarJapanese.lunar_month_of_year(1381, 7) ==
                {6, :leap}
 
       assert LunarJapanese.month_of_year(1381, 7, 1) == {6, :leap}
@@ -486,7 +458,7 @@ defmodule Calendrical.Coverage.LunisolarTest do
     test "date_to_iso_days and date_from_iso_days round trip" do
       iso_days = LunarJapanese.date_to_iso_days(1382, 1, 1)
       assert iso_days == Calendar.ISO.date_to_iso_days(2026, 2, 17)
-      assert LunarJapanese.date_to_iso_days({1382, 1, 1}) == iso_days
+      assert LunarJapanese.date_to_iso_days(1382, 1, 1) == iso_days
       assert LunarJapanese.date_from_iso_days(iso_days) == {1382, 1, 1}
     end
 

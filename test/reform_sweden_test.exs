@@ -124,7 +124,6 @@ defmodule Calendrical.Reform.SwedenTest do
       week_of_year: 3,
       iso_week_of_year: 3,
       week_of_month: 3,
-      calendar_year: 3,
       extended_year: 3,
       related_gregorian_year: 3,
       cyclic_year: 3
@@ -226,17 +225,17 @@ defmodule Calendrical.Reform.SwedenTest do
     end
 
     test "years, quarters and months step over the missing year" do
-      assert Transitional.plus(-2, 6, 3, :years, 2) == {1, 6, 3}
-      assert Transitional.plus(-1, 6, 15, :years, 1) == {1, 6, 15}
-      assert Transitional.plus(1, 6, 15, :years, -1) == {-1, 6, 15}
-      assert Transitional.plus(3, 6, 15, :years, -5) == {-3, 6, 15}
-      assert Transitional.plus(-1, 12, 31, :months, 1) == {1, 1, 31}
-      assert Transitional.plus(1, 1, 31, :months, -1) == {-1, 12, 31}
-      assert Transitional.plus(-1, 11, 15, :quarters, 1) == {1, 2, 15}
-      assert Transitional.plus(-1, 12, 31, :days, 1) == {1, 1, 1}
+      assert Transitional.shift(-2, 6, 3, :years, 2) == {1, 6, 3}
+      assert Transitional.shift(-1, 6, 15, :years, 1) == {1, 6, 15}
+      assert Transitional.shift(1, 6, 15, :years, -1) == {-1, 6, 15}
+      assert Transitional.shift(3, 6, 15, :years, -5) == {-3, 6, 15}
+      assert Transitional.shift(-1, 12, 31, :months, 1) == {1, 1, 31}
+      assert Transitional.shift(1, 1, 31, :months, -1) == {-1, 12, 31}
+      assert Transitional.shift(-1, 11, 15, :quarters, 1) == {1, 2, 15}
+      assert Transitional.shift(-1, 12, 31, :days, 1) == {1, 1, 1}
 
       # 4 BC is no leap year in the proleptic Julian calendar and 5 BC is.
-      assert Transitional.plus(-5, 2, 29, :years, 1, coerce: true) == {-4, 2, 28}
+      assert Transitional.shift(-5, 2, 29, :years, 1, clamp: true) == {-4, 2, 28}
 
       assert Transitional.diff({-2, 6, 3}, {-1, 6, 3}, :years) == 1
       assert Transitional.diff({-1, 6, 1}, {1, 6, 1}, :years) == 1
@@ -250,7 +249,7 @@ defmodule Calendrical.Reform.SwedenTest do
                Date.new!(-1, 12, 31, Transitional)
     end
 
-    test "plus/6 and diff/3 are the Julian calendar's from 5 BC to AD 5" do
+    test "shift/6 and diff/3 are the Julian calendar's from 5 BC to AD 5" do
       dates =
         for year <- @years,
             {month, day} <- [{1, 1}, {1, 31}, {2, 28}, {6, 15}, {12, 31}],
@@ -259,8 +258,8 @@ defmodule Calendrical.Reform.SwedenTest do
       for {year, month, day} = from <- dates,
           part <- [:years, :quarters, :months, :weeks, :days],
           count <- [-30, -13, -12, -3, -1, 0, 1, 2, 12, 13, 30] do
-        assert Transitional.plus(year, month, day, part, count, coerce: true) ==
-                 Julian.plus(year, month, day, part, count, coerce: true),
+        assert Transitional.shift(year, month, day, part, count, clamp: true) ==
+                 Julian.shift(year, month, day, part, count, clamp: true),
                "#{inspect(from)} plus #{count} #{part}"
       end
 
@@ -273,11 +272,11 @@ defmodule Calendrical.Reform.SwedenTest do
     # Within the window the calendar's own months are counted: a year after
     # 30 February 1712 is 28 February 1713, and a month before 30 March 1712
     # is 30 February.
-    test "plus/6 brings a day into the months of 1700 and 1712" do
-      assert Transitional.plus(1712, 2, 30, :years, 1, coerce: true) == {1713, 2, 28}
-      assert Transitional.plus(1712, 3, 30, :months, -1, coerce: true) == {1712, 2, 30}
-      assert Transitional.plus(1696, 2, 29, :years, 4, coerce: true) == {1700, 2, 28}
-      assert Transitional.plus(1708, 2, 29, :years, 4, coerce: true) == {1712, 2, 29}
+    test "shift/6 brings a day into the months of 1700 and 1712" do
+      assert Transitional.shift(1712, 2, 30, :years, 1, clamp: true) == {1713, 2, 28}
+      assert Transitional.shift(1712, 3, 30, :months, -1, clamp: true) == {1712, 2, 30}
+      assert Transitional.shift(1696, 2, 29, :years, 4, clamp: true) == {1700, 2, 28}
+      assert Transitional.shift(1708, 2, 29, :years, 4, clamp: true) == {1712, 2, 29}
     end
   end
 

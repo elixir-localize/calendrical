@@ -1,29 +1,17 @@
 defmodule Calendrical.Compiler.DateCheck do
   @moduledoc false
 
-  # A calendar answers a question about a date only for a date it has: a
-  # date its `valid_date?/3` rejects is `{:error, :invalid_date}`, never a
-  # raise nor an answer for some other date, and a date missing a field the
-  # question needs is a `Calendrical.MissingFieldsError`. Each calendar base
-  # registers this hook after its own, so it wraps the definition a calendar
-  # ends with, the base's or the calendar's own override, and the check is
-  # made once, however the callback is implemented.
+  # The two era primitives a calendar may override, `year_of_era/3` and
+  # `day_of_era/3`, answer a question about a date only for a date the
+  # calendar has: a date its `valid_date?/3` rejects is
+  # `{:error, :invalid_date}`, never a raise nor an answer for some other
+  # date, and a date missing a field is a `Calendrical.MissingFieldsError`.
+  # Each maker registers this hook after its definitions, so it wraps the
+  # definition a calendar ends with, the derived one or the calendar's own,
+  # and the check is made once however the primitive is implemented. Every
+  # other derived function checks its date itself.
 
-  @date_callbacks [
-    day_of_week: 4,
-    day_of_year: 3,
-    day_of_era: 3,
-    year_of_era: 3,
-    quarter_of_year: 3,
-    month_of_year: 3,
-    week_of_year: 3,
-    iso_week_of_year: 3,
-    week_of_month: 3,
-    calendar_year: 3,
-    extended_year: 3,
-    related_gregorian_year: 3,
-    cyclic_year: 3
-  ]
+  @date_callbacks [day_of_era: 3, year_of_era: 3]
 
   @whole_date [:year, :month, :day]
 
@@ -42,8 +30,6 @@ defmodule Calendrical.Compiler.DateCheck do
   }
 
   defmacro __before_compile__(env), do: wrap(env.module, %{})
-
-  defmacro partial_dates(env), do: wrap(env.module, @partial_dates)
 
   defp wrap(module, needed_fields) do
     callbacks =

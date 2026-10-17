@@ -12,7 +12,7 @@ defmodule Calendrical.NumericMonthTest do
   as the Gregorian months they are, so its dates are written as the
   Gregorian dates they are (user, 2026-10-16): the fiscal year from July
   whose year 2026 begins in July 2025 writes its month 1 day 15 as
-  15/07/2025, while its `calendar_year/3` and its ranges stay the fiscal
+  15/07/2025, while its `year_of_era/1` and its ranges stay the fiscal
   year's.
 
   The dates are worked out by hand. The Lady Day year 1750 begins on 25
@@ -30,8 +30,8 @@ defmodule Calendrical.NumericMonthTest do
 
   describe "the day and the month a date is written with in figures" do
     test "are its fields in a calendar that numbers its months as it writes them" do
-      {:ok, fiscal} =
-        Calendrical.new(Calendrical.NumericMonthTest.FiscalFromJuly, :month, month_of_year: 7)
+      {:ok, _fiscal} =
+        Calendrical.new(Calendrical.NumericMonthTest.FiscalFromJuly, :month, year_begins: {7, 1})
 
       assert written(~D[2025-06-16 Calendrical.Gregorian]) == {16, 6}
       assert written(~D[1750-06-05 Calendrical.Julian]) == {5, 6}
@@ -43,11 +43,10 @@ defmodule Calendrical.NumericMonthTest do
     # July, written with the Gregorian year it falls in.
     test "are the Gregorian day and month in a fiscal calendar, with the Gregorian year" do
       {:ok, fiscal} =
-        Calendrical.new(Calendrical.NumericMonthTest.FiscalFromJuly, :month, month_of_year: 7)
+        Calendrical.new(Calendrical.NumericMonthTest.FiscalFromJuly, :month, year_begins: {7, 1})
 
       assert written(Date.new!(2026, 1, 15, fiscal)) == {15, 7}
       assert fiscal.cardinal_year(2026, 1, 15) == 2025
-      assert fiscal.calendar_year(2026, 1, 15) == 2026
 
       assert written(Date.new!(2026, 7, 15, fiscal)) == {15, 1}
       assert fiscal.cardinal_year(2026, 7, 15) == 2026
@@ -102,7 +101,7 @@ defmodule Calendrical.NumericMonthTest do
 
     test "writes a fiscal date as the Gregorian date it is" do
       {:ok, fiscal} =
-        Calendrical.new(Calendrical.NumericMonthTest.FiscalFromJuly, :month, month_of_year: 7)
+        Calendrical.new(Calendrical.NumericMonthTest.FiscalFromJuly, :month, year_begins: {7, 1})
 
       assert Calendrical.strftime(Date.new!(2026, 1, 15, fiscal), "%d/%m/%Y, %-d %B", locale: :en) ==
                {:ok, "15/07/2025, 15 July"}

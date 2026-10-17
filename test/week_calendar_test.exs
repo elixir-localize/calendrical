@@ -57,7 +57,7 @@ defmodule Calendrical.Week.Test do
     assert {date.month, date.day} == {6, 17}
     assert Date.months_in_year(date) == 12
     assert Calendrical.ISOWeek.months_in_year() == 12
-    assert Calendrical.ISOWeek.weeks_in_year(2026) == {53, 7}
+    assert Calendrical.ISOWeek.weeks_in_year(2026) == 53
     assert Calendrical.month_of_year(date) == 6
     assert Calendrical.week_of_year(date) == {2026, 25}
 
@@ -159,18 +159,18 @@ defmodule Calendrical.Week.Test do
     {:ok, today} = Date.convert(today, Calendars.Sunday)
     this_period = Calendrical.Interval.month(today)
 
-    previous = Calendrical.previous(this_period, :month, coerce: true)
+    previous = Calendrical.previous(this_period, :month, clamp: true)
     assert previous.first == week_date(2018, 44, 1, Calendars.Sunday)
     assert previous.last == week_date(2018, 47, 7, Calendars.Sunday)
 
-    next = Calendrical.next(this_period, :month, coerce: true)
+    next = Calendrical.next(this_period, :month, clamp: true)
     assert next.first == week_date(2019, 1, 1, Calendars.Sunday)
     assert next.last == week_date(2019, 4, 7, Calendars.Sunday)
   end
 
   test "previous month for a week calendar transitioning to prior quarter" do
     {:ok, today} = Date.convert(~D[2019-04-11], Calendars.Monday)
-    prior_period_day = Calendrical.previous(today, :month, coerce: true)
+    prior_period_day = Calendrical.previous(today, :month, clamp: true)
     prior_period = Calendrical.Interval.month(prior_period_day)
 
     last_day_of_prior_period = prior_period.last

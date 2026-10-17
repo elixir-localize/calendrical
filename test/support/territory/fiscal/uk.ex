@@ -1,8 +1,3 @@
-require Calendrical.Compiler.Month
-
 defmodule Calendrical.Fiscal.UK do
-  use Calendrical.Base.Month,
-    first_or_last: :first,
-    month_of_year: 4,
-    year: :majority
+  use Calendrical.Calendar.Shifted, year_begins: {4, 1}, year_number: :majority
 end

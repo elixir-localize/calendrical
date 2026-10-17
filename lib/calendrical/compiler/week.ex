@@ -10,19 +10,19 @@ defmodule Calendrical.Compiler.Week do
 
     Module.put_attribute(env.module, :calendar_config, config)
 
+    # A year that ends on its configured day of the week begins, and its
+    # weeks begin, on the day after.
+    week_first_day =
+      if config.first_or_last == :last and is_integer(config.day_of_week),
+        do: Integer.mod(config.day_of_week, 7) + 1,
+        else: config.day_of_week
+
+    Module.put_attribute(env.module, :week_first_day, week_first_day)
+
     quote location: :keep do
       @behaviour Calendar
       @behaviour Calendrical
       use Calendrical.Compiler.StandardCallbacks
-
-      @doc """
-      Returns the number of years after which this calendar's years
-      repeat, their days and their weekdays alike: 400, the Gregorian
-      calendar's cycle of leap years, which is a whole number of weeks.
-
-      """
-      @impl true
-      def years_in_cycle, do: 400
 
       # @type year :: -9999..9999
       # @type month :: 1..12
@@ -54,65 +54,16 @@ defmodule Calendrical.Compiler.Week do
       def info do
         config = __config__()
 
-        Calendrical.Info.gather(__MODULE__,
+        Calendrical.Info.new(__MODULE__,
+          cldr_calendar_type: :generic,
+          era_calendar_type: config.cldr_calendar_type,
+          structure: :weeks,
+          months_in_year: {12, 12},
+          years_in_cycle: 400,
+          parsing_calendar: Calendar.ISO,
           epoch: date_to_iso_days(1, 1, 1),
-          weeks: Calendrical.Info.week_rule(config.day_of_week, config.min_days_in_first_week)
+          weeks: Calendrical.Info.week_rule(@week_first_day, config.min_days_in_first_week)
         )
-      end
-
-      @doc """
-      Identifies that the calendar is week based.
-      """
-      @impl true
-      def calendar_base do
-        :week
-      end
-
-      @doc """
-      Returns the CLDR calendar type whose data names this calendar's months, days and quarters: `:generic`.
-
-      A calendar of weeks has no month names of its own: its months are the ordinal periods of its pattern of weeks (4-4-5, 4-5-4 or 5-4-4), so they take the names of CLDR's generic calendar, "M01" to "M12". Its days, quarters and day periods are the generic calendar's, which are the Gregorian calendar's.
-
-      """
-      @impl true
-      def cldr_calendar_type do
-        :generic
-      end
-
-      @doc """
-      Returns the calendar module of this calendar's family whose CLDR
-      calendar type is the one given.
-
-      Localize asks a calendar for the calendars of its family: a CLDR
-      calendar type names no module of its own, and a locale's `-u-ca-`
-      names a type rather than a calendar.
-
-      """
-      @impl Calendrical
-      defdelegate calendar_from_cldr_calendar_type(calendar_type), to: Calendrical
-
-      @doc """
-      Returns the CLDR calendar type that names the calendar's eras: `:gregorian`.
-
-      A calendar of weeks counts its years as the Gregorian calendar does, and CLDR's generic calendar leaves its eras unnamed ("ERA0", "ERA1"), so its eras take the Gregorian calendar's names.
-
-      """
-      @impl true
-      def era_calendar_type do
-        :gregorian
-      end
-
-      @doc """
-      Returns the calendar module that text none of this calendar's
-      own formats reads is parsed in: `Calendar.ISO`. Its months are
-      named as CLDR's generic calendar names them, "M02", so "Feb 1,
-      2024" is none of its own dates: it is read as a Gregorian date
-      and converted into this calendar.
-
-      """
-      @impl true
-      def parsing_calendar do
-        Calendar.ISO
       end
 
       @doc """
@@ -125,230 +76,29 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
-      Calculates the year and era from the given `year`.
-      The ISO calendar has two eras: the current era which
-      starts in year 1 and is defined as era "1". And a
-      second era for those years less than 1 defined as
-      era "0".
+      Returns the figures a date is written with: its week year, the
+      Gregorian month that names its month, and its day of the month.
 
       """
-      @spec year_of_era(Calendrical.year()) ::
-              {year :: Calendar.year(), era :: Calendrical.era()}
-
-      def year_of_era(year) do
-        Week.year_of_era(year, __config__())
+      @impl true
+      def written_date(year, month, day) do
+        {year, Week.cardinal_month(month, __config__()), day}
       end
 
       @doc """
-      Calculates the year and era from the given `year`,
-      `month` and `day`.
-
-      The ISO calendar has two eras: the current era which
-      starts in year 1 and is defined as era "1". And a
-      second era for those years less than 1 defined as
-      era "0".
+      Returns the date of this calendar that written figures name: the
+      month of the year the named month is, with the year and the day as
+      written, where they are a date.
 
       """
-      @spec year_of_era(
-              year :: Calendrical.year(),
-              week :: Calendrical.week(),
-              day :: Calendrical.day()
-            ) ::
-              {year :: Calendar.year(), era :: Calendrical.era()}
-              | Calendrical.date_error()
-
       @impl true
-
-      def year_of_era(year, _week, _day) do
-        Week.year_of_era(year, __config__())
-      end
-
-      @doc """
-      Returns the calendar year as displayed
-      on rendered calendars.
-
-      """
-      @spec calendar_year(
-              year :: Calendrical.year(),
-              week :: Calendrical.week(),
-              day :: Calendrical.day()
-            ) ::
-              year :: Calendar.year() | Calendrical.date_error()
-
-      @impl true
-      def calendar_year(year, _week, _day) when is_integer(year) do
-        year
-      end
-
-      def calendar_year(year, _week, _day) do
-        {:error, missing_year_error("calendar_year", year)}
-      end
-
-      @doc """
-      Returns the related Gregorian year as displayed
-      on rendered calendars.
-
-      Per TR35 this is the Gregorian year in which this calendar's year
-      begins, so it is the same for every date of the calendar year. A week
-      calendar's year can begin in the Gregorian year before the one it is
-      labelled with: ISO 8601's week year 2026 begins on 29 December 2025, so
-      its related Gregorian year is 2025.
-
-      """
-      @spec related_gregorian_year(
-              year :: Calendrical.year(),
-              week :: Calendrical.week(),
-              day :: Calendrical.day()
-            ) ::
-              year :: Calendar.year() | Calendrical.date_error()
-
-      @impl true
-      def related_gregorian_year(year, _week, _day) when is_integer(year) do
-        {gregorian_year, _month, _day} =
-          year
-          |> date_to_iso_days(1, 1)
-          |> Calendar.ISO.date_from_iso_days()
-
-        gregorian_year
-      end
-
-      def related_gregorian_year(year, _week, _day) do
-        {:error, missing_year_error("related_gregorian_year", year)}
-      end
-
-      @doc """
-      Returns the extended year, one number for the year through every era: the calendar year itself in this calendar.
-
-      """
-      @spec extended_year(
-              year :: Calendrical.year(),
-              week :: Calendrical.week(),
-              day :: Calendrical.day()
-            ) ::
-              year :: Calendar.year() | Calendrical.date_error()
-
-      @impl true
-      def extended_year(year, week, day) when is_integer(year) do
-        year
-      end
-
-      def extended_year(year, _week, _day) do
-        {:error, missing_year_error("extended_year", year)}
-      end
-
-      @doc """
-      Returns the cyclic year as displayed
-      on rendered calendars.
-
-      """
-      @spec cyclic_year(
-              year :: Calendrical.year(),
-              week :: Calendrical.week(),
-              day :: Calendrical.day()
-            ) ::
-              year :: Calendar.year() | Calendrical.date_error()
-
-      @impl true
-      def cyclic_year(year, _week, _day) when is_integer(year) do
-        year
-      end
-
-      def cyclic_year(year, _week, _day) do
-        {:error, missing_year_error("cyclic_year", year)}
-      end
-
-      @doc """
-      Calculates the quarter of the year from the given `year`, `month`, and `day`.
-      It is an integer from 1 to 4.
-
-      """
-      @spec quarter_of_year(
-              year :: Calendrical.year(),
-              week :: Calendrical.week(),
-              day :: Calendrical.day()
-            ) ::
-              quarter :: Calendrical.quarter() | Calendrical.date_error()
-
-      @impl true
-      def quarter_of_year(year, month, day) do
-        {year, week, day} = Week.week_date(year, month, day, __config__())
-        Week.quarter_of_year(year, week, day, __config__())
-      end
-
-      @doc """
-      Calculates the month of the year from the given `year`, `month`, and `day`.
-      It is an integer from 1 to 12.
-
-      """
-      @spec month_of_year(
-              year :: Calendrical.year(),
-              week :: Calendrical.week(),
-              day :: Calendrical.day()
-            ) ::
-              month :: Calendar.month() | Calendrical.date_error()
-
-      @impl true
-      def month_of_year(year, month, day) do
-        {year, week, day} = Week.week_date(year, month, day, __config__())
-        Week.month_of_year(year, week, day, __config__())
-      end
-
-      @doc """
-      Returns the Gregorian month that a month of the year, as
-      `month_of_year/3` returns it, names: counted from the month
-      the year begins in.
-
-      """
-      @spec cardinal_month(Calendar.month()) :: Calendar.month()
-
-      @impl true
-      def cardinal_month(month) do
-        Week.cardinal_month(month, __config__())
-      end
-
-      @doc """
-      Calculates the week of the year from the given `year`, `month`, and `day`.
-      It is an integer from 1 to 53.
-
-      """
-      @spec week_of_year(Calendrical.year(), Calendrical.month(), Calendrical.day()) ::
-              {year :: Calendar.year(), week :: Calendrical.week()}
-              | Calendrical.date_error()
-
-      @impl true
-      def week_of_year(year, month, day) do
-        {year, week, day} = Week.week_date(year, month, day, __config__())
-        Week.week_of_year(year, week, day, __config__())
-      end
-
-      @doc """
-      Calculates the ISO week of the year from the given `year`, `month`, and `day`.
-      It is an integer from 1 to 53.
-
-      """
-      @spec iso_week_of_year(Calendrical.year(), Calendrical.month(), Calendrical.day()) ::
-              {year :: Calendar.year(), week :: Calendrical.week()}
-              | Calendrical.date_error()
-
-      @impl true
-      def iso_week_of_year(year, month, day) do
-        {year, week, day} = Week.week_date(year, month, day, __config__())
-        Week.iso_week_of_year(year, week, day, __config__())
-      end
-
-      @doc """
-      Calculates the week of the month from the given `year`, `month`, and `day`.
-      It is an integer from 1 to 5.
-
-      """
-      @spec week_of_month(Calendrical.year(), Calendrical.week(), Calendar.day()) ::
-              {month :: Calendar.month(), week :: Calendrical.week()}
-              | Calendrical.date_error()
-
-      @impl true
-      def week_of_month(year, month, day) do
-        {year, week, day} = Week.week_date(year, month, day, __config__())
-        Week.week_of_month(year, week, day, __config__())
+      def date_from_written_date(year, named_month, day) do
+        Calendrical.Base.Written.own_date(
+          __MODULE__,
+          year,
+          Week.month_from_cardinal_month(named_month, __config__()),
+          day
+        )
       end
 
       @doc """
@@ -363,114 +113,6 @@ defmodule Calendrical.Compiler.Week do
       def day_of_era(year, month, day) do
         {year, week, day} = Week.week_date(year, month, day, __config__())
         Week.day_of_era(year, week, day, __config__())
-      end
-
-      @doc """
-      Calculates the day of the year from the given `year`, `month`, and `day`.
-      It is an integer from 1 to 364, or to 371 in a long year.
-
-      """
-      @spec day_of_year(Calendrical.year(), Calendrical.month(), Calendrical.day()) ::
-              day :: Calendar.day() | Calendrical.date_error()
-
-      @impl true
-      def day_of_year(year, month, day) do
-        {year, week, day} = Week.week_date(year, month, day, __config__())
-        Week.day_of_year(year, week, day, __config__())
-      end
-
-      @doc """
-      Calculates the day of the week from the given `year`, `week`, and `day`.
-      It is an integer where 1 means the first day of the week and 7 means the
-      last day of the week.
-
-      Explicity, `1` does *not* mean `Monday` unless `starting_on` is `:monday`.
-
-      """
-      @spec day_of_week(
-              year :: Calendrical.year(),
-              month :: Calendrical.week(),
-              day :: Calendrical.day(),
-              :default | atom()
-            ) ::
-              {day_of_week :: Calendar.day_of_week(),
-               first_day_of_week ::
-                 Calendar.day_of_week(), last_day_of_week :: Calendar.day_of_week()}
-              | Calendrical.date_error()
-
-      @impl true
-      def day_of_week(year, month, day, starting_on) do
-        {year, week, day} = Week.week_date(year, month, day, __config__())
-
-        case Week.day_of_week(year, week, day, starting_on, __config__()) do
-          {:error, reason} -> {:error, reason}
-          day -> {day, 1, 7}
-        end
-      end
-
-      @doc """
-      Calculates the number of periods in a given `year`: its months,
-      which a date's month field counts.
-
-      """
-      @spec periods_in_year(year :: Calendrical.year()) :: Calendar.month()
-      def periods_in_year(year) do
-        months_in_year(year)
-      end
-
-      @doc """
-      Returns the number weeks in a given year.
-
-      ### Arguments
-
-      * `year` is any `t:Calendar.year/0`
-
-      ### Returns
-
-      * `{weeks_in_year, days_in_last_week}`
-
-      ### Example
-
-          iex> Calendrical.ISOWeek.weeks_in_year 2020
-          {53, 7}
-
-          iex> Calendrical.ISOWeek.weeks_in_year 2021
-          {52, 7}
-
-      """
-      @spec weeks_in_year(year :: Calendrical.year()) ::
-              {weeks :: Calendar.week(), days_in_last_week :: Calendar.day()}
-              | {:error, Exception.t()}
-
-      @impl true
-      def weeks_in_year(year) do
-        Week.weeks_in_year(year, __config__())
-      end
-
-      @doc """
-      Returns the number days in a given year.
-
-      """
-      @spec days_in_year(year :: Calendrical.year()) ::
-              days :: Calendar.day() | {:error, Exception.t()}
-
-      @impl true
-      def days_in_year(year) do
-        Week.days_in_year(year, __config__())
-      end
-
-      @doc """
-      Returns the dates in this calendar, of the given `month` and `day`,
-      that fall within the given Gregorian year — zero, one or two of them,
-      in this calendar.
-
-      """
-      @spec dates_in_gregorian_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
-              [Date.t()]
-
-      @impl true
-      def dates_in_gregorian_year(gregorian_year, month, day) do
-        Calendrical.generic_dates_in_gregorian_year(__MODULE__, gregorian_year, month, day)
       end
 
       @doc """
@@ -502,141 +144,6 @@ defmodule Calendrical.Compiler.Week do
       end
 
       @doc """
-      Returns how many days there are in the given month, whatever the year.
-
-      ### Arguments
-
-      * `month` is a month of the year, from 1 to 12.
-
-      ### Returns
-
-      * The number of days of a month that has as many in every year, or
-
-      * `{:ambiguous, [days, days_in_a_long_year]}` for the last month, which has one week more in a year of 53 weeks, or
-
-      * `{:error, :undefined}` for a month no year has.
-
-      """
-      @spec days_in_month(month :: Calendrical.month()) ::
-              days ::
-              Calendar.day()
-              | {:ambiguous, [pos_integer()]}
-              | {:error, :undefined | Exception.t()}
-
-      @impl true
-      def days_in_month(month) do
-        Week.days_in_month(month, __config__())
-      end
-
-      @doc """
-      Returns the number of months in a year (without a year).
-
-      """
-      @impl true
-      def months_in_year do
-        Week.months_in_year(__config__())
-      end
-
-      @doc """
-      Returns the date of a day of a week of a year. A calendar of weeks'
-      week dates are counted in its own weeks: the week is a week of its
-      year, and the day is counted from the day its weeks begin on.
-
-      """
-      @impl true
-      def date_from_week_date(year, week, day) do
-        Week.date_from_week_date(year, week, day, __config__())
-      end
-
-      @doc """
-      Returns the year, the week and the day of the week of a date, as
-      `date_from_week_date/3` counts them.
-
-      """
-      @impl true
-      def week_date_from_date(year, month, day) do
-        Week.week_date_from_date(year, month, day, __config__())
-      end
-
-      @doc """
-      Returns the number of weeks in a year of this calendar of weeks.
-
-      """
-      @impl true
-      def weeks_in_week_year(year) do
-        Calendrical.Base.WeekDate.weeks_in_own_year(__MODULE__, year)
-      end
-
-      @doc """
-      Returns the number days in a a week.
-
-      """
-      @impl true
-      def days_in_week do
-        Week.days_in_week()
-      end
-
-      @doc """
-      Returns a `t:Date.Range.t/0` representing
-      a given year.
-
-      """
-      @impl true
-      def year(year) do
-        Week.year(year, __config__())
-      end
-
-      @doc """
-      Returns a `t:Date.Range.t/0` representing
-      a given quarter of a year.
-
-      """
-      @impl true
-      def quarter(year, quarter) do
-        Week.quarter(year, quarter, __config__())
-      end
-
-      @doc """
-      Returns a `t:Date.Range.t/0` representing
-      a given quadrimester (third) of a year: four of its months.
-
-      """
-      @impl true
-      def quadrimester(year, quadrimester) do
-        Calendrical.Period.date_range(__MODULE__, year, quadrimester, 4)
-      end
-
-      @doc """
-      Returns a `t:Date.Range.t/0` representing
-      a given semester (half) of a year: six of its months.
-
-      """
-      @impl true
-      def semester(year, semester) do
-        Calendrical.Period.date_range(__MODULE__, year, semester, 6)
-      end
-
-      @doc """
-      Returns a `t:Date.Range.t/0` representing
-      a given month of a year.
-
-      """
-      @impl true
-      def month(year, month) do
-        Week.month(year, month, __config__())
-      end
-
-      @doc """
-      Returns a `t:Date.Range.t/0` representing
-      a given week of a year.
-
-      """
-      @impl true
-      def week(year, week) do
-        Week.week(year, week, __config__())
-      end
-
-      @doc """
       Adds an `increment` number of `date_part`s
       to a `year-month-day`.
 
@@ -645,53 +152,16 @@ defmodule Calendrical.Compiler.Week do
 
       """
       @impl true
-      def plus(year, month, day, date_part, increment, options \\ [])
+      def shift(year, month, day, date_part, increment, options \\ [])
 
-      def plus(year, month, day, date_part, increment, options)
+      def shift(year, month, day, date_part, increment, options)
           when date_part in [:years, :quarters, :months, :weeks, :days] do
         {year, week, day} = Week.week_date(year, month, day, __config__())
 
         {year, week, day} =
-          Week.plus(year, week, day, __config__(), date_part, increment, options)
+          Week.shift(year, week, day, __config__(), date_part, increment, options)
 
         Week.month_date(year, week, day, __config__())
-      end
-
-      @doc """
-      Returns the whole number of `date_part`s from one
-      `{year, week, day}` to another — the inverse of `plus/6`.
-
-      `date_part` can be `:years`, `:quarters`, `:months`, `:weeks`
-      or `:days`; a month is a period of the calendar's weeks, as
-      `plus/6` counts it. The count is the largest number `plus/6`
-      can add to the earlier date without passing the later one; it
-      is negative when `to` is before `from`.
-
-      """
-      @impl true
-      def diff(from, to, date_part) do
-        Calendrical.Base.Common.diff(__MODULE__, from, to, date_part)
-      end
-
-      @doc """
-      Adds a :year, :month, :day or time increments
-
-      These functions support CalendarInterval
-
-      """
-      def add(year, month, day, hour, minute, second, microsecond, :year, step) do
-        {year, month, day} = plus(year, month, day, :years, step)
-        {year, month, day, hour, minute, second, microsecond}
-      end
-
-      def add(year, month, day, hour, minute, second, microsecond, :quarter, step) do
-        {year, month, day} = plus(year, month, day, :quarters, step)
-        {year, month, day, hour, minute, second, microsecond}
-      end
-
-      def add(year, month, day, hour, minute, second, microsecond, :month, step) do
-        {year, month, day} = plus(year, month, day, :months, step)
-        {year, month, day, hour, minute, second, microsecond}
       end
 
       @doc """
@@ -702,75 +172,6 @@ defmodule Calendrical.Compiler.Week do
       @impl true
       def leap_year?(year) do
         Week.long_year?(year, __config__())
-      end
-
-      @doc """
-      Shifts a date by given duration.
-
-      """
-      @spec shift_date(Calendar.year(), Calendar.month(), Calendar.day(), Duration.t()) ::
-              {Calendar.year(), Calendar.month(), Calendar.day()}
-
-      @impl Calendar
-      def shift_date(year, month, day, duration) do
-        Calendrical.shift_date(year, month, day, __MODULE__, duration)
-      end
-
-      @doc """
-      Shifts a time by given duration.
-
-      """
-      @spec shift_time(
-              Calendar.hour(),
-              Calendar.minute(),
-              Calendar.second(),
-              Calendar.microsecond(),
-              Duration.t()
-            ) ::
-              {Calendar.hour(), Calendar.minute(), Calendar.second(), Calendar.microsecond()}
-
-      @impl Calendar
-      def shift_time(hour, minute, second, microsecond, duration) do
-        Calendar.ISO.shift_time(hour, minute, second, microsecond, duration)
-      end
-
-      @doc """
-      Shifts a naive date time by given duration.
-
-      """
-      @spec shift_naive_datetime(
-              Calendar.year(),
-              Calendar.month(),
-              Calendar.day(),
-              Calendar.hour(),
-              Calendar.minute(),
-              Calendar.second(),
-              Calendar.microsecond(),
-              Duration.t()
-            ) ::
-              {
-                Calendar.year(),
-                Calendar.month(),
-                Calendar.day(),
-                Calendar.hour(),
-                Calendar.minute(),
-                Calendar.second(),
-                Calendar.microsecond()
-              }
-
-      @impl Calendar
-      def shift_naive_datetime(year, month, day, hour, minute, second, microsecond, duration) do
-        Calendrical.shift_naive_datetime(
-          year,
-          month,
-          day,
-          hour,
-          minute,
-          second,
-          microsecond,
-          __MODULE__,
-          duration
-        )
       end
 
       @doc """
@@ -815,147 +216,9 @@ defmodule Calendrical.Compiler.Week do
         Week.last_gregorian_day_of_year(year, __config__())
       end
 
-      @doc """
-      Returns the `t:Calendar.iso_days/0` format of the specified date.
-
-      """
-      @impl true
-      @spec naive_datetime_to_iso_days(
-              Calendar.year(),
-              Calendar.month(),
-              Calendar.day(),
-              Calendar.hour(),
-              Calendar.minute(),
-              Calendar.second(),
-              Calendar.microsecond()
-            ) :: Calendar.iso_days()
-
-      def naive_datetime_to_iso_days(year, month, day, hour, minute, second, microsecond) do
-        {year, week, day} = Week.week_date(year, month, day, __config__())
-
-        Week.naive_datetime_to_iso_days(
-          year,
-          week,
-          day,
-          hour,
-          minute,
-          second,
-          microsecond,
-          __config__()
-        )
-      end
-
-      @doc """
-      Converts the `t:Calendar.iso_days/0` format to the datetime format specified by this calendar.
-
-      """
-      @spec naive_datetime_from_iso_days(Calendar.iso_days()) :: {
-              Calendar.year(),
-              Calendar.month(),
-              Calendar.day(),
-              Calendar.hour(),
-              Calendar.minute(),
-              Calendar.second(),
-              Calendar.microsecond()
-            }
-      @impl true
-      def naive_datetime_from_iso_days({days, day_fraction}) do
-        {year, week, day, hour, minute, second, microsecond} =
-          Week.naive_datetime_from_iso_days({days, day_fraction}, __config__())
-
-        {year, month, day} = Week.month_date(year, week, day, __config__())
-        {year, month, day, hour, minute, second, microsecond}
-      end
-
       @doc false
       @impl true
-      def date_to_string(year, month, day) do
-        Week.date_to_string(year, month, day)
-      end
-
-      @doc false
-      @impl true
-      def datetime_to_string(
-            year,
-            month,
-            day,
-            hour,
-            minute,
-            second,
-            microsecond,
-            time_zone,
-            zone_abbr,
-            utc_offset,
-            std_offset
-          ) do
-        Week.datetime_to_string(
-          year,
-          month,
-          day,
-          hour,
-          minute,
-          second,
-          microsecond,
-          time_zone,
-          zone_abbr,
-          utc_offset,
-          std_offset
-        )
-      end
-
-      @doc false
-      @impl true
-      def naive_datetime_to_string(year, month, day, hour, minute, second, microsecond) do
-        Week.naive_datetime_to_string(year, month, day, hour, minute, second, microsecond)
-      end
-
-      @doc false
-      calendar_impl()
-
-      def parse_date(string) do
-        Calendrical.Parse.parse_week_date(string, __MODULE__)
-      end
-
-      @doc false
-      calendar_impl()
-
-      def parse_utc_datetime(string) do
-        Calendrical.Parse.parse_utc_datetime(string, __MODULE__)
-      end
-
-      @doc false
-      calendar_impl()
-
-      def parse_naive_datetime(string) do
-        Calendrical.Parse.parse_naive_datetime(string, __MODULE__)
-      end
-
-      @doc false
-      defdelegate parse_time(string), to: Calendar.ISO
-
-      @doc false
-      defdelegate iso_days_to_beginning_of_day(iso_days), to: Calendar.ISO
-
-      @doc false
-      defdelegate iso_days_to_end_of_day(iso_days), to: Calendar.ISO
-
-      @doc false
-      defdelegate day_rollover_relative_to_midnight_utc, to: Calendar.ISO
-
-      @doc false
       defdelegate months_in_year(year), to: Calendar.ISO
-
-      @doc false
-      defdelegate time_from_day_fraction(day_fraction), to: Calendar.ISO
-
-      @doc false
-      defdelegate time_to_day_fraction(hour, minute, second, microsecond), to: Calendar.ISO
-
-      @doc false
-      defdelegate time_to_string(hour, minute, second, microsecond), to: Calendar.ISO
-
-      @doc false
-      defdelegate valid_time?(hour, minute, second, microsecond), to: Calendar.ISO
     end
   end
 end

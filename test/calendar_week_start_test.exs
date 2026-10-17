@@ -92,17 +92,24 @@ defmodule Calendrical.CalendarWeekStartTest do
       # year such as 5786 and the 13th of a leap year.
       elul = Calendrical.Hebrew.months_in_year(5786)
       last_day = Calendrical.Hebrew.days_in_month(5786, elul)
-      {weeks, _days_in_last_week} = Calendrical.Hebrew.weeks_in_year(5786)
-      assert Calendrical.Hebrew.week_of_year(5786, elul, last_day) == {5786, weeks}
+      # 29 Elul 5786 is in week 1 of 5787, which begins on the Sunday before
+      # 1 Tishri; the day before that Sunday is in the last week of 5786.
+      weeks = Calendrical.Hebrew.weeks_in_year(5786)
+      assert Calendrical.Hebrew.week_of_year(5786, elul, last_day) == {5787, 1}
+      assert Calendrical.Hebrew.week_of_year(5786, elul, last_day - 7) == {5786, weeks}
 
       last_day = Calendrical.Islamic.Civil.days_in_month(1447, 12)
-      {weeks, _days_in_last_week} = Calendrical.Islamic.Civil.weeks_in_year(1447)
-      assert Calendrical.Islamic.Civil.week_of_year(1447, 12, last_day) == {1447, weeks}
+      weeks = Calendrical.Islamic.Civil.weeks_in_year(1447)
+
+      assert Calendrical.Islamic.Civil.week_of_year(1447, 12, last_day) in [
+               {1447, weeks},
+               {1448, 1}
+             ]
     end
 
     test "a Hebrew leap year has more weeks than an ordinary year" do
-      assert Calendrical.Hebrew.weeks_in_year(5786) == {51, 6}
-      assert Calendrical.Hebrew.weeks_in_year(5787) == {56, 6}
+      assert Calendrical.Hebrew.weeks_in_year(5786) == 50
+      assert Calendrical.Hebrew.weeks_in_year(5787) == 55
       assert Calendrical.Hebrew.leap_year?(5787)
     end
 

@@ -195,7 +195,7 @@ defmodule Calendrical.Lunisolar do
     new_month = constrained_ordinal(lunar_month, leap_month(new_year, epoch, location_fun))
 
     new_day =
-      if Keyword.get(options, :coerce, false) do
+      if Keyword.get(options, :clamp, false) do
         min(day, days_in_month(new_year, new_month, epoch, location_fun))
       else
         day

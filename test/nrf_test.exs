@@ -37,9 +37,9 @@ defmodule Calendrical.NRF.Test do
     assert Calendrical.NRF.days_in_month(2024, 2) == 35
     assert Calendrical.NRF.week_date_from_date(2024, 2, 35) == {2024, 9, 7}
 
-    assert Calendrical.NRF.plus(2024, 2, 35, :months, 3, coerce: true) == {2024, 5, 35}
-    assert Calendrical.NRF.plus(2024, 2, 35, :months, -3, coerce: true) == {2023, 11, 35}
-    assert Calendrical.NRF.plus(2024, 2, 35, :months, 1, coerce: true) == {2024, 3, 28}
+    assert Calendrical.NRF.shift(2024, 2, 35, :months, 3, clamp: true) == {2024, 5, 35}
+    assert Calendrical.NRF.shift(2024, 2, 35, :months, -3, clamp: true) == {2023, 11, 35}
+    assert Calendrical.NRF.shift(2024, 2, 35, :months, 1, clamp: true) == {2024, 3, 28}
 
     assert Date.shift(%Date{year: 2024, month: 2, day: 35, calendar: Calendrical.NRF}, month: 3) ==
              %Date{year: 2024, month: 5, day: 35, calendar: Calendrical.NRF}

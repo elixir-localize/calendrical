@@ -1,5 +1,3 @@
-require Calendrical.Compiler.Month
-
 defmodule Calendrical.Fiscal.AU do
-  use Calendrical.Base.Month, month_of_year: 7, year: :ending
+  use Calendrical.Calendar.Shifted, year_begins: {7, 1}, year_number: :ending
 end

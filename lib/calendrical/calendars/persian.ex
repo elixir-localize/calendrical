@@ -28,10 +28,10 @@ defmodule Calendrical.Persian do
 
   """
 
-  use Calendrical.Behaviour,
+  use Calendrical.Calendar,
     epoch: ~D[0622-03-20 Calendrical.Julian],
     cldr_calendar_type: :persian,
-    first_day_of_week: 6
+    weeks: [first_day: 6]
 
   # `Astro.equinox/2` is accurate to within two minutes only for
   # this span of Gregorian years; outside it the equinox — and
@@ -125,73 +125,6 @@ defmodule Calendrical.Persian do
   @impl true
   def leap_year?(year) when is_integer(year) do
     new_year(year + 1) - new_year(year) == 366
-  end
-
-  @doc """
-  Returns `{year, week_in_year}` for the given Persian date.
-
-  Weeks run Saturday (Shanbeh) through Friday, the
-  calendar's own week boundary. Week 1 is the week containing
-  1 Farvardin, so a year that opens mid-week has a short
-  first week. Every date numbers within its own year; weeks do
-  not spill into the adjacent year's numbering.
-
-  ### Arguments
-
-  * `year` is any Persian year as an integer.
-
-  * `month` is a Persian month number.
-
-  * `day` is a Persian day-of-month.
-
-  ### Returns
-
-  * A two-tuple `{year, week_in_year}`, or
-
-  * `{:error, :invalid_date}` if the date is not valid.
-
-  ### Examples
-
-      iex> Calendrical.Persian.week_of_year(1404, 1, 1)
-      {1404, 1}
-
-      iex> Calendrical.Persian.week_of_year(1404, 7, 1)
-      {1404, 28}
-
-  """
-  @impl true
-  @spec week_of_year(Calendar.year(), Calendar.month(), Calendar.day()) ::
-          {Calendar.year(), Calendar.week()} | Calendrical.date_error()
-  def week_of_year(year, month, day) do
-    Calendrical.Base.Common.week_of_year(__MODULE__, year, month, day)
-  end
-
-  @doc """
-  Returns the number of weeks in the given Persian `year`.
-
-  ### Arguments
-
-  * `year` is any Persian year as an integer.
-
-  ### Returns
-
-  * A two-tuple `{weeks_in_year, days_in_last_week}` where the
-    final week is short when the year does not end on the last
-    day of the calendar's week, or
-
-  * `{:error, :invalid_date}` if `year` is not valid.
-
-  ### Examples
-
-      iex> Calendrical.Persian.weeks_in_year(1404)
-      {53, 7}
-
-  """
-  @impl true
-  @spec weeks_in_year(Calendar.year()) ::
-          {Calendrical.week(), Calendar.day()} | {:error, :invalid_date}
-  def weeks_in_year(year) do
-    Calendrical.Base.Common.weeks_in_year(__MODULE__, year)
   end
 
   @doc """
@@ -396,39 +329,4 @@ defmodule Calendrical.Persian do
     correction = if MapSet.member?(@arithmetic_common_years, year - 1), do: 1, else: 0
     @arithmetic_epoch + 365 * (year - 1) + Integer.floor_div(8 * year + 21, 33) - correction
   end
-
-  @doc """
-  Returns the number of days in the given month, whatever its year.
-
-  The first six months have 31 days and the next five 30; the last, Esfand, has 30 in a leap year and 29 otherwise.
-
-  ### Arguments
-
-  * `month` is a month number, 1..12.
-
-  ### Returns
-
-  * The number of days, where the month has as many in every year.
-
-  * `{:ambiguous, range}` where the month's length depends on the year.
-
-  * `{:error, :undefined}` for any other value.
-
-  ### Examples
-
-      iex> Calendrical.Persian.days_in_month(1)
-      31
-
-      iex> Calendrical.Persian.days_in_month(7)
-      30
-
-      iex> Calendrical.Persian.days_in_month(12)
-      {:ambiguous, 29..30}
-
-  """
-  @impl true
-  def days_in_month(month) when month in 1..6, do: 31
-  def days_in_month(month) when month in 7..11, do: 30
-  def days_in_month(12), do: {:ambiguous, 29..30}
-  def days_in_month(_month), do: {:error, :undefined}
 end

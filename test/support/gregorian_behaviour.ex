@@ -1,11 +1,11 @@
-defmodule Calendrical.Behaviour.Gregorian do
+defmodule Calendrical.Test.Gregorian do
   @moduledoc """
   Implementation of the Gregorian calendar used
   only to validate the calendar behaviour,
 
   """
 
-  use Calendrical.Behaviour,
+  use Calendrical.Calendar,
     epoch: ~D[0000-01-01]
 
   @doc """

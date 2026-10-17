@@ -63,7 +63,7 @@ defmodule Calendrical.PreferenceTest do
     test "other first days resolve to a derived Gregorian calendar" do
       assert {:ok, module} = Preference.calendar_from_locale("en-u-fw-sun")
       assert module == Calendrical.Gregorian.Sun
-      assert module.__config__().day_of_week == 7
+      assert module.info().weeks.first_day == 7
       assert {:ok, _date} = Date.convert(~D[2026-07-05], module)
     end
   end

@@ -248,7 +248,7 @@ defmodule Calendrical.Preference do
     {:ok, day} = Map.fetch(@first_day, first_day)
     module = first_day |> Atom.to_string() |> String.capitalize() |> String.to_atom()
     calendar_module = Module.concat([@base_calendar, Gregorian, module])
-    Calendrical.new(calendar_module, :month, day_of_week: day)
+    Calendrical.new(calendar_module, :month, weeks: [first_day: day])
   end
 
   def calendar_from_locale(%LanguageTag{locale: %{ca: nil}} = locale) do

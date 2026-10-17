@@ -123,20 +123,23 @@ defmodule Calendrical.CalendarCreationTest do
 
   describe "Calendrical.new/3" do
     test "answers every process with the calendar, of months or of weeks" do
-      months = at_once(fn -> Calendrical.new(Creation.Month, :month, month_of_year: 4) end)
+      months = at_once(fn -> Calendrical.new(Creation.Month, :month, year_begins: {4, 1}) end)
 
       assert Enum.uniq(months) == [{:ok, Creation.Month}]
 
       weeks =
         at_once(fn ->
-          Calendrical.new(Creation.Week, :week, month_of_year: 2, weeks_in_month: [4, 4, 5])
+          Calendrical.new(Creation.Week, :week,
+            pattern: [4, 4, 5],
+            year_begins: {:monday, :on_or_before, {2, 1}}
+          )
         end)
 
       assert Enum.uniq(weeks) == [{:ok, Creation.Week}]
     end
 
     test "answers with the error of options that do not make a calendar" do
-      assert {:error, _reason} = Calendrical.new(Creation.NoMonth, :month, month_of_year: 99)
+      assert {:error, _reason} = Calendrical.new(Creation.NoMonth, :month, year_begins: {99, 1})
 
       refute Code.ensure_loaded?(Creation.NoMonth)
     end

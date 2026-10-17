@@ -72,8 +72,8 @@ defmodule Calendrical.UCaCalendarTest do
 
       # GB's weeks begin on Monday and its first holds four days of the year,
       # where the United States' begin on Sunday.
-      assert Calendrical.GB.__config__().day_of_week == 1
-      assert Calendrical.US.__config__().day_of_week == 7
+      assert Calendrical.GB.info().weeks.first_day == 1
+      assert Calendrical.US.info().weeks.first_day == 7
     end
 
     test "naming the calendar a territory already prefers changes nothing" do

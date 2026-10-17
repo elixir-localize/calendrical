@@ -1,5 +1,3 @@
-require Calendrical.Compiler.Week
-
 defmodule Calendrical.NRF do
   @moduledoc """
   Implements the US National Retail Federation
@@ -14,10 +12,5 @@ defmodule Calendrical.NRF do
   the same week of the year.
 
   """
-  use Calendrical.Base.Week,
-    min_days_in_first_week: 4,
-    begins_or_ends: :ends,
-    first_or_last: :last,
-    day_of_week: 6,
-    month_of_year: 1
+  use Calendrical.Calendar.Weeks, year_ends: {:saturday, :nearest, {1, 31}}
 end

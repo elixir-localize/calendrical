@@ -52,7 +52,7 @@ defmodule Calendrical.Base.Bounds do
   defp bounds({:error, :undefined}, undefined), do: undefined.()
   defp bounds({:error, _exception} = error, _undefined), do: error
 
-  # A calendar made with `use Calendrical.Behaviour` says how many months
+  # A calendar made with `use Calendrical.Calendar` says how many months
   # its ordinary and its leap years have.
   defp ordinary_and_leap_months(calendar) do
     if function_exported?(calendar, :months_in_ordinary_year, 0) and

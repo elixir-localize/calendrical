@@ -1,7 +1,7 @@
 defmodule Calendrical.MixProject do
   use Mix.Project
 
-  @version "1.4.0-dev"
+  @version "2.0.0-dev"
 
   def project do
     [
@@ -132,7 +132,22 @@ defmodule Calendrical.MixProject do
       "Other Calendars": ~r/^Calendrical\.(Persian|Composite|Coptic)$/,
       "Reform Calendars": ~r/^Calendrical\.Reform(\.(Sweden(\.Transitional)?|Japan|England))?$/,
       "Fiscal-year Calendars": ~r/^Calendrical\.FiscalYear$/,
-      Behaviours: [Calendrical.Behaviour, Calendrical.Formatter],
+      Makers: [
+        Calendrical.Calendar,
+        Calendrical.Calendar.Shifted,
+        Calendrical.Calendar.Weeks,
+        Calendrical.Calendar.Lunisolar,
+        Calendrical.Composite
+      ],
+      "Derived API": [
+        Calendrical.Info,
+        Calendrical.Month,
+        Calendrical.Week,
+        Calendrical.Period,
+        Calendrical.Era,
+        Calendrical.Shift
+      ],
+      Behaviours: [Calendrical.Formatter],
       Parsing: [
         Calendrical.Date,
         Calendrical.DateTime,

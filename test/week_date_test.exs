@@ -80,7 +80,9 @@ defmodule Calendrical.WeekDateTest do
       assert Calendrical.Hebrew.date_from_week_date(5786, 1, 3) ==
                ~D[5786-01-01 Calendrical.Hebrew]
 
-      assert Calendrical.Hebrew.date_from_week_date(5786, 1, 1) == {:error, :invalid_date}
+      # Week 1 begins on the Sunday before 1 Tishri, 28 Elul 5785
+      assert Calendrical.Hebrew.date_from_week_date(5786, 1, 1) ==
+               ~D[5785-12-28 Calendrical.Hebrew]
 
       assert Date.convert!(~D[5786-03-03 Calendrical.Hebrew], Calendar.ISO) == ~D[2025-11-23]
 
@@ -91,8 +93,8 @@ defmodule Calendrical.WeekDateTest do
 
       # Monday 22 September 2025 is 29 Elul 5785, the second day of the last
       # week of 5785.
-      assert Calendrical.Hebrew.week_date_from_date(5785, 12, 29) ==
-               {5785, Calendrical.Hebrew.weeks_in_week_year(5785), 2}
+      # 29 Elul 5785, a Monday, is in week 1 of 5786, which began the day before
+      assert Calendrical.Hebrew.week_date_from_date(5785, 12, 29) == {5786, 1, 2}
     end
 
     test "is no week of the Gregorian year, which iso_week_of_year/3 gives" do
@@ -123,7 +125,7 @@ defmodule Calendrical.WeekDateTest do
       end
     end
 
-    test "week 1 holds the year's first day, and the day before it is of the last week before" do
+    test "week 1 holds the year's first day, and the day before week 1 is of the last week before" do
       for {calendar, years} <- [
             {Calendrical.Hebrew, 5780..5800},
             {Calendrical.Coptic, 1740..1750},
@@ -135,7 +137,7 @@ defmodule Calendrical.WeekDateTest do
         assert {^year, 1, _day} =
                  calendar.week_date_from_date(first.year, first.month, first.day)
 
-        before = Date.add(first, -1)
+        before = Date.add(calendar.date_from_week_date(year, 1, 1), -1)
 
         assert {before_year, last_week, _day} =
                  calendar.week_date_from_date(before.year, before.month, before.day)

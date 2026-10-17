@@ -54,14 +54,13 @@ defmodule Calendrical.Reform.JapanTest do
       %{year: year, month: month, day: day} = Date.convert!(~D[1700-02-10], Japan)
 
       assert Japan.year_of_era(year, month, day) == {12, 208}
-      assert Japan.calendar_year(year, month, day) == 12
       assert Japan.related_gregorian_year(year, month, day) == 1699
       assert Japan.cyclic_year(year, month, day) == 16
       assert Japan.extended_year(year, month, day) == year
     end
 
     test "a post-reform date answers as the Japanese calendar" do
-      assert Japan.calendar_year(2025, 3, 15) == 7
+      assert Japan.year_of_era(2025, 3, 15) == {7, 236}
       assert Japan.related_gregorian_year(2025, 3, 15) == 2025
     end
 

@@ -97,7 +97,7 @@ defmodule Calendrical.Laws do
   # The weeks of a week-year, `week/2` of 1 up to `weeks_in_year/1`.
   def weeks_of_year(calendar, year) do
     case calendar.weeks_in_year(year) do
-      {weeks, _days_in_last_week} -> Enum.map(1..weeks//1, &{&1, calendar.week(year, &1)})
+      weeks when is_integer(weeks) -> Enum.map(1..weeks//1, &{&1, calendar.week(year, &1)})
       other -> {:error, {:weeks_in_year, other}}
     end
   end
@@ -186,7 +186,7 @@ defmodule Calendrical.Laws do
   # beyond the fourth.
   def absent_periods(calendar, year) do
     {_fewest, most_months} = calendar.months_in_year_bounds()
-    {weeks, _days} = calendar.weeks_in_year(year)
+    weeks = calendar.weeks_in_year(year)
     months = calendar.month_numbers(year)
 
     absent_months =

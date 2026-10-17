@@ -14,12 +14,12 @@ defmodule Calendrical.DayOfWeekTest do
     end
   end
 
-  property "Day of week for Calendrical.Behaviour.Gregorian and Calendar.ISO are the same" do
+  property "Day of week for Calendrical.Test.Gregorian and Calendar.ISO are the same" do
     check all(
             date <- Calendrical.Test.DateGenerator.generate_date_in_calendar(Calendar.ISO),
             max_runs: @max_runs
           ) do
-      gregorian = Date.convert!(date, Calendrical.Behaviour.Gregorian)
+      gregorian = Date.convert!(date, Calendrical.Test.Gregorian)
       assert Date.day_of_week(date) == Date.day_of_week(gregorian)
     end
   end

@@ -80,7 +80,6 @@ defmodule Calendrical.EraTest do
     test "modern dates carry the current era" do
       date = Date.convert!(~D[2026-07-05], Calendrical.LunarJapanese)
       assert Calendrical.LunarJapanese.year_of_era(date.year, date.month, date.day) == {8, 236}
-      assert Calendrical.LunarJapanese.calendar_year(date.year, date.month, date.day) == 8
     end
 
     test "an era begins on its proclamation day, mid-lunar-year" do
@@ -192,12 +191,10 @@ defmodule Calendrical.EraTest do
       assert Calendrical.Japanese.year_of_era(0, 12, 31) == {-644, 0}
       assert Calendrical.Japanese.year_of_era(600, 1, 1) == {-44, 0}
       assert Calendrical.Japanese.year_of_era(-6000, 1, 1) == {-6644, 0}
-      assert Calendrical.Japanese.calendar_year(600, 1, 1) == -44
       assert Calendrical.Japanese.day_of_era(645, 7, 19) == {0, 0}
 
       date = Date.convert!(~D[0600-06-01], Calendrical.LunarJapanese)
       assert Calendrical.LunarJapanese.year_of_era(date.year, date.month, date.day) == {-44, 0}
-      assert Calendrical.LunarJapanese.calendar_year(date.year, date.month, date.day) == -44
     end
   end
 

@@ -11,8 +11,8 @@ defmodule Calendrical.PropertyTest do
             max_runs: @max_runs
           ) do
       this = Calendrical.Interval.week(date)
-      previous = Calendrical.previous(this, :week, coerce: true)
-      next = Calendrical.next(this, :week, coerce: true)
+      previous = Calendrical.previous(this, :week, clamp: true)
+      next = Calendrical.next(this, :week, clamp: true)
 
       assert Calendrical.date_to_iso_days(this.last) + 1 ==
                Calendrical.date_to_iso_days(next.first)
@@ -28,8 +28,8 @@ defmodule Calendrical.PropertyTest do
             max_runs: @max_runs
           ) do
       this = Calendrical.Interval.month(date)
-      previous = Calendrical.previous(this, :month, coerce: true)
-      next = Calendrical.next(this, :month, coerce: true)
+      previous = Calendrical.previous(this, :month, clamp: true)
+      next = Calendrical.next(this, :month, clamp: true)
 
       assert Calendrical.date_to_iso_days(this.last) + 1 ==
                Calendrical.date_to_iso_days(next.first)
@@ -45,8 +45,8 @@ defmodule Calendrical.PropertyTest do
             max_runs: @max_runs
           ) do
       this = Calendrical.Interval.quarter(date)
-      previous = Calendrical.previous(this, :quarter, coerce: true)
-      next = Calendrical.next(this, :quarter, coerce: true)
+      previous = Calendrical.previous(this, :quarter, clamp: true)
+      next = Calendrical.next(this, :quarter, clamp: true)
 
       assert Calendrical.date_to_iso_days(this.last) + 1 ==
                Calendrical.date_to_iso_days(next.first)

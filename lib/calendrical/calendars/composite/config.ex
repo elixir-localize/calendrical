@@ -209,14 +209,15 @@ defmodule Calendrical.Composite.Config do
   end
 
   # The calendar whose months a segment's months and years are walked in.
-  # A Julian year-start variant counts its months from its new-year day,
-  # so a year reckoned from 25 March has thirteen, its March split in two,
-  # where it names twelve: its months are walked as the Julian months
-  # that name them, from January, and its days as their Julian days. Any
+  # A year begun elsewhere in a base calendar's year counts its months from
+  # that day, so a year reckoned from 25 March has thirteen, its March
+  # split in two, where it names twelve: its months are walked as the base
+  # calendar's months that name them, from January, and its days as their
+  # days in the base calendar, which `base/0` names. Any
   # other calendar walks its own.
   defp civil_calendar(calendar) do
-    if Code.ensure_loaded?(calendar) and function_exported?(calendar, :date_from_julian_date, 3),
-      do: Calendrical.Julian,
+    if Code.ensure_loaded?(calendar) and function_exported?(calendar, :base, 0),
+      do: calendar.base(),
       else: calendar
   end
 

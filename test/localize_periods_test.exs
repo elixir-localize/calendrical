@@ -3,7 +3,7 @@ defmodule Calendrical.LocalizePeriodsTest do
   Localize counts the periods between two dates by asking the dates'
   calendar: the years, quarters and months of a relative time and the years,
   months and days of a duration come from the calendar's `diff/3` and
-  `plus/6`, and two dates are ordered by its days. Localize cannot load
+  `shift/6`, and two dates are ordered by its days. Localize cannot load
   Calendrical, so its counting in Calendrical's calendars is held to the
   calendars' own answers here.
 

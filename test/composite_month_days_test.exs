@@ -35,7 +35,7 @@ defmodule Calendrical.CompositeMonthDaysTest do
   test "Japan's years between its lunisolar calendar and 1873 have no months" do
     for year <- [1229, 1500, 1872] do
       assert Japan.months_in_year(year) == 0
-      assert Japan.days_in_year(year) == 0
+      assert Japan.days_in_year(year) == {:error, :invalid_date}
       assert Enum.all?(1..13, &(Japan.days_in_month(year, &1) == 0))
     end
 
@@ -83,7 +83,6 @@ defmodule Calendrical.CompositeMonthDaysTest do
       refute England.valid_date?(1751, 3, 1)
       assert England.month_of_year(1751, 3, 1) == 3
       assert England.quarter_of_year(1751, 3, 1) == 1
-      assert England.calendar_year(1751, 3, 1) == 1751
 
       refute russia.valid_date?(1918, 2, 1)
       assert russia.month_of_year(1918, 2, 1) == 2

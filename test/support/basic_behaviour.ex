@@ -1,13 +1,13 @@
-defmodule Calendrical.Behaviour.Basic do
+defmodule Calendrical.Test.Basic do
   @moduledoc """
   Implementation of the Coptic calendar used
   only to validate the calendar behaviour
 
   """
 
-  use Calendrical.Behaviour,
+  use Calendrical.Calendar,
     epoch: ~D[0284-08-29 Calendrical.Julian],
-    months_in_ordinary_year: 13,
+    months_in_year: 13,
     cldr_calendar_type: :coptic
 
   import Localize.Utils.Math, only: [mod: 2]

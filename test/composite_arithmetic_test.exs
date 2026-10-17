@@ -82,7 +82,7 @@ defmodule Calendrical.CompositeArithmetic.Test do
             {{1747, 12, 29}, 1, {1748, 12, 28}}
           ] do
         {year, month, day} = from
-        assert England.plus(year, month, day, :years, years, []) == to, inspect({from, years})
+        assert England.shift(year, month, day, :years, years, []) == to, inspect({from, years})
       end
     end
 
@@ -113,13 +113,13 @@ defmodule Calendrical.CompositeArithmetic.Test do
     end
   end
 
-  describe "plus/6" do
+  describe "shift/6" do
     test "adds every date part" do
-      assert England.plus(2020, 1, 1, :days, 1) == {2020, 1, 2}
-      assert England.plus(2020, 1, 1, :weeks, 1) == {2020, 1, 8}
-      assert England.plus(2020, 1, 1, :months, 1) == {2020, 2, 1}
-      assert England.plus(2020, 1, 1, :quarters, 1) == {2020, 4, 1}
-      assert England.plus(2020, 2, 29, :years, 1) == {2021, 2, 28}
+      assert England.shift(2020, 1, 1, :days, 1) == {2020, 1, 2}
+      assert England.shift(2020, 1, 1, :weeks, 1) == {2020, 1, 8}
+      assert England.shift(2020, 1, 1, :months, 1) == {2020, 2, 1}
+      assert England.shift(2020, 1, 1, :quarters, 1) == {2020, 4, 1}
+      assert England.shift(2020, 2, 29, :years, 1) == {2021, 2, 28}
     end
 
     test "a date and time shift crosses the gap" do
@@ -157,17 +157,16 @@ defmodule Calendrical.CompositeArithmetic.Test do
     end
 
     test "a year no segment labels has no days" do
-      assert Japan.days_in_year(1500) == 0
+      assert Japan.days_in_year(1500) == {:error, :invalid_date}
       assert {:error, :invalid_date} = Japan.year(1500)
     end
 
-    # A year has quarters where its counted months divide evenly into
-    # them: England's thirteen-month Lady Day years have none, a year a
-    # transition cuts short has none, and a whole twelve-month year has
-    # its own, from whichever day it begins on.
+    # A year has quarters wherever it has the months: a thirteen-month
+    # Lady Day year's run to its last month, and a year a transition cuts
+    # short has those its months make.
     test "a year has quarters where its months divide into them" do
-      assert England.quarter(1700, 1) == {:error, :not_defined}
-      assert Russia.quarter(1492, 1) == {:error, :not_defined}
+      assert %Date.Range{} = England.quarter(1700, 1)
+      assert %Date.Range{} = Russia.quarter(1492, 1)
 
       # The March year 1400's first quarter is its months 1 to 3,
       # March to May, and the September year 1600's September to
@@ -263,7 +262,7 @@ defmodule Calendrical.CompositeArithmetic.Test do
           assert first <= iso_days and iso_days <= last
         end
 
-        {weeks, _days_in_last_week} = calendar.weeks_in_year(year)
+        weeks = calendar.weeks_in_year(year)
 
         1..weeks
         |> Enum.map(&calendar.week(year, &1))
@@ -281,14 +280,19 @@ defmodule Calendrical.CompositeArithmetic.Test do
     # days alone: the days 1 January to 24 March 1155 have no dates and
     # no weeks.
     test "a year whose first day moved counts its weeks from that day" do
-      assert {weeks_in_year, _days_in_last_week} = England.weeks_in_year(1155)
+      weeks_in_year = England.weeks_in_year(1155)
+      assert is_integer(weeks_in_year)
 
       assert England.week_of_year(1155, 1, 1) == {1155, 1}
 
       assert England.week(1155, 1).first == ~D[1155-01-01 Calendrical.Reform.England]
 
+      # The year's last six days, 19 to 24 March, are in week 1 of 1156,
+      # whose weeks begin on the Monday before its first day.
       assert England.week(1155, weeks_in_year).last ==
-               ~D[1155-13-24 Calendrical.Reform.England]
+               ~D[1155-13-18 Calendrical.Reform.England]
+
+      assert England.week_of_year(1155, 13, 24) == {1156, 1}
 
       for week <- (weeks_in_year + 1)..(weeks_in_year + 3) do
         assert England.week(1155, week) == {:error, :invalid_date}, "week #{week}"
@@ -316,19 +320,22 @@ defmodule Calendrical.CompositeArithmetic.Test do
       assert Date.day_of_week(~D[1700-01-11]) == 1
       assert Date.day_of_week(~D[1701-01-11]) == 2
 
-      assert Russia.weeks_in_year(1700) == {53, 2}
+      assert Russia.weeks_in_year(1700) == 52
       assert Russia.week_of_year(1700, 1, 1) == {1700, 1}
       assert Russia.week_of_year(1700, 1, 7) == {1700, 1}
       assert Russia.week_of_year(1700, 1, 8) == {1700, 2}
-      assert Russia.week_of_year(1700, 12, 31) == {1700, 53}
+      # 30 and 31 December 1700 are in week 1 of 1701, which begins on the
+      # Monday before 1 January 1701
+      assert Russia.week_of_year(1700, 12, 29) == {1700, 52}
+      assert Russia.week_of_year(1700, 12, 31) == {1701, 1}
 
       assert Russia.week(1700, 1) ==
                Date.range(~D[1700-01-01 Calendrical.Russia], ~D[1700-01-07 Calendrical.Russia])
 
-      assert Russia.week(1700, 53) ==
-               Date.range(~D[1700-12-30 Calendrical.Russia], ~D[1700-12-31 Calendrical.Russia])
+      assert Russia.week(1700, 52) ==
+               Date.range(~D[1700-12-23 Calendrical.Russia], ~D[1700-12-29 Calendrical.Russia])
 
-      assert Russia.week(1700, 54) == {:error, :invalid_date}
+      assert Russia.week(1700, 53) == {:error, :invalid_date}
     end
   end
 

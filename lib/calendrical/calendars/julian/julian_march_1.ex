@@ -20,5 +20,9 @@ defmodule Calendrical.Julian.March1 do
 
   """
 
-  use Calendrical.Julian, new_year_starting_month_and_day: {3, 1}, year: :beginning
+  use Calendrical.Calendar.Shifted,
+    base: Calendrical.Julian,
+    year_begins: {3, 1},
+    year_number: :beginning,
+    written_year: :label
 end

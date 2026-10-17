@@ -4,7 +4,7 @@ defmodule Calendrical.DaysInMonthWithoutYearTest do
   where the month has as many in every year, `{:ambiguous, range}` where
   its length depends on the year, and `{:error, :undefined}` for a month
   the calendar does not have. Every calendar built on
-  `Calendrical.Behaviour` answered `{:error, :undefined}` for every month.
+  `Calendrical.Calendar` answered `{:error, :undefined}` for every month.
 
   The oracle is the calendar's own `days_in_month/2` over a span of years:
   the lengths a month takes there are the answer.
@@ -111,7 +111,7 @@ defmodule Calendrical.DaysInMonthWithoutYearTest do
       assert Calendrical.Julian.Dec25.months_in_year() == 13
     end
 
-    test "every calendar answers, a composite that it cannot" do
+    test "every calendar answers, a composite that its years are not alike" do
       for {calendar, years} <- @calendars do
         counts = for year <- years, uniq: true, do: calendar.months_in_year(year)
 
@@ -124,8 +124,11 @@ defmodule Calendrical.DaysInMonthWithoutYearTest do
         assert calendar.months_in_year() == expected, inspect(calendar)
       end
 
+      # England's 1751 has ten months and its 1750 thirteen, so no count
+      # without a year is true of it; its bounds are the sampled {10, 13}.
       assert Calendrical.Reform.England.months_in_year() == {:error, :undefined}
-      assert Calendrical.Reform.England.days_in_month(2) == {:error, :undefined}
+      assert Calendrical.Reform.England.months_in_year_bounds() == {10, 13}
+      assert Calendrical.Reform.England.days_in_month(2) == {:ambiguous, 28..30}
     end
   end
 end

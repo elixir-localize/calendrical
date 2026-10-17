@@ -37,7 +37,6 @@ defmodule Calendrical.CyclicYearTest do
       assert calendar.cyclic_year(date.year, date.month, date.day) == expected,
              "#{inspect(calendar)} #{iso}"
 
-      assert calendar.cyclic_year(date) == expected
       assert Calendrical.cyclic_year(date) == expected
     end
   end
