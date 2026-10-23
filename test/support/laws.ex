@@ -255,4 +255,49 @@ defmodule Calendrical.Laws do
 
   defp shifted?(calendar, {year, month, day}, :valid), do: calendar.valid_date?(year, month, day)
   defp shifted?(_calendar, shifted, expected), do: shifted == expected
+
+  @doc """
+  The failures of law 6 for a year: a month number the year states with no
+  `month/2` range, a day number a month states that is no date, and a count
+  of months or of a month's days outside the year-less bounds.
+  """
+  def number_failures(calendar, year) do
+    {fewest_months, most_months} = calendar.months_in_year_bounds()
+    months = numbers(calendar.month_numbers(year))
+
+    count_failure(
+      "#{year} states #{length(months)} months",
+      length(months),
+      fewest_months,
+      most_months
+    ) ++
+      Enum.flat_map(months, &month_number_failures(calendar, year, &1))
+  end
+
+  defp month_number_failures(calendar, year, month) do
+    {fewest, most} = calendar.days_in_month_bounds(month)
+    days = numbers(calendar.day_numbers(year, month))
+
+    range_failure(calendar, year, month) ++
+      count_failure(
+        "month #{month} of #{year} states #{length(days)} days",
+        length(days),
+        fewest,
+        most
+      ) ++
+      for day <- days,
+          not calendar.valid_date?(year, month, day),
+          do: "day #{day} of month #{month} of #{year} is no date"
+  end
+
+  defp range_failure(calendar, year, month) do
+    if match?(%Date.Range{}, calendar.month(year, month)),
+      do: [],
+      else: ["month #{month} of #{year} has no range"]
+  end
+
+  defp count_failure(_what, count, fewest, most) when count >= fewest and count <= most, do: []
+  defp count_failure(what, _count, fewest, most), do: ["#{what}, outside #{fewest}..#{most}"]
+
+  defp numbers(runs), do: Enum.flat_map(runs, &Enum.to_list/1)
 end

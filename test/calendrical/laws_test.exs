@@ -7,8 +7,8 @@ defmodule Calendrical.LawsTest do
   knowing a calendar's kind: the day scale round-trips (1), a date's
   fields order the days (2), the months and the weeks tile the year
   (3), the labels agree with the periods (4), an absent period is an
-  error (5), the year-less bounds bound the years (6), and a shift of
-  nothing is nothing (7). `Calendrical.Laws` finds the failures of each;
+  error (5), the year-less bounds bound the years and the numbers a year
+  states are its dates (6), and a shift of nothing is nothing (7). `Calendrical.Laws` finds the failures of each;
   a passing law has none.
 
   Each calendar has a module of its own below, so its atlas of days is
@@ -39,22 +39,12 @@ defmodule Calendrical.LawsTest do
 
   # The laws an existing calendar breaks, by calendar and law, with the
   # reason: each is a finding for the user to rule on, not a defect of
-  # the law test. See the moduledoc for how to run them. Ruled on
-  # 2026-10-24: the exemption below stays, with the composite's documented
-  # behaviour, that a day with no date of its own answers the first later
-  # day that has one.
-  @known_failures %{
-    # Law 6 says a month within the fewest exists in every year, which
-    # reads the fewest as a count of months numbered from 1. England's
-    # 1751 has ten months, 3 to 12: `months_in_year_bounds/0` is
-    # `{10, 13}`, and months 1 and 2 of 1751 do not exist. Likewise
-    # September 1752 has nineteen days, 1, 2 and 14 to 30, where
-    # `days_in_month_bounds(9)` is `{19, 30}` and day 3 does not exist.
-    # The law holds where a year's months, and a month's days, are
-    # numbered from 1 without a gap; a composite's are not.
-    {Calendrical.Reform.England, :within_fewest} =>
-      "England's 1751 lacks months 1 and 2 and its September 1752 lacks days 3 to 13: the fewest is a count, not the numbers"
-  }
+  # the law test. See the moduledoc for how to run them. None at present:
+  # England's gap in law 6 (its 1751 has the months 3 to 12, and its
+  # September 1752 the days 1, 2 and 14 to 30) was answered on 2026-10-24
+  # by holding the law to the numbers a calendar states, `month_numbers/1`
+  # and `day_numbers/2`, rather than to a count from 1.
+  @known_failures %{}
 
   sample_dates = @sample_dates
   extra_years = @extra_years
@@ -180,25 +170,16 @@ defmodule Calendrical.LawsTest do
         end
       end
 
-      if reason = known_failures[{calendar, :within_fewest}], do: @tag(known_failure: reason)
+      if reason = known_failures[{calendar, :numbers}], do: @tag(known_failure: reason)
 
-      test "6. a month, or a day of a month, within the fewest exists in every sampled year",
+      # A year's months, and a month's days, are the numbers the calendar
+      # states, which run from 1 without a gap in every calendar but a
+      # composite: England's 1751 is the months 3 to 12. Each is a period
+      # the calendar has, and their counts are within the year-less bounds.
+      test "6. the month and day numbers a year states are its months and days, within the bounds",
            %{calendar: calendar, years: years} do
-        {fewest_months, _most_months} = calendar.months_in_year_bounds()
-
         for year <- years do
-          for month <- 1..fewest_months//1 do
-            assert match?(%Date.Range{}, calendar.month(year, month)), "month #{month} of #{year}"
-          end
-
-          {:ok, months} = Laws.months_walked(calendar, year)
-
-          for {{^year, month}, _range} <- months,
-              {fewest, _most} = calendar.days_in_month_bounds(month),
-              day <- 1..fewest//1 do
-            assert calendar.valid_date?(year, month, day),
-                   "day #{day} of month #{month} of #{year}"
-          end
+          assert Laws.number_failures(calendar, year) == [], "in #{year}"
         end
       end
 
