@@ -161,8 +161,14 @@ defmodule Calendrical.Islamic.UmmAlQura do
 
   * `{:ok, date}` — an Umm al-Qura `t:Date.t/0`.
 
-  * `{:error, reason}` if the day-start option is invalid or sunset cannot
-    be computed.
+  * `{:error, %Calendrical.InvalidOptionValueError{}}` for an invalid
+    `:day_start` or `:nightfall_angle`.
+
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a date outside
+    the range the calendar or the installed JPL ephemeris covers.
+
+  * `{:error, %Calendrical.NoDuskError{}}` where the sun does not set, or
+    nightfall does not occur, at the location on that day.
 
   ### Examples
 
@@ -175,7 +181,7 @@ defmodule Calendrical.Islamic.UmmAlQura do
       {:ok, ~D[1446-09-02 Calendrical.Islamic.UmmAlQura]}
 
   """
-  @spec date_at(DateTime.t(), Keyword.t()) :: {:ok, Date.t()} | {:error, term()}
+  @spec date_at(DateTime.t(), Keyword.t()) :: {:ok, Date.t()} | {:error, Exception.t()}
   def date_at(%DateTime{} = datetime, options \\ []) do
     Calendrical.DayStart.date_at(
       datetime,
@@ -243,6 +249,9 @@ defmodule Calendrical.Islamic.UmmAlQura do
     requested month falls outside the embedded data range, where the
     calendar's months are the civil calendar's.
 
+  * `{:error, %Calendrical.InvalidMonthError{}}` for a month that is
+    not `1` to `12`.
+
   ### Examples
 
       iex> Calendrical.Islamic.UmmAlQura.first_day_of_month(1446, 9)
@@ -250,6 +259,9 @@ defmodule Calendrical.Islamic.UmmAlQura do
 
       iex> {:error, %Calendrical.IslamicYearOutOfRangeError{}} =
       ...>   Calendrical.Islamic.UmmAlQura.first_day_of_month(1700, 1)
+
+      iex> {:error, %Calendrical.InvalidMonthError{year: 1446, month: 13}} =
+      ...>   Calendrical.Islamic.UmmAlQura.first_day_of_month(1446, 13)
 
   """
   @spec first_day_of_month(year, month) ::
@@ -265,10 +277,19 @@ defmodule Calendrical.Islamic.UmmAlQura do
     {:error, out_of_range_error(hijri_year)}
   end
 
-  def first_day_of_month(_year, _month) do
+  def first_day_of_month(hijri_year, hijri_month) when is_integer(hijri_year) do
+    {:error,
+     Calendrical.InvalidMonthError.exception(
+       calendar: __MODULE__,
+       year: hijri_year,
+       month: hijri_month
+     )}
+  end
+
+  def first_day_of_month(hijri_year, _hijri_month) do
     {:error,
      Calendrical.IslamicYearOutOfRangeError.exception(
-       year: nil,
+       year: hijri_year,
        min_year: @min_year,
        max_year: @max_year
      )}
@@ -339,12 +360,11 @@ defmodule Calendrical.Islamic.UmmAlQura do
 
   """
   @impl true
-  def leap_year?(year) do
+  def leap_year?(year) when is_integer(year) do
     case days_in_year_lookup(year) do
       {:ok, 355} -> true
       {:ok, 354} -> false
-      :error when is_integer(year) -> Civil.leap_year?(year)
-      :error -> false
+      :error -> Civil.leap_year?(year)
     end
   end
 
@@ -361,7 +381,13 @@ defmodule Calendrical.Islamic.UmmAlQura do
 
   ### Returns
 
-  * The number of days in the month, `29` or `30`.
+  * The number of days in the month, `29` or `30`, or
+
+  * `{:error, %Calendrical.InvalidMonthError{}}` for a month the year
+    does not have, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+    month is `nil`.
 
   ### Examples
 
@@ -370,7 +396,7 @@ defmodule Calendrical.Islamic.UmmAlQura do
 
   """
   @impl true
-  @spec days_in_month(year, month) :: 29..30
+  @spec days_in_month(year, month) :: 29..30 | {:error, Exception.t()}
   def days_in_month(year, month) when month in 1..12 do
     case days_in_month_lookup(year, month) do
       {:ok, days} -> days

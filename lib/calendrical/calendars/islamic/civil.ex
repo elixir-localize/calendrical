@@ -90,7 +90,13 @@ defmodule Calendrical.Islamic.Civil do
 
   ### Returns
 
-  * The number of days in the month (`29` or `30`).
+  * The number of days in the month (`29` or `30`), or
+
+  * `{:error, %Calendrical.InvalidMonthError{}}` for a month the year
+    does not have, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+    month is `nil`.
 
   ### Examples
 
@@ -105,7 +111,7 @@ defmodule Calendrical.Islamic.Civil do
 
   """
   @impl true
-  @spec days_in_month(year, month) :: 29..30
+  @spec days_in_month(year, month) :: 29..30 | {:error, Exception.t()}
   def days_in_month(year, month), do: Tabular.days_in_month(year, month)
 
   @doc """

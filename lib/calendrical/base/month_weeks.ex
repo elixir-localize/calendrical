@@ -13,9 +13,8 @@ defmodule Calendrical.Base.MonthWeeks do
   # on which week a day is in; the walks here are bounded by the days in a
   # week.
 
-  # The number of weeks in a month, `{:error, :invalid_date}` for a month
-  # the year does not have, or `{:error, :not_defined}` where the calendar
-  # has no weeks.
+  # The number of weeks in a month, or an error naming the month where the
+  # year does not have it.
   def weeks_in_month(calendar, year, month) do
     with {_first_week_start, _second_week_start, _end_of_weeks, weeks} <-
            month_weeks(calendar, year, month) do
@@ -23,17 +22,16 @@ defmodule Calendrical.Base.MonthWeeks do
     end
   end
 
-  # The days of the nth week of a month, `{:error, :invalid_date}` where the
-  # month has no such week, or `{:error, :not_defined}` where the calendar
-  # has no weeks.
+  # The days of the nth week of a month, or an error naming the week where
+  # the month has no such week.
   def month_week(calendar, year, month, nth) when is_integer(nth) and nth >= 1 do
     with {_first, _second, _end_of_weeks, _weeks} = month_weeks <-
            month_weeks(calendar, year, month) do
-      nth_week(nth, month_weeks, calendar)
+      nth_week(nth, month_weeks, {calendar, year, month})
     end
   end
 
-  def month_week(_calendar, _year, _month, _nth), do: {:error, :invalid_date}
+  def month_week(calendar, year, month, nth), do: no_such_week(calendar, year, month, nth)
 
   # The weeks of a month in order, each the days `month_week/4` gives its
   # nth week, or an error naming the month where the year does not have
@@ -49,19 +47,20 @@ defmodule Calendrical.Base.MonthWeeks do
     end
   end
 
-  defp nth_week(nth, {_first, _second, _end_of_weeks, weeks}, _calendar) when nth > weeks do
-    {:error, :invalid_date}
+  defp nth_week(nth, {_first, _second, _end_of_weeks, weeks}, {calendar, year, month})
+       when nth > weeks do
+    no_such_week(calendar, year, month, nth)
   end
 
-  defp nth_week(1, {first_week_start, _second, end_of_weeks, 1}, calendar) do
+  defp nth_week(1, {first_week_start, _second, end_of_weeks, 1}, {calendar, _year, _month}) do
     iso_days_to_range(first_week_start, end_of_weeks, calendar)
   end
 
-  defp nth_week(1, {first_week_start, second_week_start, _end_of_weeks, _weeks}, calendar) do
+  defp nth_week(1, {first_week_start, second_week_start, _end, _weeks}, {calendar, _year, _month}) do
     iso_days_to_range(first_week_start, second_week_start - 1, calendar)
   end
 
-  defp nth_week(nth, {_first, second_week_start, end_of_weeks, _weeks}, calendar) do
+  defp nth_week(nth, {_first, second_week_start, end_of_weeks, _weeks}, {calendar, _year, _month}) do
     days_in_week = calendar.days_in_week()
     first = second_week_start + (nth - 2) * days_in_week
     iso_days_to_range(first, min(first + days_in_week - 1, end_of_weeks), calendar)
@@ -160,12 +159,20 @@ defmodule Calendrical.Base.MonthWeeks do
   end
 
   defp iso_days_to_range(first, last, calendar) do
-    {first_year, first_month, first_day} = calendar.date_from_iso_days(first)
-    {last_year, last_month, last_day} = calendar.date_from_iso_days(last)
+    Date.range(date_at(first, calendar), date_at(last, calendar))
+  end
 
-    with {:ok, first_date} <- Date.new(first_year, first_month, first_day, calendar),
-         {:ok, last_date} <- Date.new(last_year, last_month, last_day, calendar) do
-      Date.range(first_date, last_date)
-    end
+  defp date_at(iso_days, calendar) do
+    {year, month, day} = calendar.date_from_iso_days(iso_days)
+    %Date{year: year, month: month, day: day, calendar: calendar}
+  end
+
+  # The nth week of a month the month does not have.
+  defp no_such_week(calendar, year, month, nth) do
+    {:error,
+     Calendrical.InvalidDateError.exception(
+       calendar: calendar,
+       value: [year: year, month: month, week: nth]
+     )}
   end
 end

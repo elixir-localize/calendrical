@@ -274,8 +274,8 @@ defmodule Calendrical.JulianVariantsTest do
     end
 
     test "any other value does not compile" do
-      assert_raise ArgumentError,
-                   ":year_number must be one of [:beginning, :ending, :majority], found :first",
+      assert_raise Calendrical.InvalidOptionValueError,
+                   ":year_number must be :beginning, :ending or :majority. Found :first",
                    fn ->
                      defmodule Unknown do
                        use Calendrical.Calendar.Shifted,
@@ -299,12 +299,20 @@ defmodule Calendrical.JulianVariantsTest do
         end
 
         assert Date.new(0, 6, 15, calendar) == {:error, :invalid_date}, inspect(calendar)
-        assert calendar.year(0) == {:error, :invalid_date}, inspect(calendar)
-        assert calendar.month(0, 1) == {:error, :invalid_date}, inspect(calendar)
-        assert calendar.month(0, 12) == {:error, :invalid_date}, inspect(calendar)
-        assert calendar.quarter(0, 1) == {:error, :invalid_date}, inspect(calendar)
-        assert calendar.quadrimester(0, 3) == {:error, :invalid_date}, inspect(calendar)
-        assert calendar.semester(0, 2) == {:error, :invalid_date}, inspect(calendar)
+        assert {:error, %Calendrical.InvalidDateError{}} = calendar.year(0), inspect(calendar)
+        assert {:error, %Calendrical.InvalidDateError{}} = calendar.month(0, 1), inspect(calendar)
+
+        assert {:error, %Calendrical.InvalidDateError{}} = calendar.month(0, 12),
+               inspect(calendar)
+
+        assert {:error, %Calendrical.InvalidDateError{}} = calendar.quarter(0, 1),
+               inspect(calendar)
+
+        assert {:error, %Calendrical.InvalidDateError{}} = calendar.quadrimester(0, 3),
+               inspect(calendar)
+
+        assert {:error, %Calendrical.InvalidDateError{}} = calendar.semester(0, 2),
+               inspect(calendar)
       end
     end
 
@@ -364,7 +372,9 @@ defmodule Calendrical.JulianVariantsTest do
           year <- 2020..2027,
           month <- 1..13,
           day <- 1..31 do
-        assert variant.valid_date?(year, month, day) == day <= variant.days_in_month(year, month),
+        days = variant.days_in_month(year, month)
+
+        assert variant.valid_date?(year, month, day) == (is_integer(days) and day <= days),
                "#{inspect(variant)} #{year}-#{month}-#{day}"
       end
     end
@@ -425,7 +435,10 @@ defmodule Calendrical.JulianVariantsTest do
       assert Calendrical.Julian.March25.days_in_month(2) == 30
       assert Calendrical.Julian.March25.days_in_month(12) == {:ambiguous, 28..29}
       assert Calendrical.Julian.March25.days_in_month(13) == 24
-      assert Calendrical.Julian.March25.days_in_month(14) == {:error, :undefined}
+
+      assert {:error, %Calendrical.NotDefinedError{}} =
+               Calendrical.Julian.March25.days_in_month(14)
+
       assert Calendrical.Julian.March25.months_in_year() == 13
       assert Calendrical.Julian.March1.days_in_month(1) == 31
       assert Calendrical.Julian.March1.days_in_month(12) == {:ambiguous, 28..29}
@@ -674,6 +687,21 @@ defmodule Calendrical.JulianVariantsTest do
           assert {step.year, step.month, step.day} == {year, month, day}
         end
       end
+    end
+  end
+
+  # A partial date names the base fields it determines and leaves the rest
+  # nil, whichever field is missing, rather than raising.
+  describe "a partial date's base date" do
+    test "a missing year leaves the base year nil" do
+      assert Calendrical.Julian.Sept1.base_date(nil, 3, 5) == {nil, 11, 5}
+      assert Calendrical.Julian.March25.base_date(nil, 3, 5) == {nil, 5, 5}
+      assert Calendrical.Julian.Sept1.written_date(nil, 3, 5) == {nil, 11, 5}
+    end
+
+    test "a missing month or day leaves what depends on it nil" do
+      assert Calendrical.Julian.March25.base_date(1750, nil, nil) == {nil, nil, nil}
+      assert Calendrical.Julian.March25.cardinal_year(1750, nil, nil) == 1750
     end
   end
 end

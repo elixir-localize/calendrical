@@ -65,7 +65,8 @@ defmodule Calendrical.YearsInCycleTest do
             Calendrical.Islamic.Observational,
             Calendrical.Reform.England
           ] do
-        assert calendar.years_in_cycle() == {:error, :undefined}, inspect(calendar)
+        assert {:error, %Calendrical.NotDefinedError{}} = calendar.years_in_cycle(),
+               inspect(calendar)
       end
     end
 

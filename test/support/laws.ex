@@ -212,8 +212,17 @@ defmodule Calendrical.Laws do
   # Law 7: a shift of nothing is the date itself, and a shift of a day, a
   # week, a month or a year is a valid date, a day or a week of it the
   # day or the week after on the day scale.
+  # Every eleventh day, and the last day of every month, where a shift by
+  # months or years has a day to clamp.
   def shift_failures(calendar, atlas) do
-    for %{day: day, date: {year, month, day_of_month} = date} <- Enum.take_every(atlas, 11),
+    month_ends =
+      for [%{date: {_, month, _}} = last, %{date: {_, next_month, _}}] <-
+            Enum.chunk_every(atlas, 2, 1, :discard),
+          month != next_month,
+          do: last
+
+    for %{day: day, date: {year, month, day_of_month} = date} <-
+          Enum.uniq(Enum.take_every(atlas, 11) ++ month_ends),
         failure <- shift_failures(calendar, day, date, year, month, day_of_month),
         do: failure
   end
@@ -227,10 +236,21 @@ defmodule Calendrical.Laws do
       {%Duration{year: 1}, :valid}
     ]
 
-    for {duration, expected} <- checks,
-        shifted = calendar.shift_date(year, month, day_of_month, duration),
-        not shifted?(calendar, shifted, expected),
-        do: {date, duration, expected, shifted}
+    date_shifts =
+      for {duration, expected} <- checks,
+          shifted = calendar.shift_date(year, month, day_of_month, duration),
+          not shifted?(calendar, shifted, expected),
+          do: {date, duration, expected, shifted}
+
+    # The calendar's own shift/6 with its default options, which clamp.
+    default_shifts =
+      for date_part <- [:months, :years, :quarters],
+          increment <- [1, -1],
+          shifted = calendar.shift(year, month, day_of_month, date_part, increment, []),
+          not shifted?(calendar, shifted, :valid),
+          do: {date, {:shift, date_part, increment}, :valid, shifted}
+
+    date_shifts ++ default_shifts
   end
 
   defp shifted?(calendar, {year, month, day}, :valid), do: calendar.valid_date?(year, month, day)

@@ -388,22 +388,24 @@ defmodule Calendrical.Islamic.UmmAlQura.AstronomicalTest do
   # ── Error handling ───────────────────────────────────────────────────────────
 
   describe "error cases" do
-    test "year 1391 AH (one year before Era 2) returns :year_out_of_range" do
-      assert {:error, :year_out_of_range} =
+    test "year 1391 AH (one year before Era 2) is out of range" do
+      assert {:error, %Calendrical.UnsupportedDateRangeError{range: {:from, 1392}}} =
                Astronomical.first_day_of_month(1391, 1)
     end
 
-    test "year 1 AH returns :year_out_of_range" do
-      assert {:error, :year_out_of_range} =
+    test "year 1 AH is out of range" do
+      assert {:error, %Calendrical.UnsupportedDateRangeError{}} =
                Astronomical.first_day_of_month(1, 1)
     end
 
     test "month 0 returns an error for a valid year" do
-      assert {:error, _} = Astronomical.first_day_of_month(1446, 0)
+      assert {:error, %Calendrical.InvalidMonthError{month: 0}} =
+               Astronomical.first_day_of_month(1446, 0)
     end
 
     test "month 13 returns an error for a valid year" do
-      assert {:error, _} = Astronomical.first_day_of_month(1446, 13)
+      assert {:error, %Calendrical.InvalidMonthError{month: 13}} =
+               Astronomical.first_day_of_month(1446, 13)
     end
   end
 

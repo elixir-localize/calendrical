@@ -63,7 +63,10 @@ defmodule Calendrical.CompositeLabelTest do
   # The days about each change of calendar whose year, month and day are no
   # other day's, and do not read back as the day.
   defp unread(calendar, days_about_a_change) do
-    changes = calendar.__config__() |> Enum.drop(1) |> Enum.map(&elem(&1, 0))
+    changes =
+      Calendrical.Test.CompositeChanges.changes(calendar)
+      |> Enum.drop(1)
+      |> Enum.map(&elem(&1, 0))
 
     days =
       changes
@@ -111,7 +114,8 @@ defmodule Calendrical.CompositeLabelTest do
 
     test "is read in the calendar in effect on it" do
       for calendar <- [England, Sweden, Russia, Christmas],
-          {change, _year, _month, _day, _calendar} <- Enum.drop(calendar.__config__(), 1),
+          {change, _year, _month, _day, _calendar} <-
+            Enum.drop(Calendrical.Test.CompositeChanges.changes(calendar), 1),
           iso_days <- (change - 400)..(change + 400)//7 do
         {year, month, day} = calendar.date_from_iso_days(iso_days)
 
@@ -261,7 +265,8 @@ defmodule Calendrical.CompositeLabelTest do
     # as far back as that goes.
     test "is the base calendar's, however early" do
       for calendar <- [England, Sweden, Russia],
-          {base, _first_change} = {hd(calendar.__config__()) |> elem(4), nil},
+          {base, _first_change} =
+            {hd(Calendrical.Test.CompositeChanges.changes(calendar)) |> elem(4), nil},
           {year, month, day} <- [{-9999, 1, 1}, {-10_000, 6, 15}, {-12_345, 12, 31}] do
         context = "#{inspect(calendar)} #{inspect({year, month, day})}"
 

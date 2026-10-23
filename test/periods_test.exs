@@ -75,9 +75,13 @@ defmodule Calendrical.PeriodsTest do
     end
 
     test "outside the year is an error" do
-      assert Calendrical.Hebrew.quarter(5787, 5) == {:error, :invalid_date}
-      assert Calendrical.Gregorian.quadrimester(2026, 4) == {:error, :invalid_date}
-      assert Calendrical.Islamic.Civil.semester(1447, 0) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = Calendrical.Hebrew.quarter(5787, 5)
+
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.Gregorian.quadrimester(2026, 4)
+
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.Islamic.Civil.semester(1447, 0)
     end
   end
 

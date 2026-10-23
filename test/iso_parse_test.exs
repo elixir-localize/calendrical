@@ -32,9 +32,9 @@ defmodule Calendrical.IsoParseTest do
     end
 
     test "rejects malformed input" do
-      assert Parse.parse_date("not a date", @calendar) == {:error, :invalid_date}
-      assert Parse.parse_date("1742/01/01", @calendar) == {:error, :invalid_date}
-      assert Parse.parse_date("", @calendar) == {:error, :invalid_date}
+      assert Parse.parse_date("not a date", @calendar) == {:error, :invalid_format}
+      assert Parse.parse_date("1742/01/01", @calendar) == {:error, :invalid_format}
+      assert Parse.parse_date("", @calendar) == {:error, :invalid_format}
     end
 
     test "drives the ~D sigil for Behaviour calendars" do

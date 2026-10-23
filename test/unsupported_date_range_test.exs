@@ -20,10 +20,17 @@ defmodule Calendrical.UnsupportedDateRangeTest do
 
   describe "Calendrical.Persian's new year outside Gregorian years 1900..2100" do
     test "new_year_gregorian/1 returns a tagged error" do
-      assert {:error, :year_out_of_range} = Calendrical.Persian.new_year_gregorian(900)
-      assert {:error, :year_out_of_range} = Calendrical.Persian.new_year_gregorian(3500)
-      assert {:error, :year_out_of_range} = Calendrical.Persian.new_year_gregorian(1899)
-      assert {:error, :year_out_of_range} = Calendrical.Persian.new_year_gregorian(2101)
+      assert {:error, %Calendrical.UnsupportedDateRangeError{}} =
+               Calendrical.Persian.new_year_gregorian(900)
+
+      assert {:error, %Calendrical.UnsupportedDateRangeError{}} =
+               Calendrical.Persian.new_year_gregorian(3500)
+
+      assert {:error, %Calendrical.UnsupportedDateRangeError{}} =
+               Calendrical.Persian.new_year_gregorian(1899)
+
+      assert {:error, %Calendrical.UnsupportedDateRangeError{}} =
+               Calendrical.Persian.new_year_gregorian(2101)
     end
 
     test "new_year_gregorian/1 still succeeds inside the range" do
@@ -31,7 +38,8 @@ defmodule Calendrical.UnsupportedDateRangeTest do
     end
 
     test "year_end_gregorian/1 returns a tagged error when year + 1 is out of range" do
-      assert {:error, :year_out_of_range} = Calendrical.Persian.year_end_gregorian(3000)
+      assert {:error, %Calendrical.UnsupportedDateRangeError{}} =
+               Calendrical.Persian.year_end_gregorian(3000)
     end
 
     test "Date.convert/2 answers inside and outside the range" do
@@ -63,6 +71,32 @@ defmodule Calendrical.UnsupportedDateRangeTest do
       test "Date.convert/2 still succeeds inside the ephemeris range" do
         assert {:ok, %Date{calendar: Calendrical.Islamic.Observational}} =
                  Date.convert(~D[2026-07-05], Calendrical.Islamic.Observational)
+      end
+
+      # A date valid_date?/3 rejects is {:error, %Calendrical.InvalidDateError{}} for the era
+      # questions too, rather than a raise from reckoning the month.
+      test "date_at/2 names the calendar and the date it was converting" do
+        assert {:error,
+                %Calendrical.UnsupportedDateRangeError{
+                  calendar: Calendrical.Islamic.Observational,
+                  value: ~D[1700-03-01]
+                }} = Calendrical.Islamic.Observational.date_at(~U[1700-03-01 20:00:00Z])
+      end
+
+      test "a year far outside the ephemeris is refused at once" do
+        for calendar <- [Calendrical.Islamic.Observational, Calendrical.Islamic.Rgsa] do
+          {microseconds, valid?} = :timer.tc(fn -> calendar.valid_date?(10_000_000, 1, 1) end)
+          refute valid?
+          assert microseconds < 1_000_000
+        end
+      end
+
+      test "year_of_era/3 and day_of_era/3 return an error outside the range" do
+        for calendar <- [Calendrical.Islamic.Observational, Calendrical.Islamic.Rgsa] do
+          refute calendar.valid_date?(1300, 1, 1)
+          assert {:error, %Calendrical.InvalidDateError{}} = calendar.year_of_era(1300, 1, 1)
+          assert {:error, %Calendrical.InvalidDateError{}} = calendar.day_of_era(1300, 1, 1)
+        end
       end
     end
   end

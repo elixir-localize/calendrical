@@ -2,9 +2,10 @@ defmodule Calendrical.DaysInMonthWithoutYearTest do
   @moduledoc """
   `days_in_month/1` answers for a month with no year: the number of days
   where the month has as many in every year, `{:ambiguous, range}` where
-  its length depends on the year, and `{:error, :undefined}` for a month
-  the calendar does not have. Every calendar built on
-  `Calendrical.Calendar` answered `{:error, :undefined}` for every month.
+  its length depends on the year, and
+  `{:error, %Calendrical.NotDefinedError{}}` for a month the calendar does
+  not have. Every calendar built on `Calendrical.Calendar` once answered
+  `{:error, :undefined}` for every month.
 
   The oracle is the calendar's own `days_in_month/2` over a span of years:
   the lengths a month takes there are the answer.
@@ -53,9 +54,19 @@ defmodule Calendrical.DaysInMonthWithoutYearTest do
 
         expected =
           case Enum.sort(lengths) do
-            [] -> {:error, :undefined}
-            [days] -> days
-            several -> {:ambiguous, List.first(several)..List.last(several)}
+            [] ->
+              {:error,
+               Calendrical.NotDefinedError.exception(
+                 calendar: calendar,
+                 question: :days_in_month,
+                 value: month
+               )}
+
+            [days] ->
+              days
+
+            several ->
+              {:ambiguous, List.first(several)..List.last(several)}
           end
 
         assert calendar.days_in_month(month) == expected, "month #{month}"
@@ -77,18 +88,19 @@ defmodule Calendrical.DaysInMonthWithoutYearTest do
 
   test "a month the calendar does not have is undefined" do
     for {calendar, _years} <- @calendars, month <- [0, -1, 14, 100] do
-      assert calendar.days_in_month(month) == {:error, :undefined},
+      assert {:error, %Calendrical.NotDefinedError{}} = calendar.days_in_month(month),
              "#{inspect(calendar)} #{inspect(month)}"
     end
   end
 
-  # The callback answers a value that is not a month with `{:error, :undefined}`
-  # or `{:error, exception}`: the month calendars name the missing year.
+  # The callback answers a value that is not a month with an exception: a
+  # `Calendrical.NotDefinedError`, or, from the month calendars, one that
+  # names the missing year.
   test "a value that is not a month is an error" do
     for {calendar, _years} <- @calendars, month <- [nil, "1", 1.0, :january] do
       assert {:error, reason} = calendar.days_in_month(month)
 
-      assert reason == :undefined or is_exception(reason),
+      assert is_exception(reason),
              "#{inspect(calendar)} #{inspect(month)}"
     end
   end
@@ -126,7 +138,9 @@ defmodule Calendrical.DaysInMonthWithoutYearTest do
 
       # England's 1751 has ten months and its 1750 thirteen, so no count
       # without a year is true of it; its bounds are the sampled {10, 13}.
-      assert Calendrical.Reform.England.months_in_year() == {:error, :undefined}
+      assert {:error, %Calendrical.NotDefinedError{}} =
+               Calendrical.Reform.England.months_in_year()
+
       assert Calendrical.Reform.England.months_in_year_bounds() == {10, 13}
       assert Calendrical.Reform.England.days_in_month(2) == {:ambiguous, 28..30}
     end

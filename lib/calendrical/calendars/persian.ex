@@ -249,8 +249,9 @@ defmodule Calendrical.Persian do
 
   * `{:ok, date}` where `date` is a `t:Date.t/0` in `Calendar.ISO`.
 
-  * `{:error, :year_out_of_range}` if `year` is outside the
-    Gregorian years 1900 to 2100 the ephemeris Astro bundles covers.
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` if `year` is
+    outside the Gregorian years 1900 to 2100 the ephemeris Astro bundles
+    covers.
 
   ### Examples
 
@@ -258,23 +259,28 @@ defmodule Calendrical.Persian do
       {:ok, ~D[2025-03-21]}
 
       iex> Calendrical.Persian.new_year_gregorian(900)
-      {:error, :year_out_of_range}
+      {:error, %Calendrical.UnsupportedDateRangeError{calendar: Calendrical.Persian, value: 900, range: 1900..2100}}
 
   """
-  @spec new_year_gregorian(Calendar.year()) :: {:ok, Date.t()} | {:error, :year_out_of_range}
+  @spec new_year_gregorian(Calendar.year()) :: {:ok, Date.t()} | {:error, Exception.t()}
   def new_year_gregorian(year) when year in @supported_gregorian_years do
     with {:ok, equinox} <- vernal_equinox(year),
-         {:ok, solar_noon} <- midday_in_tehran(equinox) do
-      if Time.compare(equinox, solar_noon) in [:gt, :eq] do
-        Date.new(equinox.year, equinox.month, equinox.day + 1)
-      else
-        Date.new(equinox.year, equinox.month, equinox.day)
-      end
+         {:ok, solar_noon} <- midday_in_tehran(equinox, year) do
+      day = DateTime.to_date(equinox)
+
+      if Time.compare(equinox, solar_noon) in [:gt, :eq],
+        do: {:ok, Date.add(day, 1)},
+        else: {:ok, day}
     end
   end
 
   def new_year_gregorian(year) when is_integer(year) do
-    {:error, :year_out_of_range}
+    {:error,
+     Calendrical.UnsupportedDateRangeError.exception(
+       calendar: __MODULE__,
+       value: year,
+       range: @supported_gregorian_years
+     )}
   end
 
   @doc """
@@ -290,8 +296,9 @@ defmodule Calendrical.Persian do
   * `{:ok, date}` where `date` is a `t:Date.t/0` in `Calendar.ISO`,
     one day before the next Persian new year.
 
-  * `{:error, :year_out_of_range}` if `year + 1` is outside the
-    Gregorian years 1900 to 2100 the ephemeris Astro bundles covers.
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` if `year + 1` is
+    outside the Gregorian years 1900 to 2100 the ephemeris Astro bundles
+    covers.
 
   ### Examples
 
@@ -299,19 +306,19 @@ defmodule Calendrical.Persian do
       {:ok, ~D[2026-03-20]}
 
   """
-  @spec year_end_gregorian(Calendar.year()) :: {:ok, Date.t()} | {:error, :year_out_of_range}
+  @spec year_end_gregorian(Calendar.year()) :: {:ok, Date.t()} | {:error, Exception.t()}
   def year_end_gregorian(year) do
     with {:ok, new_year} <- new_year_gregorian(year + 1) do
       {:ok, Date.add(new_year, -1)}
     end
   end
 
-  defp midday_in_tehran(date) do
-    Astro.solar_noon(@tehran, date)
+  defp midday_in_tehran(date, year) do
+    @tehran |> Astro.solar_noon(date) |> Calendrical.Base.Astro.result(__MODULE__, year)
   end
 
   defp vernal_equinox(year) do
-    Astro.equinox(year, :march)
+    year |> Astro.equinox(:march) |> Calendrical.Base.Astro.result(__MODULE__, year)
   end
 
   @doc """

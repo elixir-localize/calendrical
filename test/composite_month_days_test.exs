@@ -1,7 +1,7 @@
 defmodule Calendrical.CompositeMonthDaysTest do
   @moduledoc """
   A composite's `days_in_month/2` counts the days that carry the month's
-  label, so a month no day carries has none, and `months_in_year/1` is the
+  label, so a month no day carries is an error, and `months_in_year/1` is the
   number of the year's last month that has days, `0` for a year no day
   carries. The hand-derived years are England's 1751, which began on Lady
   Day, Russia's 1492, which ended on 31 August, and the years between
@@ -16,18 +16,24 @@ defmodule Calendrical.CompositeMonthDaysTest do
   alias Calendrical.Reform.{England, Japan, Sweden}
 
   defp days_in_months(calendar, year) do
-    for month <- 1..12, do: calendar.days_in_month(year, month)
+    for month <- 1..12, do: count(calendar.days_in_month(year, month))
   end
 
+  # A month no day carries is `:none`: its `days_in_month/2` is an error.
+  defp count({:error, %Calendrical.InvalidMonthError{}}), do: :none
+  defp count(days) when is_integer(days) and days > 0, do: days
+
   test "England's 1751 began on 25 March" do
-    assert days_in_months(England, 1751) == [0, 0, 7, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    assert days_in_months(England, 1751) == [:none, :none, 7, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     assert England.months_in_year(1751) == 12
     assert England.days_in_year(1751) == 282
   end
 
   test "Russia's 1492 ended on 31 August" do
     # The March year's counted months 1 (March) to 6 (August) have days.
-    assert days_in_months(Calendrical.Russia, 1492) == [31, 30, 31, 30, 31, 31, 0, 0, 0, 0, 0, 0]
+    assert days_in_months(Calendrical.Russia, 1492) ==
+             [31, 30, 31, 30, 31, 31, :none, :none, :none, :none, :none, :none]
+
     assert Calendrical.Russia.months_in_year(1492) == 6
     assert Calendrical.Russia.days_in_year(1492) == 184
   end
@@ -35,8 +41,8 @@ defmodule Calendrical.CompositeMonthDaysTest do
   test "Japan's years between its lunisolar calendar and 1873 have no months" do
     for year <- [1229, 1500, 1872] do
       assert Japan.months_in_year(year) == 0
-      assert Japan.days_in_year(year) == {:error, :invalid_date}
-      assert Enum.all?(1..13, &(Japan.days_in_month(year, &1) == 0))
+      assert {:error, %Calendrical.InvalidDateError{}} = Japan.days_in_year(year)
+      assert Enum.all?(1..13, &(count(Japan.days_in_month(year, &1)) == :none))
     end
 
     assert Japan.months_in_year(1873) == 12
@@ -51,7 +57,8 @@ defmodule Calendrical.CompositeMonthDaysTest do
         months_in_year = calendar.months_in_year(year)
 
         if month <= months_in_year do
-          assert calendar.days_in_month(year, month) == days, "#{year}-#{month}"
+          expected = if days > 0, do: days, else: :none
+          assert count(calendar.days_in_month(year, month)) == expected, "#{year}-#{month}"
         else
           assert days == 0, "#{year}-#{month} has days after month #{months_in_year}"
         end
@@ -64,7 +71,7 @@ defmodule Calendrical.CompositeMonthDaysTest do
   # The base calendar has no first day, so the years around a change are
   # those around each calendar that takes effect after it.
   defp years_around_changes(calendar) do
-    calendar.__config__()
+    Calendrical.Test.CompositeChanges.changes(calendar)
     |> Enum.drop(1)
     |> Enum.flat_map(fn {iso_days, _year, _month, _day, _calendar} ->
       [iso_days - 400, iso_days - 1, iso_days, iso_days + 400]
@@ -92,14 +99,14 @@ defmodule Calendrical.CompositeMonthDaysTest do
     end
 
     test "is still no date for a question about a day" do
-      assert England.day_of_week(1751, 3, 1, :default) == {:error, :invalid_date}
-      assert England.day_of_year(1751, 3, 1) == {:error, :invalid_date}
-      assert England.month_of_year(1751, 3, 5) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = England.day_of_week(1751, 3, 1, :default)
+      assert {:error, %Calendrical.InvalidDateError{}} = England.day_of_year(1751, 3, 1)
+      assert {:error, %Calendrical.InvalidDateError{}} = England.month_of_year(1751, 3, 5)
     end
 
     # England's February 1751 holds no day: the year ran from 25 March.
     test "is no month where the month holds no day" do
-      assert England.month_of_year(1751, 2, 1) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = England.month_of_year(1751, 2, 1)
     end
 
     test "is written from its year and month" do

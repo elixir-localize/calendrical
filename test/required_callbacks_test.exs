@@ -40,7 +40,9 @@ defmodule Calendrical.RequiredCallbacksTest do
 
     test "read a written date as the calendar's own fields" do
       assert Calendrical.Hebrew.date_from_cardinal_date(5785, 1, 15) == {5785, 1, 15}
-      assert Calendrical.Gregorian.date_from_cardinal_date(2026, 2, 30) == {:error, :invalid_date}
+
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.Gregorian.date_from_cardinal_date(2026, 2, 30)
     end
 
     test "resolve a CLDR calendar type through the family" do

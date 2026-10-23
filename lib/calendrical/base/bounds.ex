@@ -18,9 +18,9 @@ defmodule Calendrical.Base.Bounds do
     bounds(calendar.months_in_year(), fn -> ordinary_and_leap_months(calendar) end)
   end
 
-  # The bounds of the days a month has: `{:error, :undefined}` where the
-  # calendar cannot say without a year, and an error naming the month
-  # where the calendar has no such month in any year.
+  # The bounds of the days a month has: a `Calendrical.NotDefinedError`
+  # where the calendar cannot say without a year, and an error naming the
+  # month where the calendar has no such month in any year.
   def days_in_month_bounds(calendar, month) when is_integer(month) and month >= 1 do
     bounds(calendar.days_in_month(month), fn -> undefined_month(calendar, month) end)
   end
@@ -33,14 +33,20 @@ defmodule Calendrical.Base.Bounds do
   def months_in_year_bounds(calendar, members, transition_years) do
     members
     |> Enum.map(& &1.months_in_year_bounds())
-    |> combine(Enum.map(transition_years, &months_in(calendar, &1)))
+    |> combine(
+      Enum.map(transition_years, &months_in(calendar, &1)),
+      {calendar, :months_in_year, nil}
+    )
   end
 
   def days_in_month_bounds(calendar, members, transition_years, month)
       when is_integer(month) and month >= 1 do
     members
     |> Enum.map(& &1.days_in_month_bounds(month))
-    |> combine(Enum.map(transition_years, &calendar.days_in_month(&1, month)))
+    |> combine(
+      Enum.map(transition_years, &calendar.days_in_month(&1, month)),
+      {calendar, :days_in_month, month}
+    )
     |> month_bounds(calendar, month)
   end
 
@@ -49,7 +55,7 @@ defmodule Calendrical.Base.Bounds do
 
   defp bounds(count, _undefined) when is_integer(count), do: {count, count}
   defp bounds({:ambiguous, counts}, _undefined), do: {Enum.min(counts), Enum.max(counts)}
-  defp bounds({:error, :undefined}, undefined), do: undefined.()
+  defp bounds({:error, %Calendrical.NotDefinedError{}}, undefined), do: undefined.()
   defp bounds({:error, _exception} = error, _undefined), do: error
 
   # A calendar made with `use Calendrical.Calendar` says how many months
@@ -59,10 +65,10 @@ defmodule Calendrical.Base.Bounds do
          function_exported?(calendar, :months_in_leap_year, 0) do
       bounds(
         {:ambiguous, [calendar.months_in_ordinary_year(), calendar.months_in_leap_year()]},
-        fn -> {:error, :undefined} end
+        fn -> not_defined(calendar, :months_in_year, nil) end
       )
     else
-      {:error, :undefined}
+      not_defined(calendar, :months_in_year, nil)
     end
   end
 
@@ -71,12 +77,12 @@ defmodule Calendrical.Base.Bounds do
   defp undefined_month(calendar, month) do
     case months_in_year_bounds(calendar) do
       {:error, _reason} = error -> error
-      {_fewest, most} when month <= most -> {:error, :undefined}
+      {_fewest, most} when month <= most -> not_defined(calendar, :days_in_month, month)
       {_fewest, _most} -> {:error, no_such_month(calendar, month)}
     end
   end
 
-  defp month_bounds({:error, :undefined}, calendar, month),
+  defp month_bounds({:error, %Calendrical.NotDefinedError{}}, calendar, month),
     do: {:error, no_such_month(calendar, month)}
 
   defp month_bounds(bounds, _calendar, _month), do: bounds
@@ -89,7 +95,7 @@ defmodule Calendrical.Base.Bounds do
 
   # The bounds that hold every pair of bounds and every count, where a
   # member that cannot answer and a year with none are left out.
-  defp combine(member_bounds, counts) do
+  defp combine(member_bounds, counts, {calendar, question, value}) do
     pairs =
       Enum.filter(
         member_bounds,
@@ -99,9 +105,14 @@ defmodule Calendrical.Base.Bounds do
     counts = Enum.filter(counts, &(is_integer(&1) and &1 > 0))
 
     case Enum.map(pairs, &elem(&1, 0)) ++ counts do
-      [] -> {:error, :undefined}
+      [] -> not_defined(calendar, question, value)
       fewest -> {Enum.min(fewest), Enum.max(Enum.map(pairs, &elem(&1, 1)) ++ counts)}
     end
+  end
+
+  defp not_defined(calendar, question, value) do
+    {:error,
+     Calendrical.NotDefinedError.exception(calendar: calendar, question: question, value: value)}
   end
 
   defp no_such_month(calendar, month) do

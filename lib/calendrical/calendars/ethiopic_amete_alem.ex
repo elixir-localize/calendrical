@@ -134,7 +134,7 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
   """
   @impl true
   @spec leap_year?(year) :: boolean()
-  def leap_year?(year) do
+  def leap_year?(year) when is_integer(year) do
     Calendrical.Ethiopic.leap_year?(amete_mihret_year(year))
   end
 
@@ -153,7 +153,13 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
 
   ### Returns
 
-  * An integer number of days.
+  * An integer number of days, or
+
+  * `{:error, %Calendrical.InvalidMonthError{}}` for a month the year
+    does not have, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+    month is `nil`.
 
   ### Examples
 
@@ -165,7 +171,7 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
 
   """
   @impl true
-  @spec days_in_month(year, month) :: 5..30
+  @spec days_in_month(year, month) :: 5..30 | {:error, Exception.t()}
   def days_in_month(year, month) do
     Calendrical.Ethiopic.days_in_month(amete_mihret_year(year), month)
   end

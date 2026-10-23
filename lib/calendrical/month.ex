@@ -172,7 +172,8 @@ defmodule Calendrical.Month do
 
   * The month as `c:Calendrical.written_date/3` writes it, or
 
-  * `{:error, :invalid_month}` where the year has no month of that name.
+  * `{:error, %Calendrical.InvalidMonthError{}}` where the year has no
+    month of that name.
 
   ### Examples
 
@@ -186,17 +187,17 @@ defmodule Calendrical.Month do
       {2, :leap}
 
       iex> Calendrical.Month.written_month_from_cldr_month(Calendrical.Hebrew, 5786, 6)
-      {:error, :invalid_month}
+      {:error, %Calendrical.InvalidMonthError{calendar: Calendrical.Hebrew, year: 5786, month: 6}}
 
   """
   @spec written_month_from_cldr_month(calendar, Calendar.year(), traditional_month()) ::
-          traditional_month() | {:error, :invalid_month}
+          traditional_month() | {:error, Exception.t()}
   def written_month_from_cldr_month(calendar, year, cldr_month) do
     # A number names the leap month of that number where the year has no
     # other: 7 in a Hebrew leap year is Adar II, CLDR's `{7, :leap}`.
     case position_of_cldr_month(calendar, year, cldr_month) do
       nil ->
-        {:error, :invalid_month}
+        {:error, no_such_month(calendar, year, cldr_month)}
 
       position ->
         {_year, written_month, _day} = calendar.written_date(year, position, 1)
@@ -573,8 +574,10 @@ defmodule Calendrical.Month do
 
   ### Returns
 
-  * A count, `{:ambiguous, range}`, or `{:error, :undefined}` for a month
-    the calendar has in no year.
+  * A count, `{:ambiguous, range}`, or
+
+  * `{:error, %Calendrical.NotDefinedError{}}` for a month the calendar
+    has in no year.
 
   ### Examples
 
@@ -586,16 +589,27 @@ defmodule Calendrical.Month do
 
   """
   @spec days_in_month(calendar, Calendar.month()) ::
-          Calendar.day() | {:ambiguous, Range.t() | [Calendar.day(), ...]} | {:error, :undefined}
+          Calendar.day()
+          | {:ambiguous, Range.t() | [Calendar.day(), ...]}
+          | {:error, Exception.t()}
   def days_in_month(calendar, month) when is_integer(month) do
     case Map.get(lengths(calendar), month) do
-      nil -> {:error, :undefined}
+      nil -> days_not_defined(calendar, month)
       days when is_integer(days) -> days
       range -> {:ambiguous, range}
     end
   end
 
-  def days_in_month(_calendar, _month), do: {:error, :undefined}
+  def days_in_month(calendar, month), do: days_not_defined(calendar, month)
+
+  defp days_not_defined(calendar, month) do
+    {:error,
+     Calendrical.NotDefinedError.exception(
+       calendar: calendar,
+       question: :days_in_month,
+       value: month
+     )}
+  end
 
   @doc """
   Returns the lengths the months of the calendar can have, by month: the

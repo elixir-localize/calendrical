@@ -11,11 +11,17 @@ defmodule Calendrical.Base.Written do
   # * A lunisolar calendar, whose months are written by their traditional
   #   numbers, `{number, :leap}` for a leap month, as
   #   `Calendrical.Month.traditional_month/3` names them.
+  #
+  # Figures that name no date are `{:error, :invalid_date}`, an atom, as
+  # `c:Calendrical.date_from_written_date/3` answers: Localize's date parser
+  # reads it.
 
   @doc false
   def own_date(calendar, year, month, day) do
     if calendar.valid_date?(year, month, day),
       do: {:ok, {year, month, day}},
+      # Localize's date parser reads this atom (see c:Calendrical.date_from_written_date/3).
+      # credo:disable-for-next-line Calendrical.Credo.ErrorTuple
       else: {:error, :invalid_date}
   end
 
@@ -27,6 +33,8 @@ defmodule Calendrical.Base.Written do
   @doc false
   def date_from_lunisolar_written_date(calendar, year, lunar_month, day) do
     case Calendrical.Month.month_from_traditional(calendar, year, lunar_month) do
+      # Localize's date parser reads this atom (see c:Calendrical.date_from_written_date/3).
+      # credo:disable-for-next-line Calendrical.Credo.ErrorTuple
       {:error, _no_such_month} -> {:error, :invalid_date}
       month -> own_date(calendar, year, month, day)
     end

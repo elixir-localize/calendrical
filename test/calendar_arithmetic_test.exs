@@ -142,7 +142,7 @@ defmodule Calendrical.CalendarArithmetic.Test do
           assert calendar.date_to_iso_days(year, month, day) == iso_days
         end
 
-        assert {:error, :invalid_date} = calendar.year(0)
+        assert {:error, %Calendrical.InvalidDateError{}} = calendar.year(0)
         assert %Date.Range{} = calendar.year(-1)
       end
     end

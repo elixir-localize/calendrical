@@ -121,8 +121,14 @@ defmodule Calendrical.Islamic.Observational do
 
   * `{:ok, date}` — an observational Hijri `t:Date.t/0`.
 
-  * `{:error, reason}` if the day-start option is invalid, the date lies outside
-    the supported range, or sunset cannot be computed.
+  * `{:error, %Calendrical.InvalidOptionValueError{}}` for an invalid
+    `:day_start` or `:nightfall_angle`.
+
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a date outside
+    the range the calendar or the installed JPL ephemeris covers.
+
+  * `{:error, %Calendrical.NoDuskError{}}` where the sun does not set, or
+    nightfall does not occur, at the location on that day.
 
   ### Examples
 
@@ -131,7 +137,7 @@ defmodule Calendrical.Islamic.Observational do
       Calendrical.Islamic.Observational
 
   """
-  @spec date_at(DateTime.t(), Keyword.t()) :: {:ok, Date.t()} | {:error, term()}
+  @spec date_at(DateTime.t(), Keyword.t()) :: {:ok, Date.t()} | {:error, Exception.t()}
   def date_at(%DateTime{} = datetime, options \\ []) do
     Calendrical.DayStart.date_at(datetime, __MODULE__, location(), 2 * 60 * 60, options)
   end
@@ -165,7 +171,7 @@ defmodule Calendrical.Islamic.Observational do
   """
   @impl true
   @spec leap_year?(year) :: boolean()
-  def leap_year?(year) do
+  def leap_year?(year) when is_integer(year) do
     days_in_year(year) > 354
   end
 
@@ -181,7 +187,16 @@ defmodule Calendrical.Islamic.Observational do
 
   ### Returns
 
-  * The number of days in the month (`29` or `30`).
+  * The number of days in the month (`29` or `30`), or
+
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a month the
+    installed ephemeris does not cover, or
+
+  * `{:error, %Calendrical.InvalidMonthError{}}` for a month that is not
+    `1..12`, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+    month is `nil`.
 
   ### Examples
 
@@ -193,11 +208,12 @@ defmodule Calendrical.Islamic.Observational do
 
   """
   @impl true
-  @spec days_in_month(year, month) :: 29..30
+  @spec days_in_month(year, month) :: 29..30 | {:error, Exception.t()}
   def days_in_month(year, month) when month in 1..12 do
-    next_month_first = first_day_of_month(year, month + 1)
-    this_month_first = first_day_of_month(year, month)
-    next_month_first - this_month_first
+    case month_length(year, month) do
+      {:ok, days} -> days
+      {:error, exception} -> {:error, %{exception | calendar: __MODULE__}}
+    end
   end
 
   @doc """
@@ -232,7 +248,7 @@ defmodule Calendrical.Islamic.Observational do
              year >= 1 and month in 1..12 and day in 1..30 do
     case month_length(year, month) do
       {:ok, days} -> day <= days
-      {:error, _date} -> false
+      {:error, _out_of_ephemeris} -> false
     end
   end
 
@@ -317,7 +333,7 @@ defmodule Calendrical.Islamic.Observational do
     Visibility.phasis_on_or_before(midmonth(year, month), @cairo)
   end
 
-  # The month's length as `{:ok, days}`, or `{:error, date}` when the
+  # The month's length as `{:ok, days}`, or an error when the
   # installed ephemeris does not cover the month — which is then no date
   # at all, so `valid_date?/3` answers false rather than raising.
   defp month_length(year, month) do

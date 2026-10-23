@@ -83,7 +83,8 @@ defmodule Calendrical.CalendarContract.Test do
         for {year, month, day} <- impossible ++ [{date.year, "1", 1}, {date.year, 1, :""}],
             {callback, extra} <- @date_callbacks,
             function_exported?(calendar, callback, 3 + length(extra)) do
-          assert apply(calendar, callback, [year, month, day | extra]) == {:error, :invalid_date},
+          assert {:error, %Calendrical.InvalidDateError{calendar: ^calendar}} =
+                   apply(calendar, callback, [year, month, day | extra]),
                  "#{callback}#{inspect([year, month, day | extra])}"
         end
       end
@@ -131,9 +132,15 @@ defmodule Calendrical.CalendarContract.Test do
         day_of_year = calendar.day_of_year(date.year, date.month, date.day)
 
         assert calendar.date_from_day_of_year(date.year, day_of_year) == date
-        assert calendar.date_from_day_of_year(date.year, 0) == {:error, :invalid_date}
-        assert calendar.date_from_day_of_year(date.year, 999) == {:error, :invalid_date}
-        assert calendar.date_from_day_of_year(nil, 1) == {:error, :invalid_date}
+
+        assert {:error, %Calendrical.InvalidDateError{calendar: ^calendar}} =
+                 calendar.date_from_day_of_year(date.year, 0)
+
+        assert {:error, %Calendrical.InvalidDateError{calendar: ^calendar}} =
+                 calendar.date_from_day_of_year(date.year, 999)
+
+        assert {:error, %Calendrical.InvalidDateError{calendar: ^calendar}} =
+                 calendar.date_from_day_of_year(nil, 1)
 
         assert Calendrical.date_from_day_of_year(date.year, day_of_year, calendar) == date
       end
@@ -179,7 +186,7 @@ defmodule Calendrical.CalendarContract.Test do
         case calendar.months_in_year() do
           months when is_integer(months) -> assert months > 0
           {:ambiguous, counts} -> assert Enum.all?(counts, &(&1 > 0))
-          other -> assert other == {:error, :undefined}
+          other -> assert {:error, %Calendrical.NotDefinedError{calendar: ^calendar}} = other
         end
       end
 
@@ -327,7 +334,8 @@ defmodule Calendrical.CalendarContract.Test do
             assert earlier.last_in_iso_days + 1 == later.first_in_iso_days
           end)
 
-          assert {:error, :invalid_date} = calendar.week(date.year, weeks + 1)
+          assert {:error, %Calendrical.InvalidDateError{calendar: ^calendar}} =
+                   calendar.week(date.year, weeks + 1)
         end
       end
 

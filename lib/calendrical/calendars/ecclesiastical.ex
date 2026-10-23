@@ -428,7 +428,8 @@ defmodule Calendrical.Ecclesiastical do
 
   * `{:ok, date}` where `date` is a `Calendar.ISO` `t:Date.t/0`, or
 
-  * `{:error, exception}` if the calculation cannot be performed.
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a year outside
+    `1000..3000`, or for a date the installed ephemeris does not cover.
 
   ### Examples
 
@@ -440,9 +441,9 @@ defmodule Calendrical.Ecclesiastical do
 
   """
   @spec astronomical_easter_sunday(Calendar.year()) ::
-          {:ok, Date.t()} | {:error, Exception.t()} | {:error, :year_out_of_range}
+          {:ok, Date.t()} | {:error, Exception.t()}
   def astronomical_easter_sunday(gregorian_year)
-      when is_integer(gregorian_year) and gregorian_year in 1000..3000 do
+      when is_integer(gregorian_year) do
     with {:ok, pfm} <- paschal_full_moon(gregorian_year) do
       {:ok, sunday_after(pfm)}
     end
@@ -462,7 +463,8 @@ defmodule Calendrical.Ecclesiastical do
 
   * `{:ok, date}` where `date` is a `Calendar.ISO` `t:Date.t/0`, or
 
-  * `{:error, exception}` if the calculation cannot be performed.
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a year outside
+    `1000..3000`, or for a date the installed ephemeris does not cover.
 
   ### Examples
 
@@ -474,9 +476,9 @@ defmodule Calendrical.Ecclesiastical do
 
   """
   @spec astronomical_good_friday(Calendar.year()) ::
-          {:ok, Date.t()} | {:error, Exception.t()} | {:error, :year_out_of_range}
+          {:ok, Date.t()} | {:error, Exception.t()}
   def astronomical_good_friday(gregorian_year)
-      when is_integer(gregorian_year) and gregorian_year in 1000..3000 do
+      when is_integer(gregorian_year) do
     with {:ok, easter} <- astronomical_easter_sunday(gregorian_year) do
       {:ok, Date.add(easter, -2)}
     end
@@ -508,7 +510,8 @@ defmodule Calendrical.Ecclesiastical do
   * `{:ok, date}` where `date` is the `t:Calendar.date/0` of the
     Paschal Full Moon in UTC, or
 
-  * `{:error, exception}` if the calculation cannot be performed.
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a year outside
+    `1000..3000`, or for a date the installed ephemeris does not cover.
 
   ### Examples
 
@@ -520,14 +523,21 @@ defmodule Calendrical.Ecclesiastical do
 
   """
   @spec paschal_full_moon(Calendar.year()) ::
-          {:ok, Date.t()} | {:error, Exception.t()} | {:error, :year_out_of_range}
+          {:ok, Date.t()} | {:error, Exception.t()}
   def paschal_full_moon(gregorian_year)
-      when is_integer(gregorian_year) and gregorian_year in 1000..3000 do
-    with {:ok, equinox} <- Astro.equinox(gregorian_year, :march),
+      when is_integer(gregorian_year) do
+    with {:ok, equinox} <- astro(Astro.equinox(gregorian_year, :march), gregorian_year),
          {:ok, full_moon} <-
-           Astro.date_time_lunar_phase_at_or_after(equinox, Astro.Lunar.full_moon_phase()) do
+           astro(
+             Astro.date_time_lunar_phase_at_or_after(equinox, Astro.Lunar.full_moon_phase()),
+             gregorian_year
+           ) do
       {:ok, DateTime.to_date(full_moon)}
     end
+  end
+
+  defp astro(result, gregorian_year) do
+    Calendrical.Base.Astro.result(result, nil, gregorian_year)
   end
 
   @doc """

@@ -323,14 +323,12 @@ defmodule Calendrical.EcclesiasticalTest do
       end
     end
 
-    test "raises for years outside the supported range" do
-      assert_raise FunctionClauseError, fn ->
-        Ecclesiastical.astronomical_easter_sunday(999)
-      end
+    test "is an error for years outside the supported range" do
+      assert {:error, %Calendrical.UnsupportedDateRangeError{range: 1000..3000}} =
+               Ecclesiastical.astronomical_easter_sunday(999)
 
-      assert_raise FunctionClauseError, fn ->
-        Ecclesiastical.astronomical_easter_sunday(3001)
-      end
+      assert {:error, %Calendrical.UnsupportedDateRangeError{range: 1000..3000}} =
+               Ecclesiastical.astronomical_easter_sunday(3001)
     end
   end
 
@@ -350,10 +348,9 @@ defmodule Calendrical.EcclesiasticalTest do
       end
     end
 
-    test "raises for years outside the supported range" do
-      assert_raise FunctionClauseError, fn ->
-        Ecclesiastical.astronomical_good_friday(999)
-      end
+    test "is an error for years outside the supported range" do
+      assert {:error, %Calendrical.UnsupportedDateRangeError{range: 1000..3000}} =
+               Ecclesiastical.astronomical_good_friday(999)
     end
   end
 
@@ -464,14 +461,12 @@ defmodule Calendrical.EcclesiasticalTest do
       end
     end
 
-    test "raises for years outside the supported range" do
-      assert_raise FunctionClauseError, fn ->
-        Ecclesiastical.paschal_full_moon(999)
-      end
+    test "is an error for years outside the supported range" do
+      assert {:error, %Calendrical.UnsupportedDateRangeError{range: 1000..3000}} =
+               Ecclesiastical.paschal_full_moon(999)
 
-      assert_raise FunctionClauseError, fn ->
-        Ecclesiastical.paschal_full_moon(3001)
-      end
+      assert {:error, %Calendrical.UnsupportedDateRangeError{range: 1000..3000}} =
+               Ecclesiastical.paschal_full_moon(3001)
     end
 
     test "raises for non-integer input" do

@@ -18,7 +18,7 @@ defmodule Calendrical.Islamic.Tabular do
   24, 26, and 29 of each cycle are leap years (354 → 355 days).
   """
   @spec leap_year?(integer()) :: boolean()
-  def leap_year?(year) do
+  def leap_year?(year) when is_integer(year) do
     Integer.mod(14 + 11 * year, 30) < 11
   end
 

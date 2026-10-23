@@ -104,7 +104,7 @@ defmodule CoverageArithmeticTest do
     test "days_in_month/1 is the month's length where every year has it" do
       assert Ethiopic.days_in_month(5) == 30
       assert Coptic.days_in_month(13) == {:ambiguous, 5..6}
-      assert Coptic.days_in_month(14) == {:error, :undefined}
+      assert {:error, %Calendrical.NotDefinedError{}} = Coptic.days_in_month(14)
     end
 
     test "valid_date? false branches" do
@@ -331,20 +331,22 @@ defmodule CoverageArithmeticTest do
       assert Julian.week(2025, 52) ==
                Date.range(~D[2025-12-23 Calendrical.Julian], ~D[2025-12-29 Calendrical.Julian])
 
-      assert Julian.week(2025, 53) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = Julian.week(2025, 53)
 
-      assert Julian.week(2025, 54) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = Julian.week(2025, 54)
     end
   end
 
   describe "Julian shift/6 arithmetic" do
-    test "plus :years without clamp keeps the day" do
-      assert Julian.shift(2024, 2, 29, :years, 1) == {2025, 2, 29}
+    test "plus :years clamps by default and keeps the day with clamp: false" do
+      assert Julian.shift(2024, 2, 29, :years, 1) == {2025, 2, 28}
+      assert Julian.shift(2024, 2, 29, :years, 1, clamp: false) == {2025, 2, 29}
     end
 
-    test "plus :months with and without clamp" do
-      assert Julian.shift(2025, 1, 31, :months, 1) == {2025, 2, 31}
+    test "plus :months clamps by default and keeps the day with clamp: false" do
+      assert Julian.shift(2025, 1, 31, :months, 1) == {2025, 2, 28}
       assert Julian.shift(2025, 1, 31, :months, 1, clamp: true) == {2025, 2, 28}
+      assert Julian.shift(2025, 1, 31, :months, 1, clamp: false) == {2025, 2, 31}
     end
 
     test "plus :years crossing year zero skips it" do
@@ -449,8 +451,10 @@ defmodule CoverageArithmeticTest do
         assert Interval.day(year, days_in_year, calendar) == Date.range(last, last),
                "#{inspect(calendar)} #{year} last day"
 
-        assert Interval.day(year, days_in_year + 1, calendar) == {:error, :invalid_date}
-        assert Interval.day(year, 0, calendar) == {:error, :invalid_date}
+        assert {:error, %Calendrical.InvalidDateError{}} =
+                 Interval.day(year, days_in_year + 1, calendar)
+
+        assert {:error, %Calendrical.InvalidDateError{}} = Interval.day(year, 0, calendar)
       end
     end
 
@@ -522,7 +526,7 @@ defmodule CoverageArithmeticTest do
       assert Interval.day(2019, 92, Calendrical.NRF) ==
                Date.range(~D[2019-W14-1 Calendrical.NRF], ~D[2019-W14-1 Calendrical.NRF])
 
-      assert Interval.day(2025, 400) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = Interval.day(2025, 400)
     end
 
     test "to_iso_calendar converts both endpoints" do
@@ -634,6 +638,104 @@ defmodule CoverageArithmeticTest do
       assert_raise ArgumentError, ~r/unknown CLDR calendar type :bogus/, fn ->
         Era.era_data(:bogus)
       end
+    end
+  end
+
+  # Calendar.ISO answers as Calendrical.Gregorian, with its dates in
+  # Calendar.ISO, as the date forms of the constructors treat it.
+  describe "Interval constructors with Calendar.ISO" do
+    test "each constructor answers in Calendar.ISO" do
+      gregorian = Calendrical.Gregorian
+
+      for {constructor, arguments} <- [
+            year: [2024],
+            quarter: [2024, 2],
+            quadrimester: [2024, 3],
+            semester: [2024, 2],
+            month: [2024, 2],
+            week: [2024, 10],
+            day: [2024, 60]
+          ] do
+        expected = apply(Interval, constructor, arguments ++ [gregorian])
+        iso = apply(Interval, constructor, arguments ++ [Calendar.ISO])
+
+        assert iso == Interval.coerce_iso_calendar(expected), inspect(constructor)
+        assert iso.first.calendar == Calendar.ISO
+      end
+    end
+
+    test "an interval the year lacks is an error" do
+      assert {:error, %Calendrical.InvalidDateError{}} = Interval.month(2024, 13, Calendar.ISO)
+    end
+  end
+
+  describe "Interval date forms with a date the calendar lacks" do
+    test "month/1 and day/1 return errors rather than raising" do
+      invalid = %Date{year: 2024, month: 13, day: 1, calendar: Calendrical.Gregorian}
+      dayless = %Date{year: 2024, month: 2, day: nil, calendar: Calendrical.Gregorian}
+
+      for constructor <- [:month, :day] do
+        assert {:error, %Calendrical.InvalidDateError{}} = apply(Interval, constructor, [invalid])
+
+        assert {:error, %Calendrical.MissingFieldsError{}} =
+                 apply(Interval, constructor, [dayless])
+      end
+    end
+  end
+
+  # Every period answers a missing field as a MissingFieldsError naming
+  # its own fields, and a value no period has as :invalid_date.
+  describe "periods with a missing field" do
+    test "each period names the field it lacks" do
+      gregorian = Calendrical.Gregorian
+
+      for period <- [:quarter, :quadrimester, :semester, :week] do
+        assert {:error, %Calendrical.MissingFieldsError{fields: [{:year, nil}, {^period, 1}]}} =
+                 apply(gregorian, period, [nil, 1])
+      end
+
+      assert {:error, %Calendrical.InvalidDateError{}} = gregorian.quarter(2024, 5)
+      assert {:error, %Calendrical.InvalidDateError{}} = gregorian.week(2024, 60)
+    end
+
+    test "Interval.year/1 rejects a whole date the calendar lacks" do
+      invalid = %Date{year: 2024, month: 2, day: 30, calendar: Calendrical.Gregorian}
+      yearless = %{year: nil, month: 1, day: 1, calendar: Calendrical.Gregorian}
+      year_only = %{year: 2024, month: nil, day: nil, calendar: Calendrical.Gregorian}
+
+      assert {:error, %Calendrical.InvalidDateError{}} = Interval.year(invalid)
+      assert {:error, %Calendrical.MissingFieldsError{}} = Interval.year(yearless)
+      assert %Date.Range{} = Interval.year(year_only)
+    end
+  end
+
+  describe "Interval.day/3 with a day that is no ordinal" do
+    test "a missing day is a MissingFieldsError and another an invalid date" do
+      assert {:error, %Calendrical.MissingFieldsError{fields: [year: 2024, day: nil]}} =
+               Interval.day(2024, nil)
+
+      assert {:error, %Calendrical.InvalidDateError{}} = Interval.day(2024, 1.5)
+      assert {:error, %Calendrical.MissingFieldsError{}} = Interval.day(2024, nil, Calendar.ISO)
+    end
+  end
+
+  describe "partial dates' months and quarters" do
+    test "a month and a quarter need no day" do
+      assert Calendrical.Gregorian.quarter_of_year(2023, 5, nil) == 2
+      assert Calendrical.Gregorian.month_of_year(2023, 5, nil) == 5
+    end
+
+    test "without a year the month and the day are still checked" do
+      assert {:error, %Calendrical.InvalidMonthError{month: 13}} =
+               Calendrical.Gregorian.month_of_year(nil, 13, nil)
+
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.Gregorian.month_of_year(nil, 2, 30)
+
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.Hebrew.month_of_year(nil, 6, 31)
+
+      assert Calendrical.Gregorian.month_of_year(nil, 2, 29) == 2
     end
   end
 end

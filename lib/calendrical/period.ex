@@ -17,6 +17,10 @@ defmodule Calendrical.Period do
 
   @traditional_months_in_year 12
 
+  # The name of a period of a year by the months in it, for an error that
+  # names the period.
+  @period_names %{3 => :quarter, 4 => :quadrimester, 6 => :semester}
+
   @typedoc "A calendar module."
   @type calendar :: module()
 
@@ -33,7 +37,7 @@ defmodule Calendrical.Period do
 
   ### Returns
 
-  * A `t:Date.Range.t/0`, or `{:error, :invalid_date}` for a year the
+  * A `t:Date.Range.t/0`, or `{:error, %Calendrical.InvalidDateError{}}` for a year the
     calendar does not have, or `{:error, Calendrical.MissingFieldsError.t()}`
     for no year.
 
@@ -46,26 +50,26 @@ defmodule Calendrical.Period do
       Date.range(~D[1751-03-25 Calendrical.Reform.England], ~D[1751-12-31 Calendrical.Reform.England])
 
       iex> Calendrical.Period.year(Calendrical.Julian, 0)
-      {:error, :invalid_date}
+      {:error, %Calendrical.InvalidDateError{calendar: Calendrical.Julian, value: [year: 0]}}
 
   """
   @spec year(calendar, Calendar.year()) ::
-          Date.Range.t() | {:error, :invalid_date | Exception.t()}
+          Date.Range.t() | {:error, Exception.t()}
   def year(calendar, year) when is_integer(year) do
     if Calendrical.Base.Common.composite?(calendar) do
       case Calendrical.Month.month_numbers(calendar, year) do
-        [] -> {:error, :invalid_date}
+        [] -> invalid_date(calendar, year: year)
         months -> days_between(calendar, year, List.first(months).first, List.last(months).last)
       end
     else
-      with {:ok, first} <- first_day(calendar, year, 1),
-           {:ok, last} <- last_day(calendar, year, calendar.months_in_year(year)) do
+      with {:ok, first} <- first_day(calendar, year, 1, year: year),
+           {:ok, last} <- last_day(calendar, year, calendar.months_in_year(year), year: year) do
         Date.range(first, last)
       end
     end
   end
 
-  def year(_calendar, year), do: missing_or_invalid("year", year: year)
+  def year(calendar, year), do: missing_or_invalid(calendar, "year", year: year)
 
   @doc """
   Returns the days of a month of a year as a `t:Date.Range.t/0`: from the
@@ -79,7 +83,7 @@ defmodule Calendrical.Period do
 
   ### Returns
 
-  * A `t:Date.Range.t/0`, or `{:error, :invalid_date}` for a month the
+  * A `t:Date.Range.t/0`, or `{:error, %Calendrical.InvalidDateError{}}` for a month the
     year does not have, or `{:error, Calendrical.MissingFieldsError.t()}`
     for a missing year or month.
 
@@ -89,23 +93,24 @@ defmodule Calendrical.Period do
       Date.range(~D[2026-02-01 Calendrical.Gregorian], ~D[2026-02-28 Calendrical.Gregorian])
 
       iex> Calendrical.Period.month(Calendrical.Gregorian, 2026, 13)
-      {:error, :invalid_date}
+      {:error, %Calendrical.InvalidDateError{calendar: Calendrical.Gregorian, value: [year: 2026, month: 13]}}
 
   """
   @spec month(calendar, Calendar.year(), Calendar.month()) ::
-          Date.Range.t() | {:error, :invalid_date | Exception.t()}
+          Date.Range.t() | {:error, Exception.t()}
   def month(calendar, year, month) when is_integer(year) and is_integer(month) do
     if Calendrical.Base.Common.composite?(calendar) do
       days_between(calendar, year, month, month)
     else
-      with {:ok, first} <- first_day(calendar, year, month),
-           {:ok, last} <- last_day(calendar, year, month) do
+      with {:ok, first} <- first_day(calendar, year, month, year: year, month: month),
+           {:ok, last} <- last_day(calendar, year, month, year: year, month: month) do
         Date.range(first, last)
       end
     end
   end
 
-  def month(_calendar, year, month), do: missing_or_invalid("month", year: year, month: month)
+  def month(calendar, year, month),
+    do: missing_or_invalid(calendar, "month", year: year, month: month)
 
   @doc """
   Returns the days of a quarter of a year, three months each, as a
@@ -122,8 +127,11 @@ defmodule Calendrical.Period do
 
   ### Returns
 
-  * A `t:Date.Range.t/0`, or `{:error, :invalid_date}` for a quarter or a
-    year the calendar does not have.
+  * A `t:Date.Range.t/0`, or `{:error, %Calendrical.InvalidDateError{}}` for a quarter or a
+    year the calendar does not have, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+    quarter is `nil`.
 
   ### Examples
 
@@ -131,8 +139,12 @@ defmodule Calendrical.Period do
       Date.range(~D[2026-10-01 Calendrical.Gregorian], ~D[2026-12-31 Calendrical.Gregorian])
 
   """
-  @spec quarter(calendar, Calendar.year(), 1..4) :: Date.Range.t() | {:error, :invalid_date}
-  def quarter(calendar, year, quarter), do: date_range(calendar, year, quarter, 3)
+  @spec quarter(calendar, Calendar.year(), 1..4) :: Date.Range.t() | Calendrical.date_error()
+  def quarter(calendar, year, quarter) when is_integer(year) and is_integer(quarter),
+    do: date_range(calendar, year, quarter, 3)
+
+  def quarter(calendar, year, quarter),
+    do: missing_or_invalid(calendar, "quarter", year: year, quarter: quarter)
 
   @doc """
   Returns the days of a quadrimester of a year, four months each, as a
@@ -148,7 +160,9 @@ defmodule Calendrical.Period do
 
   ### Returns
 
-  * A `t:Date.Range.t/0`, or `{:error, :invalid_date}`.
+  * A `t:Date.Range.t/0`, or `{:error, %Calendrical.InvalidDateError{}}`, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` where a field is `nil`.
 
   ### Examples
 
@@ -156,8 +170,13 @@ defmodule Calendrical.Period do
       Date.range(~D[2026-09-01 Calendrical.Gregorian], ~D[2026-12-31 Calendrical.Gregorian])
 
   """
-  @spec quadrimester(calendar, Calendar.year(), 1..3) :: Date.Range.t() | {:error, :invalid_date}
-  def quadrimester(calendar, year, quadrimester), do: date_range(calendar, year, quadrimester, 4)
+  @spec quadrimester(calendar, Calendar.year(), 1..3) :: Date.Range.t() | Calendrical.date_error()
+  def quadrimester(calendar, year, quadrimester)
+      when is_integer(year) and is_integer(quadrimester),
+      do: date_range(calendar, year, quadrimester, 4)
+
+  def quadrimester(calendar, year, quadrimester),
+    do: missing_or_invalid(calendar, "quadrimester", year: year, quadrimester: quadrimester)
 
   @doc """
   Returns the days of a semester of a year, six months each, as a
@@ -173,7 +192,9 @@ defmodule Calendrical.Period do
 
   ### Returns
 
-  * A `t:Date.Range.t/0`, or `{:error, :invalid_date}`.
+  * A `t:Date.Range.t/0`, or `{:error, %Calendrical.InvalidDateError{}}`, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` where a field is `nil`.
 
   ### Examples
 
@@ -181,8 +202,12 @@ defmodule Calendrical.Period do
       Date.range(~D[2026-07-01 Calendrical.Gregorian], ~D[2026-12-31 Calendrical.Gregorian])
 
   """
-  @spec semester(calendar, Calendar.year(), 1..2) :: Date.Range.t() | {:error, :invalid_date}
-  def semester(calendar, year, semester), do: date_range(calendar, year, semester, 6)
+  @spec semester(calendar, Calendar.year(), 1..2) :: Date.Range.t() | Calendrical.date_error()
+  def semester(calendar, year, semester) when is_integer(year) and is_integer(semester),
+    do: date_range(calendar, year, semester, 6)
+
+  def semester(calendar, year, semester),
+    do: missing_or_invalid(calendar, "semester", year: year, semester: semester)
 
   @doc """
   Returns the quarter of the year a date falls in: the quarter of its
@@ -196,7 +221,7 @@ defmodule Calendrical.Period do
 
   ### Returns
 
-  * 1 to 4, or `{:error, :invalid_date}` for a month the year does not
+  * 1 to 4, or `{:error, %Calendrical.InvalidDateError{}}` for a month the year does not
     have, or `{:error, Calendrical.MissingFieldsError.t()}` for a missing
     year or month.
 
@@ -210,15 +235,17 @@ defmodule Calendrical.Period do
 
   """
   @spec quarter_of_year(calendar, Calendar.year(), Calendar.month(), Calendar.day()) ::
-          1..4 | {:error, :invalid_date | Exception.t()}
+          1..4 | {:error, Exception.t()}
+  # A quarter needs only the year and the month: with no day, the month
+  # need only have days in the year.
   def quarter_of_year(calendar, year, month, day) when is_integer(year) and is_integer(month) do
-    if Calendrical.Month.day_in_month?(calendar, year, month, day),
+    if Calendrical.Month.day_in_month?(calendar, year, month, day || 1),
       do: period_number_of_month(calendar, year, month, 3),
-      else: {:error, :invalid_date}
+      else: invalid_date(calendar, year: year, month: month)
   end
 
-  def quarter_of_year(_calendar, year, month, _day),
-    do: missing_or_invalid("quarter_of_year", year: year, month: month)
+  def quarter_of_year(calendar, year, month, _day),
+    do: missing_or_invalid(calendar, "quarter_of_year", year: year, month: month)
 
   @doc """
   Returns the day of the year of a date: 1 on the first day the year has.
@@ -231,7 +258,7 @@ defmodule Calendrical.Period do
 
   ### Returns
 
-  * A positive integer, or `{:error, :invalid_date}` for a date the
+  * A positive integer, or `{:error, %Calendrical.InvalidDateError{}}` for a date the
     calendar does not have, or `{:error, Calendrical.MissingFieldsError.t()}`
     for a missing field.
 
@@ -246,7 +273,7 @@ defmodule Calendrical.Period do
 
   """
   @spec day_of_year(calendar, Calendar.year(), Calendar.month(), Calendar.day()) ::
-          pos_integer() | {:error, :invalid_date | Exception.t()}
+          pos_integer() | {:error, Exception.t()}
   def day_of_year(calendar, year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     with %Date.Range{first: first} <- year(calendar, year),
@@ -255,8 +282,8 @@ defmodule Calendrical.Period do
     end
   end
 
-  def day_of_year(_calendar, year, month, day),
-    do: missing_or_invalid("day_of_year", year: year, month: month, day: day)
+  def day_of_year(calendar, year, month, day),
+    do: missing_or_invalid(calendar, "day_of_year", year: year, month: month, day: day)
 
   @doc """
   Returns the number of days a year has: the days from its first to its
@@ -271,7 +298,7 @@ defmodule Calendrical.Period do
 
   ### Returns
 
-  * A positive integer, or `{:error, :invalid_date}` for a year the
+  * A positive integer, or `{:error, %Calendrical.InvalidDateError{}}` for a year the
     calendar does not have, or `{:error, Calendrical.MissingFieldsError.t()}`
     for no year.
 
@@ -286,31 +313,32 @@ defmodule Calendrical.Period do
 
   """
   @spec days_in_year(calendar, Calendar.year()) ::
-          pos_integer() | {:error, :invalid_date | Exception.t()}
+          pos_integer() | {:error, Exception.t()}
   def days_in_year(calendar, year) when is_integer(year) do
     with %Date.Range{first: first, last: last} <- year(calendar, year) do
       Date.to_gregorian_days(last) - Date.to_gregorian_days(first) + 1
     end
   end
 
-  def days_in_year(_calendar, year), do: missing_or_invalid("days_in_year", year: year)
+  def days_in_year(calendar, year),
+    do: missing_or_invalid(calendar, "days_in_year", year: year)
 
   # The first day of a month, and its last, in a calendar whose months run
   # from 1 to their length: one validation of the first day and one length,
   # since each may be a sighting of the moon.
-  defp first_day(calendar, year, month) when is_integer(month) do
+  defp first_day(calendar, year, month, fields) when is_integer(month) do
     if calendar.valid_date?(year, month, 1),
       do: {:ok, %Date{year: year, month: month, day: 1, calendar: calendar}},
-      else: {:error, :invalid_date}
+      else: invalid_date(calendar, fields)
   end
 
-  defp last_day(calendar, year, month) when is_integer(month) do
+  defp last_day(calendar, year, month, fields) when is_integer(month) do
     case calendar.days_in_month(year, month) do
       days when is_integer(days) and days > 0 ->
         {:ok, %Date{year: year, month: month, day: days, calendar: calendar}}
 
       _no_such_month ->
-        {:error, :invalid_date}
+        invalid_date(calendar, fields)
     end
   end
 
@@ -321,7 +349,10 @@ defmodule Calendrical.Period do
     last_days = Calendrical.Month.day_numbers(calendar, year, last_month)
 
     if first_days == [] or last_days == [] do
-      {:error, :invalid_date}
+      invalid_date(calendar,
+        year: year,
+        month: if(first_days == [], do: first_month, else: last_month)
+      )
     else
       Date.range(
         Date.new!(year, first_month, List.first(first_days).first, calendar),
@@ -332,30 +363,35 @@ defmodule Calendrical.Period do
 
   defp iso_days(calendar, year, month, day) do
     if calendar.valid_date?(year, month, day),
-      do: integer_days(calendar.date_to_iso_days(year, month, day)),
-      else: {:error, :invalid_date}
+      do: integer_days(calendar, calendar.date_to_iso_days(year, month, day), {year, month, day}),
+      else: invalid_date(calendar, {year, month, day})
   end
 
-  defp integer_days(days) when is_integer(days), do: {:ok, days}
-  defp integer_days(_other), do: {:error, :invalid_date}
+  # A calendar's ISO day number may be a moment, which no whole day is.
+  defp integer_days(_calendar, days, _date) when is_integer(days), do: {:ok, days}
+  defp integer_days(calendar, _days, date), do: invalid_date(calendar, date)
 
   # A field that is missing is a missing field; one that is no integer
   # is no date's.
-  defp missing_or_invalid(function, fields) do
+  defp missing_or_invalid(calendar, function, fields) do
     if Enum.any?(fields, fn {_field, value} -> is_nil(value) end),
       do: {:error, %Calendrical.MissingFieldsError{function: function, fields: fields}},
-      else: {:error, :invalid_date}
+      else: invalid_date(calendar, fields)
+  end
+
+  defp invalid_date(calendar, value) do
+    {:error, Calendrical.InvalidDateError.exception(calendar: calendar, value: value)}
   end
 
   @doc false
   # The dates of the year's `period_number`th period of `months_per_period`
   # months.
   @spec date_range(module(), Calendar.year(), pos_integer(), pos_integer()) ::
-          Date.Range.t() | {:error, :not_defined | :invalid_date}
+          Date.Range.t() | {:error, Exception.t()}
   def date_range(calendar, year, period_number, months_per_period) do
-    case ordinal_month_span(calendar, year, period_number, months_per_period) do
-      {:ok, first..last//1} -> range_of_months(calendar, year, first, last)
-      {:error, _no_such_period} -> {:error, :invalid_date}
+    with {:ok, first..last//1} <-
+           ordinal_month_span(calendar, year, period_number, months_per_period) do
+      range_of_months(calendar, year, first, last)
     end
   end
 
@@ -370,11 +406,11 @@ defmodule Calendrical.Period do
   # The number of the period of `months_per_period` months that holds the
   # ordinal `month`.
   @spec period_number_of_month(module(), Calendar.year(), Calendar.month(), pos_integer()) ::
-          pos_integer() | {:error, :invalid_date}
+          pos_integer() | {:error, Exception.t()}
   def period_number_of_month(calendar, year, month, months_per_period) do
     1..periods_in_year(months_per_period)
     |> Enum.find(&period_holds_month?(calendar, year, &1, months_per_period, month))
-    |> period_number_or_error()
+    |> period_number_or_error(calendar, year, month)
   end
 
   defp period_holds_month?(calendar, year, period_number, months_per_period, month) do
@@ -384,8 +420,10 @@ defmodule Calendrical.Period do
     end
   end
 
-  defp period_number_or_error(nil), do: {:error, :invalid_date}
-  defp period_number_or_error(period_number), do: period_number
+  defp period_number_or_error(nil, calendar, year, month),
+    do: invalid_date(calendar, year: year, month: month)
+
+  defp period_number_or_error(period_number, _calendar, _year, _month), do: period_number
 
   # The months of a year in a period: those whose traditional number falls
   # in the period's run of traditional months, the last period taking every
@@ -399,12 +437,16 @@ defmodule Calendrical.Period do
       last = if period_number == periods, do: :last, else: period_number * months_per_period
 
       case months_in_period(calendar, year, first, last) do
-        [] -> {:error, :invalid_date}
+        [] -> invalid_date(calendar, period_fields(year, period_number, months_per_period))
         months -> {:ok, List.first(months)..List.last(months)//1}
       end
     else
-      {:error, :invalid_date}
+      invalid_date(calendar, period_fields(year, period_number, months_per_period))
     end
+  end
+
+  defp period_fields(year, period_number, months_per_period) do
+    [{:year, year}, {Map.fetch!(@period_names, months_per_period), period_number}]
   end
 
   defp months_in_period(calendar, year, first, last) do

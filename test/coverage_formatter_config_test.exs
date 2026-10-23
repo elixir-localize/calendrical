@@ -190,12 +190,22 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
     alias Calendrical.Composite.Config
 
     test "Composite.new/2 rejects a calendars list that is not dates" do
-      assert Composite.new(Coverage.BadComposite, calendars: [:nope]) ==
-               {:error, :must_be_a_list_of_dates}
+      assert Composite.new(Coverage.BadComposite, calendars: [:nope]) |> composite_reason() ==
+               :must_be_a_list_of_dates
     end
 
     test "validate_options/1 rejects an empty option list" do
-      assert Config.validate_options([]) == {:error, :no_calendars_configured}
+      assert Config.validate_options([]) |> composite_reason() == :no_calendars_configured
+    end
+
+    test "validate_options/1 refuses an option no composite reads" do
+      assert {:error, %Calendrical.UnknownOptionError{} = message_error} =
+               Config.validate_options(
+                 calendars: [~D[1700-03-01 Calendrical.Gregorian]],
+                 base: Calendrical.Julian
+               )
+
+      assert Exception.message(message_error) =~ "does not read the options [:base]"
     end
 
     test "validate_options/1 wraps a single date into a list" do
@@ -218,7 +228,7 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
     end
 
     test "extract_options/1 raises on entries that are not dates" do
-      assert_raise ArgumentError, ~r/:calendars must be dates/, fn ->
+      assert_raise Calendrical.InvalidCompositeError, ~r/:calendars must be dates/, fn ->
         Config.extract_options(calendars: [:not_a_date])
       end
     end
@@ -283,12 +293,12 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
 
   describe "Calendrical.new/3 config validation" do
     test "rejects a weekday the rule does not name" do
-      assert {:error, %ArgumentError{message: message}} =
+      assert {:error, %Calendrical.InvalidOptionValueError{} = message_error} =
                Calendrical.new(Coverage.BadDay, :week,
                  year_begins: {:funday, :on_or_before, {1, 4}}
                )
 
-      assert message =~ ":year_begins must be"
+      assert Exception.message(message_error) =~ ":year_begins must be"
     end
 
     test "accepts weeks counted from the first day of the year for month calendars" do
@@ -297,47 +307,49 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
     end
 
     test "rejects a day beyond the first week of the year" do
-      assert {:error, %ArgumentError{message: message}} =
+      assert {:error, %Calendrical.InvalidOptionValueError{} = message_error} =
                Calendrical.new(Coverage.BadMinDays, :week,
                  year_begins: {:monday, :on_or_before, {1, 9}}
                )
 
-      assert message =~ ":year_begins must be"
+      assert Exception.message(message_error) =~ ":year_begins must be"
     end
 
     test "rejects an unknown :pattern" do
-      assert {:error, %ArgumentError{message: message}} =
+      assert {:error, %Calendrical.InvalidOptionValueError{} = message_error} =
                Calendrical.new(Coverage.BadWeeks, :week, pattern: [3, 3, 3])
 
-      assert message =~ ":pattern must be [4, 4, 5], [4, 5, 4] or [5, 4, 4]"
+      assert Exception.message(message_error) =~
+               ":pattern must be [4, 4, 5], [4, 5, 4] or [5, 4, 4]"
     end
 
     test "rejects a :year_begins month outside the base calendar's" do
-      assert {:error, %ArgumentError{message: message}} =
+      assert {:error, %Calendrical.InvalidOptionValueError{} = message_error} =
                Calendrical.new(Coverage.BadMonth, :month, year_begins: {15, 1})
 
-      assert message =~ ":year_begins must be {month, day} of the base calendar"
+      assert Exception.message(message_error) =~
+               ":year_begins must be {month, day} of the base calendar"
     end
 
     test "rejects an unknown :year_number policy" do
-      assert {:error, %ArgumentError{message: message}} =
+      assert {:error, %Calendrical.InvalidOptionValueError{} = message_error} =
                Calendrical.new(Coverage.BadYear, :week, year_number: :bogus)
 
-      assert message =~ ":beginning, :ending or :majority"
+      assert Exception.message(message_error) =~ ":beginning, :ending or :majority"
     end
 
     test "rejects an unknown :cldr_calendar_type" do
-      assert {:error, %ArgumentError{message: message}} =
+      assert {:error, %Calendrical.InvalidOptionValueError{} = message_error} =
                Calendrical.new(Coverage.BadType, :week, cldr_calendar_type: :hebrew)
 
-      assert message =~ ":cldr_calendar_type must be"
+      assert Exception.message(message_error) =~ ":cldr_calendar_type must be"
     end
 
     test "refuses unrecognised options" do
-      assert {:error, %ArgumentError{message: message}} =
+      assert {:error, %Calendrical.UnknownOptionError{} = message_error} =
                Calendrical.new(Coverage.BogusOption, :week, bogus_option: 1)
 
-      assert message =~ "unknown options [:bogus_option]"
+      assert Exception.message(message_error) =~ "does not read the options [:bogus_option]"
     end
 
     test "returns an already-loaded module without recreating it" do
@@ -357,4 +369,6 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
       assert Calendrical.Reform.England.days_in_month(1752, 9) == 19
     end
   end
+
+  defp composite_reason({:error, %Calendrical.InvalidCompositeError{reason: reason}}), do: reason
 end

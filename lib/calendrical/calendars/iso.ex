@@ -30,7 +30,8 @@ defmodule Calendrical.ISO do
   def leap_year?(year), do: Calendar.ISO.leap_year?(year)
 
   @impl Calendar
-  @spec days_in_month(Calendar.year(), Calendar.month()) :: Calendar.day()
+  @spec days_in_month(Calendar.year(), Calendar.month()) ::
+          Calendar.day() | {:error, Exception.t()}
   def days_in_month(year, month), do: Calendar.ISO.days_in_month(year, month)
 
   @impl Calendar

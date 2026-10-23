@@ -24,6 +24,12 @@ defmodule Calendrical.Islamic.Visibility do
 
   @default_method :odeh
 
+  # The days before and after a date that a crescent search near it can
+  # reach: back to the new moon that began its month, and on through a
+  # month and the days a crescent can take to be seen.
+  @search_before 60
+  @search_after 90
+
   @typedoc """
   A crescent-visibility criterion: the Odeh (2004), Yallop (1997)
   or Schaefer empirical model.
@@ -43,18 +49,24 @@ defmodule Calendrical.Islamic.Visibility do
   def phasis_on_or_before(iso_days, location, method \\ @default_method) do
     case find_phasis_on_or_before(iso_days, location, method) do
       {:ok, phasis} -> phasis
-      {:error, date} -> unsupported!(date)
+      {:error, exception} -> raise exception
     end
   end
 
   @doc """
   Returns the first day of the lunar month containing `iso_days`, as
-  `{:ok, iso_days}`, or `{:error, date}` naming a date the installed
-  ephemeris does not cover.
+  `{:ok, iso_days}`, or `{:error, %Calendrical.UnsupportedDateRangeError{}}`
+  naming a date the installed ephemeris does not cover.
   """
   @spec find_phasis_on_or_before(integer(), Geo.PointZ.t(), method()) ::
-          {:ok, integer()} | {:error, Date.t()}
+          {:ok, integer()} | {:error, Exception.t()}
   def find_phasis_on_or_before(iso_days, location, method \\ @default_method) do
+    with :ok <- searchable(iso_days) do
+      find_phasis_in_cover_on_or_before(iso_days, location, method)
+    end
+  end
+
+  defp find_phasis_in_cover_on_or_before(iso_days, location, method) do
     moon_iso = prior_new_moon_iso_days(iso_days)
 
     with {:ok, tau} <- phasis_search_start(iso_days, moon_iso, location, method) do
@@ -69,7 +81,7 @@ defmodule Calendrical.Islamic.Visibility do
     case crescent_visible(iso_days, location, method) do
       {:ok, true} -> {:ok, moon_iso}
       {:ok, false} -> {:ok, moon_iso - 30}
-      {:error, _date} = error -> error
+      {:error, _exception} = error -> error
     end
   end
 
@@ -90,11 +102,17 @@ defmodule Calendrical.Islamic.Visibility do
   def phasis_on_or_after(iso_days, location, method \\ @default_method) do
     case find_phasis_on_or_after(iso_days, location, method) do
       {:ok, phasis} -> phasis
-      {:error, date} -> unsupported!(date)
+      {:error, exception} -> raise exception
     end
   end
 
   defp find_phasis_on_or_after(iso_days, location, method) do
+    with :ok <- searchable(iso_days) do
+      find_phasis_in_cover_on_or_after(iso_days, location, method)
+    end
+  end
+
+  defp find_phasis_in_cover_on_or_after(iso_days, location, method) do
     moon_iso = prior_new_moon_iso_days(iso_days)
 
     with {:ok, tau} <- next_phasis_search_start(iso_days, moon_iso, location, method) do
@@ -114,7 +132,7 @@ defmodule Calendrical.Islamic.Visibility do
     case crescent_visible(iso_days - 1, location, method) do
       {:ok, true} -> {:ok, moon_iso + 29}
       {:ok, false} -> {:ok, iso_days}
-      {:error, _date} = error -> error
+      {:error, _exception} = error -> error
     end
   end
 
@@ -130,7 +148,7 @@ defmodule Calendrical.Islamic.Visibility do
   def visible_crescent?(iso_days, location, method \\ @default_method) do
     case crescent_visible(iso_days, location, method) do
       {:ok, visible?} -> visible?
-      {:error, date} -> unsupported!(date)
+      {:error, exception} -> raise exception
     end
   end
 
@@ -146,7 +164,7 @@ defmodule Calendrical.Islamic.Visibility do
 
     case Astro.new_visible_crescent(location, date, method) do
       {:ok, visibility} -> {:ok, visibility in [:A, :B, :C]}
-      {:error, :not_found} -> {:error, date}
+      {:error, :not_found} -> {:error, out_of_ephemeris(date)}
       _no_sighting -> {:ok, false}
     end
   end
@@ -158,13 +176,13 @@ defmodule Calendrical.Islamic.Visibility do
   defp next_visible_crescent(iso_days, location, method, fuel \\ 60)
 
   defp next_visible_crescent(iso_days, _location, _method, 0),
-    do: {:error, Date.from_gregorian_days(iso_days)}
+    do: {:error, out_of_ephemeris(Date.from_gregorian_days(iso_days))}
 
   defp next_visible_crescent(iso_days, location, method, fuel) do
     case crescent_visible(iso_days, location, method) do
       {:ok, true} -> {:ok, iso_days}
       {:ok, false} -> next_visible_crescent(iso_days + 1, location, method, fuel - 1)
-      {:error, _date} = error -> error
+      {:error, _exception} = error -> error
     end
   end
 
@@ -176,10 +194,19 @@ defmodule Calendrical.Islamic.Visibility do
     datetime |> DateTime.to_date() |> Date.to_gregorian_days()
   end
 
-  @spec unsupported!(Date.t()) :: no_return()
-  defp unsupported!(date) do
-    raise Calendrical.UnsupportedDateRangeError,
-      value: date,
-      range: :jpl_ephemeris
+  # A search for the crescent near `iso_days` looks from about two months
+  # before it to about three after. Where the ephemeris covers none of that
+  # window no crescent can be judged, so the search is refused before the
+  # new moon is sought, which far from the ephemeris is slow.
+  defp searchable(iso_days) do
+    if covered?(iso_days - @search_before) or covered?(iso_days + @search_after),
+      do: :ok,
+      else: {:error, out_of_ephemeris(Date.from_gregorian_days(iso_days))}
+  end
+
+  defp covered?(iso_days), do: Astro.Ephemeris.check_coverage(iso_days * 1.0) == :ok
+
+  defp out_of_ephemeris(date) do
+    Calendrical.UnsupportedDateRangeError.exception(value: date, range: :jpl_ephemeris)
   end
 end

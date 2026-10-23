@@ -23,7 +23,21 @@ defmodule Calendrical.Reform.England do
     days 3 September 1752 through 13 September 1752 are skipped, so 2 September
     1752 is followed directly by 14 September 1752.
 
+  The Lady Day year 1155 keeps the number of the Julian year it begins in, so
+  its dates from 1155-01-01 (25 March) name the days the Julian dates 1 January
+  to 24 March 1155 would. Those 83 Julian days have no date of their own: as
+  `Calendrical.Composite` describes, a conversion or shift that reaches one
+  answers 1155-01-01, the first later day that has a date, and `Date.diff/2`
+  across them counts them.
+
   ## Examples
+
+      # The day before 25 March 1155 has no date of its own
+      iex> Date.add(~D[1155-01-01 Calendrical.Reform.England], -1)
+      ~D[1155-01-01 Calendrical.Reform.England]
+
+      iex> Date.diff(~D[1155-01-01 Calendrical.Reform.England], ~D[1154-12-31 Calendrical.Reform.England])
+      84
 
       # The eleven days lost to the 1752 Gregorian adoption
       iex> Calendrical.Reform.England.valid_date?(1752, 9, 5)

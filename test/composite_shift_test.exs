@@ -129,7 +129,7 @@ defmodule Calendrical.CompositeShiftTest do
   end
 
   defp changes(calendar) do
-    calendar.__config__() |> Enum.drop(1) |> Enum.map(&elem(&1, 0))
+    Calendrical.Test.CompositeChanges.changes(calendar) |> Enum.drop(1) |> Enum.map(&elem(&1, 0))
   end
 
   # The dates of each civil month about the calendar's changes, by their

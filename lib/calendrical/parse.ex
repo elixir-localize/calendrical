@@ -1,7 +1,23 @@
 defmodule Calendrical.Parse do
   @moduledoc false
 
+  # Every error here is an atom, not an exception: these functions answer the
+  # `Calendar` parse callbacks, whose contract is `{:error, atom}`, and
+  # `Date.from_iso8601/2` and the others read the atom.
+  # credo:disable-for-this-file Calendrical.Credo.ErrorTuple
+
   @split_reg "[\\sT]"
+
+  @doc false
+  # `:return_calendar` was removed in 2.0: the date is returned in the
+  # `:calendar` it is parsed in. Localize ignores an option it does not know,
+  # so a 1.x caller passing it would silently get a date in another calendar;
+  # it is refused instead.
+  def refuse_removed_options(options) do
+    if Keyword.keyword?(options) and Keyword.has_key?(options, :return_calendar),
+      do: {:error, Calendrical.RemovedOptionError.exception(option: :return_calendar)},
+      else: :ok
+  end
 
   def parse_date(<<"-", year::bytes-4, "-", month::bytes-2, "-", day::bytes-2>>, calendar) do
     return_date({"-", year}, month, day, calendar)
@@ -11,13 +27,19 @@ defmodule Calendrical.Parse do
     return_date({"", year}, month, day, calendar)
   end
 
+  # An explicit `+` before a four-digit year, as `Calendar.ISO` reads it.
+  def parse_date(<<"+", year::bytes-4, "-", month::bytes-2, "-", day::bytes-2>>, calendar) do
+    return_date({"", year}, month, day, calendar)
+  end
+
   # A calendar of weeks reads a date written as a week date ("2026-W25-2")
   # as the date its week-date callback gives it, as well as one written as
-  # a year, a month and a day. It wrote its dates as week dates until 1.4.
+  # a year, a month and a day. It wrote its dates as week dates before 2.0.
+  # Text in no date's shape is `:invalid_format`, as `Calendar.ISO` answers.
   def parse_date(string, calendar) do
     if calendar.info().structure == :weeks,
       do: week_notation(string, calendar),
-      else: {:error, :invalid_date}
+      else: {:error, :invalid_format}
   end
 
   @doc false
@@ -31,7 +53,7 @@ defmodule Calendrical.Parse do
     return_week_date({"", year}, week, day, calendar)
   end
 
-  defp week_notation(_string, _calendar), do: {:error, :invalid_date}
+  defp week_notation(_string, _calendar), do: {:error, :invalid_format}
 
   defp return_week_date({sign, year}, week, day, calendar) do
     if digits?(year) and digits?(week) and digits?(day) do

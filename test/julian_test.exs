@@ -107,11 +107,11 @@ defmodule Calendrical.JulianTest do
     end
 
     test "a date that is not a Julian date has no week" do
-      assert Julian.week_of_year(2025, 13, 1) == {:error, :invalid_date}
-      assert Julian.week_of_month(2025, 2, 30) == {:error, :invalid_date}
-      assert Julian.iso_week_of_year(2025, 2, 30) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = Julian.week_of_year(2025, 13, 1)
+      assert {:error, %Calendrical.InvalidDateError{}} = Julian.week_of_month(2025, 2, 30)
+      assert {:error, %Calendrical.InvalidDateError{}} = Julian.iso_week_of_year(2025, 2, 30)
       assert {:error, %Calendrical.MissingFieldsError{}} = Julian.weeks_in_year(nil)
-      assert Julian.week(2025, 0) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = Julian.week(2025, 0)
     end
 
     test "year, quarter and month ranges" do

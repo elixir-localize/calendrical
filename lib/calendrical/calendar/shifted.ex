@@ -209,6 +209,10 @@ defmodule Calendrical.Calendar.Shifted do
         defp named_day(_counted, day), do: day
       end
 
+      # The base month of a partial date's counted month, where it is given.
+      defp partial_named_month(month) when is_integer(month), do: counted_to_named(month)
+      defp partial_named_month(_month), do: nil
+
       # The base year a base month and day fall in under this calendar's
       # year, from where the day stands against the day the year begins
       # on: in a year numbered by the base year it begins in, the days
@@ -257,7 +261,10 @@ defmodule Calendrical.Calendar.Shifted do
 
       ### Returns
 
-      * `{year, month, day}` in the base calendar.
+      * `{year, month, day}` in the base calendar. For a partial date,
+        a field that depends on a missing one is `nil`: the base month
+        needs the month, the base day the month and the day, and the
+        base year all three.
 
       ### Examples
 
@@ -266,7 +273,16 @@ defmodule Calendrical.Calendar.Shifted do
           iex> #{inspect(__MODULE__)}.date_from_base_date(year, month, day)
           {today.year, today.month, today.day}
 
+          iex> #{inspect(__MODULE__)}.base_date(2024, nil, nil)
+          {nil, nil, nil}
+
       """
+      def base_date(_year, month, day) when not (is_integer(month) and is_integer(day)),
+        do: {nil, partial_named_month(month), nil}
+
+      def base_date(year, month, day) when not is_integer(year),
+        do: {nil, counted_to_named(month), named_day(month, day)}
+
       def base_date(year, month, day) do
         named_month = counted_to_named(month)
         named_day = named_day(month, day)
@@ -283,7 +299,9 @@ defmodule Calendrical.Calendar.Shifted do
 
       ### Returns
 
-      * `{year, month, day}` in this calendar.
+      * `{year, month, day}` in this calendar. For a partial date, whose
+        counted month, day and year each depend on the base month and
+        day, every field is `nil` unless all three are given.
 
       ### Examples
 
@@ -292,7 +310,14 @@ defmodule Calendrical.Calendar.Shifted do
           iex> #{inspect(__MODULE__)}.date_from_base_date(year, month, day)
           {today.year, today.month, today.day}
 
+          iex> #{inspect(__MODULE__)}.date_from_base_date(2024, nil, 1)
+          {nil, nil, nil}
+
       """
+      def date_from_base_date(year, month, day)
+          when not (is_integer(year) and is_integer(month) and is_integer(day)),
+          do: {nil, nil, nil}
+
       def date_from_base_date(year, month, day) do
         {counted_month, counted_day} = named_to_counted(month, day)
         {year_of_base(year, month, day), counted_month, counted_day}
@@ -386,7 +411,13 @@ defmodule Calendrical.Calendar.Shifted do
 
       ### Returns
 
-      * The number of days, or `0` for a month the year does not have.
+      * The number of days, or
+
+      * `{:error, %Calendrical.InvalidMonthError{}}` for a month the year
+        does not have, or
+
+      * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+        month is `nil`.
 
       ### Examples
 
@@ -395,6 +426,8 @@ defmodule Calendrical.Calendar.Shifted do
           true
 
       """
+      @spec days_in_month(Calendar.year(), Calendar.month()) ::
+              Calendar.day() | {:error, Exception.t()}
       if @split_months do
         def days_in_month(year, 1) when is_integer(year) do
           {base_year, base_month, _day} = base_date(year, 1, 1)
@@ -404,12 +437,12 @@ defmodule Calendrical.Calendar.Shifted do
         def days_in_month(year, @counted_months) when is_integer(year), do: @year_begins_day - 1
       end
 
-      def days_in_month(year, month) when is_integer(year) and month in 1..@counted_months//1 do
+      # A month the year does not have, and a field that is not an integer,
+      # are answered before this by `Calendrical.Compiler.DateCheck`.
+      def days_in_month(year, month) do
         {base_year, base_month, _day} = base_date(year, month, 1)
         @base.days_in_month(base_year, base_month)
       end
-
-      def days_in_month(_year, _month), do: 0
 
       @doc """
       Returns whether a year is a leap year: whether it holds 366 days.
@@ -429,7 +462,7 @@ defmodule Calendrical.Calendar.Shifted do
           true
 
       """
-      def leap_year?(year) do
+      def leap_year?(year) when is_integer(year) do
         Calendrical.Period.days_in_year(__MODULE__, year) == 366
       end
 
@@ -512,7 +545,8 @@ defmodule Calendrical.Calendar.Shifted do
 
         * `{:ok, {year, month, day}}` in this calendar.
 
-        * `{:error, :invalid_date}` for figures that name no date.
+        * `{:error, :invalid_date}` for figures that name no date, an atom
+          as `c:Calendrical.date_from_written_date/3` answers.
 
         ### Examples
 
@@ -527,9 +561,14 @@ defmodule Calendrical.Calendar.Shifted do
                    month in 1..@base_months//1 do
           if @base.valid_date?(year, month, day),
             do: {:ok, date_from_iso_days(@base.date_to_iso_days(year, month, day))},
+            # Localize's date parser reads this atom (see c:Calendrical.date_from_written_date/3).
+            # credo:disable-for-next-line Calendrical.Credo.ErrorTuple
             else: {:error, :invalid_date}
         end
       else
+        # The written year is the counted year itself, so it is known
+        # whatever the month and day; the base month and day follow
+        # base_date/3.
         def written_date(year, month, day) do
           {_base_year, base_month, base_day} = base_date(year, month, day)
           {year, base_month, base_day}
@@ -547,7 +586,8 @@ defmodule Calendrical.Calendar.Shifted do
 
         * `{:ok, {year, month, day}}` in this calendar.
 
-        * `{:error, :invalid_date}` for figures that name no date.
+        * `{:error, :invalid_date}` for figures that name no date, an atom
+          as `c:Calendrical.date_from_written_date/3` answers.
 
         ### Examples
 
@@ -564,10 +604,14 @@ defmodule Calendrical.Calendar.Shifted do
 
           if valid_date?(year, counted_month, counted_day),
             do: {:ok, {year, counted_month, counted_day}},
+            # Localize's date parser reads this atom (see c:Calendrical.date_from_written_date/3).
+            # credo:disable-for-next-line Calendrical.Credo.ErrorTuple
             else: {:error, :invalid_date}
         end
       end
 
+      # Localize's date parser reads this atom (see c:Calendrical.date_from_written_date/3).
+      # credo:disable-for-next-line Calendrical.Credo.ErrorTuple
       def date_from_written_date(_year, _month, _day), do: {:error, :invalid_date}
 
       @doc """
@@ -627,7 +671,12 @@ defmodule Calendrical.Calendar.Shifted do
 
       ### Returns
 
-      * `{year, month, day}` of this calendar.
+      * `{year, month, day}` of this calendar, or
+
+      * `{:error, %Calendrical.InvalidDateError{}}` where `year`, `month` and
+        `day` are no date of this calendar, or
+
+      * `{:error, %Calendrical.MissingFieldsError{}}` where a field is `nil`.
 
       ### Examples
 
@@ -665,9 +714,10 @@ defmodule Calendrical.Calendar.Shifted do
         :ok
 
       unknown ->
-        raise ArgumentError,
-              "unknown options #{inspect(unknown)} for use Calendrical.Calendar.Shifted; " <>
-                "the options are #{inspect(known_options)}"
+        raise Calendrical.UnknownOptionError,
+          maker: Calendrical.Calendar.Shifted,
+          options: unknown,
+          known_options: known_options
     end
   end
 
@@ -678,10 +728,11 @@ defmodule Calendrical.Calendar.Shifted do
       {months, months} ->
         months
 
-      {fewest, most} ->
-        raise ArgumentError,
-              "#{inspect(base)} has #{fewest} to #{most} months in a year; " <>
-                "a shifted year needs a base with as many months in every year"
+      {_fewest, _most} ->
+        raise Calendrical.InvalidOptionValueError,
+          option: :base,
+          value: base,
+          maker: Calendrical.Calendar.Shifted
     end
   end
 
@@ -693,8 +744,10 @@ defmodule Calendrical.Calendar.Shifted do
         year_begins
 
       other ->
-        raise ArgumentError,
-              ":year_begins must be {month, day} of the base calendar, found #{inspect(other)}"
+        raise Calendrical.InvalidOptionValueError,
+          option: :year_begins,
+          value: other,
+          maker: Calendrical.Calendar.Shifted
     end
   end
 
@@ -718,8 +771,10 @@ defmodule Calendrical.Calendar.Shifted do
         number
 
       {other, _month, _day} ->
-        raise ArgumentError,
-              ":year_number must be one of #{inspect(@year_numbers)}, found #{inspect(other)}"
+        raise Calendrical.InvalidOptionValueError,
+          option: :year_number,
+          value: other,
+          maker: Calendrical.Calendar.Shifted
     end
   end
 
@@ -730,8 +785,10 @@ defmodule Calendrical.Calendar.Shifted do
         written
 
       other ->
-        raise ArgumentError,
-              ":written_year must be one of #{inspect(@written_years)}, found #{inspect(other)}"
+        raise Calendrical.InvalidOptionValueError,
+          option: :written_year,
+          value: other,
+          maker: Calendrical.Calendar.Shifted
     end
   end
 
@@ -748,8 +805,10 @@ defmodule Calendrical.Calendar.Shifted do
         )
 
       other ->
-        raise ArgumentError,
-              ":weeks must be a keyword list or :from_first_day, found #{inspect(other)}"
+        raise Calendrical.InvalidOptionValueError,
+          option: :weeks,
+          value: other,
+          maker: Calendrical.Calendar.Shifted
     end
   end
 end

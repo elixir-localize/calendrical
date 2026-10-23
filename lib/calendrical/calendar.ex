@@ -149,9 +149,10 @@ defmodule Calendrical.Calendar do
         :ok
 
       unknown ->
-        raise ArgumentError,
-              "unknown options #{inspect(unknown)} for use Calendrical.Calendar; " <>
-                "the options are #{inspect(@known_options)}"
+        raise Calendrical.UnknownOptionError,
+          maker: Calendrical.Calendar,
+          options: unknown,
+          known_options: @known_options
     end
   end
 
@@ -166,8 +167,10 @@ defmodule Calendrical.Calendar do
         {Keyword.get(rule, :first_day, 1), Keyword.get(rule, :min_days_in_first_week, 1)}
 
       other ->
-        raise ArgumentError,
-              ":weeks must be a keyword list or :from_first_day, found #{inspect(other)}"
+        raise Calendrical.InvalidOptionValueError,
+          option: :weeks,
+          value: other,
+          maker: Calendrical.Calendar
     end
   end
 
@@ -181,8 +184,10 @@ defmodule Calendrical.Calendar do
         {fewest, most}
 
       other ->
-        raise ArgumentError,
-              ":months_in_year must be a count or {fewest, most}, found #{inspect(other)}"
+        raise Calendrical.InvalidOptionValueError,
+          option: :months_in_year,
+          value: other,
+          maker: Calendrical.Calendar
     end
   end
 
@@ -333,7 +338,11 @@ defmodule Calendrical.Calendar do
 
       ### Returns
 
-      * The number of months in the year, as a positive integer.
+      * The number of months in the year, as a positive integer, or
+
+      * `{:error, %Calendrical.MissingFieldsError{}}` where `year` is `nil`, or
+
+      * `{:error, %Calendrical.InvalidDateError{}}` where `year` is no integer.
 
       ### Examples
 
@@ -367,7 +376,13 @@ defmodule Calendrical.Calendar do
 
       ### Returns
 
-      * The number of days in the month.
+      * The number of days in the month, or
+
+      * `{:error, %Calendrical.InvalidMonthError{}}` for a month the year
+        does not have, or
+
+      * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+        month is `nil`.
 
       ### Examples
 
@@ -376,7 +391,8 @@ defmodule Calendrical.Calendar do
           true
 
       """
-      @spec days_in_month(Calendar.year(), Calendar.month()) :: Calendar.month()
+      @spec days_in_month(Calendar.year(), Calendar.month()) ::
+              Calendar.day() | {:error, Exception.t()}
       @impl true
 
       def days_in_month(year, month) do
@@ -426,7 +442,12 @@ defmodule Calendrical.Calendar do
 
       ### Returns
 
-      * `{year, month, day}` of this calendar.
+      * `{year, month, day}` of this calendar, or
+
+      * `{:error, %Calendrical.InvalidDateError{}}` where `year`, `month` and
+        `day` are no date of this calendar, or
+
+      * `{:error, %Calendrical.MissingFieldsError{}}` where a field is `nil`.
 
       ### Examples
 

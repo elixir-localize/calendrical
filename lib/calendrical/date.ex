@@ -68,6 +68,9 @@ defmodule Calendrical.Date do
 
   * `{:error, Localize.InvalidValueError.t()}` when `input` is not a string or an option is malformed.
 
+  * `{:error, %Calendrical.RemovedOptionError{}}` for the
+    `:return_calendar` option, which was removed in 2.0.
+
   ### Examples
 
       iex> Calendrical.Date.parse("2026-05-16", locale: :en)
@@ -107,7 +110,10 @@ defmodule Calendrical.Date do
   """
   @spec parse(String.t(), Keyword.t()) ::
           {:ok, Date.t() | map()} | {:error, Exception.t()}
-  defdelegate parse(input, options \\ []), to: Localize.Date
+  def parse(input, options \\ []) do
+    with :ok <- Calendrical.Parse.refuse_removed_options(options),
+         do: Localize.Date.parse(input, options)
+  end
 
   @doc """
   Parses a locale-formatted date range. Delegates to `Localize.Interval.parse/2`.
@@ -164,6 +170,9 @@ defmodule Calendrical.Date do
 
   * `{:error, Localize.InvalidValueError.t()}` when `input` is not a string or an option is malformed.
 
+  * `{:error, %Calendrical.RemovedOptionError{}}` for the
+    `:return_calendar` option, which was removed in 2.0.
+
   ### Examples
 
       iex> {:ok, range} = Calendrical.Date.parse_range({"2026-05-05", "2026-05-10"})
@@ -190,5 +199,8 @@ defmodule Calendrical.Date do
   """
   @spec parse_range(String.t() | {String.t(), String.t()}, Keyword.t()) ::
           {:ok, Date.Range.t() | {map(), map()}} | {:error, Exception.t()}
-  defdelegate parse_range(input, options \\ []), to: Localize.Interval, as: :parse
+  def parse_range(input, options \\ []) do
+    with :ok <- Calendrical.Parse.refuse_removed_options(options),
+         do: Localize.Interval.parse(input, options)
+  end
 end

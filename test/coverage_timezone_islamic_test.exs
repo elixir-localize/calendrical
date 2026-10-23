@@ -327,7 +327,7 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
     end
 
     test "first_day_of_month/2 rejects invalid months" do
-      assert {:error, %Calendrical.IslamicYearOutOfRangeError{year: nil}} =
+      assert {:error, %Calendrical.InvalidMonthError{year: 1446, month: 13}} =
                UmmAlQura.first_day_of_month(1446, 13)
     end
 
@@ -409,11 +409,13 @@ defmodule Calendrical.Coverage.TimeZoneIslamicTest do
     end
 
     test "years before 1392 AH are rejected" do
-      assert Astronomical.first_day_of_month(1391, 1) == {:error, :year_out_of_range}
+      assert {:error, %Calendrical.UnsupportedDateRangeError{}} =
+               Astronomical.first_day_of_month(1391, 1)
     end
 
     test "invalid months are rejected" do
-      assert Astronomical.first_day_of_month(1446, 13) == {:error, :year_out_of_range}
+      assert {:error, %Calendrical.InvalidMonthError{year: 1446, month: 13}} =
+               Astronomical.first_day_of_month(1446, 13)
     end
   end
 

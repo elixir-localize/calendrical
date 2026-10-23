@@ -96,13 +96,16 @@ defmodule Calendrical.TraditionalMonthsTest do
           assert calendar.ordinal_month_from_traditional(year, month) == {:ok, month}
         end
 
-        assert calendar.lunar_month_of_year(year, months + 1) == {:error, :invalid_month}
+        assert {:error, %Calendrical.InvalidMonthError{}} =
+                 calendar.lunar_month_of_year(year, months + 1)
 
-        assert calendar.ordinal_month_from_traditional(year, months + 1) ==
-                 {:error, :invalid_month}
+        assert {:error, %Calendrical.InvalidMonthError{}} =
+                 calendar.ordinal_month_from_traditional(year, months + 1)
 
-        assert calendar.lunar_month_of_year(year, 0) == {:error, :invalid_month}
-        assert calendar.ordinal_month_from_traditional(year, 0) == {:error, :invalid_month}
+        assert {:error, %Calendrical.InvalidMonthError{}} = calendar.lunar_month_of_year(year, 0)
+
+        assert {:error, %Calendrical.InvalidMonthError{}} =
+                 calendar.ordinal_month_from_traditional(year, 0)
       end
     end
 
@@ -110,18 +113,23 @@ defmodule Calendrical.TraditionalMonthsTest do
       for calendar <- [Calendrical.Gregorian, Calendrical.Coptic, Calendrical.Islamic.Civil] do
         assert calendar.traditional_leap_month(2026) == nil
 
-        assert calendar.ordinal_month_from_traditional(2026, {5, :leap}) ==
-                 {:error, :invalid_leap_month}
+        assert {:error, %Calendrical.InvalidMonthError{}} =
+                 calendar.ordinal_month_from_traditional(2026, {5, :leap})
       end
     end
 
     test "answers what is no year or no month with an error, and never raises" do
       calendar = Calendrical.Gregorian
 
-      assert calendar.lunar_month_of_year(nil, 1) == {:error, :invalid_month}
-      assert calendar.lunar_month_of_year(2026, "1") == {:error, :invalid_month}
-      assert calendar.ordinal_month_from_traditional(nil, 1) == {:error, :invalid_month}
-      assert calendar.ordinal_month_from_traditional(2026, :january) == {:error, :invalid_month}
+      assert {:error, %Calendrical.InvalidMonthError{}} = calendar.lunar_month_of_year(nil, 1)
+      assert {:error, %Calendrical.InvalidMonthError{}} = calendar.lunar_month_of_year(2026, "1")
+
+      assert {:error, %Calendrical.InvalidMonthError{}} =
+               calendar.ordinal_month_from_traditional(nil, 1)
+
+      assert {:error, %Calendrical.InvalidMonthError{}} =
+               calendar.ordinal_month_from_traditional(2026, :january)
+
       assert calendar.traditional_months(nil) == []
     end
   end

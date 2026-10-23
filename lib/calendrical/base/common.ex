@@ -46,7 +46,8 @@ defmodule Calendrical.Base.Common do
     end
   end
 
-  def week_of_year(_calendar, _year, _month, _day), do: {:error, :invalid_date}
+  def week_of_year(calendar, year, month, day),
+    do: invalid_date(calendar, {year, month, day})
 
   def weeks_in_year(calendar, year) do
     case year_frame(calendar, year) do
@@ -54,7 +55,7 @@ defmodule Calendrical.Base.Common do
         weeks = weeks(days_in_year, offset)
         {weeks, days_in_year + offset - 1 - (weeks - 1) * @days_in_week}
 
-      {:error, :invalid_date} = error ->
+      {:error, %Calendrical.InvalidDateError{}} = error ->
         error
     end
   end
@@ -63,21 +64,21 @@ defmodule Calendrical.Base.Common do
   # cut to the year.
   def week(calendar, year, week) when is_integer(week) do
     with {:ok, first, days_in_year, offset} <- year_frame(calendar, year),
-         :ok <- week_in_year(week, days_in_year, offset) do
+         :ok <- week_in_year(calendar, year, week, days_in_year, offset) do
       first_day = first + max((week - 1) * @days_in_week - (offset - 1), 0)
       last_day = min(first + week * @days_in_week - offset, first + days_in_year - 1)
 
-      week_range(calendar, first_day, last_day)
+      week_range(calendar, first_day, last_day, year: year, week: week)
     end
   end
 
-  def week(_calendar, _year, _week), do: {:error, :invalid_date}
+  def week(calendar, year, week), do: invalid_date(calendar, year: year, week: week)
 
   # The dates of a week, from its first day to its last. A day of a
   # composite calendar can have no date of its own, its year, month and day
   # naming another day: its week is cut to the days that have one, and is no
   # range of dates where none has.
-  defp week_range(calendar, first_day, last_day) do
+  defp week_range(calendar, first_day, last_day, week) do
     days =
       if composite?(calendar),
         do: dated_days(calendar, first_day, last_day),
@@ -91,7 +92,7 @@ defmodule Calendrical.Base.Common do
         )
 
       nil ->
-        {:error, :invalid_date}
+        invalid_date(calendar, week)
     end
   end
 
@@ -128,21 +129,26 @@ defmodule Calendrical.Base.Common do
     end
   end
 
-  def week_of_month(_calendar, _year, _month, _day), do: {:error, :invalid_date}
+  def week_of_month(calendar, year, month, day),
+    do: invalid_date(calendar, {year, month, day})
 
   defp valid_date(calendar, year, month, day) do
-    if calendar.valid_date?(year, month, day), do: :ok, else: {:error, :invalid_date}
+    if calendar.valid_date?(year, month, day),
+      do: :ok,
+      else: invalid_date(calendar, {year, month, day})
   end
 
-  defp week_in_year(week, days_in_year, offset) do
-    if week >= 1 and week <= weeks(days_in_year, offset), do: :ok, else: {:error, :invalid_date}
+  defp week_in_year(calendar, year, week, days_in_year, offset) do
+    if week >= 1 and week <= weeks(days_in_year, offset),
+      do: :ok,
+      else: invalid_date(calendar, year: year, week: week)
   end
 
   # The days of a month as a range, where the calendar has the month.
   defp month_range(calendar, year, month) do
     case calendar.month(year, month) do
       %Date.Range{} = range -> {:ok, range}
-      _no_month -> {:error, :invalid_date}
+      _no_month -> {:error, no_such_month(calendar, year, month)}
     end
   end
 
@@ -157,11 +163,12 @@ defmodule Calendrical.Base.Common do
 
       Calendrical.Gregorian.iso_week_of_year(year, month, day)
     else
-      {:error, :invalid_date}
+      invalid_date(calendar, {year, month, day})
     end
   end
 
-  def iso_week_of_year(_calendar, _year, _month, _day), do: {:error, :invalid_date}
+  def iso_week_of_year(calendar, year, month, day),
+    do: invalid_date(calendar, {year, month, day})
 
   defp weeks(days_in_year, offset), do: div(days_in_year - 2 + offset, @days_in_week) + 1
 
@@ -173,7 +180,7 @@ defmodule Calendrical.Base.Common do
       {:ok, first_days, last_days} ->
         {:ok, first_days, last_days - first_days + 1, day_of_week_on(calendar, first_days)}
 
-      {:error, :invalid_date} = error ->
+      {:error, %Calendrical.InvalidDateError{}} = error ->
         error
     end
   end
@@ -195,11 +202,11 @@ defmodule Calendrical.Base.Common do
          calendar.date_to_iso_days(last.year, last.month, last.day)}
 
       _no_such_year ->
-        {:error, :invalid_date}
+        invalid_date(calendar, year: year)
     end
   end
 
-  def year_days(_calendar, _year), do: {:error, :invalid_date}
+  def year_days(calendar, year), do: invalid_date(calendar, year: year)
 
   # The months a year has and the days a month of a year has, as the
   # numbers themselves: runs of them, in order, and none for a year or a
@@ -279,11 +286,12 @@ defmodule Calendrical.Base.Common do
     with {:ok, first, last} <- year_days(calendar, year) do
       if first + day_of_year - 1 <= last,
         do: date_at(calendar, first + day_of_year - 1),
-        else: {:error, :invalid_date}
+        else: invalid_date(calendar, year: year, day_of_year: day_of_year)
     end
   end
 
-  def date_from_day_of_year(_calendar, _year, _day_of_year), do: {:error, :invalid_date}
+  def date_from_day_of_year(calendar, year, day_of_year),
+    do: invalid_date(calendar, year: year, day_of_year: day_of_year)
 
   # The days of a named month in a year, in the order of time: one range
   # for each month the year counts that carries the name. A month carries
@@ -317,10 +325,11 @@ defmodule Calendrical.Base.Common do
 
     if month && calendar.valid_date?(year, month, day),
       do: {year, month, day},
-      else: {:error, :invalid_date}
+      else: invalid_date(calendar, year: year, month: named_month, day: day)
   end
 
-  def date_from_cardinal_date(_calendar, _year, _named_month, _day), do: {:error, :invalid_date}
+  def date_from_cardinal_date(calendar, year, named_month, day),
+    do: invalid_date(calendar, year: year, month: named_month, day: day)
 
   defp written_month(calendar, year, month) do
     case calendar.month_of_year(year, month, 1) do
@@ -352,20 +361,23 @@ defmodule Calendrical.Base.Common do
   # month. A lunisolar calendar answers the first two for itself.
   def lunar_month_of_year(calendar, year, month)
       when is_integer(year) and is_integer(month) and month >= 1 do
-    if month <= months_in(calendar, year), do: month, else: {:error, :invalid_month}
+    if month <= months_in(calendar, year),
+      do: month,
+      else: {:error, no_such_month(calendar, year, month)}
   end
 
-  def lunar_month_of_year(_calendar, _year, _month), do: {:error, :invalid_month}
+  def lunar_month_of_year(calendar, year, month),
+    do: {:error, no_such_month(calendar, year, month)}
 
   def ordinal_month_from_traditional(calendar, year, month)
       when is_integer(year) and is_integer(month) and month >= 1 do
-    if month <= months_in(calendar, year), do: {:ok, month}, else: {:error, :invalid_month}
+    if month <= months_in(calendar, year),
+      do: {:ok, month},
+      else: {:error, no_such_month(calendar, year, month)}
   end
 
-  def ordinal_month_from_traditional(_calendar, year, {_month, :leap}) when is_integer(year),
-    do: {:error, :invalid_leap_month}
-
-  def ordinal_month_from_traditional(_calendar, _year, _month), do: {:error, :invalid_month}
+  def ordinal_month_from_traditional(calendar, year, month),
+    do: {:error, no_such_month(calendar, year, month)}
 
   # A year's months in order as they are named: the months it numbers, and
   # its leap month after the month it follows. Both are the calendar's own
@@ -424,6 +436,10 @@ defmodule Calendrical.Base.Common do
 
   defp no_such_month(calendar, year, month) do
     Calendrical.InvalidMonthError.exception(calendar: calendar, year: year, month: month)
+  end
+
+  defp invalid_date(calendar, value) do
+    {:error, Calendrical.InvalidDateError.exception(calendar: calendar, value: value)}
   end
 
   # The months a year has, which is none for a year the calendar lacks.
@@ -491,16 +507,38 @@ defmodule Calendrical.Base.Common do
   # to from a guess near it.
   defp fit(calendar, from, to, date_part, count) when is_integer(count) do
     cond do
-      count > 0 and past?(calendar, shift(calendar, from, date_part, count), to) ->
+      count > 0 and passes?(calendar, from, to, date_part, count) ->
         fit(calendar, from, to, date_part, count - 1)
 
-      not past?(calendar, shift(calendar, from, date_part, count + 1), to) ->
+      not passes?(calendar, from, to, date_part, count + 1) ->
         fit(calendar, from, to, date_part, count + 1)
 
       true ->
         count
     end
   end
+
+  # Whether `count` of `date_part` added to `from` passes `to`. A shift that
+  # reaches a later year than `to`'s passes it, which is known from the year
+  # numbers alone, so no shift is made past `to`'s year: a calendar that
+  # answers only for a range of years is never asked for one beyond it.
+  defp passes?(calendar, from, to, date_part, count) do
+    beyond_year?(calendar, from, to, date_part, count) or
+      past?(calendar, shift(calendar, from, date_part, count), to)
+  end
+
+  defp beyond_year?(_calendar, {year_from, _, _}, {year_to, _, _}, :years, count),
+    do: year_from + count > year_to
+
+  # A year holds at most the calendar's largest number of months, so the
+  # shift lands no earlier than the year that many months a year reach.
+  defp beyond_year?(calendar, {year_from, month_from, _}, {year_to, _, _}, :months, count) do
+    {_fewest, most} = months_in_year_range(calendar.info().months_in_year)
+    year_from + div(month_from - 1 + count, most) > year_to
+  end
+
+  defp months_in_year_range({fewest, most}), do: {fewest, most}
+  defp months_in_year_range(months) when is_integer(months), do: {months, months}
 
   defp shift(calendar, {year, month, day}, date_part, count),
     do: calendar.shift(year, month, day, date_part, count, clamp: true)

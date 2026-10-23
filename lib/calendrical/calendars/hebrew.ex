@@ -158,8 +158,14 @@ defmodule Calendrical.Hebrew do
 
   * `{:ok, date}` — a Hebrew `t:Date.t/0`.
 
-  * `{:error, reason}` if an option is invalid, or sunset/nightfall cannot be
-    computed for the date and location.
+  * `{:error, %Calendrical.InvalidOptionValueError{}}` for an invalid
+    `:day_start`, `:nightfall_angle` or `:location`.
+
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a date outside
+    the range the calendar or the installed JPL ephemeris covers.
+
+  * `{:error, %Calendrical.NoDuskError{}}` where the sun does not set, or
+    nightfall does not occur, at the location on that day.
 
   ### Examples
 
@@ -169,7 +175,7 @@ defmodule Calendrical.Hebrew do
       Calendrical.Hebrew
 
   """
-  @spec date_at(DateTime.t(), Keyword.t()) :: {:ok, Date.t()} | {:error, term()}
+  @spec date_at(DateTime.t(), Keyword.t()) :: {:ok, Date.t()} | {:error, Exception.t()}
   def date_at(%DateTime{} = datetime, options \\ []) do
     case resolve_location(Keyword.get(options, :location, @jerusalem)) do
       {:ok, location, utc_offset_seconds} ->
@@ -193,7 +199,7 @@ defmodule Calendrical.Hebrew do
   end
 
   defp resolve_location(other) do
-    {:error, {:invalid_location, other}}
+    {:error, Calendrical.InvalidOptionValueError.exception(option: :location, value: other)}
   end
 
   # ── Configuration overrides ──────────────────────────────────────────────
@@ -224,7 +230,7 @@ defmodule Calendrical.Hebrew do
   """
   @impl true
   @spec leap_year?(year) :: boolean()
-  def leap_year?(year) do
+  def leap_year?(year) when is_integer(year) do
     Integer.mod(7 * year + 1, 19) < 7
   end
 
@@ -238,7 +244,11 @@ defmodule Calendrical.Hebrew do
 
   ### Returns
 
-  * `12` for an ordinary year or `13` for a leap year.
+  * `12` for an ordinary year or `13` for a leap year, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` where `year` is `nil`, or
+
+  * `{:error, %Calendrical.InvalidDateError{}}` where `year` is no integer.
 
   ### Examples
 
@@ -250,7 +260,7 @@ defmodule Calendrical.Hebrew do
 
   """
   @impl true
-  @spec months_in_year(year) :: 12..13
+  @spec months_in_year(year) :: 12..13 | {:error, Exception.t()}
   def months_in_year(year) do
     if leap_year?(year), do: 13, else: 12
   end
@@ -267,8 +277,13 @@ defmodule Calendrical.Hebrew do
 
   ### Returns
 
-  * The number of days in the month, 29 or 30, or `0` for a month the
-    year does not have.
+  * The number of days in the month, 29 or 30, or
+
+  * `{:error, %Calendrical.InvalidMonthError{}}` for a month the year does
+    not have, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+    month is `nil`.
 
   ### Examples
 
@@ -285,20 +300,17 @@ defmodule Calendrical.Hebrew do
 
       # An ordinary year has no 13th month
       iex> Calendrical.Hebrew.days_in_month(5785, 13)
-      0
+      {:error, %Calendrical.InvalidMonthError{calendar: Calendrical.Hebrew, year: 5785, month: 13}}
 
   """
   @impl true
-  @spec days_in_month(year, month) :: 0 | 29 | 30
-  def days_in_month(year, month) when is_integer(year) and is_integer(month) do
-    cond do
-      month not in 1..months_in_year(year) -> 0
-      month in [@heshvan, @kislev] -> cldr_month_days(month, days_in_year(year))
-      true -> cldr_month_days(cldr_number(year, month), nil)
-    end
-  end
+  @spec days_in_month(year, month) :: 29 | 30 | {:error, Exception.t()}
+  # A month the year does not have, and a field that is not an integer,
+  # are answered before this by `Calendrical.Compiler.DateCheck`.
+  def days_in_month(year, month) when month in [@heshvan, @kislev],
+    do: cldr_month_days(month, days_in_year(year))
 
-  def days_in_month(_year, _month), do: 0
+  def days_in_month(year, month), do: cldr_month_days(cldr_number(year, month), nil)
 
   @doc """
   Returns whether the given `year`, `month`, and `day` form a valid
@@ -337,14 +349,14 @@ defmodule Calendrical.Hebrew do
   def valid_date?(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) and
              year >= 1 and month in 1..13 and day in 1..30 do
-    day <= days_in_month(year, month)
+    month <= months_in_year(year) and day <= days_in_month(year, month)
   end
 
   def valid_date?(_year, _month, _day), do: false
 
   @doc """
   Returns the whole number of `date_part`s from one `{year, month, day}`
-  to another — the inverse of `shift/6`.
+  to another, as `shift/6` adds them.
 
   `date_part` can be `:years`, `:quarters`, `:months`, `:weeks` or
   `:days`. The count is the largest number `shift/6`, clamping the day
@@ -415,14 +427,13 @@ defmodule Calendrical.Hebrew do
 
   ### Arguments
 
-  * `date_or_year` is a Hebrew year as an integer, or a `t:Date.t/0`
-    in the Hebrew calendar.
+  * `year` is a Hebrew year as an integer.
 
   ### Returns
 
   * `6`, the position of *Adar I*, in a leap year.
 
-  * `nil` in an ordinary year.
+  * `nil` in an ordinary year, or for anything but an integer year.
 
   ### Examples
 
@@ -433,11 +444,12 @@ defmodule Calendrical.Hebrew do
       nil
 
   """
-  @spec leap_month(Date.t() | Calendar.year()) :: 6 | nil
+  @spec leap_month(Calendar.year()) :: 6 | nil
   @impl true
-  def leap_month(%Date{year: year, calendar: __MODULE__}), do: leap_month(year)
   def leap_month(year) when is_integer(year), do: if(leap_year?(year), do: @leap_month)
-  def leap_month(_date_or_year), do: nil
+
+  # Anything but a year, a date among them, is no year and has no leap month.
+  def leap_month(_not_a_year), do: nil
 
   # ── Calendar conversion ──────────────────────────────────────────────────
 

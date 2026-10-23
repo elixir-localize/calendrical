@@ -210,10 +210,10 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
     end
 
     test "first_day_of_month/2 returns an error for invalid months" do
-      assert {:error, %Calendrical.IslamicYearOutOfRangeError{}} =
+      assert {:error, %Calendrical.InvalidMonthError{year: 1446, month: 0}} =
                UmmAlQura.first_day_of_month(1446, 0)
 
-      assert {:error, %Calendrical.IslamicYearOutOfRangeError{}} =
+      assert {:error, %Calendrical.InvalidMonthError{year: 1446, month: 13}} =
                UmmAlQura.first_day_of_month(1446, 13)
     end
 
@@ -345,7 +345,7 @@ defmodule Calendrical.Islamic.UmmAlQuraTest do
     end
 
     test "returns an error, never raises, on bad input" do
-      assert {:error, {:invalid_day_start, :bogus}} =
+      assert {:error, %Calendrical.InvalidOptionValueError{option: :day_start, value: :bogus}} =
                UmmAlQura.date_at(~U[2025-03-01 12:00:00Z], day_start: :bogus)
 
       # After 30 Dhu al-Hijja 1500 AH (16 November 2077), the end of the

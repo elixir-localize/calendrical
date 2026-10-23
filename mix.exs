@@ -196,7 +196,7 @@ defmodule Calendrical.MixProject do
       {:tz, "~> 0.26", optional: true},
       {:gettext, "~> 1.0"},
       {:calendar_interval, "~> 0.2", optional: true},
-      {:ex_doc, "~> 0.38", optional: true, runtime: false},
+      {:ex_doc, "~> 0.38", only: [:dev, :release], runtime: false},
       {:dialyxir, "~> 1.0", optional: true, only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", optional: true, only: [:dev, :test], runtime: false},
       {:stream_data, "~> 1.0", only: :test}
@@ -207,7 +207,7 @@ defmodule Calendrical.MixProject do
     if Code.ensure_loaded?(:json) do
       []
     else
-      [{:json_polyfill, "~> 0.2 or ~> 1.0"}]
+      [{:json_polyfill, "~> 0.2 or ~> 1.0", only: [:dev, :test]}]
     end
   end
 

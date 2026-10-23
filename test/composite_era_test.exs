@@ -497,18 +497,19 @@ defmodule Calendrical.CompositeEraTest do
     end
 
     test "a date the calendar does not have is an error" do
-      assert England.day_of_era(1752, 9, 5) == {:error, :invalid_date}
-      assert Sweden.day_of_era(1753, 2, 20) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = England.day_of_era(1752, 9, 5)
+      assert {:error, %Calendrical.InvalidDateError{}} = Sweden.day_of_era(1753, 2, 20)
     end
 
     # A composite refuses a date it does not have before its member
     # calendar is asked, so a member's own refusal is reached only here: it
     # is the answer, unchanged.
     test "a member calendar's refusal of a date is the answer" do
-      segments = Calendrical.Composite.Config.segments(England.__config__())
+      segments =
+        Calendrical.Composite.Config.segments(Calendrical.Test.CompositeChanges.changes(England))
 
-      assert Calendrical.Composite.Era.day_of_era(segments, 3, 2023, 2, 30) ==
-               {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.Composite.Era.day_of_era(segments, 3, 2023, 2, 30)
     end
   end
 end

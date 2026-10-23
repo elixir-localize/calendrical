@@ -57,8 +57,8 @@ defmodule Calendrical.Kernel.Test do
     assert Calendrical.Chinese.date_from_written_date(4660, {2, :leap}, 1) == {:ok, {4660, 3, 1}}
     assert Calendrical.Chinese.date_from_written_date(4660, 3, 1) == {:ok, {4660, 4, 1}}
 
-    assert Calendrical.Chinese.date_from_written_date(4661, {2, :leap}, 1) ==
-             {:error, :invalid_date}
+    assert {:error, :invalid_date} =
+             Calendrical.Chinese.date_from_written_date(4661, {2, :leap}, 1)
 
     assert Calendrical.Chinese.leap_month(4660) == 3
   end

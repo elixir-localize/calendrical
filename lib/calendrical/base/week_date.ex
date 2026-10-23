@@ -25,15 +25,19 @@ defmodule Calendrical.Base.WeekDate do
              day >= 1 do
     case calendar.week(week_year, week) do
       %Date.Range{} = days ->
-        Enum.find(days, {:error, :invalid_date}, &(day_of_week(calendar, &1) == day))
+        Enum.find(
+          days,
+          invalid_date(calendar, week_year: week_year, week: week, day_of_week: day),
+          &(day_of_week(calendar, &1) == day)
+        )
 
       _no_such_week ->
-        {:error, :invalid_date}
+        invalid_date(calendar, week_year: week_year, week: week, day_of_week: day)
     end
   end
 
-  def date_from_week_date(_calendar, _week_year, _week, _day) do
-    {:error, :invalid_date}
+  def date_from_week_date(calendar, week_year, week, day) do
+    invalid_date(calendar, week_year: week_year, week: week, day_of_week: day)
   end
 
   # The week-year, the week and the day of the week of a date.
@@ -45,13 +49,15 @@ defmodule Calendrical.Base.WeekDate do
   end
 
   defp valid_date(calendar, year, month, day) do
-    if calendar.valid_date?(year, month, day), do: :ok, else: {:error, :invalid_date}
+    if calendar.valid_date?(year, month, day),
+      do: :ok,
+      else: invalid_date(calendar, {year, month, day})
   end
 
   defp week_of_year(calendar, year, month, day) do
     case calendar.week_of_year(year, month, day) do
       {week_year, week} when is_integer(week) -> {:ok, week_year, week}
-      _no_week -> {:error, :invalid_date}
+      _no_week -> invalid_date(calendar, {year, month, day})
     end
   end
 
@@ -60,8 +66,8 @@ defmodule Calendrical.Base.WeekDate do
     weeks_in_own_year(calendar, week_year)
   end
 
-  def weeks_in_week_year(_calendar, _week_year) do
-    {:error, :invalid_date}
+  def weeks_in_week_year(calendar, week_year) do
+    invalid_date(calendar, week_year: week_year)
   end
 
   # A calendar's weeks in a year, as a count or as the pair an older
@@ -69,12 +75,16 @@ defmodule Calendrical.Base.WeekDate do
   def weeks_in_own_year(calendar, year) do
     case calendar.weeks_in_year(year) do
       {weeks, _days_in_last_week} when is_integer(weeks) -> weeks
-      _no_such_year -> {:error, :invalid_date}
+      _no_such_year -> invalid_date(calendar, year: year)
     end
   end
 
   defp day_of_week(calendar, %Date{year: year, month: month, day: day}) do
     {day_of_week, _first, _last} = calendar.day_of_week(year, month, day, :default)
     day_of_week
+  end
+
+  defp invalid_date(calendar, value) do
+    {:error, Calendrical.InvalidDateError.exception(calendar: calendar, value: value)}
   end
 end

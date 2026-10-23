@@ -4,7 +4,7 @@ defmodule Calendrical.YearLessTest do
   # Year-less calendar primitives: `days_in_month/1` and
   # `months_in_year/0`. Each returns an integer when the value is the
   # same for every year, `{:ambiguous, range}` when it varies with the
-  # year, and `{:error, :undefined}` when it cannot be determined
+  # year, and `{:error, %Calendrical.NotDefinedError{}}` when it cannot be determined
   # without a year (or the month is out of range).
 
   describe "days_in_month/1" do
@@ -20,8 +20,9 @@ defmodule Calendrical.YearLessTest do
 
     test "out-of-range months are undefined, not a wrapped length" do
       for month <- [0, 13, 14, -1] do
-        assert Calendrical.Gregorian.days_in_month(month) == {:error, :undefined},
-               "days_in_month(#{month}) should be {:error, :undefined}"
+        assert {:error, %Calendrical.NotDefinedError{}} =
+                 Calendrical.Gregorian.days_in_month(month),
+               "days_in_month(#{month}) should be {:error, %Calendrical.NotDefinedError{}}"
       end
     end
   end

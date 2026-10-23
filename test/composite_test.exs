@@ -49,7 +49,7 @@ defmodule Calendrical.CompositeTest do
                {lady_day, 1155, 1, 1, Calendrical.Julian.March25},
                {january, 1751, 3, 25, Calendrical.Julian.Jan1},
                {gregorian, 1752, 9, 14, Calendrical.Gregorian}
-             ] = Calendrical.Reform.England.__config__()
+             ] = Calendrical.Test.CompositeChanges.changes(Calendrical.Reform.England)
 
       assert lady_day == Date.to_gregorian_days(~D[1155-04-01])
       assert january == Date.to_gregorian_days(~D[1751-04-05])
@@ -65,7 +65,7 @@ defmodule Calendrical.CompositeTest do
       assert [
                {_first, -9999, 1, 1, Calendrical.Julian},
                {gregorian, 1700, 3, 1, Calendrical.Gregorian}
-             ] = calendar.__config__()
+             ] = Calendrical.Test.CompositeChanges.changes(calendar)
 
       assert gregorian == Date.to_gregorian_days(~D[1700-03-01])
     end

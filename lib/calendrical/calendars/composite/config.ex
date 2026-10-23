@@ -2,6 +2,7 @@ defmodule Calendrical.Composite.Config do
   @moduledoc false
 
   @default_base_calendar Calendrical.Julian
+  @known_options [:calendars, :base_calendar]
 
   # The base calendar has no first day. This is the date it is listed by,
   # never converted: an astronomical base calendar has no day so far back.
@@ -17,7 +18,7 @@ defmodule Calendrical.Composite.Config do
   def extract_options(options) when is_list(options) do
     case validate_options(options) do
       {:ok, options} -> config(options)
-      {:error, reason} -> raise error(reason)
+      {:error, exception} -> raise exception
     end
   end
 
@@ -58,10 +59,11 @@ defmodule Calendrical.Composite.Config do
   #
   # The calendars are asked about the dates given, and one that raises for
   # a date it does not reach is the reason.
-  def validate_options([]), do: {:error, :no_calendars_configured}
+  def validate_options([]), do: refuse(:no_calendars_configured)
 
   def validate_options(options) when is_list(options) do
-    with {:ok, calendars} <- calendars(options),
+    with :ok <- known_options(options),
+         {:ok, calendars} <- calendars(options),
          :ok <- validate_calendar(Keyword.get(options, :base_calendar, @default_base_calendar)),
          :ok <- validate_dates(calendars),
          options = Keyword.put(options, :calendars, calendars),
@@ -72,40 +74,58 @@ defmodule Calendrical.Composite.Config do
     exception -> {:error, exception}
   end
 
+  # An option no composite reads is refused, as the other makers refuse one.
+  defp known_options(options) do
+    case Keyword.keys(options) -- @known_options do
+      [] ->
+        :ok
+
+      unknown ->
+        {:error,
+         Calendrical.UnknownOptionError.exception(
+           maker: Calendrical.Composite,
+           options: unknown,
+           known_options: @known_options
+         )}
+    end
+  end
+
   defp calendars(options) do
     case Keyword.fetch(options, :calendars) do
       {:ok, calendars} when is_list(calendars) ->
         if List.improper?(calendars),
-          do: {:error, :must_be_a_list_of_dates},
+          do: refuse(:must_be_a_list_of_dates, calendars),
           else: {:ok, calendars}
 
       {:ok, calendar} ->
         {:ok, [calendar]}
 
       :error ->
-        {:error, :no_calendars_configured}
+        refuse(:no_calendars_configured)
     end
   end
 
   defp validate_dates(calendars) do
     Enum.find_value(calendars, :ok, fn
-      %{year: year, month: month, day: day, calendar: calendar} ->
+      %{year: year, month: month, day: day, calendar: calendar} = date ->
         with :ok <- validate_calendar(calendar),
-             :ok <- validate_date(calendar, year, month, day),
+             :ok <- validate_date(date, calendar, year, month, day),
              do: nil
 
-      _not_a_date ->
-        {:error, :must_be_a_list_of_dates}
+      not_a_date ->
+        refuse(:must_be_a_list_of_dates, not_a_date)
     end)
   end
 
   # Fields that are not integers are no date, whatever the calendar says.
-  defp validate_date(calendar, year, month, day)
+  defp validate_date(date, calendar, year, month, day)
        when is_integer(year) and is_integer(month) and is_integer(day) do
-    if member(calendar).valid_date?(year, month, day), do: :ok, else: {:error, :invalid_date}
+    if member(calendar).valid_date?(year, month, day),
+      do: :ok,
+      else: refuse(:invalid_date, date)
   end
 
-  defp validate_date(_calendar, _year, _month, _day), do: {:error, :invalid_date}
+  defp validate_date(date, _calendar, _year, _month, _day), do: refuse(:invalid_date, date)
 
   # A calendar module is one `Calendrical.validate_calendar/1` takes for
   # one. It is waited for here where it is being compiled along with the
@@ -118,10 +138,10 @@ defmodule Calendrical.Composite.Config do
         {:error, Calendrical.InvalidCalendarModuleError.exception(module: calendar)}
 
       Calendrical.Base.Common.composite?(calendar) ->
-        {:error, :must_not_be_composite_calendars}
+        refuse(:must_not_be_composite_calendars, calendar)
 
       function_exported?(calendar, :calendar_base, 0) and calendar.calendar_base() == :week ->
-        {:error, :must_not_be_week_calendars}
+        refuse(:must_not_be_week_calendars, calendar)
 
       true ->
         :ok
@@ -142,40 +162,23 @@ defmodule Calendrical.Composite.Config do
     config
     |> Enum.chunk_every(2, 1, :discard)
     |> Enum.with_index()
-    |> Enum.find_value(:ok, fn {[{before, _, _, _, calendar}, {iso_days, year, _, _, _}], index} ->
+    |> Enum.find_value(:ok, fn {[
+                                  {before, _, _, _, calendar},
+                                  {iso_days, year, month, day, incoming}
+                                ], index} ->
       {last_year, _month, _day} = calendar.date_from_iso_days(iso_days - 1)
+      change = %Date{year: year, month: month, day: day, calendar: incoming}
 
       cond do
-        index > 0 and iso_days == before -> {:error, :must_take_effect_on_different_days}
-        year < last_year -> {:error, :years_must_not_go_back}
+        index > 0 and iso_days == before -> refuse(:must_take_effect_on_different_days, change)
+        year < last_year -> refuse(:years_must_not_go_back, change)
         true -> nil
       end
     end)
   end
 
-  defp error(%{__exception__: true} = exception), do: exception
-  defp error(reason), do: ArgumentError.exception(describe(reason))
-
-  defp describe(:no_calendars_configured),
-    do: "a composite calendar needs :calendars, the first day of each calendar that takes effect"
-
-  defp describe(:must_be_a_list_of_dates),
-    do: ":calendars must be dates, each in the calendar that takes effect on it"
-
-  defp describe(:invalid_date),
-    do: "each of :calendars must be a date of its own calendar"
-
-  defp describe(:must_not_be_composite_calendars),
-    do: "the calendars of a composite calendar must not be composite calendars"
-
-  defp describe(:must_not_be_week_calendars),
-    do: "the calendars of a composite calendar must not be calendars of weeks"
-
-  defp describe(:must_take_effect_on_different_days),
-    do: "each of :calendars must take effect on a day of its own"
-
-  defp describe(:years_must_not_go_back),
-    do: "a calendar must not number its first year before the last year of the calendar before it"
+  defp refuse(reason, value \\ nil),
+    do: {:error, Calendrical.InvalidCompositeError.exception(reason: reason, value: value)}
 
   @doc false
   # The segments of the time line, one per member calendar in order: the

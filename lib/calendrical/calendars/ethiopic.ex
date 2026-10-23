@@ -184,7 +184,13 @@ defmodule Calendrical.Ethiopic do
 
   ### Returns
 
-  * An integer number of days.
+  * An integer number of days, or
+
+  * `{:error, %Calendrical.InvalidMonthError{}}` for a month the year
+    does not have, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+    month is `nil`.
 
   ### Examples
 
@@ -199,7 +205,7 @@ defmodule Calendrical.Ethiopic do
 
   """
   @impl true
-  @spec days_in_month(year, month) :: 5..30
+  @spec days_in_month(year, month) :: 5..30 | {:error, Exception.t()}
   def days_in_month(year, month) do
     Egyptian.days_in_month(year, month)
   end
@@ -229,7 +235,7 @@ defmodule Calendrical.Ethiopic do
   """
   @impl true
   @spec leap_year?(year) :: boolean()
-  def leap_year?(year) do
+  def leap_year?(year) when is_integer(year) do
     Egyptian.leap_year?(year)
   end
 

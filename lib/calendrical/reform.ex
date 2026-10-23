@@ -98,6 +98,9 @@ defmodule Calendrical.Reform do
 
   @known_territories @reforms |> Map.keys() |> Enum.sort()
 
+  # The territories by name, for a territory given as a string.
+  @territories_by_name Map.new(@known_territories, &{Atom.to_string(&1), &1})
+
   @doc """
   Returns the sorted list of ISO 3166 territory codes for which a reform
   calendar is available.
@@ -168,7 +171,8 @@ defmodule Calendrical.Reform do
   * `{:ok, %{last_julian: last, first_gregorian: first}}` where `last` is the
     last Julian date in the territory and `first` is the first Gregorian date.
 
-  * `{:error, :unknown_territory}` if the territory has no reform date.
+  * `{:error, %Calendrical.UnknownReformError{}}` if the territory has no
+    reform date.
 
   ### Examples
 
@@ -180,12 +184,12 @@ defmodule Calendrical.Reform do
        }}
 
       iex> Calendrical.Reform.reform_date(:XX)
-      {:error, :unknown_territory}
+      {:error, %Calendrical.UnknownReformError{territory: :XX}}
 
   """
   @spec reform_date(atom() | String.t() | Localize.LanguageTag.t()) ::
           {:ok, %{last_julian: Date.t(), first_gregorian: Date.t()}}
-          | {:error, :unknown_territory}
+          | {:error, Exception.t()}
   def reform_date(territory) do
     with {:ok, territory} <- normalize_territory(territory) do
       {year, month, day} = @reforms[territory].last_julian
@@ -225,7 +229,8 @@ defmodule Calendrical.Reform do
   * `{:ok, calendar_module}` where `calendar_module` is a `Calendrical.Composite`
     calendar implementing both the `Calendar` and `Calendrical` behaviours.
 
-  * `{:error, :unknown_territory}` if the territory has no reform date.
+  * `{:error, %Calendrical.UnknownReformError{}}` if the territory has no
+    reform date.
 
   ### Examples
 
@@ -239,11 +244,11 @@ defmodule Calendrical.Reform do
       {:ok, Calendrical.Reform.Japan}
 
       iex> Calendrical.Reform.calendar_for(:XX)
-      {:error, :unknown_territory}
+      {:error, %Calendrical.UnknownReformError{territory: :XX}}
 
   """
   @spec calendar_for(atom() | String.t() | Localize.LanguageTag.t()) ::
-          {:ok, module()} | {:error, :unknown_territory}
+          {:ok, module()} | {:error, Exception.t()}
   def calendar_for(territory) do
     with {:ok, territory} <- normalize_territory(territory) do
       case Map.fetch(curated_calendars(), territory) do
@@ -300,16 +305,21 @@ defmodule Calendrical.Reform do
   end
 
   defp normalize_territory(territory) when is_atom(territory) do
-    if territory in @known_territories do
-      {:ok, territory}
-    else
-      {:error, :unknown_territory}
-    end
+    if territory in @known_territories,
+      do: {:ok, territory},
+      else: unknown_reform(territory)
   end
 
   defp normalize_territory(territory) when is_binary(territory) do
-    normalize_territory(String.to_existing_atom(String.upcase(territory)))
-  rescue
-    ArgumentError -> {:error, :unknown_territory}
+    case Map.fetch(@territories_by_name, String.upcase(territory)) do
+      {:ok, territory} -> {:ok, territory}
+      :error -> unknown_reform(territory)
+    end
+  end
+
+  defp normalize_territory(territory), do: unknown_reform(territory)
+
+  defp unknown_reform(territory) do
+    {:error, Calendrical.UnknownReformError.exception(territory: territory)}
   end
 end

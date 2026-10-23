@@ -150,7 +150,7 @@ defmodule Calendrical.Reform.Sweden.Transitional do
   @spec leap_year?(Calendar.year()) :: boolean()
   def leap_year?(1700), do: false
 
-  def leap_year?(year) do
+  def leap_year?(year) when is_integer(year) do
     Calendrical.Julian.leap_year?(year)
   end
 
@@ -207,7 +207,13 @@ defmodule Calendrical.Reform.Sweden.Transitional do
 
   ### Returns
 
-  * The number of days in the month.
+  * The number of days in the month, or
+
+  * `{:error, %Calendrical.InvalidMonthError{}}` for a month the year
+    does not have, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+    month is `nil`.
 
   ### Examples
 
@@ -219,7 +225,8 @@ defmodule Calendrical.Reform.Sweden.Transitional do
 
   """
   @impl true
-  @spec days_in_month(Calendar.year(), Calendar.month()) :: Calendar.day()
+  @spec days_in_month(Calendar.year(), Calendar.month()) ::
+          Calendar.day() | {:error, Exception.t()}
   def days_in_month(year, @months_in_ordinary_year) do
     date_to_iso_days(next_year(year), 1, 1) -
       date_to_iso_days(year, @months_in_ordinary_year, 1)
@@ -269,7 +276,10 @@ defmodule Calendrical.Reform.Sweden.Transitional do
 
   ### Returns
 
-  * A `{year_of_era, era}` tuple, or `{:error, :invalid_date}`.
+  * A `{year_of_era, era}` tuple, or
+
+  * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar
+    does not have.
 
   * `{:error, %Calendrical.MissingFieldsError{}}` when `year` is not
     an integer, as for a partial date with no year.
@@ -300,7 +310,10 @@ defmodule Calendrical.Reform.Sweden.Transitional do
 
   ### Returns
 
-  * A `{day_of_era, era}` tuple, or `{:error, :invalid_date}`.
+  * A `{day_of_era, era}` tuple, or
+
+  * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar
+    does not have.
 
   ### Examples
 

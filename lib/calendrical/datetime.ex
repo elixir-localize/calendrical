@@ -63,6 +63,9 @@ defmodule Calendrical.DateTime do
 
   * `{:error, Localize.InvalidValueError.t()}` when `input` is not a string or an option is malformed.
 
+  * `{:error, %Calendrical.RemovedOptionError{}}` for the
+    `:return_calendar` option, which was removed in 2.0.
+
   ### Examples
 
       iex> Calendrical.DateTime.parse("2026-05-16T14:30:00", locale: :en)
@@ -84,5 +87,8 @@ defmodule Calendrical.DateTime do
   """
   @spec parse(String.t(), Keyword.t()) ::
           {:ok, NaiveDateTime.t() | DateTime.t() | map()} | {:error, Exception.t()}
-  defdelegate parse(input, options \\ []), to: Localize.DateTime
+  def parse(input, options \\ []) do
+    with :ok <- Calendrical.Parse.refuse_removed_options(options),
+         do: Localize.DateTime.parse(input, options)
+  end
 end

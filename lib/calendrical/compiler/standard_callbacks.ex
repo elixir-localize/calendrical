@@ -195,7 +195,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       @doc """
       Returns the number of months in a year without a year: the count
       where every year has as many, `{:ambiguous, range}` where a leap
-      year has more, and `{:error, :undefined}` for a composite calendar
+      year has more, and `{:error, %Calendrical.NotDefinedError{}}` for a composite calendar
       (`Calendrical.Info.months_in_year/1`).
 
       ### Returns
@@ -204,7 +204,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * `{:ambiguous, fewest..most}` where a leap year has more, or
 
-      * `{:error, :undefined}` for a composite calendar, whose bounds
+      * `{:error, %Calendrical.NotDefinedError{}}` for a composite calendar, whose bounds
         `months_in_year_bounds/0` gives.
 
       ### Examples
@@ -212,7 +212,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           iex> case #{inspect(__MODULE__)}.months_in_year() do
           ...>   months when is_integer(months) -> months == #{inspect(__MODULE__)}.months_in_leap_year()
           ...>   {:ambiguous, fewest..most//1} -> {fewest, most} == #{inspect(__MODULE__)}.info().months_in_year
-          ...>   {:error, :undefined} -> is_list(#{inspect(__MODULE__)}.info().members)
+          ...>   {:error, %Calendrical.NotDefinedError{}} -> is_list(#{inspect(__MODULE__)}.info().members)
           ...> end
           true
 
@@ -231,7 +231,8 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * The leap month's position in the year, or
 
-      * `nil` where the year has no leap month.
+      * `nil` where the year has no leap month, as for anything but an
+        integer year.
 
       ### Examples
 
@@ -285,6 +286,9 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * `{:error, :invalid_date}` where the figures name no date.
 
+      The reason is an atom, not an exception: Localize's date parser reads
+      it, as `c:Calendrical.date_from_written_date/3` sets out.
+
       ### Examples
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
@@ -309,17 +313,17 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       ### Arguments
 
-      * `year`, `month` and `day` are a date of this calendar.
+      * `year`, `month` and `day` are a date of this calendar. The year
+        and the day may be `nil`: a month's name needs only the month.
 
       ### Returns
 
       * A CLDR month number, or `{month, :leap}`, or
 
-      * `{:error, :invalid_date}` for a day the month does not have, or
+      * `{:error, %Calendrical.InvalidDateError{}}` for a day the month does not have, or
 
       * `{:error, exception}` for a month the year does not have, or a
-        `Calendrical.MissingFieldsError` where the year or the month is
-        `nil`.
+        `Calendrical.MissingFieldsError` where the month is `nil`.
 
       ### Examples
 
@@ -328,11 +332,12 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.month_of_year(date.year, date.month, 0)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.month_of_year(date.year, date.month, 0)
 
       """
-      def month_of_year(year, month, _day) when is_nil(year) or is_nil(month) do
+      # A month's name needs only the month: the year refines it where it
+      # varies (a leap month), and the day only checks that the date exists.
+      def month_of_year(year, month, _day) when is_nil(month) do
         {:error,
          %Calendrical.MissingFieldsError{
            function: "month_of_year",
@@ -340,10 +345,37 @@ defmodule Calendrical.Compiler.StandardCallbacks do
          }}
       end
 
+      # With no year, the month must be one the calendar has, and the day,
+      # where given, one such a month can have.
+      def month_of_year(nil, month, day) do
+        case days_in_month_bounds(month) do
+          {_fewest, most} when is_integer(most) ->
+            if is_nil(day) or (is_integer(day) and day in 1..most//1),
+              do: Calendrical.Month.cldr_month(__MODULE__, month),
+              else:
+                {:error,
+                 Calendrical.InvalidDateError.exception(
+                   calendar: __MODULE__,
+                   value: [month: month, day: day]
+                 )}
+
+          {:error, _no_such_month} = error ->
+            error
+        end
+      end
+
+      def month_of_year(year, month, nil),
+        do: Calendrical.Month.cldr_month(__MODULE__, year, month)
+
       def month_of_year(year, month, day) do
         if Calendrical.Month.day_in_month?(__MODULE__, year, month, day),
           do: Calendrical.Month.cldr_month(__MODULE__, year, month),
-          else: {:error, :invalid_date}
+          else:
+            {:error,
+             Calendrical.InvalidDateError.exception(
+               calendar: __MODULE__,
+               value: {year, month, day}
+             )}
       end
 
       @doc """
@@ -414,7 +446,9 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       * The month as `written_date/3` writes it, or
 
       * `{:error, :invalid_month}` where the year has no month of that
-        name.
+        name. The reason is an atom, not an exception: Localize's date parser
+        reads it, where `Calendrical.Month.written_month_from_cldr_month/3`
+        answers with an exception.
 
       ### Examples
 
@@ -430,7 +464,12 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       """
       def written_month_from_cldr_month(year, cldr_month) do
-        Calendrical.Month.written_month_from_cldr_month(__MODULE__, year, cldr_month)
+        case Calendrical.Month.written_month_from_cldr_month(__MODULE__, year, cldr_month) do
+          # Localize's date parser reads this atom (see c:Calendrical.date_from_written_date/3).
+          # credo:disable-for-next-line Calendrical.Credo.ErrorTuple
+          {:error, _no_such_month} -> {:error, :invalid_month}
+          written_month -> written_month
+        end
       end
 
       @doc """
@@ -522,7 +561,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * `{year, month, day}`, the date of this calendar, or
 
-      * `{:error, :invalid_date}` where the figures name no date.
+      * `{:error, %Calendrical.InvalidDateError{}}` where the figures name no date.
 
       ### Examples
 
@@ -532,14 +571,20 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.date_from_cardinal_date(date.year, 0, 1)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.date_from_cardinal_date(date.year, 0, 1)
 
       """
       def date_from_cardinal_date(year, month, day) do
         case date_from_written_date(year, month, day) do
-          {:ok, date} -> date
-          {:error, :invalid_date} = error -> error
+          {:ok, date} ->
+            date
+
+          {:error, :invalid_date} ->
+            {:error,
+             Calendrical.InvalidDateError.exception(
+               calendar: __MODULE__,
+               value: {year, month, day}
+             )}
         end
       end
 
@@ -557,7 +602,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       * The month's traditional number, or `{month, :leap}` for a leap
         month, or
 
-      * `{:error, :invalid_month}` for a month the year does not have.
+      * `{:error, %Calendrical.InvalidMonthError{}}` for a month the year does not have.
 
       ### Examples
 
@@ -567,13 +612,12 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.lunar_month_of_year(date.year, 99)
-          {:error, :invalid_month}
+          iex> {:error, %Calendrical.InvalidMonthError{}} = #{inspect(__MODULE__)}.lunar_month_of_year(date.year, 99)
 
       """
       def lunar_month_of_year(year, month) do
         case Calendrical.Month.traditional_month(__MODULE__, year, month) do
-          {:error, _no_such_month} -> {:error, :invalid_month}
+          {:error, _no_such_month} = error -> error
           traditional_month -> traditional_month
         end
       end
@@ -593,11 +637,8 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * `{:ok, month}`, the month's position in the year, or
 
-      * `{:error, :invalid_leap_month}` for a leap month of 1 to 12 the
-        year does not have, or
-
-      * `{:error, :invalid_month}` for any other month the year does not
-        have.
+      * `{:error, %Calendrical.InvalidMonthError{}}` for a month or a leap
+        month the year does not have.
 
       ### Examples
 
@@ -607,8 +648,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.ordinal_month_from_traditional(date.year, 99)
-          {:error, :invalid_month}
+          iex> {:error, %Calendrical.InvalidMonthError{}} = #{inspect(__MODULE__)}.ordinal_month_from_traditional(date.year, 99)
 
       """
       def ordinal_month_from_traditional(year, traditional_month) do
@@ -616,20 +656,10 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           position when is_integer(position) ->
             {:ok, position}
 
-          {:error, _no_such_month} when is_tuple(traditional_month) ->
-            {:error, leap_month_error(traditional_month)}
-
-          {:error, _no_such_month} ->
-            {:error, :invalid_month}
+          {:error, _no_such_month} = error ->
+            error
         end
       end
-
-      # A leap month a year does not have is `:invalid_leap_month`; a tuple
-      # that is no leap month at all is `:invalid_month`.
-      defp leap_month_error({month, :leap}) when is_integer(month) and month in 1..12,
-        do: :invalid_leap_month
-
-      defp leap_month_error(_other), do: :invalid_month
 
       @doc """
       Returns the traditional number of the month a year's leap month
@@ -754,7 +784,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * A `t:Date.t/0` of this calendar, or
 
-      * `{:error, :invalid_date}` for a day the year does not have.
+      * `{:error, %Calendrical.InvalidDateError{}}` for a day the year does not have.
 
       ### Examples
 
@@ -764,8 +794,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.date_from_day_of_year(date.year, 1000)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.date_from_day_of_year(date.year, 1000)
 
       """
       def date_from_day_of_year(year, day_of_year),
@@ -862,7 +891,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       * `{:ambiguous, lengths}` where its length depends on the year, the
         lengths a range or, where they are not consecutive, a list, or
 
-      * `{:error, :undefined}` for a month the calendar has in no year, or
+      * `{:error, %Calendrical.NotDefinedError{}}` for a month the calendar has in no year, or
 
       * `{:error, exception}`, a `Calendrical.MissingFieldsError`, where
         the month is `nil`.
@@ -877,8 +906,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           ...> end
           true
 
-          iex> #{inspect(__MODULE__)}.days_in_month(99)
-          {:error, :undefined}
+          iex> {:error, %Calendrical.NotDefinedError{}} = #{inspect(__MODULE__)}.days_in_month(99)
 
       """
       def days_in_month(nil) do
@@ -951,9 +979,9 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       * `{week_year, week}`, where the week-year is the year before or
         after where the date falls in that year's last or first week, or
 
-      * `{:error, reason}` for a date the calendar does not have: a
-        `Calendrical.MissingFieldsError` for a date missing a field, and
-        `:invalid_date` otherwise.
+      * `{:error, exception}` for a date the calendar does not have: a
+        `Calendrical.MissingFieldsError` for a date missing a field, and a
+        `Calendrical.InvalidDateError` otherwise.
 
       ### Examples
 
@@ -963,8 +991,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.week_of_year(date.year, date.month, 0)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.week_of_year(date.year, date.month, 0)
 
       """
       def week_of_year(year, month, day),
@@ -982,7 +1009,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * `{week_year, week}` of ISO 8601, or
 
-      * `{:error, reason}` for a date the calendar does not have.
+      * `{:error, exception}` for a date the calendar does not have.
 
       ### Examples
 
@@ -1007,7 +1034,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       * `{month, week}`, where the month is the one before or after where
         the date falls in that month's last or first week, or
 
-      * `{:error, reason}` for a date the calendar does not have.
+      * `{:error, exception}` for a date the calendar does not have.
 
       ### Examples
 
@@ -1031,7 +1058,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * The number of weeks, or
 
-      * `{:error, reason}` for a year the calendar does not have.
+      * `{:error, exception}` for a year the calendar does not have.
 
       ### Examples
 
@@ -1057,7 +1084,10 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       * A `t:Date.Range.t/0` of the week's seven days, which may begin in
         the year before or end in the year after, or
 
-      * `{:error, :invalid_date}` for a week the year does not have.
+      * `{:error, %Calendrical.InvalidDateError{}}` for a week the year does not have, or
+
+      * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+        week is `nil`.
 
       ### Examples
 
@@ -1068,8 +1098,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           {7, true}
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.week(date.year, 0)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.week(date.year, 0)
 
       """
       def week(year, week), do: Calendrical.Week.week(__MODULE__, year, week)
@@ -1120,7 +1149,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * A `t:Date.t/0` of this calendar, or
 
-      * `{:error, :invalid_date}` where the week has no such day.
+      * `{:error, %Calendrical.InvalidDateError{}}` where the week has no such day.
 
       ### Examples
 
@@ -1130,8 +1159,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.date_from_week_date(date.year, 1, 8)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.date_from_week_date(date.year, 1, 8)
 
       """
       def date_from_week_date(week_year, week, day),
@@ -1150,7 +1178,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       * `{week_year, week, day_of_week}`, the day numbered from the day
         the calendar's weeks begin on, or
 
-      * `{:error, :invalid_date}` for a date the calendar does not have.
+      * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar does not have.
 
       ### Examples
 
@@ -1175,7 +1203,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * The number of weeks, or
 
-      * `{:error, :invalid_date}` for a year the calendar does not have.
+      * `{:error, %Calendrical.InvalidDateError{}}` for a year the calendar does not have.
 
       ### Examples
 
@@ -1199,7 +1227,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * A `t:Date.Range.t/0`, or
 
-      * `{:error, :invalid_date}` for a year the calendar does not have,
+      * `{:error, %Calendrical.InvalidDateError{}}` for a year the calendar does not have,
         or
 
       * `{:error, exception}`, a `Calendrical.MissingFieldsError`, for
@@ -1229,8 +1257,11 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * A `t:Date.Range.t/0`, or
 
-      * `{:error, :invalid_date}` for a quarter or a year the calendar
-        does not have.
+      * `{:error, %Calendrical.InvalidDateError{}}` for a quarter or a year the calendar
+        does not have, or
+
+      * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+        quarter is `nil`.
 
       ### Examples
 
@@ -1240,8 +1271,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.quarter(date.year, 5)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.quarter(date.year, 5)
 
       """
       def quarter(year, quarter), do: Calendrical.Period.quarter(__MODULE__, year, quarter)
@@ -1260,8 +1290,11 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * A `t:Date.Range.t/0`, or
 
-      * `{:error, :invalid_date}` for a quadrimester or a year the
-        calendar does not have.
+      * `{:error, %Calendrical.InvalidDateError{}}` for a quadrimester or a year the
+        calendar does not have, or
+
+      * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+        quadrimester is `nil`.
 
       ### Examples
 
@@ -1270,8 +1303,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.quadrimester(date.year, 4)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.quadrimester(date.year, 4)
 
       """
       def quadrimester(year, quadrimester),
@@ -1290,8 +1322,11 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * A `t:Date.Range.t/0`, or
 
-      * `{:error, :invalid_date}` for a semester or a year the calendar
-        does not have.
+      * `{:error, %Calendrical.InvalidDateError{}}` for a semester or a year the calendar
+        does not have, or
+
+      * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+        semester is `nil`.
 
       ### Examples
 
@@ -1300,8 +1335,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.semester(date.year, 3)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.semester(date.year, 3)
 
       """
       def semester(year, semester), do: Calendrical.Period.semester(__MODULE__, year, semester)
@@ -1317,7 +1351,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * A `t:Date.Range.t/0`, or
 
-      * `{:error, :invalid_date}` for a month the year does not have, or
+      * `{:error, %Calendrical.InvalidDateError{}}` for a month the year does not have, or
 
       * `{:error, exception}`, a `Calendrical.MissingFieldsError`, for a
         missing year or month.
@@ -1329,8 +1363,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.month(date.year, 99)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.month(date.year, 99)
 
       """
       def month(year, month), do: Calendrical.Period.month(__MODULE__, year, month)
@@ -1347,7 +1380,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * The quarter, `1` to `4`, or
 
-      * `{:error, :invalid_date}` for a date the calendar does not have,
+      * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar does not have,
         or
 
       * `{:error, exception}`, a `Calendrical.MissingFieldsError`, for a
@@ -1360,8 +1393,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.quarter_of_year(date.year, date.month, 0)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.quarter_of_year(date.year, date.month, 0)
 
       """
       unquote(calendar_impl)
@@ -1380,7 +1412,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * The day of the year, counted from 1 for its first day, or
 
-      * `{:error, :invalid_date}` for a date the calendar does not have,
+      * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar does not have,
         or
 
       * `{:error, exception}`, a `Calendrical.MissingFieldsError`, for a
@@ -1394,8 +1426,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.day_of_year(date.year, date.month, 0)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.day_of_year(date.year, date.month, 0)
 
       """
       unquote(calendar_impl)
@@ -1414,7 +1445,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * The number of days, or
 
-      * `{:error, :invalid_date}` for a year the calendar does not have,
+      * `{:error, %Calendrical.InvalidDateError{}}` for a year the calendar does not have,
         or
 
       * `{:error, exception}`, a `Calendrical.MissingFieldsError`, for no
@@ -1507,7 +1538,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       * `{day_of_week, 1, 7}`, the day numbered from the day the week
         begins on, or
 
-      * `{:error, :invalid_date}` for a date the calendar does not have,
+      * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar does not have,
         or
 
       * `{:error, exception}`, a `Calendrical.MissingFieldsError`, for a
@@ -1521,8 +1552,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           {6, 1, 7}
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.day_of_week(date.year, date.month, 0, :monday)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.day_of_week(date.year, date.month, 0, :monday)
 
       """
       unquote(calendar_impl)
@@ -1542,7 +1572,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       * `{year_of_era, era}`, the era in effect on the year's first day,
         or
 
-      * `{:error, :invalid_date}` for a year the calendar does not have,
+      * `{:error, %Calendrical.InvalidDateError{}}` for a year the calendar does not have,
         or
 
       * `{:error, exception}`, a `Calendrical.MissingFieldsError`, for no
@@ -1569,7 +1599,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * `{year_of_era, era}`, or
 
-      * `{:error, :invalid_date}` for a date the calendar does not have,
+      * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar does not have,
         or
 
       * `{:error, exception}`, a `Calendrical.MissingFieldsError`, for no
@@ -1583,8 +1613,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.year_of_era(date.year, 99, 1)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.year_of_era(date.year, 99, 1)
 
       """
       unquote(calendar_impl)
@@ -1604,7 +1633,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       * `{day_of_era, era}`, where the day of the era counts from the
         era's first day, or
 
-      * `{:error, :invalid_date}` for a date the calendar does not have,
+      * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar does not have,
         or
 
       * `{:error, exception}`, a `Calendrical.MissingFieldsError`, for a
@@ -1619,8 +1648,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.day_of_era(date.year, date.month, 0)
-          {:error, :invalid_date}
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.day_of_era(date.year, date.month, 0)
 
       """
       unquote(calendar_impl)
@@ -1639,6 +1667,8 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * The year numbered without a gap at 0, so that in a calendar with
         no year 0 the year before 1 is 0, or
+
+      * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar does not have, or
 
       * `{:error, exception}`, a `Calendrical.MissingFieldsError`, for no
         year.
@@ -1667,7 +1697,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * The Gregorian year the date's calendar year begins in, or
 
-      * `{:error, :invalid_date}` for a year the calendar does not have,
+      * `{:error, %Calendrical.InvalidDateError{}}` for a year the calendar does not have,
         or
 
       * `{:error, exception}`, a `Calendrical.MissingFieldsError`, for no
@@ -1697,7 +1727,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
         Asian calendar, and its year in a calendar whose years run in no
         such cycle, or
 
-      * `{:error, :invalid_date}` for a year the calendar does not have,
+      * `{:error, %Calendrical.InvalidDateError{}}` for a year the calendar does not have,
         or
 
       * `{:error, exception}`, a `Calendrical.MissingFieldsError`, for no
@@ -1823,10 +1853,14 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * `{:ok, {year, month, day}}`, or
 
-      * `{:error, :invalid_format}` where the fields are not digits, or
+      * `{:error, :invalid_format}` where the text is not in that form or
+        its fields are not digits, or
 
       * `{:error, :invalid_date}` where the text names no date of this
         calendar.
+
+      The reason is an atom, not an exception, because `c:Calendar.parse_date/1`
+      requires one: `Date.from_iso8601/2` reads it.
 
       ### Examples
 
@@ -1835,7 +1869,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
           iex> #{inspect(__MODULE__)}.parse_date("not a date")
-          {:error, :invalid_date}
+          {:error, :invalid_format}
 
       """
       unquote(calendar_impl)
@@ -1857,6 +1891,10 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * `{:error, reason}`, such as `:invalid_format`, `:invalid_date` or
         `:missing_offset`, where the text is no such datetime.
+
+      The reason is an atom, not an exception, because
+      `c:Calendar.parse_utc_datetime/1` requires one:
+      `DateTime.from_iso8601/2` reads it.
 
       ### Examples
 
@@ -1887,6 +1925,10 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * `{:error, reason}`, such as `:invalid_format` or `:invalid_date`,
         where the text is no such datetime.
+
+      The reason is an atom, not an exception, because
+      `c:Calendar.parse_naive_datetime/1` requires one:
+      `NaiveDateTime.from_iso8601/2` reads it.
 
       ### Examples
 
@@ -2060,21 +2102,86 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       defdelegate iso_days_to_end_of_day(iso_days), to: Calendar.ISO
 
       @doc """
+      Adds whole years, quarters or months to the fields of a naive
+      datetime, keeping its time of day: the `add/9` callback
+      [`CalendarInterval`](https://hexdocs.pm/calendar_interval) steps an
+      interval of a year or a month with. The date moves as `shift/6`
+      moves it, clamping the day into a shorter month.
+
+      ### Arguments
+
+      * `year`, `month` and `day` are the date's fields in this calendar.
+
+      * `hour`, `minute`, `second` and `microsecond` are the time of day,
+        returned unchanged.
+
+      * `precision` is `:year`, `:quarter` or `:month`.
+
+      * `step` is the number of years, quarters or months to add, which
+        may be negative.
+
+      ### Returns
+
+      * `{year, month, day, hour, minute, second, microsecond}`.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> {year, month, day, 12, 30, 0, {0, 0}} =
+          ...>   #{inspect(__MODULE__)}.add(date.year, date.month, date.day, 12, 30, 0, {0, 0}, :month, 1)
+          iex> {year, month, day} == #{inspect(__MODULE__)}.shift(date.year, date.month, date.day, :months, 1, [])
+          true
+
+      """
+      def add(year, month, day, hour, minute, second, microsecond, :year, step),
+        do:
+          add_time(
+            shift(year, month, day, :years, step, clamp: true),
+            hour,
+            minute,
+            second,
+            microsecond
+          )
+
+      def add(year, month, day, hour, minute, second, microsecond, :quarter, step),
+        do:
+          add_time(
+            shift(year, month, day, :quarters, step, clamp: true),
+            hour,
+            minute,
+            second,
+            microsecond
+          )
+
+      def add(year, month, day, hour, minute, second, microsecond, :month, step),
+        do:
+          add_time(
+            shift(year, month, day, :months, step, clamp: true),
+            hour,
+            minute,
+            second,
+            microsecond
+          )
+
+      defp add_time({year, month, day}, hour, minute, second, microsecond),
+        do: {year, month, day, hour, minute, second, microsecond}
+
+      @doc """
       Returns the number of years after which this calendar's years
-      repeat, as its `info/0` states, or `{:error, :undefined}`.
+      repeat, as its `info/0` states, or `{:error, %Calendrical.NotDefinedError{}}`.
 
       ### Returns
 
       * The number of years in the cycle, or
 
-      * `{:error, :undefined}` where the calendar states none.
+      * `{:error, %Calendrical.NotDefinedError{}}` where the calendar states none.
 
       ### Examples
 
           # A year has as many days as the year one cycle later
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
           iex> case #{inspect(__MODULE__)}.years_in_cycle() do
-          ...>   {:error, :undefined} -> true
+          ...>   {:error, %Calendrical.NotDefinedError{}} -> true
           ...>   years -> #{inspect(__MODULE__)}.days_in_year(date.year) == #{inspect(__MODULE__)}.days_in_year(date.year + years)
           ...> end
           true
@@ -2098,7 +2205,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       * `{:ok, date}`, a `t:Date.t/0` in `Calendrical.Gregorian`, or
 
-      * `{:error, {:invalid_solar_term, index}}` where `index` is not
+      * `{:error, %Calendrical.InvalidSolarTermError{}}` where `index` is not
         `1` to `24`.
 
       ### Examples
@@ -2108,7 +2215,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           {:ok, ~D[2025-04-04 Calendrical.Gregorian]}
 
           iex> #{inspect(__MODULE__)}.solar_term(25, 2025)
-          {:error, {:invalid_solar_term, 25}}
+          {:error, %Calendrical.InvalidSolarTermError{index: 25}}
 
       """
       def solar_term(index, gregorian_year),

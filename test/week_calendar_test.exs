@@ -40,8 +40,12 @@ defmodule Calendrical.Week.Test do
 
     assert Calendrical.ISOWeek.days_in_month(2026, 12) == 35
     assert Calendrical.ISOWeek.days_in_month(2025, 12) == 28
-    assert Calendrical.ISOWeek.days_in_month(2026, 13) == {:error, :invalid_date}
-    assert Calendrical.ISOWeek.days_in_month(2026, 0) == {:error, :invalid_date}
+
+    assert {:error, %Calendrical.InvalidMonthError{year: 2026, month: 13}} =
+             Calendrical.ISOWeek.days_in_month(2026, 13)
+
+    assert {:error, %Calendrical.InvalidMonthError{year: 2026, month: 0}} =
+             Calendrical.ISOWeek.days_in_month(2026, 0)
 
     assert {:error, %Calendrical.MissingFieldsError{}} =
              Calendrical.ISOWeek.days_in_month(nil, 6)
@@ -194,8 +198,8 @@ defmodule Calendrical.Week.Test do
     end
 
     assert calendar.days_in_month(12) == {:ambiguous, [35, 42]}
-    assert calendar.days_in_month(13) == {:error, :undefined}
-    assert calendar.days_in_month(0) == {:error, :undefined}
+    assert {:error, %Calendrical.NotDefinedError{}} = calendar.days_in_month(13)
+    assert {:error, %Calendrical.NotDefinedError{}} = calendar.days_in_month(0)
     assert Calendrical.ISOWeek.days_in_month(6) == 28
     assert Calendrical.ISOWeek.days_in_month(12) == {:ambiguous, [28, 35]}
   end

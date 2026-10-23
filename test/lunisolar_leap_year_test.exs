@@ -58,7 +58,7 @@ defmodule Calendrical.LunisolarLeapYear.Test do
       # month), accepting day 30 and silently rolling it into month 2.
       assert LunarJapanese.days_in_month(569, 1) == 29
       assert {:ok, _date} = LunarJapanese.new(569, 1, 29)
-      assert {:error, :invalid_date} = LunarJapanese.new(569, 1, 30)
+      assert {:error, %Calendrical.InvalidDateError{}} = LunarJapanese.new(569, 1, 30)
     end
   end
 

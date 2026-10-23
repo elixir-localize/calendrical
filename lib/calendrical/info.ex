@@ -86,6 +86,11 @@ defmodule Calendrical.Info do
             family: Calendrical,
             members: nil
 
+  # Larger than any month or day a calendar has: the upper bound of a
+  # partial date's missing field when its member is looked up. Its lower
+  # bound is 1, the first month and day.
+  @past_any_field 10_000
+
   @doc """
   Builds the facts about a calendar from the fields given, with the
   defaults a calendar leaves unsaid.
@@ -163,8 +168,10 @@ defmodule Calendrical.Info do
 
   ### Returns
 
-  * The number of years in the cycle, or `{:error, :undefined}` where the
-    calendar states none.
+  * The number of years in the cycle, or
+
+  * `{:error, %Calendrical.NotDefinedError{}}` where the calendar states
+    none.
 
   ### Examples
 
@@ -172,12 +179,12 @@ defmodule Calendrical.Info do
       400
 
       iex> Calendrical.Info.years_in_cycle(Calendrical.Chinese)
-      {:error, :undefined}
+      {:error, %Calendrical.NotDefinedError{calendar: Calendrical.Chinese, question: :years_in_cycle}}
 
   """
-  @spec years_in_cycle(module()) :: pos_integer() | {:error, :undefined}
+  @spec years_in_cycle(module()) :: pos_integer() | {:error, Exception.t()}
   def years_in_cycle(calendar) do
-    calendar.info().years_in_cycle || {:error, :undefined}
+    calendar.info().years_in_cycle || not_defined(calendar, :years_in_cycle)
   end
 
   @doc """
@@ -219,9 +226,11 @@ defmodule Calendrical.Info do
 
   * The count where every year has as many months,
     `{:ambiguous, fewest..most}` where a leap year has more, or
-    `{:error, :undefined}` for a composite calendar, whose years change
-    calendar and so are not alike enough to count without a year;
-    `Calendrical.Month.months_in_year_bounds/1` gives its bounds.
+
+  * `{:error, %Calendrical.NotDefinedError{}}` for a composite calendar,
+    whose years change calendar and so are not alike enough to count
+    without a year; `Calendrical.Month.months_in_year_bounds/1` gives its
+    bounds.
 
   ### Examples
 
@@ -232,14 +241,14 @@ defmodule Calendrical.Info do
       {:ambiguous, 12..13}
 
       iex> Calendrical.Info.months_in_year(Calendrical.Reform.England)
-      {:error, :undefined}
+      {:error, %Calendrical.NotDefinedError{calendar: Calendrical.Reform.England, question: :months_in_year}}
 
   """
   @spec months_in_year(module()) ::
-          pos_integer() | {:ambiguous, Range.t()} | {:error, :undefined}
+          pos_integer() | {:ambiguous, Range.t()} | {:error, Exception.t()}
   def months_in_year(calendar) do
     case calendar.info() do
-      %{members: [_ | _]} -> {:error, :undefined}
+      %{members: [_ | _]} -> not_defined(calendar, :months_in_year)
       %{months_in_year: {months, months}} -> months
       %{months_in_year: {fewest, most}} -> {:ambiguous, fewest..most//1}
     end
@@ -315,23 +324,41 @@ defmodule Calendrical.Info do
   # first day, as the composite labels it, is on or before the date in the
   # order of its fields, so a date the composite lacks is still read in the
   # member its year falls in; `nil` for a calendar with no members.
-  defp member_in_effect(calendar, year, month, day)
-       when is_integer(year) and is_integer(month) and is_integer(day) do
-    case calendar.info().members do
-      nil ->
-        nil
+  # A partial date is governed by a member when every date it could be is:
+  # the member in effect on its earliest possible fields is the one in
+  # effect on its latest.
+  defp member_in_effect(calendar, year, month, day) when is_integer(year) do
+    members = calendar.info().members
 
-      members ->
-        members
-        |> Enum.take_while(fn {first, _member} ->
-          is_nil(first) or calendar.date_from_iso_days(first) <= {year, month, day}
-        end)
-        |> List.last()
-        |> elem(1)
-    end
+    if members && field?(month) && field?(day),
+      do: member_of_all(calendar, members, year, month, day)
   end
 
   defp member_in_effect(_calendar, _year, _month, _day), do: nil
+
+  defp member_of_all(calendar, members, year, month, day) do
+    earliest = member_on(calendar, members, {year, month || 1, day || 1})
+
+    latest =
+      member_on(calendar, members, {year, month || @past_any_field, day || @past_any_field})
+
+    if earliest == latest, do: earliest
+  end
+
+  defp field?(value), do: is_integer(value) or is_nil(value)
+
+  defp not_defined(calendar, question) do
+    {:error, Calendrical.NotDefinedError.exception(calendar: calendar, question: question)}
+  end
+
+  defp member_on(calendar, members, fields) do
+    members
+    |> Enum.take_while(fn {first, _member} ->
+      is_nil(first) or calendar.date_from_iso_days(first) <= fields
+    end)
+    |> List.last()
+    |> elem(1)
+  end
 
   @doc """
   Returns the calendar whose facts govern a date: the member of a

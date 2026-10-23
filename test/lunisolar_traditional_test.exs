@@ -6,7 +6,7 @@ defmodule Calendrical.LunisolarTraditional.Test do
 
   The bug being protected against: prior to the fix, calling
   `<Calendar>.new(year, {m, :leap}, day)` with the documented
-  traditional notation returned `{:error, :invalid_date}` because the
+  traditional notation returned `{:error, %Calendrical.InvalidDateError{}}` because the
   Lunisolar validity check compared the user's traditional month number
   against the ordinal position returned by `leap_month/1`.
 
@@ -27,11 +27,13 @@ defmodule Calendrical.LunisolarTraditional.Test do
     end
 
     test "rejects ordinal-pretending-to-be-traditional {M+1, :leap}" do
-      assert {:error, :invalid_date} = Calendrical.LunarJapanese.new(1210, {8, :leap}, 1)
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.LunarJapanese.new(1210, {8, :leap}, 1)
     end
 
     test "rejects {M, :leap} in a non-leap year" do
-      assert {:error, :invalid_date} = Calendrical.LunarJapanese.new(1211, {7, :leap}, 1)
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.LunarJapanese.new(1211, {7, :leap}, 1)
     end
 
     test "traditional integer month past the intercalary lands on the right Gregorian day" do
@@ -60,8 +62,8 @@ defmodule Calendrical.LunisolarTraditional.Test do
       assert %Date{} = Calendrical.LunarJapanese.new!(1210, {7, :leap}, 1)
     end
 
-    test "raises ArgumentError on invalid input" do
-      assert_raise ArgumentError, fn ->
+    test "raises InvalidDateError on invalid input" do
+      assert_raise Calendrical.InvalidDateError, fn ->
         Calendrical.LunarJapanese.new!(1211, {7, :leap}, 1)
       end
     end
@@ -113,7 +115,8 @@ defmodule Calendrical.LunisolarTraditional.Test do
     end
 
     test "rejects ordinal {3, :leap}" do
-      assert {:error, :invalid_date} = Calendrical.Chinese.new(4660, {3, :leap}, 1)
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.Chinese.new(4660, {3, :leap}, 1)
     end
 
     test "traditional integer month past intercalary maps to ordinal+1" do
@@ -145,7 +148,8 @@ defmodule Calendrical.LunisolarTraditional.Test do
     end
 
     test "rejects ordinal {3, :leap}" do
-      assert {:error, :invalid_date} = Calendrical.Korean.new(4356, {3, :leap}, 1)
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.Korean.new(4356, {3, :leap}, 1)
     end
 
     test "Buddha's birthday (lunar M4 D8) in a leap year lands on the correct Gregorian day" do

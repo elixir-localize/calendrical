@@ -8,271 +8,217 @@ The format is based on
 
 ## [2.0.0] — 2026-10-23
 
-Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and derives the rest. The guides describe the design; the entries here are what a consumer of 1.x sees change.
+Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and derives the rest. The [migration guide](https://hexdocs.pm/calendrical/migration.html) describes each change in full.
 
 ### Breaking changes
 
-* The `Calendrical` behaviour has eight callbacks: `info/0`, `date_to_iso_days/3`, `date_from_iso_days/1`, `leap_month/1`, `written_date/3`, `date_from_written_date/3`, `shift/6` and `diff/3`. The other 50 callbacks of 1.4 are derived functions every calendar module still answers, but they are no longer the behaviour's and cannot be overridden.
+* The `Calendrical` behaviour has eight callbacks: `info/0`, `date_to_iso_days/3`, `date_from_iso_days/1`, `leap_month/1`, `written_date/3`, `date_from_written_date/3`, `shift/6` and `diff/3`. The other callbacks of 1.3 are derived functions every calendar still answers but cannot override.
 
-* `use Calendrical.Behaviour` is `use Calendrical.Calendar`, with `months_in_year: 13` or `{12, 13}` in place of `:months_in_ordinary_year` and `:months_in_leap_year`, `weeks: [first_day: 7, min_days_in_first_week: 1]` or `:from_first_day` in place of `:first_day_of_week`, and no `:cldr_calendar_base` or `:days_in_week`. An option a maker does not read is refused at compile time.
+* `use Calendrical.Behaviour` is `use Calendrical.Calendar`, with `months_in_year:` and `weeks:` in place of the old month and week options. A maker refuses an option it does not read at compile time.
 
-* `use Calendrical.Base.Month`, `use Calendrical.Base.Week` and `use Calendrical.Julian` are `use Calendrical.Calendar.Shifted` and `use Calendrical.Calendar.Weeks`, and `Calendrical.new/3` takes their options: `year_begins: {7, 1}` and `year_number: :ending` for a year begun elsewhere, `pattern: [4, 5, 4]` with `year_begins: {:monday, :on_or_before, {1, 4}}` or `year_ends: {:saturday, :nearest, {1, 31}}` for a year of whole weeks. The `:month_of_year`, `:day_of_week`, `:min_days_in_first_week`, `:first_or_last`, `:begins_or_ends`, `:weeks_in_month`, `:year` and `:new_year_starting_month_and_day` options are gone.
+* Every error is `{:error, exception}`: `:invalid_date`, `:invalid_month`, `:undefined`, `:not_defined`, `:year_out_of_range` and `:unknown_territory` are exceptions, mapped in the migration guide. Only the `Calendar` parse callbacks, `date_from_written_date/3` and `written_month_from_cldr_month/2` keep their atoms.
 
-* `plus/6` is `shift/6` and its `:coerce` option is `:clamp`, `true` by default in every calendar: a day the month reached lacks becomes its last day, a traditional month the year reached lacks becomes the month it repeats, and a count across a missing year 0 goes a year further.
+* `days_in_month/2` returns `{:error, %Calendrical.InvalidMonthError{}}` in every calendar for a month its year does not have, where it raised `FunctionClauseError` or answered `0`.
 
-* Every calendar numbers whole weeks by TR35's rule from its own first day of the week and `min_days_in_first_week`, which default to Monday and 1: week 1 is the first week holding at least that many days of the year, and the days before it belong to the last week of the year before. The hand-written, Julian and composite calendars cut their weeks at the year's ends in 1.4; `weeks_in_year/1` answers an integer.
+* `Calendrical.Reform` returns `Calendrical.UnknownReformError` for a territory it has no reform for, and the lunisolar `new!/3` raises `Calendrical.InvalidDateError`.
 
-* A Hebrew date is written with its month's place in the year, as ICU writes it (`7/15/5786` for 15 Nisan of an ordinary year), while its month's name stays CLDR's (Nisan is month 8). `written_date/3` carries the figures and `Calendrical.Month.cldr_month/3` the name.
+* `shift/6` returns `Calendrical.InvalidDateError` for a `{year, month, day}` that is no date, where it shifted the fields to another non-date; `Date.shift/2` raises it.
 
-* `month_of_year/3` is the CLDR month a date's month is named by, which `cardinal_month/1` used to add: a fiscal year begun in July answers 7 for its month 1. A question that needs no day is answered for a month's 1st where the month has days but begins later.
+* `months_in_year/1` returns `Calendrical.MissingFieldsError` for a `nil` year in every calendar, where some raised and others answered a count.
 
-* `calendar_year/3`, `cardinal_year/3`, `date_from_cardinal_date/3`, `epoch_day_of_week/0`, `first_day_of_week/0`, `last_day_of_week/0`, `__config__/0` and the forms of `leap_year?/1`, `leap_month/1`, `leap_month?/2`, `cyclic_year/3`, `lunar_month_of_year/2` and `date_to_iso_days/3` that took a `Date` or a tuple are gone. The lunisolar calendars' `julian_date/3` is `base_date/3` on every shifted calendar.
+* `use Calendrical.Base.Month`, `use Calendrical.Base.Week` and `use Calendrical.Julian` are `use Calendrical.Calendar.Shifted` and `use Calendrical.Calendar.Weeks`, and `Calendrical.new/3` takes their options (`year_begins:`, `year_ends:`, `year_number:`, `pattern:`). The guide maps each old option.
 
-* `days_in_month/1` answers for a composite calendar with the range its members span (`months_in_year/0` stays `{:error, :undefined}` for one), and a month's lengths that are not consecutive are a list, `[28, 35]` for a week calendar's last month.
+* `plus/6` is `shift/6` and `:coerce` is `:clamp`, `true` by default in every calendar, including the Julian calendars where `:coerce` defaulted to `false`.
 
-* A date of a calendar of weeks (`Calendrical.ISOWeek`, `Calendrical.NRF`, one made with `Calendrical.new/3`) is a year, a month of its pattern of weeks and a day of that month, as `Date.new/4` takes a date of any calendar, where its month field held the week and its day field the day of the week: the second day of week 25 is `~D[2026-06-16 Calendrical.NRF]`, and `Date.new(2026, 25, 2, Calendrical.NRF)` is an error. The week is asked for (`week_of_year/3`, `week_date_from_date/3`) and given (`date_from_week_date/3`, and `parse_date/1` and `~D` still read `2026-W25-2`); a date is written `2026-06-16`, and `days_in_month/2` counts a month's 28 or 35 days.
+* Every calendar numbers whole weeks by TR35's rule from its own first day of the week, and `weeks_in_year/1` answers an integer. The hand-written, Julian and composite calendars cut their weeks at the year's ends in 1.3.
 
-* A month or week calendar's `day_of_era/3` gives a date its calendar year's era, as `year_of_era/3` does, and counts era 1 from the first day of calendar year 1: a fiscal year 0 running into AD 1 kept the Gregorian era, and NRF's days now count 34 fewer.
+* A Hebrew date's month is its position in the year (Adar is 6 and Nisan 7 in an ordinary year), as `Date.new/4` and ICU expect, while its name stays CLDR's. `days_in_month/2` is 0 for a month the year lacks.
 
-* `Calendrical.TimeZone.resolve/3` is `Localize.DateTime.Timezone.resolve/3`: errors are exceptions where they were atoms, abbreviations resolve only in a locale whose CLDR data writes them (JST in `ja`, BST in `en-GB`), a fixed offset is labelled with the offset, and a repeated hour is read in standard time.
+* `month_of_year/3` is the CLDR month a date's month is named by, which `cardinal_month/1` used to add: a fiscal year begun in July answers 7 for its month 1.
 
-* `Calendrical.strftime/3` returns `{:ok, string}` or `{:error, exception}` where it raised on an invalid locale, format, option or value; `Calendrical.strftime!/3` returns the string. It now passes `Calendar.strftime/3`'s own options, such as `:preferred_date`, through instead of dropping them.
+* `calendar_year/3`, `epoch_day_of_week/0`, `first_day_of_week/0`, `last_day_of_week/0`, `__config__/0`, `Calendrical.start_end_gregorian_years/2` and the `Date` and tuple forms of `leap_year?/1`, `leap_month/1`, `leap_month?/2`, `cyclic_year/3`, `lunar_month_of_year/2` and `date_to_iso_days/3` are removed.
 
-* A calendar of weeks names its months from CLDR's generic calendar, "M01" to "M12", since they are the ordinal periods of its pattern of weeks and have no names: its `cldr_calendar_type/0` is `:generic`, where `Calendrical.ISOWeek` and `Calendrical.NRF` named period 7 "Jul". Its eras keep the Gregorian names through `era_calendar_type/0`.
+* The Julian year-start variants' `date_from_julian_date/3` is `date_from_base_date/3`, beside a new `base_date/3`. They carry counted months, so a variant whose year begins within a month (`March25`, `Dec25`) has thirteen.
 
-* `Calendrical.parse/2`, `Calendrical.Date.parse/2` and `parse_range/2`, `Calendrical.Time.parse/2` and `Calendrical.DateTime.parse/2` delegate to Localize's parsers and return its errors, so `Calendrical.DateParseError`, `DateRangeParseError`, `DateTimeParseError`, `TimeParseError` and `ParseError` are removed. Results change where Localize is more correct: `week N of YYYY` counts the calendar's own weeks, ISO 8601's for `Calendar.ISO`, an ISO 8601 offset is kept rather than normalised to UTC, and an unknown `:calendar` is an error.
+* `Calendrical.Julian.Dec25` and `Calendrical.Julian.Sept1` number a year by the Julian year it ends in, as the Nativity and Byzantine years were reckoned. The Julian year-start variants take a date's era from its label year.
 
-* `Calendrical.Hebrew` numbers a date's month by its position in the year, as `Date.new/4` and `months_in_year/1` expect, instead of by CLDR's fixed numbers: in an ordinary year Adar is month 6, Nisan 7 and Elul 12. Leap-year dates are unchanged, and `days_in_month/2` returns 0 for a month the year does not have.
+* A date of a calendar of weeks (`Calendrical.ISOWeek`, `Calendrical.NRF`) is a year, a month of its pattern and a day of that month, so the second day of week 25 is `~D[2026-06-16 Calendrical.NRF]`. `week_of_year/3` and `date_from_week_date/3` convert, and `~D` still reads `2026-W25-2`.
 
-* The parse functions' `:calendar` option is a calendar module, and the date is returned in it: a CLDR calendar name such as `:hebrew` returns `Localize.UnknownCalendarError`, and a calendar that shares its CLDR type with another, such as `Calendrical.Gregorian` or a fiscal or composite calendar, no longer comes back as `Calendar.ISO`. `:return_calendar` is removed; convert the result with `Date.convert/2`.
+* A calendar of weeks names its months "M01" to "M12" from CLDR's generic calendar (`cldr_calendar_type/0` is `:generic`) and keeps Gregorian era names.
 
-* `Calendrical.DateTime.parse/2` keeps an ISO 8601 offset's wall time, so "2026-05-23T14:30:00+05:00" is 14:30 at +05:00 rather than 09:30 UTC — the struct a locale-formatted offset already gave.
+* `days_in_month/1` answers a composite with the range its members span, and month lengths that are not consecutive are a list, `[28, 35]` for a week calendar's last month.
 
-* `Calendrical.Coptic` has CLDR 49's single era, so its years before 1 are year 0, -1 and so on of anno martyrum (`{-5, 1}`), not an era 0 that CLDR no longer names. `Calendrical.Ethiopic` gives them to Amete Alem, 5500 years earlier, as CLDR and ICU do: year -50 is `{5450, 0}`, not `{50, 0}`.
+* A month or week calendar's `day_of_era/3` counts era 1 from the first day of calendar year 1, so NRF's days count 34 fewer.
 
-* The Julian new-year variants (`March1`, `March25`, `Sept1`, `Dec25`) take a date's era and year of era from its label year, so 24 March AD 1 is 1 BC in `March25`, where it was AD 1 and was written as the following year's 24 March.
+* `Calendrical.TimeZone.resolve/3` is `Localize.DateTime.Timezone.resolve/3`: errors are exceptions, abbreviations resolve only in a locale whose CLDR data writes them, and a repeated hour is read in standard time.
 
-* The Julian new-year variants carry counted months: month 1 begins on the new-year day, a variant whose year begins within a Julian month (`March25`, `Dec25`) has thirteen, and a date's fields are in the order of its days, so `Date.compare/2`, `Date.beginning_of_month/1` and `days_in_month/2` hold. The Julian month and day that name a date are answered by `cardinal_month/1`, `cardinal_day/3` and `julian_date/3`, with `month_of_year/3` the month field itself, as the fiscal calendars answer it; `julian_date/3` gives the whole Julian date.
+* `Calendrical.strftime/3` returns `{:ok, string}` or `{:error, exception}` where it raised; `Calendrical.strftime!/3` returns the string. It passes `Calendar.strftime/3`'s own options through.
 
-* A composite's members count their own months, so a change that moves the day a year begins on gives the incoming calendar's label year its whole counted year: England's 1155 is the Lady Day year, 25 March 1155 to 24 March 1156, and the days 1 January to 24 March 1155, whose labels it claims, have no dates and are in no year.
+* The parse functions delegate to Localize's parsers and return its errors, so `Calendrical.DateParseError`, `DateRangeParseError`, `DateTimeParseError`, `TimeParseError` and `ParseError` are removed. `week N of YYYY` counts the calendar's own weeks and an ISO 8601 offset is kept.
 
-* `Calendrical.Julian.Dec25` and `Calendrical.Julian.Sept1` number a year by the Julian year it ends in, as the Nativity style (C. R. Cheney, *A Handbook of Dates*) and the Byzantine year were reckoned: year 1100 begins on 25 December 1099 and on 1 September 1099, where each began a year later. `March1` and `March25` are unchanged, and a composite built on either changed calendar names its change of calendar in the new numbering.
+* The parse functions' `:calendar` option is a calendar module and the date is returned in it; `:return_calendar` is removed and returns a `Calendrical.RemovedOptionError`. A CLDR calendar name such as `:hebrew` is `Localize.UnknownCalendarError`.
 
-* `Calendrical.Composite.new/2` and `use Calendrical.Composite` refuse a configuration a composite cannot keep: a change on a day its calendar does not have, a calendar that is no calendar module (now `Calendrical.InvalidCalendarModuleError`, where it was `UndefinedFunctionError`), a composite or a calendar of weeks as a calendar, two changes on one day, or a calendar numbering its first year before the last year of the calendar before it, as the Hebrew calendar followed by the Gregorian from 1900 would. `new/2` returns `{:error, reason}` and `use` raises, where such a configuration made a calendar whose dates named the wrong days.
+* `Calendrical.Coptic` has CLDR 49's single era, so its years before 1 are 0, -1 and so on. `Calendrical.Ethiopic` gives them to Amete Alem: year -50 is `{5450, 0}`.
+
+* A composite's member counts its own months, so England's 1155 is the Lady Day year from 25 March 1155 to 24 March 1156. The Julian days 1 January to 24 March 1155, whose dates it takes, have no dates of their own.
+
+* `Calendrical.Composite.new/2` and `use Calendrical.Composite` refuse a configuration a composite cannot keep with a `Calendrical.InvalidCompositeError`, where `new/2` returned atoms such as `:no_calendars_configured`, and an option other than `:calendars` and `:base_calendar` with a `Calendrical.UnknownOptionError`.
+
+* Every calendar maker, and `Calendrical.new/3`, refuses an option it does not read with a `Calendrical.UnknownOptionError` and a value it cannot take with a `Calendrical.InvalidOptionValueError`.
+
+* `date_at/2`, `solar_term/2` and `Calendrical.Lunisolar.solar_term_name/1` return exceptions for errors: `Calendrical.InvalidOptionValueError`, `Calendrical.UnsupportedDateRangeError`, `Calendrical.NoDuskError` and `Calendrical.InvalidSolarTermError`.
 
 ### Added
 
-* `Calendrical.Info`, the facts of a calendar as data, with `in_effect/4`, `cldr_calendar_type/4` and `parsing_calendars/1` for composites.
+* `Calendrical.Info`, the facts of a calendar as data, with `in_effect/4` for composites; `info().month_lengths` states a calendar's month lengths where sampling them is slow.
 
-* `Calendrical.Month`, `Calendrical.Week`, `Calendrical.Period`, `Calendrical.Era` and `Calendrical.Shift`: the derived API, plain functions taking the calendar first, which every calendar's module functions delegate to.
+* `Calendrical.Month`, `Calendrical.Week`, `Calendrical.Period`, `Calendrical.Era` and `Calendrical.Shift`, the derived API every calendar module delegates to.
 
-* `Calendrical.Calendar.Shifted`, `Calendrical.Calendar.Weeks` and `Calendrical.Calendar.Lunisolar`, the makers of a year begun elsewhere, a year of whole weeks and a calendar reckoned from the sky, beside `Calendrical.Calendar` and `Calendrical.Composite`.
+* `Calendrical.Calendar.Shifted`, `Calendrical.Calendar.Weeks` and `Calendrical.Calendar.Lunisolar`, the makers of a year begun elsewhere, a year of whole weeks and a calendar reckoned from the sky.
 
-* `written_date/3` and `date_from_written_date/3` on every calendar, the figures a date is written with and their inverse, and `leap_month/1`, the position of a year's leap month.
+* `written_date/3`, `date_from_written_date/3` and `leap_month/1` on every calendar.
 
-* `info().month_lengths` declares the lengths a calendar's months can have where sampling them is expensive, as the sighting Islamic calendars do; otherwise `Calendrical.Month.lengths/1` samples one cycle of years and caches the answer.
+* `Calendrical.diff/3` and a `diff/3` callback on every calendar count whole years, quarters, months, weeks or days as `shift/6` adds them.
 
-* `Calendrical.named_month/3` gives the days of a named month in the order of time, in two ranges where a year-start variant splits it.
+* `add/9`, the callback `CalendarInterval` steps an interval of a year or month with, on every calendar, where only month and week calendars had it.
 
-* `Calendrical.strftime/3` writes `%d` and `%m` as the day and the month every calendar says its date is written with (`cardinal_day/3`, `numeric_month/3`), so `%d %B %Y` of a Julian year-start date is one date: "25 March 1750" from `March25`'s month 1 day 1.
+* Quarters on every calendar, and `quadrimester/2` and `semester/2` with `Calendrical.Interval.quadrimester/3` and `semester/3`.
 
-* Every calendar answers `calendar_from_cldr_calendar_type/1` with the calendar module of its family whose CLDR calendar type is the one given, and Calendrical registers itself through `Localize.Calendar.register_provider/1` as its application starts. Localize writes a date in the calendar a locale's `-u-ca-` names, which a `Calendar.ISO` value has no family of its own to supply: `en-u-ca-hebrew` writes 2026-05-16 as "29 Iyar 5786".
+* `solar_term/2` on every calendar and `Calendrical.Lunisolar.solar_term_name/1` give the date and name of each of the 24 solar terms.
 
-* A composite calendar names its member calendars with `parsing_calendars/0`, the base calendar first and the rest in the order they take effect. A date written with a member's formats then reads back: `Calendrical.Reform.Japan`'s "Mo5 11, 1872" is read in its lunisolar member, where the formats of its own CLDR type do not read it.
+* `Calendrical.Vietnamese`, the Chinese lunisolar calendar observed from Hanoi's meridian, so Tết differs from the Chinese New Year in 1985, 2007, 2030 and 2053.
 
-* `Calendrical.diff/3`, and a `diff/3` callback on every calendar, count the whole years, quarters, months, weeks or days from one date to another — the inverse of `shift/6`, negative backwards. The Hebrew and lunisolar calendars count months in one calculation, from the Metonic cycle and the new moons.
+* `Calendrical.Reform.England`, England's 1155, 1751 and 1752 calendar reforms as a composite calendar.
 
-* `calendar_from_cldr_calendar_type/1` and `additional_calendars/0` give every calendar Calendrical implements an IXDTF `[u-ca=…]` identifier where no CLDR type reaches it: `iso8601` (`Calendrical.ISO`, the Gregorian calendar with ISO 8601's week rules), `iso-week`, `vietnamese`, `lunar-japanese`, `nrf`, the Julian year-start variants (`julian-march25`…) and the reform calendars (`reform-england`…), beside `julian`.
+* `date_at/2` on the Islamic and Hebrew calendars maps an instant to a date under a `:day_start` of `:midnight` (the default), `:evening`, `:sunset` or (Hebrew) `:nightfall`.
 
-* Every calendar has quarters, and new `quadrimester/2` and `semester/2` callbacks (with `Calendrical.Interval.quadrimester/3` and `semester/3`): runs of 3, 4 or 6 traditional months, a leap month with the month it repeats (Hebrew Adar I in the second quarter) and a thirteenth month in the last period (Coptic, Ethiopic).
+* `dates_in_gregorian_year/3` on every calendar gives the dates of a calendar month and day within a Gregorian year.
 
-* `Calendrical.Hebrew.ordinal_month_from_traditional/2`, `lunar_month_of_year/2`, `leap_month/1` and `traditional_leap_month/1` convert between a Hebrew month's position and its RFC 7529 traditional month (Adar I is `{5, :leap}`), as the lunisolar calendars do.
+* `calendar_from_cldr_calendar_type/1` and `additional_calendars/0` give every calendar an IXDTF `[u-ca=…]` identifier, and Calendrical registers itself as Localize's calendar provider.
 
-* `Calendrical.Vietnamese` — the Chinese lunisolar calendar observed from the 105° East (Hanoi) meridian, so Tết diverges from the Chinese New Year in 1985 (by a month), 2007, 2030 and 2053. It borrows the `:chinese` CLDR type, and `vi-u-ca-chinese` (or `Preference.calendar_from_territory(:VN, :chinese)`) resolves to it rather than `Calendrical.Chinese`.
+* `Calendrical.named_month/3`, the days of a named month in the order of time.
 
-* `dates_in_gregorian_year/3` on every calendar (and `Calendrical.dates_in_gregorian_year/4` for a runtime-chosen calendar) returns the zero, one or two dates of a calendar month and day that fall within a given Gregorian year, accounting for calendar-year drift and dates that exist only in leap years.
+* A composite calendar's `parsing_calendars/0` names its members, so a date written in a member's formats reads back.
 
-* `Calendrical.Reform.England` — a pre-built composite calendar for England's three transitions: the 1155 March 25 year-start, the 1751 January 1 year-start (making 1751 a 282-day year), and the 1752 Julian → Gregorian switch that dropped 3–13 September 1752.
+* `Calendrical.Hebrew` converts between a month's position and its RFC 7529 traditional month, as the lunisolar calendars do.
 
-* `date_at/2` maps an instant to the calendar date under a chosen `:day_start` on the sunset-day-start calendars: `Calendrical.Islamic.UmmAlQura`, `.Rgsa` and `.Observational` (`:midnight`, an `:evening` 18:00 proxy, or true `:sunset`/Maghrib at Mecca or Cairo), and `Calendrical.Hebrew` (`:midnight`, `:sunset`, or `:nightfall`/tzeit at the observer's `:location` — default Jerusalem — with a configurable `:nightfall_angle`). Midnight stays the default, so the calendars are otherwise unchanged.
-
-* `mix calendrical.umm_al_qura.verify` audits the embedded Umm al-Qura tables, and with `--kacst` compares them with KACST's official data to detect later revisions.
-
-* `ordinal_month_from_traditional/2` on the Chinese, Korean, Vietnamese and Lunar Japanese calendars returns the ordinal month of a traditional month (`{month, :leap}` included), and their `days_in_month/1` returns `{:ambiguous, 29..30}`.
+* `mix calendrical.umm_al_qura.verify` audits the embedded Umm al-Qura tables, and with `--kacst` compares them with KACST's data.
 
 ### Changed
 
-* `Calendrical.Calendar.Weeks` implements the kernel from its options alone: the year's first day from the weekday rule and each month from the weeks of the pattern before it, with month arithmetic a count of months and a clamped day. `Calendrical.Base.Week`, `Calendrical.Config` and `Calendrical.Compiler.Week` are gone, and with them `__config__/0` on a calendar of weeks and `Calendrical.start_end_gregorian_years/2`.
+* Requires `localize ~> 1.4` and `astro ~> 2.8`.
 
-* `Calendrical.Gregorian` and `Calendrical.ISO` are hand-written calendars over `Calendar.ISO`, and the base of the fiscal years and of the month calendars `Calendrical.new/3` makes.
+* The optional `tz_world` requirement is `~> 2.3`, where it was `~> 1.0`.
 
-* A composite calendar finds a shifted member's civil calendar through the member's `base/0`.
+* The package's licenses are `Apache-2.0` and `Unicode-3.0`: the Umm al-Qura months for 1501 to 1600 AH are derived from ICU.
 
-* The era primitives `year_of_era/3` and `day_of_era/3` answer `{:error, :invalid_date}` for a date the calendar lacks in every calendar, and a nil field is a `Calendrical.MissingFieldsError`.
+* `Calendrical.Islamic.UmmAlQura` uses KACST's official month lengths for 1 to 1500 AH and ICU's for 1501 to 1600 AH, and the civil calendar outside them.
 
-* The package's licenses are `Apache-2.0` and `Unicode-3.0`: the Umm al-Qura months for 1501 to 1600 AH are derived from ICU, whose notice is in `LICENSE-UNICODE.md`.
+* `Calendrical.Persian` computes its new year from the bundled ephemeris for Persian years 1279 to 1479 and uses ICU's arithmetic cycle outside them. `new_year_gregorian/1` and `year_end_gregorian/1` cover Gregorian years 1900 to 2100.
 
-* `Calendrical.Islamic.UmmAlQura` takes ICU4C's months for 1501 to 1600 AH after KACST's for 1 to 1500 AH, where it used the civil calendar, so it matches ICU from 1300 AH on; before 1300 it keeps KACST's months, documented.
+* `Calendrical.Gregorian` and `Calendrical.ISO` are hand-written calendars over `Calendar.ISO`.
 
-* `Calendrical.UnsupportedDateRangeError`'s `:range` is data, `:jpl_ephemeris` from the Islamic visibility calculations, written as a whole translated sentence, where an English phrase was bound untranslated into the message.
+* Japanese era boundaries before Meiji are the proleptic Gregorian dates Localize publishes, and `Calendrical.LunarJapanese` counts an era's years from the lunar year of its proclamation.
 
-* Requires `localize ~> 1.4`, which implements the date, time, datetime and interval parsers, asks a calendar for its kernel, and names months through `cldr_month/2`.
+* `Calendrical.Preference` resolves `-u-ca-iso8601` to `Calendrical.ISO`, the Gregorian calendar with ISO 8601's week rules, instead of `Calendrical.ISOWeek`.
 
-* Requires `astro ~> 2.8`, which computes positions from the JPL ephemeris it bundles.
+* `quarter_of_year/3` answers for the Hebrew, Coptic and Ethiopic calendars, where it returned `{:error, :not_defined}`.
 
-* `Calendrical.Persian.new_year_gregorian/1` and `year_end_gregorian/1` compute Gregorian years 1900 to 2100, the ephemeris Astro bundles, and return `{:error, :year_out_of_range}` outside them, where they took 1000 to 3000.
+* `next/3` and `previous/3` step a week range to the week holding the day after or before it, so a week cut short at a year's end is never skipped.
 
-* Japanese era boundaries before Meiji are the proleptic Gregorian dates Localize now publishes, read as they are instead of converted from CLDR's lunisolar values, and `Calendrical.LunarJapanese` counts an era's years from the lunar year of its proclamation.
+* The lunisolar calendars compute each new moon once per question, a quarter as many across a holiday corpus.
 
-* `Calendrical.Preference` resolves a locale's `-u-ca-iso8601` to `Calendrical.ISO`, the Gregorian calendar with ISO 8601's week rules, as the IXDTF identifier `[u-ca=iso8601]` does, instead of the ISO week-date calendar `Calendrical.ISOWeek`.
-
-* `next/3` and `previous/3` step a week range to the week holding the day after or before it, so a week cut short at the end of a year is never stepped over.
-
-* `weeks_to_days/1` takes a fractional number of weeks, as it always has, and documents that it truncates to whole days: `weeks_to_days(1.5)` is 10.
-
-* `quarter_of_year/3` returns the quarter `quarter/2` puts the month in, so the Hebrew, Coptic and Ethiopic calendars answer it rather than returning `{:error, :not_defined}`.
-
-* `first_day_for_territory/1` and `min_days_for_territory/1` (and their locale variants) resolve from Localize's runtime week data instead of clauses compiled from it, so the values follow the loaded CLDR data without recompiling Calendrical. Results are unchanged for every territory.
-
-* `Calendrical.Islamic.Visibility` types its crescent-visibility criterion as `t:Calendrical.Islamic.Visibility.method/0` (`:odeh`, `:schaefer` or `:yallop`) instead of `atom()`, and several constant functions narrow their specs to what they actually return.
-
-* The Chinese, Korean, Vietnamese and Lunar Japanese calendars find a year's new year once per question and each new moon once, so `valid_date?/3`, `days_in_month/2`, `days_in_year/1`, `leap_year?/1`, `leap_month/1`, `new/3` and `lunar_month_of_year/2` ask for far fewer new moons — a quarter as many across a lunisolar holiday corpus. Results are unchanged.
-
-* `Calendrical.Gettext` interpolates with `Localize.Gettext.Interpolation`, and the exception messages are written in MessageFormat 2 with `{$name}` placeholders, extracted to `priv/gettext/calendrical.pot`. The messages read as they did.
+* The lunisolar calendars answer for the 40,001 years counted from their epoch as Gregorian years -20,000 to 20,000; beyond them `valid_date?/3` is `false` and conversions raise `Calendrical.UnsupportedDateRangeError`, where a far year took minutes.
 
 ### Fixed
 
-* `year_of_era/1` returns a `Calendrical.MissingFieldsError` for a missing year in the Coptic, Ethiopic, Julian and transitional Swedish calendars, as every other calendar does, rather than `{nil, 1}`.
+* `Calendrical.Islamic.Observational` and `Calendrical.Islamic.Rgsa` begin a month on the day after the evening the crescent is first seen, where they began a day early.
 
-* A Julian year-start variant's years and months, and a composite's across a change of new-year day, are counted in the Julian months that name the dates: two years on from 25 March 1750 in England is 25 March 1752, where it was 1 April 1752, and a month on from 20 March is 20 April. A year holds twelve months, though a year reckoned from 25 March counts thirteen.
+* Every calendar answers a question about a date only for a date it has: a `Calendrical.InvalidDateError` for a date `valid_date?/3` rejects, and a `Calendrical.MissingFieldsError` for a missing field, as `quarter/2`, `quadrimester/2`, `semester/2` and `week/2` now do too.
 
-* A solar term of a year before 0 is the day its moment is in: `Calendrical.Chinese.solar_term(5, -3000)` is 6 April, where rounding the moment towards zero gave 7 April.
+* `month_of_year/3` and `quarter_of_year/3` answer a partial date from its year and month, checking the month without a year, so `Calendrical.strftime/3` names a partial date's month as it names a whole date's.
 
-* A month a change of calendar began after its 1st is named from its year and month: the questions that need no day (a month of the year, a quarter, a year's numbers) take the month's 1st as its first day, so England's March 1751, which began on the 25th, is written "Mar 1751" where Localize returned an `InvalidValueError`. A question about a day, and every other day the calendar does not have, is still an error.
+* `Calendrical.Lunisolar.day_name/1` and `day_name_on_or_before/2` count from the right epoch, so 1 October 1949 is 甲子; days were named five places on, and `day_name_on_or_before/2` did not return a day of the name.
 
-* `Calendrical.Interval.day/3` answers for every calendar, counting through the year's own range, where it raised for a calendar without `first_gregorian_day_of_year/1` — the Julian, lunisolar and composite calendars among them.
+* The observational Islamic calendars refuse a date far outside the ephemeris at once, where it took seconds or more.
 
-* `Calendrical.calendar_from_locale/1` maps a locale's `-u-ca-<name>` through `calendar_from_cldr_calendar_type/1`, the one table of names, refining `gregory` to the territory's Gregorian calendar and `chinese` in Vietnam to `Calendrical.Vietnamese`; a value that is no locale is `{:error, exception}`, where it raised `FunctionClauseError`.
+* `leap_year?/1` raises `FunctionClauseError` for anything but an integer year in every calendar, as `Calendar.ISO` does, and `leap_month/1` answers `nil` for one in every calendar.
 
-* The Julian calendars answer with no year as the Gregorian does: `days_in_month(2)` is `{:ambiguous, 28..29}`, where it was the undeclared `{:error, :unresolved}`, a month they lack is `{:error, :undefined}`, where it was 31, and `months_in_year/0` is 12. A composite's `months_in_year/0` is `{:error, :undefined}`, and the `days_in_month/1` callback admits `{:error, exception}`.
+* `year_of_era/1` returns a `Calendrical.MissingFieldsError` for a missing year in the Coptic, Ethiopic and Julian calendars, as every other calendar does.
 
-* `days_in_month/1` answers for a month with no year in every calendar built on `Calendrical.Calendar`: the month's length where every year has it (`Calendrical.Coptic.days_in_month(1)` is `30`) and `{:ambiguous, range}` where it varies (`{:ambiguous, 5..6}` for month 13), where each was `{:error, :undefined}`.
+* A Julian year-start variant's or fiscal calendar's written and base dates answer a partial date with `nil` fields, where they raised `ArithmeticError`.
 
-* A lunisolar calendar reads a day's year as the year its new year begins, as `date_to_iso_days/3` places it: `Calendrical.LunarJapanese`, whose epoch is 165 days into its year 1, read the first day of year -10001 as year -10002.
+* `gregorian_date_for_lunar/3` raises `ArgumentError` for a lunar month or day the year lacks, where it returned another day's date.
 
-* A composite calendar of its base calendar alone (`calendars: []`) compiles without the type checker's "this guard will never succeed" warnings.
+* `valid_date?/3` is `false` rather than raising for a month or day below 1, for non-integer parts and for a date outside a calendar's supported range.
 
-* A composite calendar names a date's months and days from the CLDR calendar of the member in effect, through the new optional callback `cldr_calendar_type/3`, and its own `cldr_calendar_type/0` is its members' shared type or the last member's, where it was always `:gregorian`: `Calendrical.Reform.Japan` wrote the lunisolar second month as "February" and dropped the Meiji era after 1873.
+* `days_in_month/1` answers a month with no year in every calendar: its length, or `{:ambiguous, range}` where it varies, and a `Calendrical.NotDefinedError` for a month the calendar lacks.
 
-* A composite calendar writes a day with no date of its own as the first later day that has one, as it does for the days a reform took out: England's 1 January to 24 March 1156 and Russia's September to December 1699, reached by `Date.shift/2` or `Date.convert/2`, answered a date naming the day a year away.
+* `days_in_month/2` no longer gives a length for a month the year does not have: the lunisolar calendars answered 30 for a 13th month of a 12-month year, and Persian and `Reform.Sweden.Transitional` 30 or 31 for months 0 and 13.
 
-* A composite calendar's `days_in_month/2` is `0` for a month no day carries (England's January 1751), and `months_in_year/1` the number of the year's last month with days, `0` for a year with none (Japan's 1229 to 1872); both answered the member calendar's count.
+* `Calendrical.localize/3` returns `Calendrical.InvalidDateError` for `:era`, `:day_of_week` and `:days_of_week` of a date its calendar does not have, where it answered `nil` or raised.
 
-* `Calendrical.Islamic.UmmAlQura` has dates before 1 AH and after 1500 AH, outside KACST's tables, by `Calendrical.Islamic.Civil`, as ICU falls back to it; the civil years join the tables without a gap. Its callbacks and `Date.convert/2` raised `Calendrical.IslamicYearOutOfRangeError` there.
+* The astronomical Ecclesiastical functions return `Calendrical.UnsupportedDateRangeError` for a year outside 1000 to 3000, where they raised `FunctionClauseError`.
 
-* `Calendrical.Persian` has dates outside Persian years 1279 to 1479, the years the ephemeris Astro bundles covers, by ICU's arithmetic Persian calendar (its 33-year cycle and corrections), which agrees with the astronomical new year on every year from 1279 to 1479. Its callbacks and `Date.convert/2` raised `Calendrical.UnsupportedDateRangeError` there; years before 1 are numbered 0, -1, as in ICU.
+* `Calendrical.Persian`, `Calendrical.Ecclesiastical` and `Calendrical.Islamic.UmmAlQura.Astronomical` return an exception for an `Astro` error, where they passed its atom through.
 
-* `Calendrical.strftime/3` names the month and the day of the week from the date, as `Localize.Calendar.localize/3` does, where it named them by the date's fields: a calendar of weeks raised from week 13, Hebrew, Chinese leap and fiscal months were misnamed, and calendars whose weeks begin on another day than Monday named the wrong day.
+* The lunisolar `new/3` checks a leap month's day against that month's own length, and a lunisolar calendar reads a day's year as the year its new year begins.
 
-* A month calendar's `iso_week_of_year/3` gives the ISO 8601 week of the day its date names, where a fiscal calendar's date was read as a Gregorian one: `Calendrical.FiscalYear.US`'s first day of 2019, 1 October 2018, answered `{2019, 1}` and is `{2018, 40}`, and days whose fields are no Gregorian date raised `ArgumentError`.
+* `Calendrical.LunarJapanese` converts each lunar year once, and a `:lunar_japanese_epoch` in late July or August no longer duplicates or skips years.
 
-* `year: :beginning` and `year: :ending` number a month or week calendar's year by the Gregorian year it begins or ends in, where two of their four pairings with `:first_or_last` raised `FunctionClauseError` on every date and the other two numbered the year the other way. A month calendar's `:month_of_year` is its first month whatever `:first_or_last` says, so a January or December year no longer spans two years or ends before it begins.
+* `Date.shift/2` adds years and months together and clamps the day once, as `Calendar.ISO` does, and lunisolar and Hebrew shifts walk each year's own months.
 
-* A composite calendar's `year/1` runs from the first to the last of a year's days that has a date of its own, so England's 1155 is 1 January to 31 December, where it ended on 24 March, and a year whose two ends have no dates of their own gives `Date.range/2` no negative range and warning. A change of calendar dated before the base calendar's year -9999 takes effect after the base calendar, where the two changed places.
+* A week-based calendar's `shift/6` places the day of the month once, and its `day_of_year/3` numbers the first day 1.
 
-* A composite calendar's `diff/3` compares the day `shift/6` reaches and brackets its count from the days between the two dates, where it read back the date written for that day and stepped from the difference of the years' numbers. `Calendrical.Reform.England.diff({1155, 6, 15}, {1155, 12, 20}, :months)` is 6, where it was 8, and a count across `Calendrical.Reform.Japan`'s 1873 change answers at once, where years took a minute and months did not answer in four.
+* The composite calendars add years, months, weeks and days across a transition, count `diff/3` and `day_of_era/3` through a change of calendar, and read each date in the calendar that has its year.
 
-* A composite calendar's year that runs through days with no dates of their own, as England's 1155 runs on to 24 March 1156, is counted by its days: `weeks_in_year/1` is 65 weeks for its 449 days, where it was 13, `week/2` answers for each week that has dates, and `Calendrical.last_gregorian_day_of_year/2` and `date_from_day_of_year/3` reach its last day. The year's first and last days were taken from the dates of `year/1`, which name other days there.
+* A composite calendar names a date's months, eras and cycles from the member in effect, a partial date's included where one member holds all of it, so `Calendrical.Reform.Japan` names its lunisolar months and Meiji era.
 
-* `Calendrical.first_day_of_year/2`, `last_day_of_year/2`, `first_gregorian_day_of_year/2`, `last_gregorian_day_of_year/2` and `date_from_day_of_year/3` take a year's days from the calendar's own `year/1`, where `last_day_of_year/2` and the Gregorian-day functions raised `UndefinedFunctionError` in every calendar but the compiled month and week calendars and the first day was always month 1, day 1. They answer for `Calendar.ISO` too, and a year the calendar does not have is `{:error, :invalid_date}`.
+* A composite calendar writes a day with no date of its own as the first later day that has one, and names a month a change began part of the way through from its year and month, so England's March 1751 is "Mar 1751".
 
-* A composite calendar reads a date in the calendar that has its year, where the calendar it falls in by the order of its year, month and day has no day of that year, so the first year of a calendar whose year turns after January has all its dates: with a September year taking effect on 1 September 1492, January to August 1493 were no dates. A date before year -9999 is the base calendar's, where `valid_date?/3`, `date_to_iso_days/3` and `days_in_month/2` raised `FunctionClauseError`.
+* A Julian year-start variant's dates agree with the Julian calendar's month lengths, weeks and leap days, it has no year 0, and its months and years shift in the Julian months that name them.
 
-* `Date.shift/2` and `NaiveDateTime.shift/2` by years and months in a composite calendar add them in the calendar in effect on the date and count the months on across a change of calendar, as `shift/6` does, where they measured a year from the first of the month, which is no date where a change begins a month part of the way through: 25 March 1751 in `Calendrical.Reform.England` and one month was 25 April 1752. A shift by years across the 1873 change in `Calendrical.Reform.Japan` answers at once, where it did not in four minutes.
+* `extended_year/3` counts a Julian year BC from 0 down, as TR35 defines it.
 
-* A year added to a date of a composite calendar across a change of calendar is as many months as the calendar in effect on the date counts, thirteen in the Coptic calendar and through a lunisolar calendar's leap month, where `shift/6` walked twelve. A year on from 22 November 1872 in `Calendrical.Reform.Japan`, the 22nd of its tenth lunisolar month, is 22 November 1873, where it was 22 October.
+* `Calendrical.Korean` and `Calendrical.LunarJapanese` place a year in the sexagenary cycle by its related Gregorian year, as ICU does, and every lunisolar `cyclic_year/3` returns that place.
 
-* `Calendrical.Composite.new/2` and `Calendrical.Reform.calendar_for/1` create a calendar in the `Calendrical.Compiler` server, as `Calendrical.new/3` does, so of the processes creating the same calendar at once one creates it and the others find it, where all but one raised `CompileError`. `:calendars` that do not compile to a calendar return `{:error, exception}`, where they raised.
+* A date before a calendar's first era counts back from it in `year_of_era/3` and `day_of_era/3`, where it raised, and a before era counts back from its last day.
 
-* An exception's `message/1` is written whatever its fields hold: `Calendrical.MissingFieldsError` with `:fields` a list of names or `nil`, and `Calendrical.UnsupportedDateRangeError` with a `:range` that is not text, raised inside `Exception.message/1`.
+* `Calendrical.strftime/3` names the month and day of the week from the date, so Hebrew, Chinese leap and fiscal months are named correctly.
 
-* No year is numbered 0 in a Julian new-year calendar: `valid_date?/3` accepted the days of a year 0 that lie in the neighbouring Julian year, so `Date.new(0, 6, 15, Calendrical.Julian.Sept1)` was a date, and `month/2`, `quarter/2`, `quadrimester/2` and `semester/2` answered for one.
+* A month calendar's `week_of_month/3` follows TR35, and its `iso_week_of_year/3` gives the ISO 8601 week of the day its date names.
 
-* A composite calendar's `day_of_era/3` counts an era's days in one count through every change of calendar the era runs through, where each member calendar counted from its own first day: 14 September 1752 in `Calendrical.Reform.England` is day 639,799 of the common era, the day after 639,798, where it was 639,797. An era runs through a change where both calendars name their eras from the same CLDR calendar, and is counted on from its first day in the earlier calendar, or back from its last day in the later.
+* `Calendrical.Interval.day/3` answers for every calendar, every constructor accepts `Calendar.ISO`, and the date forms return an error for a date the calendar lacks where `month/1` and `day/1` raised.
 
-* `extended_year/3` counts a Julian year BC from 0 down, as TR35 defines the extended year, so `Calendrical.Julian.extended_year(-1, 6, 15)` is 0, where it was -1. The Julian new-year variants and the composite calendars answer the same.
+* `Calendrical.first_day_of_year/2`, `last_day_of_year/2` and the Gregorian-day functions answer for every calendar, where most raised `UndefinedFunctionError`.
 
-* `Calendrical.Reform.Sweden.Transitional` has no year 0, as the Julian calendar it is outside 1700 to 1712 has none: `shift/6` and `diff/3` step from 1 BC to AD 1, `valid_date?/3` accepts December of 1 BC, and its eras and days of era are the Julian calendar's.
+* `Calendrical.interval/3` and `interval_stream/3` order their dates by day, which the Julian year-start calendars need.
 
-* `Calendrical.interval/3` and `interval_stream/3` order their two dates by the days their calendar counts, where `Date.compare/2` ordered them by their fields without asking it. In the Julian new-year calendars, where 1 January follows 31 December of the same year, 19 December to 15 January in `Calendrical.Julian.March25` is its 28 days, where it was 69 dates from one and 270 from the other.
+* `Calendrical.calendar_from_locale/1` maps `-u-ca-<name>` through `calendar_from_cldr_calendar_type/1`, and a value that is no locale is an error where it raised.
 
-* Every calendar's `parse_date/1`, `parse_naive_datetime/1` and `parse_utc_datetime/1` answer text that is no date with `{:error, :invalid_format}`, as `Calendar.ISO` does, where a field of letters raised `ArgumentError` and a malformed time or offset returned `:error` or the text. A negative year's date is checked in that year, so "-0003-13-06" is no Coptic date.
+* `Calendrical.Islamic.UmmAlQura.first_day_of_month/2` returns a `Calendrical.InvalidMonthError` for a month outside 1 to 12, where it reported an out-of-range year.
 
-* A calendar of weeks writes its year with four digits at least, as `Calendar.ISO` does, so a week date before year 1000 reads back: "0004-W09-7", where it wrote "4-W09-7".
+* `Calendrical.Composite.new/2` and `Calendrical.Reform.calendar_for/1` create a calendar once when several processes ask at once, where all but one raised `CompileError`.
 
-* Every calendar answers a question about a date (`day_of_week/4`, `day_of_year/3`, `year_of_era/3`, `week_of_month/3`, `cyclic_year/3` and the rest) only for a date it has: a date its `valid_date?/3` rejects is `{:error, :invalid_date}` and one missing a field the question needs a `Calendrical.MissingFieldsError`, where many raised or answered for another date. The `Calendrical.date_error/0` type names both.
+* Every calendar's `parse_date/1`, `parse_naive_datetime/1` and `parse_utc_datetime/1` read a date as `Calendar.ISO` does: `{:error, :invalid_format}` for text that is no date, and a `+` before a four-digit year.
 
-* A month calendar with a first day of the week numbers a month's weeks as TR35 does, where `week_of_month/3` laid the year's weeks over 4-4-5 periods: week 1 is the first week holding `min_days_in_first_week` days of the month, so `Calendrical.Gregorian` puts 23 January 1995 in week 5 of January, not week 1 of February.
+* A calendar of weeks writes its year with four digits at least, so a date before year 1000 reads back: "0004-02-35".
 
-* `Date.shift/2` and `NaiveDateTime.shift/2` add years and months together and bring the day into the month reached once, as `Calendar.ISO` and ECMA-262 Temporal do, where they clamped it after the years and again after the months. 29 February 2024 and a year and a month is 29 March 2025, and 30 Adar I 5784 and a year and a month 30 Nisan 5785.
+* The parse functions keep a month name that is also a weekday name, accept format and stand-alone month names, parse dates with eras, resolve flexible day periods and Hebrew month names, and return errors where they raised.
 
-* A week-based calendar's `shift/6` by more than one month places the day of the month once, where each month on the way clamped it, so the last day of a five-week NRF month is the last day of a five-week month three months on.
+* `as: :map` parsing gives a fixed offset such as "GMT+5" the `DateTime` zone fields, where the map kept the text with no offset.
 
-* A date before a calendar's first era, such as a Japanese date before Taika (645) or a Coptic or Ethiopic year 0, no longer raises in `year_of_era/3` or `day_of_era/3`: it counts back from the first era, as ICU does.
+* `Calendrical.TimeZone.resolve/3` keeps the offset of a name specific to standard or daylight time: "14:00 EST" in May is 14:00 at -05:00.
 
-* `day_of_era/3` counts a before era (before ROC, before Hijra) back from its last day, as `Calendar.ISO` counts BCE, where it counted the days from 0000-01-01.
+* `Calendrical.localize/3` names the month of a composite or Julian year-start date, and `Calendrical.Format` lays out calendars without weeks and leaves out months a year lacks.
 
-* `Calendrical.Korean` and `Calendrical.LunarJapanese` place a year in the sexagenary cycle by its related Gregorian year, as ICU does, so Korean 4358 (2025) is 42, where it was 38. Every lunisolar calendar's `cyclic_year/3` returns that place, where it returned the calendar year.
+* The tabular Islamic calendars convert dates before the Hijra with floored division.
 
-* A composite calendar's `related_gregorian_year/3`, `extended_year/3` and `cyclic_year/3` answer as the calendar in effect on the date does, so a `Calendrical.Reform.Japan` date in 1700 is in Genroku 12 and related year 1699, not year 1055. Its `era_calendar_type/0` is the calendar its members name their eras from, so both sides of Japan's reform have Japanese era names.
+* `Calendrical.Reform.Sweden.Transitional` has no year 0, as the Julian calendar has none, and round-trips every day from 1700 to 1712.
 
-* `Calendrical.DateTime.parse/2` and `Calendrical.Time.parse/2` with `as: :map` give a fixed offset such as "GMT+5" the `DateTime` zone fields the struct form resolves, where the map kept `time_zone: "GMT+5"` with no offset; a named zone resolves too when the input gives its full date.
+* The exported calendar arithmetic guards its integer arguments, so a non-integer raises `FunctionClauseError` instead of computing a float.
 
-* `Calendrical.TimeZone.resolve/3` keeps the offset of a name specific to standard or daylight time, as ICU parses it: "14:00 EST" in May is 14:00 at -05:00, a fixed offset labelled EST, where it became 14:00 EDT. A generic name ("Eastern Time") still follows the zone.
-
-* The parse functions try the input as given before stripping a leading weekday, so a month name that is also a weekday name (es "mar") keeps its month, and they accept format and stand-alone month names alike (ru "июль").
-
-* Dates with an era parse: CLDR's alternative era names made the regex of every pattern with an era fail to compile. Era and weekday names of another width are accepted where they name a single era or day.
-
-* `Calendrical.Time.parse/2` resolves a flexible day period's hour by CLDR's day period rules, so ja "夜中0:30" is 00:30 where it was 12:30.
-
-* The parse functions return `Localize.InvalidValueError` for a non-string input or malformed options instead of raising, and a range given as two strings reports an unknown calendar or invalid locale instead of raising `CaseClauseError`.
-
-* `Calendrical.Date.parse/2` resolves a month name to that month in the parsed year, so Hebrew month names parse in ordinary and leap years alike, and "Adar II" parses.
-
-* `Calendrical.Islamic.UmmAlQura` is built from KACST's official month lengths instead of R.H. van Gent's astronomical reconstruction, which differed from them in 695 months between 1356 and 1500 AH, including 211 from 2029 on. It now covers 1–1500 AH rather than 1356–1500 AH.
-
-* `Calendrical.LunarJapanese` no longer computes each lunar year twice when converting to other calendars, halving that cost, because the lunisolar mid-year estimate no longer assumes the epoch is a new year. A `:lunar_japanese_epoch` configured in late July or August no longer duplicates or skips years.
-
-* The exported calendar arithmetic guards its integer arguments (`start_end_gregorian_years/2`, the Egyptian and lunisolar conversion entry points, and the lunisolar wrappers), so a non-integer argument raises `FunctionClauseError` instead of silently computing a float.
-
-* `.dialyzer_ignore.exs` is now empty — all twenty-six previously-suppressed dialyzer warnings are fixed at the source instead of ignored.
-
-* `valid_date?/3`, and so `Date.new/4`, rejects a month or day below 1 in the lunisolar calendars and in every calendar using the `Calendrical.Calendar` default (Persian, Japanese, the civil and tabular Islamic, and the Japan and Sweden reform calendars), which accepted it or raised.
-
-* `Calendrical.Islamic.Observational` and `Calendrical.Islamic.Rgsa` begin a month on the day after the evening its crescent is first seen, the eve of the month's first day, where they judged the evening of that day and so began months a day early. With Astro 2.6.2's corrected crescent visibility, each month begins with Umm al-Qura's or a day after.
-
-* The lunisolar `new/3` checks a leap month's day, and the day of a month after the leap month, against that month's own length, and `leap_month?/2` no longer marks a term-less month that follows a leap month falling before the new year.
-
-* `valid_date?/3` is `false`, rather than raising, for parts that are not integers in every calendar, for fiscal month 0, and for a date outside the supported range of `Calendrical.Persian`, `Calendrical.Islamic.Observational` and `Calendrical.Islamic.Rgsa`. Those two sighting-based calendars raise `Calendrical.UnsupportedDateRangeError` instead of a `MatchError` far outside the ephemeris.
-
-* Month and year arithmetic in the lunisolar and Hebrew calendars walks each year's own months, so `Date.shift/2` no longer produces a thirteenth month in a twelve-month year or a day 0 in Adar I. Adding years keeps the traditional month (the Mid-Autumn Festival stays in the eighth month; Adar I becomes Adar in an ordinary year), and `Calendrical.Hebrew.year/1` ends with Elul.
-
-* The week-based calendars number the first day of the year 1 in `day_of_year/3`, which counted from 2.
-
-* The tabular Islamic calendars convert dates before the Hijra with floored division, which produced negative months and days.
-
-* The Julian year-start variants (`Calendrical.Julian.March25` and the rest) agree with the Julian calendar on month lengths, weeks and leap days, shift dates and date-times through it, keep the time of day, and skip year 0 as it does. `month_of_year/3` is the date's Julian month, so `Calendrical.localize/3` names 10 August 1600 August rather than June.
-
-* The composite calendars add years, quarters, months, weeks and days across a transition (one month after 20 August 1752 in England is 20 September; after 5 August, 14 September) and shift date-times through their own arithmetic. Years, quarters and months span the days that carry them, so England's 1751 starts on 25 March and Sweden's February 1753 has 17 days; a year beginning on Lady Day has no quarters.
-
-* `Calendrical.localize/3` names the month of a composite-calendar date, and `Calendrical.Format` lays out calendars without week ranges (Hebrew, lunisolar, Coptic and others) and leaves out months a year lacks instead of raising.
-
-* `Calendrical.Interval.month/1` finds a lunisolar or Hebrew leap month and the months after it, and `week/1` and `quarter/1` return an error for a calendar without weeks or quarters instead of raising.
-
-* `Calendrical.localize/3` lists the days of the week for every calendar, `shift/6` adds quarters in every `Calendrical.Calendar` calendar, and `month/2` returns `{:error, :invalid_date}` for a month the year lacks.
-
-* The Swedish transitional calendar round-trips every day from 1700 to 1712 and has no 29 February 1700.
+* An exception's `message/1` is written whatever its fields hold.
 
 ## [1.3.0] — 2026-08-26
 

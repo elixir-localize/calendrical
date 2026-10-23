@@ -45,7 +45,7 @@ defmodule Calendrical.ReformTest do
     end
 
     test "reform_date/1 rejects an unknown territory" do
-      assert {:error, :unknown_territory} = Calendrical.Reform.reform_date(:XX)
+      assert {:error, %Calendrical.UnknownReformError{}} = Calendrical.Reform.reform_date(:XX)
     end
   end
 
@@ -109,7 +109,7 @@ defmodule Calendrical.ReformTest do
 
   describe "calendar_for/1 errors and idempotency" do
     test "returns :unknown_territory for a code with no reform date" do
-      assert {:error, :unknown_territory} = Calendrical.Reform.calendar_for(:XX)
+      assert {:error, %Calendrical.UnknownReformError{}} = Calendrical.Reform.calendar_for(:XX)
     end
 
     test "is idempotent — the same territory returns the same module" do

@@ -461,25 +461,30 @@ defmodule Calendrical.CoverageMainTest do
       assert Calendrical.date_from_tuple({2019, 3, 25}) ==
                %Date{calendar: Calendrical.Gregorian, year: 2019, month: 3, day: 25}
 
-      assert Calendrical.date_from_tuple({2019, 2, 29}) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.date_from_tuple({2019, 2, 29})
     end
 
     test "date_from_list/1,2" do
       assert Calendrical.date_from_list(year: 2019, month: 3, day: 25) ==
                %Date{calendar: Calendrical.Gregorian, year: 2019, month: 3, day: 25}
 
-      assert Calendrical.date_from_list(year: 2019, month: 2, day: 29) ==
-               {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.date_from_list(year: 2019, month: 2, day: 29)
 
-      assert Calendrical.date_from_list(month: 2, day: 28) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.date_from_list(month: 2, day: 28)
     end
 
     test "date_from_day_of_year/2,3" do
       assert Calendrical.date_from_day_of_year(2019, 32) ==
                %Date{calendar: Calendrical.Gregorian, year: 2019, month: 2, day: 1}
 
-      assert Calendrical.date_from_day_of_year(2019, 366) == {:error, :invalid_date}
-      assert Calendrical.date_from_day_of_year(2019, 0) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.date_from_day_of_year(2019, 366)
+
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.date_from_day_of_year(2019, 0)
     end
 
     test "date_from_iso_days/2 with a tuple and an integer" do
@@ -519,8 +524,8 @@ defmodule Calendrical.CoverageMainTest do
 
   describe "coerce_iso_calendar/1" do
     test "passes errors through" do
-      assert Calendrical.coerce_iso_calendar({:error, :invalid_date}) ==
-               {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.coerce_iso_calendar({:error, %Calendrical.InvalidDateError{}})
     end
 
     test "relabels a date" do
@@ -763,20 +768,12 @@ defmodule Calendrical.CoverageMainTest do
       assert Calendrical.cardinal_day_of_week(2, Calendrical.ISOWeek) == 2
       assert Calendrical.cardinal_day_of_week(1, Calendrical.NRF) == 7
       assert Calendrical.cardinal_day_of_week(1, Calendrical.Test.Calendars.Sunday) == 7
-      # A module without __config__/0 returns the day unchanged.
+      # A module that is no calendar returns the day unchanged.
       assert Calendrical.cardinal_day_of_week(3, Enum) == 3
     end
   end
 
-  describe "month_day/5 and the Gregorian year a year of weeks is anchored in" do
-    # The day is brought into the month it is clamped to: December has 31
-    # days, and Elul, the last of the twelve months of 5785, 29.
-    test "month_day with and without clamping" do
-      assert Calendrical.month_day(2026, 2, 31, Calendrical.Gregorian, false) == {2, 31}
-      assert Calendrical.month_day(2026, 14, 31, Calendrical.Gregorian, true) == {12, 31}
-      assert Calendrical.month_day(5785, 13, 30, Calendrical.Hebrew, true) == {12, 29}
-    end
-
+  describe "the Gregorian year a year of weeks is anchored in" do
     test "a year begun in January or ended in December is anchored in its own year" do
       assert Calendrical.Calendar.Weeks.anchor_year_offset(:begins, 1, :ending) == 0
       assert Calendrical.Calendar.Weeks.anchor_year_offset(:ends, 12, :beginning) == 0

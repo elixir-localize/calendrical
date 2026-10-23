@@ -85,11 +85,12 @@ defmodule Calendrical.CompositeValidationTest do
 
   describe "the list of changes of calendar" do
     test "is a list of dates" do
-      assert Composite.new(Validation.ImproperList, calendars: [~D[1700-03-01] | :not_a_date]) ==
-               {:error, :must_be_a_list_of_dates}
+      assert Composite.new(Validation.ImproperList, calendars: [~D[1700-03-01] | :not_a_date])
+             |> composite_reason() ==
+               :must_be_a_list_of_dates
 
-      assert Composite.new(Validation.NotADate, calendars: "1700-03-01") ==
-               {:error, :must_be_a_list_of_dates}
+      assert Composite.new(Validation.NotADate, calendars: "1700-03-01") |> composite_reason() ==
+               :must_be_a_list_of_dates
     end
   end
 
@@ -104,7 +105,8 @@ defmodule Calendrical.CompositeValidationTest do
             %{year: "1700", month: 3, day: 1, calendar: Calendrical.Gregorian},
             %{year: 1700, month: 3, day: nil, calendar: Calendrical.Gregorian}
           ] do
-        assert Composite.new(Validation.NoSuchDay, calendars: [date]) == {:error, :invalid_date},
+        assert Composite.new(Validation.NoSuchDay, calendars: [date]) |> composite_reason() ==
+                 :invalid_date,
                inspect(date)
       end
 
@@ -113,7 +115,8 @@ defmodule Calendrical.CompositeValidationTest do
       # Fields that are not integers are no date, whatever the calendar says.
       assert Composite.new(Validation.NoIntegerYear,
                calendars: [%{year: "1900", month: 1, day: 1, calendar: Unreached}]
-             ) == {:error, :invalid_date}
+             )
+             |> composite_reason() == :invalid_date
     end
 
     test "is a date where its calendar has the day" do
@@ -169,19 +172,22 @@ defmodule Calendrical.CompositeValidationTest do
     test "is no composite calendar" do
       assert Composite.new(Validation.Nested,
                calendars: [~D[1800-01-01 Calendrical.Reform.England]]
-             ) == {:error, :must_not_be_composite_calendars}
+             )
+             |> composite_reason() == :must_not_be_composite_calendars
 
       assert Composite.new(Validation.NestedBase,
                calendars: [~D[1800-01-01 Calendrical.Gregorian]],
                base_calendar: Calendrical.Reform.England
-             ) == {:error, :must_not_be_composite_calendars}
+             )
+             |> composite_reason() == :must_not_be_composite_calendars
     end
 
     test "is no calendar of weeks" do
       assert Composite.new(Validation.Weeks,
                calendars: [%{year: 2000, month: 1, day: 1, calendar: Calendrical.ISOWeek}],
                base_calendar: Calendrical.Gregorian
-             ) == {:error, :must_not_be_week_calendars}
+             )
+             |> composite_reason() == :must_not_be_week_calendars
     end
   end
 
@@ -192,7 +198,8 @@ defmodule Calendrical.CompositeValidationTest do
                  ~D[1752-09-14 Calendrical.Gregorian],
                  ~D[1752-09-03 Calendrical.Julian]
                ]
-             ) == {:error, :must_take_effect_on_different_days}
+             )
+             |> composite_reason() == :must_take_effect_on_different_days
     end
   end
 
@@ -203,14 +210,16 @@ defmodule Calendrical.CompositeValidationTest do
       assert Composite.new(Validation.HebrewThenGregorian,
                calendars: [~D[1900-01-01 Calendrical.Gregorian]],
                base_calendar: Calendrical.Hebrew
-             ) == {:error, :years_must_not_go_back}
+             )
+             |> composite_reason() == :years_must_not_go_back
 
       # The Christmas year 1201 began on 25 December 1200, and the Lady Day
       # year 1200 runs to 24 March 1201.
       assert Composite.new(Validation.LadyDayAfterChristmas,
                calendars: [~D[1200-10-26 Calendrical.Julian.March25]],
                base_calendar: Calendrical.Julian.Dec25
-             ) == {:error, :years_must_not_go_back}
+             )
+             |> composite_reason() == :years_must_not_go_back
     end
 
     test "may stay the same through a change of calendar" do
@@ -244,7 +253,7 @@ defmodule Calendrical.CompositeValidationTest do
 
   describe "use Calendrical.Composite" do
     test "raises for a configuration it cannot keep" do
-      assert_raise ArgumentError, ~r/must not number its first year/, fn ->
+      assert_raise Calendrical.InvalidCompositeError, ~r/must not number its first year/, fn ->
         Code.compile_string("""
         defmodule Validation.CompiledHebrewThenGregorian do
           use Calendrical.Composite,
@@ -254,7 +263,7 @@ defmodule Calendrical.CompositeValidationTest do
         """)
       end
 
-      assert_raise ArgumentError, ~r/a date of its own calendar/, fn ->
+      assert_raise Calendrical.InvalidCompositeError, ~r/a date of its own calendar/, fn ->
         Code.compile_string("""
         defmodule Validation.CompiledNoSuchDay do
           use Calendrical.Composite,
@@ -316,4 +325,6 @@ defmodule Calendrical.CompositeValidationTest do
   defp julian(%Date{year: year, month: month, day: day}) do
     Date.new!(year, month, day, Calendrical.Julian)
   end
+
+  defp composite_reason({:error, %Calendrical.InvalidCompositeError{reason: reason}}), do: reason
 end

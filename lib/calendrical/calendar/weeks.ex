@@ -316,7 +316,11 @@ defmodule Calendrical.Calendar.Weeks do
 
       * The number of days, a multiple of seven, or
 
-      * `{:error, :invalid_date}` for a month the year does not have.
+      * `{:error, %Calendrical.InvalidMonthError{}}` for a month the year
+        does not have, or
+
+      * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+        month is `nil`.
 
       ### Examples
 
@@ -328,21 +332,15 @@ defmodule Calendrical.Calendar.Weeks do
       @spec days_in_month(year :: Calendrical.year(), month :: Calendrical.month()) ::
               days ::
               Calendar.day()
-              | {:error, :invalid_date | Exception.t()}
+              | {:error, Exception.t()}
       def days_in_month(year, unquote(@months_in_year)) when is_integer(year) do
         long_week = if leap_year?(year), do: unquote(@days_in_week), else: 0
         elem(@days_in_pattern_month, unquote(@months_in_year) - 1) + long_week
       end
 
-      def days_in_month(year, month)
-          when is_integer(year) and is_integer(month) and month in 1..unquote(@months_in_year)//1 do
-        elem(@days_in_pattern_month, month - 1)
-      end
-
-      def days_in_month(year, _month) when is_integer(year), do: {:error, :invalid_date}
-
-      def days_in_month(year, _month),
-        do: {:error, Calendrical.missing_year_error("days_in_month", year)}
+      # A month the year does not have, and a field that is not an integer,
+      # are answered before this by `Calendrical.Compiler.DateCheck`.
+      def days_in_month(_year, month), do: elem(@days_in_pattern_month, month - 1)
 
       @doc """
       Returns whether a year, month and day are a date of this calendar.
@@ -491,7 +489,8 @@ defmodule Calendrical.Calendar.Weeks do
 
       * `{:ok, {year, month, day}}` in this calendar.
 
-      * `{:error, :invalid_date}` for figures that name no date.
+      * `{:error, :invalid_date}` for figures that name no date, an atom as
+        `c:Calendrical.date_from_written_date/3` answers.
 
       ### Examples
 
@@ -507,6 +506,8 @@ defmodule Calendrical.Calendar.Weeks do
         Calendrical.Base.Written.own_date(__MODULE__, year, month, day)
       end
 
+      # Localize's date parser reads this atom (see c:Calendrical.date_from_written_date/3).
+      # credo:disable-for-next-line Calendrical.Credo.ErrorTuple
       def date_from_written_date(_year, _named_month, _day), do: {:error, :invalid_date}
 
       @doc """
@@ -570,7 +571,12 @@ defmodule Calendrical.Calendar.Weeks do
 
       ### Returns
 
-      * `{year, month, day}` of this calendar.
+      * `{year, month, day}` of this calendar, or
+
+      * `{:error, %Calendrical.InvalidDateError{}}` where `year`, `month` and
+        `day` are no date of this calendar, or
+
+      * `{:error, %Calendrical.MissingFieldsError{}}` where a field is `nil`.
 
       ### Examples
 
@@ -631,9 +637,10 @@ defmodule Calendrical.Calendar.Weeks do
         :ok
 
       unknown ->
-        raise ArgumentError,
-              "unknown options #{inspect(unknown)} for use Calendrical.Calendar.Weeks; " <>
-                "the options are #{inspect(known_options)}"
+        raise Calendrical.UnknownOptionError,
+          maker: Calendrical.Calendar.Weeks,
+          options: unknown,
+          known_options: known_options
     end
   end
 
@@ -644,7 +651,10 @@ defmodule Calendrical.Calendar.Weeks do
   def anchor!(options) do
     case {Keyword.fetch(options, :year_begins), Keyword.fetch(options, :year_ends)} do
       {{:ok, _begins}, {:ok, _ends}} ->
-        raise ArgumentError, "a calendar of weeks takes :year_begins or :year_ends, not both"
+        raise Calendrical.InvalidOptionValueError,
+          option: [:year_begins, :year_ends],
+          value: nil,
+          maker: Calendrical.Calendar.Weeks
 
       {:error, {:ok, ends}} ->
         year_ends!(ends)
@@ -667,15 +677,16 @@ defmodule Calendrical.Calendar.Weeks do
   end
 
   defp year_begins!(other) do
-    raise ArgumentError,
-          ":year_begins must be {weekday, :on_or_before, {month, day}} with the day 1 to 7, " <>
-            "or {weekday, :nearest, {month, 4}}, found #{inspect(other)}"
+    raise Calendrical.InvalidOptionValueError,
+      option: :year_begins,
+      value: other,
+      maker: Calendrical.Calendar.Weeks
   end
 
   defp year_ends!({weekday, :nearest, {month, day}} = rule) when is_integer(month) do
     if Map.get(@month_lengths, month) == day,
       do: year_ends!({weekday, :on_or_after, {month, day - 3}}),
-      else: raise(ArgumentError, year_ends_error(rule))
+      else: raise(year_ends_error(rule))
   end
 
   defp year_ends!({weekday, :on_or_after, {month, day}} = rule)
@@ -685,14 +696,17 @@ defmodule Calendrical.Calendar.Weeks do
 
     if day >= length - @days_in_week + 1 and day <= length,
       do: {:ends, weekday_number(weekday), month, day},
-      else: raise(ArgumentError, year_ends_error(rule))
+      else: raise(year_ends_error(rule))
   end
 
-  defp year_ends!(other), do: raise(ArgumentError, year_ends_error(other))
+  defp year_ends!(other), do: raise(year_ends_error(other))
 
   defp year_ends_error(rule) do
-    ":year_ends must be {weekday, :on_or_after, {month, day}} with the day in the month's " <>
-      "last seven, or {weekday, :nearest, {month, last_day}}, found #{inspect(rule)}"
+    Calendrical.InvalidOptionValueError.exception(
+      option: :year_ends,
+      value: rule,
+      maker: Calendrical.Calendar.Weeks
+    )
   end
 
   defp weekday_number(weekday), do: Enum.find_index(@weekdays, &(&1 == weekday)) + 1
@@ -704,8 +718,10 @@ defmodule Calendrical.Calendar.Weeks do
         pattern
 
       other ->
-        raise ArgumentError,
-              ":pattern must be [4, 4, 5], [4, 5, 4] or [5, 4, 4], found #{inspect(other)}"
+        raise Calendrical.InvalidOptionValueError,
+          option: :pattern,
+          value: other,
+          maker: Calendrical.Calendar.Weeks
     end
   end
 
@@ -716,8 +732,10 @@ defmodule Calendrical.Calendar.Weeks do
         year_number
 
       other ->
-        raise ArgumentError,
-              ":year_number must be :beginning, :ending or :majority, found #{inspect(other)}"
+        raise Calendrical.InvalidOptionValueError,
+          option: :year_number,
+          value: other,
+          maker: Calendrical.Calendar.Weeks
     end
   end
 
@@ -728,8 +746,10 @@ defmodule Calendrical.Calendar.Weeks do
         type
 
       other ->
-        raise ArgumentError,
-              ":cldr_calendar_type must be :gregorian or :japanese, found #{inspect(other)}"
+        raise Calendrical.InvalidOptionValueError,
+          option: :cldr_calendar_type,
+          value: other,
+          maker: Calendrical.Calendar.Weeks
     end
   end
 

@@ -131,7 +131,7 @@ defmodule Calendrical.Islamic.ObservationalTest do
     end
 
     test "returns an error, never raises, on bad input or an unsupported range" do
-      assert {:error, {:invalid_day_start, :bogus}} =
+      assert {:error, %Calendrical.InvalidOptionValueError{option: :day_start, value: :bogus}} =
                Observational.date_at(~U[2025-03-01 12:00:00Z], day_start: :bogus)
 
       assert {:error, _} =

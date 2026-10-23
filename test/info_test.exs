@@ -50,7 +50,7 @@ defmodule Calendrical.Info.Test do
   # from the module's own definition.
   defp expected_cycle(calendar) do
     case calendar.years_in_cycle() do
-      {:error, :undefined} -> nil
+      {:error, %Calendrical.NotDefinedError{}} -> nil
       years -> years
     end
   end

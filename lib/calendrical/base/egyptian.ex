@@ -60,7 +60,7 @@ defmodule Calendrical.Base.Egyptian do
     if leap_year?(year), do: 366, else: 365
   end
 
-  def leap_year?(year) do
+  def leap_year?(year) when is_integer(year) do
     mod(year, 4) == 3
   end
 

@@ -116,7 +116,7 @@ defmodule Calendrical.Shift do
 
   @doc """
   Returns the whole number of units from one date of the calendar to
-  another: the inverse of `shift/7`.
+  another, as `shift/7` adds them.
 
   The count is the largest number of units that `shift/7` can add to the
   earlier date without passing the later one, and is negative when `to`

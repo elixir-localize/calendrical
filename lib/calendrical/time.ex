@@ -37,7 +37,7 @@ defmodule Calendrical.Time do
   * `:as` — `:struct` (default) returns a `t:Time.t/0`.
     `:map` returns a bare field map containing only what the
     input actually supplied (`%{hour: 11}` for `"11 am"`,
-    `%{hour: 11, minute: 30, time_zone: "PST"}` for
+    `%{hour: 11, minute: 30, time_zone: "America/Los_Angeles"}` for
     `"11:30 PST"`). `:minute` and `:second` default to `0`
     only in `:struct` mode; in `:map` mode they are omitted
     unless captured. Microsecond is included only when the
@@ -45,7 +45,8 @@ defmodule Calendrical.Time do
     (`"2:30 PM GMT+5"`) adds the `t:DateTime.t/0` zone fields
     (`:time_zone`, `:utc_offset`, `:std_offset` and
     `:zone_abbr`); a named zone, whose offset depends on a
-    date, stays in `:time_zone` as written.
+    date, is given in `:time_zone` as the zone the name stands
+    for, as ICU reads it: `"PST"` is `"America/Los_Angeles"`.
 
   ### Returns
 

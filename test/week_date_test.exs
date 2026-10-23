@@ -158,8 +158,11 @@ defmodule Calendrical.WeekDateTest do
       assert Calendrical.ISOWeek.week_date_from_date(2026, 3, 1) == {2026, 10, 1}
       assert Calendrical.NRF.week_date_from_date(2026, 3, 3) == {2026, 10, 3}
 
-      assert Calendrical.ISOWeek.date_from_week_date(2026, 54, 1) == {:error, :invalid_date}
-      assert Calendrical.NRF.week_date_from_date(2026, 3, 36) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.ISOWeek.date_from_week_date(2026, 54, 1)
+
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.NRF.week_date_from_date(2026, 3, 36)
     end
 
     # 28 December is always in its year's last ISO 8601 week.
@@ -174,13 +177,22 @@ defmodule Calendrical.WeekDateTest do
   describe "what is no week date or no date" do
     test "is an error, and never raises" do
       for calendar <- [Calendrical.Gregorian, Calendrical.Hebrew, Calendrical.ISOWeek] do
-        assert calendar.date_from_week_date(2026, 99, 1) == {:error, :invalid_date}
-        assert calendar.date_from_week_date(2026, 0, 1) == {:error, :invalid_date}
-        assert calendar.date_from_week_date(2026, 1, 8) == {:error, :invalid_date}
-        assert calendar.date_from_week_date(nil, 1, 1) == {:error, :invalid_date}
-        assert calendar.week_date_from_date(2026, 99, 1) == {:error, :invalid_date}
-        assert calendar.week_date_from_date(nil, 1, 1) == {:error, :invalid_date}
-        assert calendar.weeks_in_week_year(nil) == {:error, :invalid_date}
+        assert {:error, %Calendrical.InvalidDateError{}} =
+                 calendar.date_from_week_date(2026, 99, 1)
+
+        assert {:error, %Calendrical.InvalidDateError{}} =
+                 calendar.date_from_week_date(2026, 0, 1)
+
+        assert {:error, %Calendrical.InvalidDateError{}} =
+                 calendar.date_from_week_date(2026, 1, 8)
+
+        assert {:error, %Calendrical.InvalidDateError{}} = calendar.date_from_week_date(nil, 1, 1)
+
+        assert {:error, %Calendrical.InvalidDateError{}} =
+                 calendar.week_date_from_date(2026, 99, 1)
+
+        assert {:error, %Calendrical.InvalidDateError{}} = calendar.week_date_from_date(nil, 1, 1)
+        assert {:error, %Calendrical.InvalidDateError{}} = calendar.weeks_in_week_year(nil)
       end
     end
   end

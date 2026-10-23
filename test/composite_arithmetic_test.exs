@@ -157,8 +157,8 @@ defmodule Calendrical.CompositeArithmetic.Test do
     end
 
     test "a year no segment labels has no days" do
-      assert Japan.days_in_year(1500) == {:error, :invalid_date}
-      assert {:error, :invalid_date} = Japan.year(1500)
+      assert {:error, %Calendrical.InvalidDateError{}} = Japan.days_in_year(1500)
+      assert {:error, %Calendrical.InvalidDateError{}} = Japan.year(1500)
     end
 
     # A year has quarters wherever it has the months: a thirteen-month
@@ -271,7 +271,7 @@ defmodule Calendrical.CompositeArithmetic.Test do
           assert earlier.last_in_iso_days + 1 == later.first_in_iso_days
         end)
 
-        assert {:error, :invalid_date} = calendar.week(year, weeks + 1)
+        assert {:error, %Calendrical.InvalidDateError{}} = calendar.week(year, weeks + 1)
       end
     end
 
@@ -295,7 +295,8 @@ defmodule Calendrical.CompositeArithmetic.Test do
       assert England.week_of_year(1155, 13, 24) == {1156, 1}
 
       for week <- (weeks_in_year + 1)..(weeks_in_year + 3) do
-        assert England.week(1155, week) == {:error, :invalid_date}, "week #{week}"
+        assert {:error, %Calendrical.InvalidDateError{}} = England.week(1155, week),
+               "week #{week}"
       end
 
       weeks = Enum.map(1..weeks_in_year, &England.week(1155, &1))
@@ -335,7 +336,7 @@ defmodule Calendrical.CompositeArithmetic.Test do
       assert Russia.week(1700, 52) ==
                Date.range(~D[1700-12-23 Calendrical.Russia], ~D[1700-12-29 Calendrical.Russia])
 
-      assert Russia.week(1700, 53) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = Russia.week(1700, 53)
     end
   end
 

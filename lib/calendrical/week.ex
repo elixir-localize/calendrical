@@ -44,9 +44,9 @@ defmodule Calendrical.Week do
   * `{week_year, week}`, where the week-year is the year before or after
     where the date falls in that year's last or first week, or
 
-  * `{:error, reason}` for a date the calendar does not have: a
-    `Calendrical.MissingFieldsError` for a date missing a field, and
-    `:invalid_date` otherwise.
+  * `{:error, exception}` for a date the calendar does not have: a
+    `Calendrical.MissingFieldsError` for a date missing a field, and a
+    `Calendrical.InvalidDateError` otherwise.
 
   ### Examples
 
@@ -62,7 +62,7 @@ defmodule Calendrical.Week do
 
   """
   @spec week_of_year(calendar, Calendar.year(), Calendar.month(), Calendar.day()) ::
-          {Calendar.year(), Calendrical.week()} | {:error, :invalid_date | Exception.t()}
+          {Calendar.year(), Calendrical.week()} | {:error, Exception.t()}
   def week_of_year(calendar, year, month, day) do
     with {:ok, iso_days} <- iso_days(calendar, "week_of_year", year, month, day),
          {:ok, {first, last}} <- year_bounds(calendar, year) do
@@ -97,7 +97,7 @@ defmodule Calendrical.Week do
 
   * `{week_year, week}` of ISO 8601, or
 
-  * `{:error, reason}` for a date the calendar does not have.
+  * `{:error, exception}` for a date the calendar does not have.
 
   ### Examples
 
@@ -106,7 +106,7 @@ defmodule Calendrical.Week do
 
   """
   @spec iso_week_of_year(calendar, Calendar.year(), Calendar.month(), Calendar.day()) ::
-          {Calendar.year(), Calendrical.week()} | {:error, :invalid_date | Exception.t()}
+          {Calendar.year(), Calendrical.week()} | {:error, Exception.t()}
   def iso_week_of_year(calendar, year, month, day) do
     with {:ok, iso_days} <- iso_days(calendar, "iso_week_of_year", year, month, day) do
       {year, month, day} = Calendrical.ISO.date_from_iso_days(iso_days)
@@ -128,7 +128,7 @@ defmodule Calendrical.Week do
   * `{month, week}`, where the month is the one before or after where
     the date falls in that month's last or first week, or
 
-  * `{:error, reason}` for a date the calendar does not have.
+  * `{:error, exception}` for a date the calendar does not have.
 
   ### Examples
 
@@ -141,7 +141,7 @@ defmodule Calendrical.Week do
 
   """
   @spec week_of_month(calendar, Calendar.year(), Calendar.month(), Calendar.day()) ::
-          {Calendar.month(), Calendrical.week()} | {:error, :invalid_date | Exception.t()}
+          {Calendar.month(), Calendrical.week()} | {:error, Exception.t()}
   def week_of_month(calendar, year, month, day) do
     with {:ok, iso_days} <- iso_days(calendar, "week_of_month", year, month, day),
          {:ok, {first, last}} <- month_bounds(calendar, year, month) do
@@ -176,7 +176,7 @@ defmodule Calendrical.Week do
 
   * The number of weeks, or
 
-  * `{:error, reason}` for a year the calendar does not have.
+  * `{:error, exception}` for a year the calendar does not have.
 
   ### Examples
 
@@ -191,7 +191,7 @@ defmodule Calendrical.Week do
 
   """
   @spec weeks_in_year(calendar, Calendar.year()) ::
-          pos_integer() | {:error, :invalid_date | Exception.t()}
+          pos_integer() | {:error, Exception.t()}
   def weeks_in_year(calendar, year) when is_integer(year) do
     with {:ok, {first, last}} <- year_bounds(calendar, year) do
       this_week_1 = first_week_of(calendar, first)
@@ -202,7 +202,7 @@ defmodule Calendrical.Week do
   def weeks_in_year(_calendar, nil),
     do: {:error, Calendrical.missing_year_error("weeks_in_year", nil)}
 
-  def weeks_in_year(_calendar, _year), do: {:error, :invalid_date}
+  def weeks_in_year(calendar, year), do: invalid_date(calendar, year: year)
 
   @doc """
   Returns the days of a week of a year of the calendar.
@@ -220,7 +220,7 @@ defmodule Calendrical.Week do
   * A `t:Date.Range.t/0` of the week's seven days, which may begin in the
     year before or end in the year after, or
 
-  * `{:error, :invalid_date}` for a week the year does not have.
+  * `{:error, %Calendrical.InvalidDateError{}}` for a week the year does not have.
 
   ### Examples
 
@@ -232,7 +232,7 @@ defmodule Calendrical.Week do
 
   """
   @spec week(calendar, Calendar.year(), Calendrical.week()) ::
-          Date.Range.t() | {:error, :invalid_date | Exception.t()}
+          Date.Range.t() | {:error, Exception.t()}
   def week(calendar, year, week) when is_integer(year) and is_integer(week) and week >= 1 do
     with {:ok, {first, last}} <- year_bounds(calendar, year) do
       this_week_1 = first_week_of(calendar, first)
@@ -243,14 +243,21 @@ defmodule Calendrical.Week do
         range(calendar, first_day, min(first_day + @days_in_week - 1, next_week_1 - 1))
       end
     end
-    |> invalid_unless_range()
+    |> invalid_unless_range(calendar, year, week)
   end
 
-  def week(_calendar, year, week) when is_integer(year) and is_integer(week),
-    do: {:error, :invalid_date}
+  def week(calendar, year, week) when is_integer(year) and is_integer(week),
+    do: invalid_date(calendar, year: year, week: week)
 
-  def week(_calendar, year, week),
-    do: {:error, Calendrical.missing_date_error("week", year, week, 1)}
+  def week(_calendar, year, week) when is_nil(year) or is_nil(week),
+    do:
+      {:error,
+       Calendrical.MissingFieldsError.exception(
+         function: "week",
+         fields: [year: year, week: week]
+       )}
+
+  def week(calendar, year, week), do: invalid_date(calendar, year: year, week: week)
 
   @doc """
   Returns the weeks of a month of a year of the calendar, in order.
@@ -292,7 +299,7 @@ defmodule Calendrical.Week do
         end
         |> Enum.reject(&is_nil/1)
 
-      {:error, :invalid_date} ->
+      {:error, %Calendrical.InvalidDateError{}} ->
         {:error,
          Calendrical.InvalidMonthError.exception(calendar: calendar, year: year, month: month)}
     end
@@ -315,7 +322,7 @@ defmodule Calendrical.Week do
 
   * A `t:Date.t/0` of the calendar, or
 
-  * `{:error, :invalid_date}` where the week has no such day.
+  * `{:error, %Calendrical.InvalidDateError{}}` where the week has no such day.
 
   ### Examples
 
@@ -328,7 +335,7 @@ defmodule Calendrical.Week do
 
   """
   @spec date_from_week_date(calendar, Calendar.year(), Calendrical.week(), Calendar.day_of_week()) ::
-          Date.t() | {:error, :invalid_date}
+          Date.t() | {:error, Exception.t()}
   def date_from_week_date(calendar, week_year, week, day)
       when is_integer(week_year) and is_integer(week) and is_integer(day) and
              day in 1..@days_in_week do
@@ -338,11 +345,12 @@ defmodule Calendrical.Week do
         date(calendar, first + day - 1)
 
       _no_such_day ->
-        {:error, :invalid_date}
+        invalid_date(calendar, week_year: week_year, week: week, day_of_week: day)
     end
   end
 
-  def date_from_week_date(_calendar, _week_year, _week, _day), do: {:error, :invalid_date}
+  def date_from_week_date(calendar, week_year, week, day),
+    do: invalid_date(calendar, week_year: week_year, week: week, day_of_week: day)
 
   @doc """
   Returns the week-year, the week and the day of the week of a date.
@@ -358,7 +366,7 @@ defmodule Calendrical.Week do
   * `{week_year, week, day_of_week}`, the day numbered from the day the
     calendar's weeks begin on, or
 
-  * `{:error, :invalid_date}` for a date the calendar does not have.
+  * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar does not have.
 
   ### Examples
 
@@ -367,7 +375,8 @@ defmodule Calendrical.Week do
 
   """
   @spec week_date_from_date(calendar, Calendar.year(), Calendar.month(), Calendar.day()) ::
-          {Calendar.year(), Calendrical.week(), Calendar.day_of_week()} | {:error, :invalid_date}
+          {Calendar.year(), Calendrical.week(), Calendar.day_of_week()}
+          | {:error, Exception.t()}
   def week_date_from_date(calendar, year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     with {week_year, week} when is_integer(week) <- week_of_year(calendar, year, month, day) do
@@ -375,7 +384,8 @@ defmodule Calendrical.Week do
     end
   end
 
-  def week_date_from_date(_calendar, _year, _month, _day), do: {:error, :invalid_date}
+  def week_date_from_date(calendar, year, month, day),
+    do: invalid_date(calendar, {year, month, day})
 
   @doc """
   Returns the number of weeks in a week-year, as `date_from_week_date/4`
@@ -391,7 +401,7 @@ defmodule Calendrical.Week do
 
   * The number of weeks, or
 
-  * `{:error, :invalid_date}` for a year the calendar does not have.
+  * `{:error, %Calendrical.InvalidDateError{}}` for a year the calendar does not have.
 
   ### Examples
 
@@ -399,28 +409,29 @@ defmodule Calendrical.Week do
       53
 
   """
-  @spec weeks_in_week_year(calendar, Calendar.year()) :: pos_integer() | {:error, :invalid_date}
+  @spec weeks_in_week_year(calendar, Calendar.year()) :: pos_integer() | {:error, Exception.t()}
   def weeks_in_week_year(calendar, week_year) when is_integer(week_year) do
     case weeks_in_year(calendar, week_year) do
       weeks when is_integer(weeks) -> weeks
-      {:error, _reason} -> {:error, :invalid_date}
+      {:error, _reason} -> invalid_date(calendar, week_year: week_year)
     end
   end
 
-  def weeks_in_week_year(_calendar, _week_year), do: {:error, :invalid_date}
+  def weeks_in_week_year(calendar, week_year),
+    do: invalid_date(calendar, week_year: week_year)
 
   # The first and last days of a year, in ISO days.
   defp year_bounds(calendar, year) do
     case Common.year_days(calendar, year) do
       {:ok, first, last} -> {:ok, {first, last}}
-      {:error, :invalid_date} = error -> error
+      {:error, _exception} = error -> error
     end
   end
 
   defp month_bounds(calendar, year, month) do
     case calendar.month(year, month) do
       %Date.Range{first_in_iso_days: first, last_in_iso_days: last} -> {:ok, {first, last}}
-      _no_such_month -> {:error, :invalid_date}
+      _no_such_month -> invalid_date(calendar, year: year, month: month)
     end
   end
 
@@ -430,7 +441,7 @@ defmodule Calendrical.Week do
   defp next_week_1(calendar, year, this_week_1, last) do
     case year_bounds(calendar, year + 1) do
       {:ok, {first, _last}} -> first_week_of(calendar, first)
-      {:error, :invalid_date} -> week_after(this_week_1, last)
+      {:error, _no_such_year} -> week_after(this_week_1, last)
     end
   end
 
@@ -439,7 +450,7 @@ defmodule Calendrical.Week do
 
     case month_bounds(calendar, next_year, next_month) do
       {:ok, {first, _last}} -> first_week_of(calendar, first)
-      {:error, :invalid_date} -> week_after(this_week_1, last)
+      {:error, _no_such_month} -> week_after(this_week_1, last)
     end
   end
 
@@ -462,7 +473,7 @@ defmodule Calendrical.Week do
         this_week_1 = first_week_of(calendar, first)
         weeks_between(this_week_1, next_month_week_1(calendar, year, month, this_week_1, last))
 
-      {:error, :invalid_date} ->
+      {:error, _no_such_month} ->
         1
     end
   end
@@ -514,7 +525,7 @@ defmodule Calendrical.Week do
 
   ### Returns
 
-  * `{day_of_week, 1, 7}`, or `{:error, :invalid_date}` for a date the
+  * `{day_of_week, 1, 7}`, or `{:error, %Calendrical.InvalidDateError{}}` for a date the
     calendar does not have, or `{:error, Calendrical.MissingFieldsError.t()}`
     for a missing field.
 
@@ -534,7 +545,7 @@ defmodule Calendrical.Week do
           Calendar.day(),
           :default | atom()
         ) ::
-          {Calendar.day_of_week(), 1, 7} | {:error, :invalid_date | Exception.t()}
+          {Calendar.day_of_week(), 1, 7} | {:error, Exception.t()}
   def day_of_week(calendar, year, month, day, starting_on) do
     with {:ok, iso_days} <- iso_days(calendar, "day_of_week", year, month, day),
          first_day when is_integer(first_day) <- week_begins_on(calendar, year, starting_on) do
@@ -580,7 +591,7 @@ defmodule Calendrical.Week do
        when is_integer(year) and is_integer(month) and is_integer(day) do
     if calendar.valid_date?(year, month, day),
       do: {:ok, calendar.date_to_iso_days(year, month, day)},
-      else: {:error, :invalid_date}
+      else: invalid_date(calendar, {year, month, day})
   end
 
   # A date missing a field is a partial date, named in the error; a field
@@ -589,7 +600,8 @@ defmodule Calendrical.Week do
        when is_nil(year) or is_nil(month) or is_nil(day),
        do: {:error, Calendrical.missing_date_error(function, year, month, day)}
 
-  defp iso_days(_calendar, _function, _year, _month, _day), do: {:error, :invalid_date}
+  defp iso_days(calendar, _function, year, month, day),
+    do: invalid_date(calendar, {year, month, day})
 
   # The dates of the days from `first` to `last`, cut to the days that have
   # a date of their own in a composite calendar, or nil where none has.
@@ -605,8 +617,15 @@ defmodule Calendrical.Week do
     end
   end
 
-  defp invalid_unless_range(%Date.Range{} = range), do: range
-  defp invalid_unless_range(_other), do: {:error, :invalid_date}
+  defp invalid_unless_range(%Date.Range{} = range, _calendar, _year, _week), do: range
+  defp invalid_unless_range({:error, _exception} = error, _calendar, _year, _week), do: error
+
+  defp invalid_unless_range(_no_range, calendar, year, week),
+    do: invalid_date(calendar, year: year, week: week)
+
+  defp invalid_date(calendar, value) do
+    {:error, Calendrical.InvalidDateError.exception(calendar: calendar, value: value)}
+  end
 
   defp date(calendar, iso_days) do
     {year, month, day} = calendar.date_from_iso_days(iso_days)

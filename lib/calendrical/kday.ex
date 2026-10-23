@@ -21,7 +21,7 @@ defmodule Calendrical.Kday do
 
   """
   @type kday_result ::
-          Calendar.day() | Date.t() | {:error, :incompatible_calendars | :invalid_date}
+          Calendar.day() | Date.t() | {:error, Exception.t()}
 
   @doc """
   Returns the date of the `day_of_week` on or before the

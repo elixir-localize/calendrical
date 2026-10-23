@@ -9,7 +9,8 @@ defmodule Calendrical.CalendarParseCallbacksTest do
       assert Calendrical.Gregorian.parse_date("2026-05-16") == {:ok, {2026, 5, 16}}
       assert Calendrical.Gregorian.parse_date("-2026-05-16") == {:ok, {-2026, 5, 16}}
       assert Calendrical.Gregorian.parse_date("2026-13-45") == {:error, :invalid_date}
-      assert Calendrical.Gregorian.parse_date("nope") == {:error, :invalid_date}
+      assert Calendrical.Gregorian.parse_date("nope") == {:error, :invalid_format}
+      assert Calendar.ISO.parse_date("nope") == {:error, :invalid_format}
     end
 
     test "parse_date/1 for a week calendar accepts ISO week syntax" do
@@ -114,6 +115,12 @@ defmodule Calendrical.CalendarParseCallbacksTest do
     test "date_to_iso_days/3 delegates to Calendar.ISO" do
       assert Calendrical.Parse.date_to_iso_days(2026, 5, 16) ==
                Calendar.ISO.date_to_iso_days(2026, 5, 16)
+    end
+  end
+
+  test "a + before a four-digit year is read as Calendar.ISO reads it" do
+    for text <- ["+2024-01-01", "+12024-01-01", "+2024-13-01", "+20a4-01-01"] do
+      assert Calendrical.Gregorian.parse_date(text) == Calendar.ISO.parse_date(text), text
     end
   end
 end

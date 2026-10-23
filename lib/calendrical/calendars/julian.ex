@@ -61,7 +61,7 @@ defmodule Calendrical.Julian do
   `March25`, month 1 of 2024 is 25–31 March 2024, day 1 being 25 March,
   and month 13 is 1–24 March 2025. The Julian month and day that name a
   date are answered by `cardinal_month/1` and `cardinal_day/3`, and the
-  Julian date itself by each variant's `julian_date/3`.
+  Julian date itself by each variant's `base_date/3`.
 
   The module itself is also a fully-functional calendar that can be
   used directly (`~D[1500-03-15 Calendrical.Julian]`), in which case
@@ -298,7 +298,13 @@ defmodule Calendrical.Julian do
 
   ### Returns
 
-  * An integer in the range `28..31`.
+  * An integer in the range `28..31`, or
+
+  * `{:error, %Calendrical.InvalidMonthError{}}` for a month the year
+    does not have, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+    month is `nil`.
 
   ### Examples
 
@@ -309,7 +315,7 @@ defmodule Calendrical.Julian do
       28
 
   """
-  @spec days_in_month(year, month) :: 28..31
+  @spec days_in_month(year, month) :: 28..31 | {:error, Exception.t()}
   @impl Calendar
 
   def days_in_month(year, 2) do
@@ -339,15 +345,21 @@ defmodule Calendrical.Julian do
 
   ### Options
 
-  * `:clamp` (boolean, default `false`) — when `true`, clamps the
-    resulting day-of-month to the last valid day of the new month
-    if the original day overflows (so adding one month to 31 March
-    yields 30 April rather than an invalid date).
+  * `:clamp` (boolean, default `true`) — clamps the resulting
+    day-of-month to the last valid day of the new month if the
+    original day overflows, so adding one month to 31 March yields
+    30 April. With `clamp: false` the day is kept, which can name a
+    day the month lacks.
 
   ### Returns
 
   * A three-tuple `{year, month, day}` representing the shifted
-    Julian date.
+    Julian date, or
+
+  * `{:error, %Calendrical.InvalidDateError{}}` where `year`, `month` and
+    `day` are no date of this calendar, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` where a field is `nil`.
 
   ### Examples
 
@@ -363,6 +375,9 @@ defmodule Calendrical.Julian do
       iex> Calendrical.Julian.shift(2025, 1, 1, :days, 1)
       {2025, 1, 2}
 
+      iex> Calendrical.Julian.shift(1936, 1, 31, :months, 1)
+      {1936, 2, 29}
+
   """
   @spec shift(
           year,
@@ -372,7 +387,7 @@ defmodule Calendrical.Julian do
           integer(),
           Keyword.t()
         ) ::
-          {Calendar.year(), Calendar.month(), Calendar.day()}
+          {Calendar.year(), Calendar.month(), Calendar.day()} | {:error, Exception.t()}
   @impl Calendrical
   def shift(year, month, day, date_part, increment, options \\ [])
 
@@ -380,7 +395,7 @@ defmodule Calendrical.Julian do
     new_year = skip_year_zero(year + years, year)
 
     new_day =
-      if Keyword.get(options, :clamp, false) do
+      if Keyword.get(options, :clamp, Calendrical.default_clamp()) do
         max_new_day = days_in_month(new_year, month)
         min(day, max_new_day)
       else
@@ -412,7 +427,7 @@ defmodule Calendrical.Julian do
     new_year = skip_year_zero(year + year_increment, year)
 
     new_day =
-      if Keyword.get(options, :clamp, false) do
+      if Keyword.get(options, :clamp, Calendrical.default_clamp()) do
         max_new_day = days_in_month(new_year, new_month)
         min(day, max_new_day)
       else
@@ -433,7 +448,7 @@ defmodule Calendrical.Julian do
 
   @doc """
   Returns the whole number of `date_part`s from one `{year, month, day}`
-  to another — the inverse of `shift/6`.
+  to another, as `shift/6` adds them.
 
   `date_part` can be `:years`, `:quarters`, `:months`, `:weeks` or
   `:days`. The count is the largest number `shift/6`, clamping the day

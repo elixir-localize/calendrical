@@ -6,7 +6,12 @@ defmodule Calendrical.IncompatibleCalendarError do
   ### Fields
 
   * `:from` — the first calendar (or value carrying it).
+
   * `:to` — the second calendar (or value carrying it).
+
+  * `:reason` — `:day_rollover` where a date cannot be converted from one
+    calendar to the other because their days begin at different times, as
+    `Date.convert/2` answers, or `nil` where the two must be the same.
 
   """
 
@@ -14,7 +19,7 @@ defmodule Calendrical.IncompatibleCalendarError do
     backend: Calendrical.Gettext,
     sigils: [domain: "calendrical", context: "calendar"]
 
-  defexception [:from, :to]
+  defexception [:from, :to, :reason]
 
   @impl true
   def exception(bindings) when is_list(bindings) do
@@ -22,6 +27,13 @@ defmodule Calendrical.IncompatibleCalendarError do
   end
 
   @impl true
+  def message(%__MODULE__{from: from, to: to, reason: :day_rollover}) do
+    from = inspect(from)
+    to = inspect(to)
+
+    ~t"A date cannot be converted from #{from} to #{to}: their days begin at different times"
+  end
+
   def message(%__MODULE__{from: from, to: to}) do
     from = inspect(from)
     to = inspect(to)

@@ -17,9 +17,10 @@ defmodule Calendrical.UnsupportedDateRangeError do
   * `:value` — the out-of-range date, year, or day count as given.
 
   * `:range` — what bounds the supported range, as data: `:jpl_ephemeris`
-    for the dates the installed JPL ephemeris covers. Each is written in
-    the message as a whole translated sentence. Any other value, such as
-    a description in words, is written as it is given.
+    for the dates the installed JPL ephemeris covers, or `{:from, year}`
+    for the years from `year` on. Each is written in the message as a
+    whole translated sentence. Any other value, such as a range of years,
+    is written as it is given.
 
   """
 
@@ -46,6 +47,14 @@ defmodule Calendrical.UnsupportedDateRangeError do
     value = inspect(value)
 
     ~t"The #{calendar} calendar supports only the dates the installed JPL ephemeris covers. Found #{value}"
+  end
+
+  def message(%__MODULE__{calendar: calendar, value: value, range: {:from, first}}) do
+    calendar = inspect(calendar)
+    value = inspect(value)
+    first = inspect(first)
+
+    ~t"The #{calendar} calendar supports the years from #{first}. Found #{value}"
   end
 
   def message(%__MODULE__{calendar: nil, value: value, range: range}) do

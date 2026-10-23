@@ -66,14 +66,18 @@ defmodule Calendrical.UCaCalendarTest do
 
   describe "the locale refines a name its territory says more about" do
     test "gregory is the territory's Gregorian calendar, with its weeks" do
-      assert Calendrical.calendar_from_locale("en-u-ca-gregory") == {:ok, Calendrical.US}
-      assert Calendrical.calendar_from_locale("en-GB-u-ca-gregory") == {:ok, Calendrical.GB}
+      # The territory calendars are created at run time, so they are called
+      # through the modules calendar_from_locale/1 returns.
+      assert {:ok, us} = Calendrical.calendar_from_locale("en-u-ca-gregory")
+      assert {:ok, gb} = Calendrical.calendar_from_locale("en-GB-u-ca-gregory")
+      assert us == Calendrical.US
+      assert gb == Calendrical.GB
       assert Calendrical.calendar_from_locale("fa-IR-u-ca-gregory") == {:ok, Calendrical.IR}
 
       # GB's weeks begin on Monday and its first holds four days of the year,
       # where the United States' begin on Sunday.
-      assert Calendrical.GB.info().weeks.first_day == 1
-      assert Calendrical.US.info().weeks.first_day == 7
+      assert gb.info().weeks.first_day == 1
+      assert us.info().weeks.first_day == 7
     end
 
     test "naming the calendar a territory already prefers changes nothing" do

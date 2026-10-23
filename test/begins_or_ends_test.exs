@@ -23,23 +23,23 @@ defmodule Calendrical.BeginsOrEndsTest do
   end
 
   test "a calendar of weeks refuses both rules at once, and a rule it cannot keep" do
-    assert {:error, %ArgumentError{message: both}} =
+    assert {:error, %Calendrical.InvalidOptionValueError{} = both_error} =
              Calendrical.new(T.WeekBoth, :week,
                year_begins: {:monday, :on_or_before, {1, 4}},
                year_ends: {:saturday, :nearest, {1, 31}}
              )
 
-    assert both =~ ":year_begins or :year_ends, not both"
+    assert Exception.message(both_error) =~ ":year_begins or :year_ends, not both"
 
-    assert {:error, %ArgumentError{message: beyond}} =
+    assert {:error, %Calendrical.InvalidOptionValueError{} = beyond_error} =
              Calendrical.new(T.WeekBeyond, :week, year_begins: {:monday, :on_or_before, {1, 9}})
 
-    assert beyond =~ ":year_begins must be"
+    assert Exception.message(beyond_error) =~ ":year_begins must be"
 
-    assert {:error, %ArgumentError{message: early}} =
+    assert {:error, %Calendrical.InvalidOptionValueError{} = early_error} =
              Calendrical.new(T.WeekEarly, :week, year_ends: {:saturday, :on_or_after, {1, 10}})
 
-    assert early =~ ":year_ends must be"
+    assert Exception.message(early_error) =~ ":year_ends must be"
   end
 
   test "left out, the year begins on the Monday on or before 1 January" do
@@ -49,24 +49,26 @@ defmodule Calendrical.BeginsOrEndsTest do
   end
 
   test "a month calendar refuses them" do
-    assert {:error, %ArgumentError{message: message}} =
+    assert {:error, %Calendrical.UnknownOptionError{} = message_error} =
              Calendrical.new(T.MonthEndsFirst, :month,
                year_ends: {:saturday, :nearest, {1, 31}},
                year_begins: {7, 1}
              )
 
-    assert message =~ "unknown options [:year_ends]"
+    assert Exception.message(message_error) =~ "does not read the options [:year_ends]"
   end
 
   test "use Calendrical.Calendar.Weeks refuses a rule it cannot keep" do
-    assert_raise ArgumentError, ~r/:year_begins or :year_ends, not both/, fn ->
-      Code.compile_string("""
-      defmodule Calendrical.BeginsOrEndsTest.UseBoth do
-        use Calendrical.Calendar.Weeks,
-          year_begins: {:monday, :on_or_before, {1, 4}},
-          year_ends: {:saturday, :nearest, {1, 31}}
-      end
-      """)
-    end
+    assert_raise Calendrical.InvalidOptionValueError,
+                 ~r/:year_begins or :year_ends, not both/,
+                 fn ->
+                   Code.compile_string("""
+                   defmodule Calendrical.BeginsOrEndsTest.UseBoth do
+                     use Calendrical.Calendar.Weeks,
+                       year_begins: {:monday, :on_or_before, {1, 4}},
+                       year_ends: {:saturday, :nearest, {1, 31}}
+                   end
+                   """)
+                 end
   end
 end

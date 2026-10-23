@@ -41,4 +41,21 @@ defmodule Calendrical.ParseShimsTest do
       assert {:error, %Localize.InvalidValueError{}} = calendrical_parse.(123, [])
     end
   end
+
+  # :return_calendar was removed in 2.0; Localize would ignore it and
+  # return a date in another calendar, so it is refused.
+  describe "the removed :return_calendar option" do
+    test "is refused by every date parser" do
+      options = [locale: :en, return_calendar: Calendrical.Hebrew]
+
+      for result <- [
+            Calendrical.parse("2024-01-01", options),
+            Calendrical.Date.parse("2024-01-01", options),
+            Calendrical.Date.parse_range("2024-01-01/2024-01-05", options),
+            Calendrical.DateTime.parse("2024-01-01T10:00:00", options)
+          ] do
+        assert {:error, %Calendrical.RemovedOptionError{option: :return_calendar}} = result
+      end
+    end
+  end
 end

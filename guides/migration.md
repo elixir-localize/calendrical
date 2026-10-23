@@ -10,7 +10,7 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 * `use Calendrical.Base.Month, month_of_year: 7` is `use Calendrical.Calendar.Shifted, year_begins: {7, 1}`, with `:year` as `:year_number` and the week options as `:weeks`. `use Calendrical.Julian, new_year_starting_month_and_day: {3, 25}, year: :beginning` is `use Calendrical.Calendar.Shifted, base: Calendrical.Julian, year_begins: {3, 25}, year_number: :beginning, written_year: :label`.
 
-* `use Calendrical.Base.Week, day_of_week: 1, month_of_year: 1, min_days_in_first_week: 4` is `use Calendrical.Calendar.Weeks, year_begins: {:monday, :on_or_before, {1, 4}}`; a year that ends on the last Saturday of January is `year_ends: {:saturday, :nearest, {1, 31}}`, and `:weeks_in_month` is `:pattern`. `Calendrical.new/3` takes the same options.
+* `use Calendrical.Base.Week, day_of_week: 1, month_of_year: 1, min_days_in_first_week: 4` is `use Calendrical.Calendar.Weeks, year_begins: {:monday, :on_or_before, {1, 4}}`; `begins_or_ends: :ends, first_or_last: :last` is `year_ends: {day_of_week, :on_or_after, {month_of_year, last_day - min_days_in_first_week + 1}}`, so a year that ends on the Saturday nearest 31 January (`min_days_in_first_week: 4`) is `year_ends: {:saturday, :nearest, {1, 31}}`, and `:weeks_in_month` is `:pattern`. `Calendrical.new/3` takes the same options.
 
 * `plus/6` is `shift/6` and `:coerce` is `:clamp`, `true` by default in every calendar.
 
@@ -18,7 +18,7 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 * `month_of_year/3` is the CLDR month a date's month is named by, which `cardinal_month/1` used to add. Every calendar numbers whole weeks from its own first day of the week, and a Hebrew date is written with its month's place in the year while its name stays CLDR's.
 
-* `calendar_year/3`, `cardinal_year/3`, `date_from_cardinal_date/3`, `__config__/0`, the identity functions `first_day_of_week/0`, `last_day_of_week/0` and `epoch_day_of_week/0`, and the forms of `leap_year?/1`, `leap_month/1`, `leap_month?/2`, `cyclic_year/3`, `lunar_month_of_year/2` and `date_to_iso_days/3` that took a `Date` or a tuple are gone. A Julian year-start variant's `julian_date/3` is `base_date/3`.
+* `calendar_year/3`, `__config__/0`, the identity functions `first_day_of_week/0`, `last_day_of_week/0` and `epoch_day_of_week/0`, and the forms of `leap_year?/1`, `leap_month/1`, `leap_month?/2`, `cyclic_year/3`, `lunar_month_of_year/2` and `date_to_iso_days/3` that took a `Date` or a tuple are gone. A Julian year-start variant's `date_from_julian_date/3` is `date_from_base_date/3`, beside a new `base_date/3`.
 
 ## Overview
 
@@ -123,7 +123,7 @@ All modules move from the `Cldr.Calendar` namespace to `Calendrical`:
 | `Cldr.Calendar.LunarJapanese` | `Calendrical.LunarJapanese` |
 | `Cldr.Calendar.FiscalYear` | `Calendrical.FiscalYear` |
 | `Cldr.Calendar.FiscalYear.US` | `Calendrical.FiscalYear.US` |
-| `Cldr.Calendar.Config` | `Calendrical.Config` |
+| `Cldr.Calendar.Config` | **removed** — a calendar's options are its maker's. See [Configuration changes](#configuration-changes). |
 | `Cldr.Calendar.Interval` | `Calendrical.Interval` |
 | `Cldr.Calendar.Kday` | `Calendrical.Kday` |
 | `Cldr.Calendar.Sigils` | **removed** — use Elixir's native `~D` sigil. See [Sigils](#sigils) below. |
@@ -155,6 +155,31 @@ New exceptions introduced by this refactor (replacing inline `{ArgumentError, ".
 | `Calendrical.InvalidPartError` | `:part`, `:valid_parts` | `Calendrical.localize/3` |
 | `Calendrical.InvalidTypeError` | `:type`, `:valid_types` | `Calendrical.localize/3` |
 | `Calendrical.InvalidStyleError` | `:style`, `:valid_styles` | `Calendrical.localize/3` |
+| `Calendrical.UnknownOptionError` | `:maker`, `:options`, `:known_options` | the calendar makers, `Calendrical.new/3`, `Calendrical.Composite.new/2` |
+| `Calendrical.InvalidOptionValueError` | `:option`, `:value`, `:maker` | the calendar makers, `Calendrical.new/3`, `date_at/2`, `Calendrical.strftime/3` |
+| `Calendrical.InvalidCompositeError` | `:reason`, `:value` | `use Calendrical.Composite`, `Calendrical.Composite.new/2` |
+| `Calendrical.RemovedOptionError` | `:option` | the parse functions, for `:return_calendar` |
+| `Calendrical.NoDuskError` | `:day_start`, `:location`, `:date` | `date_at/2` |
+| `Calendrical.InvalidSolarTermError` | `:index` | `solar_term/2`, `Calendrical.Lunisolar.solar_term_name/1` |
+| `Calendrical.InvalidDateError` | `:calendar`, `:value` | every function given a date, a week or a day of the year the calendar does not have |
+| `Calendrical.NotDefinedError` | `:calendar`, `:question`, `:value` | `days_in_month/1`, `months_in_year/0`, `Calendrical.Info.years_in_cycle/1` |
+| `Calendrical.UnknownReformError` | `:territory` | `Calendrical.Reform.reform_date/1`, `Calendrical.Reform.calendar_for/1` |
+| `Calendrical.AstronomyError` | `:calendar`, `:value`, `:reason` | the astronomical calendars, for an `Astro` failure other than its range |
+
+The 1.x atoms each became an exception:
+
+| 1.x | 2.0 |
+|---|---|
+| `{:error, :invalid_date}` | `{:error, %Calendrical.InvalidDateError{}}` |
+| `{:error, :invalid_month}`, `{:error, :invalid_leap_month}` | `{:error, %Calendrical.InvalidMonthError{}}` |
+| `{:error, :undefined}`, `{:error, :not_defined}` | `{:error, %Calendrical.NotDefinedError{}}` |
+| `{:error, :year_out_of_range}`, `{:error, :not_found}` | `{:error, %Calendrical.UnsupportedDateRangeError{}}` |
+| `{:error, :unknown_territory}` | `{:error, %Calendrical.UnknownReformError{}}` |
+| `{:error, :incompatible_calendars}` | `{:error, %Calendrical.IncompatibleCalendarError{reason: :day_rollover}}` |
+
+`days_in_month/2` returns `{:error, %Calendrical.InvalidMonthError{}}` in every calendar for a month its year does not have, where it raised, answered `0` or gave another month's length in 1.x.
+
+Two kinds of callback still return an atom, because code outside Calendrical reads it. A calendar's `parse_date/1`, `parse_naive_datetime/1` and `parse_utc_datetime/1` return `{:error, atom}` as Elixir's `Calendar` behaviour requires, for `Date.from_iso8601/2` and the others. `date_from_written_date/3` returns `{:error, :invalid_date}` and `written_month_from_cldr_month/2` returns `{:error, :invalid_month}`, which Localize's date parser reads.
 
 ### Error return convention
 
@@ -178,7 +203,7 @@ The new pattern lets callers extract structured data from the exception (e.g. `:
 
 ### Behaviour module
 
-Calendars that use the behaviour macro change from `use Cldr.Calendar.Behaviour` to `use Calendrical.Behaviour`, and from `use Cldr.Calendar.Base.Month` / `use Cldr.Calendar.Base.Week` to `use Calendrical.Base.Month` / `use Calendrical.Base.Week`. The configuration options remain the same.
+Calendars that use the behaviour macro change from `use Cldr.Calendar.Behaviour` to `use Calendrical.Calendar`, from `use Cldr.Calendar.Base.Month` to `use Calendrical.Calendar.Shifted`, and from `use Cldr.Calendar.Base.Week` to `use Calendrical.Calendar.Weeks`. Their options change as described in [Migrating to Calendrical 2.0](#migrating-to-calendrical-2-0).
 
 ## Removed: Cldr.Calendar.Duration
 
@@ -242,7 +267,7 @@ Date.shift(date, month: -1)
 
 ### Coercion
 
-The old `plus/4` accepted a `:clamp` option that controlled whether invalid dates (such as February 30) would be clamped to valid dates or return `{:error, :invalid_date}`. `Date.shift/2` always clamps to valid dates, matching the `clamp: true` default behaviour.
+The old `plus/4` accepted a `:clamp` option that controlled whether invalid dates (such as February 30) would be clamped to valid dates or return `{:error, :invalid_date}`. `Date.shift/2` always clamps to valid dates. A calendar's own `shift/6` keeps `:clamp`, `true` by default; `clamp: false` keeps the day, which can name a day the month lacks.
 
 ```elixir
 # Old — could disable clamping
@@ -288,7 +313,7 @@ Calendrical.previous(~D[2024-03-15], :year)
 # With Date.Range inputs, returns the next/previous period as a range
 year_range = Calendrical.Gregorian.year(2024)
 Calendrical.next(year_range, :year)
-# => Date.range(~D[2025-01-01], ~D[2025-12-31])
+# => Date.range(~D[2025-01-01 Calendrical.Gregorian], ~D[2025-12-31 Calendrical.Gregorian])
 ```
 
 ### Localization
@@ -329,29 +354,26 @@ These return `{:ok, data}` tuples.
 
 ```elixir
 # Creating custom calendars
-{:ok, MyFiscal} = Calendrical.new(MyFiscal, :month, month_of_year: 7, year: :ending)
+{:ok, MyFiscal} = Calendrical.new(MyFiscal, :month, year_begins: {7, 1}, year_number: :ending)
 
-# Or using the behaviour directly in a module
+# Or using a maker directly in a module
 defmodule MyApp.FiscalYear do
-  use Calendrical.Base.Month,
-    month_of_year: 7,
-    year: :ending
+  use Calendrical.Calendar.Shifted,
+    year_begins: {7, 1},
+    year_number: :ending
 end
 
-# Week-based calendar
+# Week-based calendar: the year ends on the first Saturday on or after 31 January
 defmodule MyApp.Retail do
-  use Calendrical.Base.Week,
-    begins_or_ends: :ends,
-    first_or_last: :last,
-    day_of_week: 6,
-    month_of_year: 1,
-    weeks_in_month: [4, 4, 5]
+  use Calendrical.Calendar.Weeks,
+    year_ends: {:saturday, :on_or_after, {1, 31}},
+    pattern: [4, 4, 5]
 end
 ```
 
 ### Week-based calendars hold a month and a day
 
-A date of a week-based calendar is a year, a month and a day of the month, as a date of any calendar is. In `ex_cldr_calendars`, and in Calendrical before 1.4, its `:month` field held the week of the year and its `:day` field the day of the week.
+A date of a week-based calendar is a year, a month and a day of the month, as a date of any calendar is. In `ex_cldr_calendars`, and in Calendrical before 2.0, its `:month` field held the week of the year and its `:day` field the day of the week.
 
 ```elixir
 # Old — the second day of week 25
@@ -404,7 +426,7 @@ import Calendrical.Sigils
 ~D[5784-08-15 Calendrical.Hebrew]                   # Hebrew (15 Nisan, month 8 of a leap year)
 ```
 
-The native `~D` sigil has supported the trailing calendar form since Elixir 1.10. It works for any module implementing the `Calendar` behaviour, so all 17 Calendrical calendars (and any user-defined calendar built with `Calendrical.Behaviour`) are valid.
+The native `~D` sigil has supported the trailing calendar form since Elixir 1.10. It works for any module implementing the `Calendar` behaviour, so every Calendrical calendar, and any calendar built with `Calendrical.Calendar` or one of its makers, is valid.
 
 Features the old `~d` sigil supported that the native `~D` does not:
 
@@ -522,7 +544,7 @@ The `Calendrical.Formatter.Options` struct fields:
 
 ## Configuration changes
 
-The `Calendrical.Config` struct no longer includes a `:cldr_backend` field. The `:locale` option can be used when creating calendars to derive locale-specific defaults for `:day_of_week` and `:min_days_in_first_week`.
+There is no configuration struct: a calendar's options are those of its maker, and `:cldr_backend` is gone. `Calendrical.calendar_for_territory/2` makes a month calendar with a territory's first day of the week and minimum days in the first week.
 
 ```elixir
 # Old
@@ -532,11 +554,9 @@ Cldr.Calendar.new(MyCalendar, :week, [
   month_of_year: 1
 ])
 
-# New
-Calendrical.new(MyCalendar, :week, [
-  day_of_week: 1,
-  month_of_year: 1
-])
+# New — the year begins on the Monday on or before 1 January
+Calendrical.new(MyCalendar, :week, year_begins: {:monday, :on_or_before, {1, 1}})
+# => {:ok, MyCalendar}
 ```
 
 ## Unit application order

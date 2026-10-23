@@ -216,7 +216,7 @@ defmodule Calendrical do
   The error a question about a date returns: `:invalid_date` for a date the calendar does not have, or a `Calendrical.MissingFieldsError` for a date missing a field the question needs.
 
   """
-  @type date_error :: {:error, :invalid_date | Exception.t()}
+  @type date_error :: {:error, Exception.t()}
 
   @typedoc """
   Represents the number of days since the
@@ -362,6 +362,10 @@ defmodule Calendrical do
   not have is brought back into it (`true`) or kept as it is counted
   (`false`); where it is not given, the calendar's own default applies.
 
+  A `{year, month, day}` that is no date of the calendar is
+  `{:error, %Calendrical.InvalidDateError{}}`, and one missing a field a
+  `Calendrical.MissingFieldsError`.
+
   """
   @callback shift(
               year :: year(),
@@ -370,11 +374,11 @@ defmodule Calendrical do
               date_part :: :years | :quarters | :months | :weeks | :days,
               increment :: integer,
               options :: Keyword.t()
-            ) :: {Calendar.year(), Calendar.month(), Calendar.day()}
+            ) :: {Calendar.year(), Calendar.month(), Calendar.day()} | {:error, Exception.t()}
 
   @doc """
   Returns the whole number of years, quarters, months, weeks or days
-  from one `{year, month, day}` to another — the inverse of `shift/6`.
+  from one `{year, month, day}` to another, as `shift/6` adds them.
 
   The count is the largest number of `date_part`s that `shift/6`, clamping
   the day into a shorter month, can add to the earlier date without
@@ -437,6 +441,10 @@ defmodule Calendrical do
   Returns the date of this calendar that written figures name: the
   inverse of `c:written_date/3`.
 
+  Figures that name no date are `{:error, :invalid_date}`. The reason is
+  an atom, not an exception as Calendrical's other functions return,
+  because Localize's date parser reads it from every calendar.
+
   """
   @callback date_from_written_date(
               year :: Calendar.year(),
@@ -444,6 +452,8 @@ defmodule Calendrical do
               day :: Calendar.day()
             ) ::
               {:ok, {Calendar.year(), Calendar.month(), Calendar.day()}}
+              # Localize's date parser reads this atom (see c:Calendrical.date_from_written_date/3).
+              # credo:disable-for-next-line Calendrical.Credo.ErrorTuple
               | {:error, :invalid_date}
 
   @doc """
@@ -697,7 +707,7 @@ defmodule Calendrical do
 
   """
   @spec new(module(), calendar_type(), Keyword.t()) ::
-          {:ok, calendar()} | {:error, String.t()}
+          {:ok, calendar()} | {:error, Exception.t()}
 
   def new(calendar_module, calendar_type, config)
       when is_atom(calendar_module) and calendar_type in [:week, :month] do
@@ -736,7 +746,7 @@ defmodule Calendrical do
 
   """
   @spec calendar_for_territory(atom() | String.t(), Keyword.t()) ::
-          {:ok, calendar()} | {:error, Exception.t() | String.t()}
+          {:ok, calendar()} | {:error, Exception.t()}
   def calendar_for_territory(territory, config \\ []) do
     with {:ok, territory} <- Localize.validate_territory(territory) do
       calendar_name = Module.concat(__MODULE__, territory)
@@ -825,7 +835,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `date_or_range` is any `t:Calendar.date/0` or ` t:Date.Range.t/0`.
+  * `date_or_range` is any `t:Calendar.date/0` or `t:Date.Range.t/0`.
 
   * `calendar` is any valid calendar module.
 
@@ -833,23 +843,47 @@ defmodule Calendrical do
 
   * `{:ok, converted_date_or_range}` or
 
-  * `{:error, :incompatible_calendars}`
+  * `{:error, %Calendrical.IncompatibleCalendarError{}}` where the two
+    calendars begin their days at different times.
 
-  ### Example
+  ### Examples
+
+      iex> Calendrical.convert(~D[2024-06-01], Calendrical.Hebrew)
+      {:ok, ~D[5784-09-24 Calendrical.Hebrew]}
+
+      iex> Calendrical.convert(Date.range(~D[2024-06-01], ~D[2024-06-03]), Calendrical.Persian)
+      {:ok, Date.range(~D[1403-03-12 Calendrical.Persian], ~D[1403-03-14 Calendrical.Persian])}
 
   """
-  @doc since: "2.4.0"
   @spec convert(Date.t() | Date.Range.t(), Calendar.calendar()) ::
-          {:ok, Date.t() | Date.Range.t()} | {:error, :incompatible_calendars}
+          {:ok, Date.t() | Date.Range.t()} | {:error, Exception.t()}
 
   def convert(%Date{} = date, calendar) do
-    Date.convert(date, calendar)
+    convert_date(date, calendar)
   end
 
   def convert(%Date.Range{first: first, last: last, step: step}, calendar) do
-    with {:ok, new_first} <- Date.convert(first, calendar),
-         {:ok, new_last} <- Date.convert(last, calendar) do
+    with {:ok, new_first} <- convert_date(first, calendar),
+         {:ok, new_last} <- convert_date(last, calendar) do
       {:ok, Date.range(new_first, new_last, step)}
+    end
+  end
+
+  @doc false
+  # `Date.convert/2`, answering a conversion between calendars whose days
+  # begin at different times with an exception rather than its atom.
+  def convert_date(date, calendar) do
+    case Date.convert(date, calendar) do
+      {:ok, converted} ->
+        {:ok, converted}
+
+      {:error, :incompatible_calendars} ->
+        {:error,
+         Calendrical.IncompatibleCalendarError.exception(
+           from: date.calendar,
+           to: calendar,
+           reason: :day_rollover
+         )}
     end
   end
 
@@ -920,6 +954,9 @@ defmodule Calendrical do
 
   * `{:error, Localize.InvalidValueError.t()}` when `input` is not a string or an option is malformed.
 
+  * `{:error, %Calendrical.RemovedOptionError{}}` for the
+    `:return_calendar` option, which was removed in 2.0.
+
   ### Examples
 
       iex> Calendrical.parse("2026-05-16", locale: :en)
@@ -952,7 +989,10 @@ defmodule Calendrical do
            | map()
            | {map(), map()}}
           | {:error, Exception.t()}
-  defdelegate parse(input, options \\ []), to: Localize.DateTime.Parser
+  def parse(input, options \\ []) do
+    with :ok <- Calendrical.Parse.refuse_removed_options(options),
+         do: Localize.DateTime.Parser.parse(input, options)
+  end
 
   @doc """
   Formats a date, time or datetime with `Calendar.strftime/3`, naming its
@@ -996,7 +1036,8 @@ defmodule Calendrical do
 
   ### Examples
 
-      iex> Calendrical.strftime(~D[2025-01-26 Calendrical.IL], "%a", locale: :he)
+      iex> {:ok, israel} = Calendrical.calendar_for_territory(:IL)
+      iex> Calendrical.strftime(Date.convert!(~D[2025-01-26], israel), "%a", locale: :he)
       {:ok, "יום א׳"}
 
       iex> Calendrical.strftime(Date.new!(5779, 7, 1, Calendrical.Hebrew), "%A %B", locale: :en)
@@ -1041,7 +1082,8 @@ defmodule Calendrical do
 
   ### Examples
 
-      iex> Calendrical.strftime!(~D[2025-01-26 Calendrical.IL], "%A", locale: :en)
+      iex> {:ok, israel} = Calendrical.calendar_for_territory(:IL)
+      iex> Calendrical.strftime!(Date.convert!(~D[2025-01-26], israel), "%A", locale: :en)
       "Sunday"
 
   """
@@ -1057,8 +1099,7 @@ defmodule Calendrical do
     if Keyword.keyword?(options) do
       :ok
     else
-      {:error,
-       ArgumentError.exception("expected options to be a keyword list, got: #{inspect(options)}")}
+      {:error, Calendrical.InvalidOptionValueError.exception(option: :options, value: options)}
     end
   end
 
@@ -1168,6 +1209,16 @@ defmodule Calendrical do
       abbreviated_day_of_week_names: fn _day ->
         date_name!(date, :day_of_week, locale, :abbreviated)
       end
+    ]
+  end
+
+  # A partial date's month is named from the date as a whole date's is; a
+  # day of the week needs the whole date.
+  defp date_names(%{month: month, calendar: calendar} = date, locale)
+       when is_integer(month) and is_atom(calendar) do
+    [
+      month_names: fn _month -> date_name!(date, :month, locale, :wide) end,
+      abbreviated_month_names: fn _month -> date_name!(date, :month, locale, :abbreviated) end
     ]
   end
 
@@ -1403,7 +1454,7 @@ defmodule Calendrical do
 
   * a `t:Calendar.date/0`  or
 
-  * `{:error, :invalid_date}`
+  * `{:error, %Calendrical.InvalidDateError{}}`
 
   ### Examples
 
@@ -1418,7 +1469,7 @@ defmodule Calendrical do
 
   """
   @spec first_day_of_year(year :: year(), calendar :: calendar()) ::
-          Date.t() | {:error, :invalid_date}
+          Date.t() | {:error, Exception.t()}
 
   def first_day_of_year(year, calendar) do
     with {:ok, first, _last} <- year_days(year, calendar) do
@@ -1457,7 +1508,7 @@ defmodule Calendrical do
 
   * a `t:Calendar.date/0`  or
 
-  * `{:error, :invalid_date}`
+  * `{:error, %Calendrical.InvalidDateError{}}`
 
   ### Examples
 
@@ -1465,7 +1516,7 @@ defmodule Calendrical do
       ~D[2019-01-01]
 
   """
-  @spec first_day_of_year(date :: date()) :: Date.t() | {:error, :invalid_date}
+  @spec first_day_of_year(date :: date()) :: Date.t() | {:error, Exception.t()}
 
   def first_day_of_year(%Date{year: year, calendar: calendar}) do
     first_day_of_year(year, calendar)
@@ -1492,7 +1543,7 @@ defmodule Calendrical do
 
   * a `t:Calendar.date/0`  or
 
-  * `{:error, :invalid_date}`
+  * `{:error, %Calendrical.InvalidDateError{}}`
 
   ### Examples
 
@@ -1507,7 +1558,7 @@ defmodule Calendrical do
 
   """
   @spec last_day_of_year(year :: year(), calendar :: calendar()) ::
-          Date.t() | {:error, :invalid_date}
+          Date.t() | {:error, Exception.t()}
 
   def last_day_of_year(year, calendar) do
     with {:ok, _first, last} <- year_days(year, calendar) do
@@ -1527,7 +1578,7 @@ defmodule Calendrical do
 
   * a `t:Calendar.date/0`  or
 
-  * `{:error, :invalid_date}`
+  * `{:error, %Calendrical.InvalidDateError{}}`
 
   ### Examples
 
@@ -1535,7 +1586,7 @@ defmodule Calendrical do
       ~D[2019-12-31]
 
   """
-  @spec last_day_of_year(date :: date()) :: Date.t() | {:error, :invalid_date}
+  @spec last_day_of_year(date :: date()) :: Date.t() | {:error, Exception.t()}
 
   def last_day_of_year(%Date{year: year, calendar: calendar}) do
     last_day_of_year(year, calendar)
@@ -1563,7 +1614,7 @@ defmodule Calendrical do
     `Calendrical.Gregorian` for a `year` and `calendar`, and in the
     date's own calendar for a date.
 
-  * `{:error, :invalid_date}` if the calendar has no such year.
+  * `{:error, %Calendrical.InvalidDateError{}}` if the calendar has no such year.
 
   ### Examples
 
@@ -1577,7 +1628,7 @@ defmodule Calendrical do
       ~D[2019-01-01]
 
   """
-  @spec first_gregorian_day_of_year(date()) :: Date.t() | {:error, :invalid_date}
+  @spec first_gregorian_day_of_year(date()) :: Date.t() | {:error, Exception.t()}
 
   def first_gregorian_day_of_year(%Date{year: year, calendar: Calendar.ISO}) do
     year
@@ -1605,7 +1656,7 @@ defmodule Calendrical do
 
   * A `t:Date.t/0` in the `Calendrical.Gregorian` calendar or
 
-  * `{:error, :invalid_date}`.
+  * `{:error, %Calendrical.InvalidDateError{}}`.
 
   ### Examples
 
@@ -1620,7 +1671,7 @@ defmodule Calendrical do
 
   """
   @spec first_gregorian_day_of_year(year(), calendar()) ::
-          Date.t() | {:error, :invalid_date}
+          Date.t() | {:error, Exception.t()}
   def first_gregorian_day_of_year(year, calendar) do
     with {:ok, first, _last} <- year_days(year, calendar) do
       date_at(first, Calendrical.Gregorian)
@@ -1644,7 +1695,7 @@ defmodule Calendrical do
     `Calendrical.Gregorian` for a `year` and `calendar`, and in the
     date's own calendar for a date.
 
-  * `{:error, :invalid_date}` if the calendar has no such year.
+  * `{:error, %Calendrical.InvalidDateError{}}` if the calendar has no such year.
 
   ### Examples
 
@@ -1658,7 +1709,7 @@ defmodule Calendrical do
       ~D[2019-12-31]
 
   """
-  @spec last_gregorian_day_of_year(date()) :: Date.t() | {:error, :invalid_date}
+  @spec last_gregorian_day_of_year(date()) :: Date.t() | {:error, Exception.t()}
 
   def last_gregorian_day_of_year(%Date{year: year, calendar: Calendar.ISO}) do
     year
@@ -1686,7 +1737,7 @@ defmodule Calendrical do
 
   * A `t:Date.t/0` in the `Calendrical.Gregorian` calendar or
 
-  * `{:error, :invalid_date}`.
+  * `{:error, %Calendrical.InvalidDateError{}}`.
 
   ### Examples
 
@@ -1701,7 +1752,7 @@ defmodule Calendrical do
 
   """
   @spec last_gregorian_day_of_year(year(), calendar()) ::
-          Date.t() | {:error, :invalid_date}
+          Date.t() | {:error, Exception.t()}
   def last_gregorian_day_of_year(year, calendar) do
     with {:ok, _first, last} <- year_days(year, calendar) do
       date_at(last, Calendrical.Gregorian)
@@ -2060,7 +2111,7 @@ defmodule Calendrical do
 
   """
   @spec quarter_of_year(date()) ::
-          Calendrical.quarter() | {:error, :not_defined} | Calendrical.date_error()
+          Calendrical.quarter() | Calendrical.date_error()
 
   def quarter_of_year(%{} = date) do
     {year, month, day, calendar} = extract_date(date)
@@ -2247,8 +2298,7 @@ defmodule Calendrical do
   * a the week of the year as an
     integer or
 
-  * `{:error, :not_defined}` if the calendar
-    does not support the concept of weeks.
+  * `{:error, exception}` for a date the calendar does not have.
 
   ### Examples
 
@@ -2286,8 +2336,7 @@ defmodule Calendrical do
   * a the ISO week of the year as an
     integer or
 
-  * `{:error, :not_defined}` is the calendar
-    does not support the concept of weeks.
+  * `{:error, exception}` for a date the calendar does not have.
 
   ### Examples
 
@@ -2323,7 +2372,7 @@ defmodule Calendrical do
 
   * a tuple of the form `{month, week}`, or
 
-  * `{:error, reason}` if the date is missing a field.
+  * `{:error, exception}` if the date is missing a field.
 
   ### Examples
 
@@ -2333,9 +2382,10 @@ defmodule Calendrical do
       {1, 1}
       iex> Calendrical.week_of_month(~D[2021-10-01 Calendrical.ISO])
       {9, 5}
-      iex> Calendrical.week_of_month(~D[2019-01-01 Calendrical.BasicWeek])
+      iex> {:ok, weeks_from_first_day} = Calendrical.new(MyApp.WeeksFromFirstDay, :month, weeks: :from_first_day)
+      iex> Calendrical.week_of_month(Date.convert!(~D[2019-01-01], weeks_from_first_day))
       {1, 1}
-      iex> Calendrical.week_of_month(~D[2018-12-31 Calendrical.BasicWeek])
+      iex> Calendrical.week_of_month(Date.convert!(~D[2018-12-31], weeks_from_first_day))
       {12, 5}
       iex> Calendrical.week_of_month(~D[2018-12-31 Calendrical.Julian])
       {12, 5}
@@ -2403,7 +2453,7 @@ defmodule Calendrical do
     counts them: whole weeks, week 1 holding at least the fewest days of
     the year the calendar's `info/0` states, or
 
-  * `{:error, reason}` for a year the calendar does not have.
+  * `{:error, exception}` for a year the calendar does not have.
 
   ### Examples
 
@@ -2436,10 +2486,10 @@ defmodule Calendrical do
       # A calendar whose weeks start on the first day of the year
       # has a short last week, its 53rd.
 
-      iex> Calendrical.SequentialWeeks.weeks_in_year(2023)
+      iex> {:ok, weeks_from_first_day} = Calendrical.new(MyApp.WeeksFromFirstDay, :month, weeks: :from_first_day)
+      iex> weeks_from_first_day.weeks_in_year(2023)
       53
-
-      iex> Calendrical.SequentialWeeks.weeks_in_year(2020)
+      iex> weeks_from_first_day.weeks_in_year(2020)
       53
 
   """
@@ -2525,9 +2575,11 @@ defmodule Calendrical do
 
   ### Returns
 
-  * `{weeks_in_year, days_in_last_week}` or
+  * The number of weeks in the year, or
 
-  * `{:error, exception}` where `exception` is an exception struct.
+  * `{:error, %Calendrical.InvalidDateError{}}` for a year the calendar does not have, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` when `year` is `nil`.
 
   ### Examples
 
@@ -2543,8 +2595,7 @@ defmodule Calendrical do
       53
 
   """
-  @spec weeks_in_year(year(), calendar) ::
-          {Calendrical.week(), Calendar.day_of_week()} | {:error, Exception.t()}
+  @spec weeks_in_year(year(), calendar) :: pos_integer() | date_error()
   def weeks_in_year(year, Calendar.ISO) do
     Calendrical.Gregorian.weeks_in_year(year)
   end
@@ -2617,7 +2668,8 @@ defmodule Calendrical do
       iex> Calendrical.weekend?(~D[2019-03-22], locale: :he)
       true
 
-      iex> Calendrical.weekend?(~D[2019-03-22 Calendrical.IL], locale: :he)
+      iex> {:ok, israel} = Calendrical.calendar_for_territory(:IL)
+      iex> Calendrical.weekend?(Date.convert!(~D[2019-03-22], israel), locale: :he)
       true
 
       # As it also does in Saudia Arabia
@@ -2707,7 +2759,8 @@ defmodule Calendrical do
       iex> Calendrical.weekday?(~D[2019-03-22], locale: :he)
       false
 
-      iex> Calendrical.weekday?(~D[2019-03-22 Calendrical.IL], locale: :he)
+      iex> {:ok, israel} = Calendrical.calendar_for_territory(:IL)
+      iex> Calendrical.weekday?(Date.convert!(~D[2019-03-22], israel), locale: :he)
       false
 
   """
@@ -3221,7 +3274,7 @@ defmodule Calendrical do
 
   """
   @spec next(date() | Date.Range.t(), :year | :quarter | :month | :week | :day, Keyword.t()) ::
-          Date.t() | Date.Range.t() | {:error, :not_defined}
+          Date.t() | Date.Range.t() | {:error, Exception.t()}
   def next(date_or_date_range, date_part, options \\ [])
 
   def next(%Date.Range{last: date}, :year, options) do
@@ -3316,7 +3369,7 @@ defmodule Calendrical do
           date() | Date.Range.t(),
           :year | :quarter | :month | :week | :day,
           Keyword.t()
-        ) :: Date.t() | Date.Range.t() | {:error, :not_defined}
+        ) :: Date.t() | Date.Range.t() | {:error, Exception.t()}
   def previous(date_or_date_range, date_part, options \\ [])
 
   def previous(%Date.Range{first: date}, :year, options) do
@@ -3387,20 +3440,14 @@ defmodule Calendrical do
       {:ok, %Date{year: 2022, month: 6, day: 9, calendar: Calendrical.FR}}
 
   """
-  @doc since: "1.19.0"
-
   @spec localize(any_date_time()) ::
-          {:ok, any_date_time()}
-          | {:error, :incompatible_calendars}
-          | {:error, Exception.t()}
+          {:ok, any_date_time()} | {:error, Exception.t()}
 
   @spec localize(any_date_time(), Keyword.t() | atom()) ::
-          {:ok, any_date_time()}
-          | {:error, :incompatible_calendars}
-          | {:error, Exception.t()}
+          {:ok, any_date_time()} | {:error, Exception.t()}
 
   @spec localize(any_date_time(), atom(), Keyword.t()) ::
-          String.t() | {:error, :incompatible_calendars} | {:error, Exception.t()}
+          String.t() | {:error, Exception.t()}
 
   def localize(date) do
     localize(date, [])
@@ -3436,13 +3483,12 @@ defmodule Calendrical do
       {:ok, %Date{year: 2022, month: 6, day: 9, calendar: Calendrical.FR}}
 
   """
-  @doc since: "1.19.0"
   def localize(date, options) when is_list(options) do
     locale = Keyword.get(options, :locale, Localize.get_locale())
 
     with {:ok, locale} <- Localize.validate_locale(locale),
          {:ok, calendar} <- calendar_from_locale(locale) do
-      Date.convert(date, calendar)
+      convert_date(date, calendar)
     end
   end
 
@@ -3555,7 +3601,7 @@ defmodule Calendrical do
     calendar_type = calendar.era_calendar_type()
     variant? = options[:era] == :variant
 
-    with {_, era} <- day_of_era(datetime) do
+    with {_day_of_era, era} when is_integer(era) <- day_of_era(datetime) do
       era_key = if variant?, do: -era - 1, else: era
       eras = unwrap!(Localize.Calendar.eras(locale, calendar_type))
 
@@ -3670,11 +3716,13 @@ defmodule Calendrical do
   @doc false
   def localize(datetime, :day_of_week, type, style, locale, _options)
       when is_full_date(datetime) do
-    calendar_type = date_calendar_type(datetime)
+    with :ok <- date_check(datetime) do
+      calendar_type = date_calendar_type(datetime)
 
-    day = iso_day_of_week(datetime)
-    days_data = unwrap!(Localize.Calendar.days(locale, calendar_type))
-    get_in(days_data, [type, style, day])
+      day = iso_day_of_week(datetime)
+      days_data = unwrap!(Localize.Calendar.days(locale, calendar_type))
+      get_in(days_data, [type, style, day])
+    end
   end
 
   def localize(date, :day_of_week, _type, _style, _locale, _options) do
@@ -3683,16 +3731,8 @@ defmodule Calendrical do
 
   @doc false
   def localize(datetime, :days_of_week, type, style, locale, _options) do
-    for date <- days_of_the_week(datetime) do
-      day_of_week = day_of_week(date)
-      cardinal_day_of_week = iso_day_of_week(date)
-
-      days_data = unwrap!(Localize.Calendar.days(locale, date_calendar_type(date)))
-
-      day_name =
-        get_in(days_data, [type, style, cardinal_day_of_week])
-
-      {day_of_week, day_name}
+    with :ok <- date_check(datetime) do
+      days_of_week(datetime, type, style, locale)
     end
   end
 
@@ -3784,6 +3824,31 @@ defmodule Calendrical do
   # order. A calendar week cut short at the start or end of its year still
   # has seven days of the week, so they count from the date's own day of
   # the week whenever the calendar's week holds fewer.
+  defp days_of_week(datetime, type, style, locale) do
+    for date <- days_of_the_week(datetime) do
+      day_of_week = day_of_week(date)
+      cardinal_day_of_week = iso_day_of_week(date)
+
+      days_data = unwrap!(Localize.Calendar.days(locale, date_calendar_type(date)))
+
+      day_name =
+        get_in(days_data, [type, style, cardinal_day_of_week])
+
+      {day_of_week, day_name}
+    end
+  end
+
+  # A date whose fields its calendar has, or the error naming it.
+  defp date_check(%{year: year, month: month, day: day} = date) do
+    calendar = Map.get(date, :calendar, @default_calendar)
+
+    if calendar.valid_date?(year, month, day),
+      do: :ok,
+      else:
+        {:error,
+         Calendrical.InvalidDateError.exception(calendar: calendar, value: {year, month, day})}
+  end
+
   defp days_of_the_week(date) do
     case Interval.week(date) do
       %Date.Range{first_in_iso_days: first, last_in_iso_days: last} = week
@@ -3900,8 +3965,6 @@ defmodule Calendrical do
       }
 
   """
-  @doc since: "2.3.0"
-
   @spec month_names(calendar :: calendar(), options :: Keyword.t()) ::
           list({pos_integer, String.t()}) | {:error, Exception.t()}
 
@@ -3954,25 +4017,6 @@ defmodule Calendrical do
   end
 
   @doc false
-  def month_day(_year, month, day, _calendar, false) do
-    {month, day}
-  end
-
-  def month_day(year, month, day, calendar, true) do
-    new_month =
-      year
-      |> calendar.periods_in_year
-      |> min(month)
-
-    new_day =
-      year
-      |> calendar.days_in_month(new_month)
-      |> min(day)
-
-    {new_month, new_day}
-  end
-
-  @doc false
   # Shifts a date as ISO 8601 (`Calendar.ISO.shift_date/4`) and ECMA-262
   # Temporal's `NonISODateAdd` shift one: the years keep the month by its
   # name, the months count on from it, the day is brought into the month
@@ -3980,6 +4024,12 @@ defmodule Calendrical do
   # and a year and a month is 29 March 2025, where bringing the day into
   # February 2025 on the way would lose it.
   def shift_date(year, month, day, calendar, duration) do
+    # `Date.shift/2` reads a date back from `c:Calendar.shift_date/4`, which
+    # cannot answer an error tuple, so what is no date raises.
+    unless calendar.valid_date?(year, month, day) do
+      raise Calendrical.InvalidDateError, calendar: calendar, value: {year, month, day}
+    end
+
     %Duration{year: years, month: months, week: weeks, day: days} = date_duration(duration)
 
     {year, month, day}
@@ -4507,7 +4557,7 @@ defmodule Calendrical do
 
   """
   @spec date_from_iso_days(Calendar.iso_days() | iso_day_number, calendar()) ::
-          Date.t() | {:error, :incompatible_calendars | :invalid_date}
+          Date.t() | {:error, Exception.t()}
 
   def date_from_iso_days({days, _}, calendar) do
     date_from_iso_days(days, calendar)
@@ -4515,9 +4565,9 @@ defmodule Calendrical do
 
   def date_from_iso_days(iso_day_number, calendar) do
     {year, month, day} = Calendar.ISO.date_from_iso_days(iso_day_number)
+    date = %Date{year: year, month: month, day: day, calendar: Calendar.ISO}
 
-    with {:ok, date} <- Date.new(year, month, day),
-         {:ok, date} <- Date.convert(date, calendar) do
+    with {:ok, date} <- convert_date(date, calendar) do
       date
     end
   end
@@ -4545,17 +4595,28 @@ defmodule Calendrical do
       %Date{calendar: Calendrical.Gregorian, day: 25, month: 3, year: 2019}
 
       iex> Calendrical.date_from_tuple({2019, 2, 29}, Calendrical.Gregorian)
-      {:error, :invalid_date}
+      {:error, %Calendrical.InvalidDateError{calendar: Calendrical.Gregorian, value: {2019, 2, 29}}}
 
   """
   @spec date_from_tuple(
           {Calendar.year(), Calendar.month(), Calendar.day()},
           calendar()
-        ) :: Date.t() | {:error, :invalid_date}
+        ) :: Date.t() | {:error, Exception.t()}
   def date_from_tuple({year, month, day}, calendar \\ Calendrical.Gregorian) do
-    with {:ok, date} <- Date.new(year, month, day, calendar) do
-      date
+    new_date(year, month, day, calendar)
+  end
+
+  # `Date.new/4`, answering what is no date with an exception rather than
+  # its atom.
+  defp new_date(year, month, day, calendar) do
+    case Date.new(year, month, day, calendar) do
+      {:ok, date} -> date
+      {:error, _not_a_date} -> invalid_date(calendar, {year, month, day})
     end
+  end
+
+  defp invalid_date(calendar, value) do
+    {:error, Calendrical.InvalidDateError.exception(calendar: calendar, value: value)}
   end
 
   @doc """
@@ -4575,7 +4636,7 @@ defmodule Calendrical do
 
   * a `t:Calendar.date/0` or
 
-  * `{:error, :invalid_date}`
+  * `{:error, %Calendrical.InvalidDateError{}}`
 
   ### Examples
 
@@ -4583,25 +4644,24 @@ defmodule Calendrical do
       %Date{calendar: Calendrical.Gregorian, day: 25, month: 3, year: 2019}
 
       iex> Calendrical.date_from_list([year: 2019, month: 2, day: 29], Calendrical.Gregorian)
-      {:error, :invalid_date}
+      {:error, %Calendrical.InvalidDateError{calendar: Calendrical.Gregorian, value: {2019, 2, 29}}}
 
   """
-  @spec date_from_list(Keyword.t(), calendar()) :: Date.t() | {:error, :invalid_date}
+  @spec date_from_list(Keyword.t(), calendar()) :: Date.t() | {:error, Exception.t()}
   def date_from_list([{atom, _value} | _rest] = list, calendar \\ Calendrical.Gregorian)
       when is_atom(atom) do
-    with {:ok, year} <- date_part(list, :year),
-         {:ok, month} <- date_part(list, :month),
-         {:ok, day} <- date_part(list, :day),
-         {:ok, date} <- Date.new(year, month, day, calendar) do
-      date
+    with {:ok, year} <- date_part(list, :year, calendar),
+         {:ok, month} <- date_part(list, :month, calendar),
+         {:ok, day} <- date_part(list, :day, calendar) do
+      new_date(year, month, day, calendar)
     end
   end
 
   # A list without one of the date's fields names no date.
-  defp date_part(list, key) do
+  defp date_part(list, key, calendar) do
     case Keyword.fetch(list, key) do
       {:ok, value} -> {:ok, value}
-      :error -> {:error, :invalid_date}
+      :error -> invalid_date(calendar, list)
     end
   end
 
@@ -4625,7 +4685,7 @@ defmodule Calendrical do
 
   * a `t:Calendar.date/0` or
 
-  * `{:error, :invalid_date}`
+  * `{:error, %Calendrical.InvalidDateError{}}`
 
   ### Examples
 
@@ -4633,14 +4693,14 @@ defmodule Calendrical do
       ~D[2019-02-01 Calendrical.Gregorian]
 
       iex> Calendrical.date_from_day_of_year(2019, 366)
-      {:error, :invalid_date}
+      {:error, %Calendrical.InvalidDateError{calendar: Calendrical.Gregorian, value: [year: 2019, day_of_year: 366]}}
 
       iex> Calendrical.date_from_day_of_year(1700, 1, Calendrical.Julian.March25)
       ~D[1700-01-01 Calendrical.Julian.March25]
 
   """
   @spec date_from_day_of_year(Calendar.year(), pos_integer(), calendar()) ::
-          Date.t() | {:error, :invalid_date}
+          Date.t() | {:error, Exception.t()}
   def date_from_day_of_year(year, day_of_year, calendar \\ Calendrical.Gregorian)
 
   # `Calendar.ISO` has none of this behaviour's callbacks: its year is the
@@ -4650,11 +4710,12 @@ defmodule Calendrical do
     with {:ok, first, last} <- year_days(year, Calendar.ISO) do
       if first + day_of_year - 1 <= last,
         do: date_at(first + day_of_year - 1, Calendar.ISO),
-        else: {:error, :invalid_date}
+        else: invalid_date(Calendar.ISO, year: year, day_of_year: day_of_year)
     end
   end
 
-  def date_from_day_of_year(_year, _day_of_year, Calendar.ISO), do: {:error, :invalid_date}
+  def date_from_day_of_year(year, day_of_year, Calendar.ISO),
+    do: invalid_date(Calendar.ISO, year: year, day_of_year: day_of_year)
 
   def date_from_day_of_year(year, day_of_year, calendar) do
     calendar.date_from_day_of_year(year, day_of_year)
@@ -4997,8 +5058,8 @@ defmodule Calendrical do
   end
 
   @doc false
-  def coerce_iso_calendar({:error, :invalid_date}) do
-    {:error, :invalid_date}
+  def coerce_iso_calendar({:error, _exception} = error) do
+    error
   end
 
   def coerce_iso_calendar(%Date.Range{} = range) do
@@ -5110,7 +5171,9 @@ defmodule Calendrical do
 
   ### Returns
 
-  * The number of days in the month of `date`.
+  * The number of days in the month of `date`, or
+
+  * `{:error, exception}` for a date whose month its year does not have.
 
   ### Examples
 
@@ -5121,7 +5184,7 @@ defmodule Calendrical do
       28
 
   """
-  @spec days_in_month(date()) :: Calendar.day()
+  @spec days_in_month(date()) :: Calendar.day() | {:error, Exception.t()}
   defdelegate days_in_month(date), to: Date
 
   @doc """
@@ -5135,7 +5198,9 @@ defmodule Calendrical do
 
   ### Returns
 
-  * The number of months in the year of `date`.
+  * The number of months in the year of `date`, or
+
+  * `{:error, exception}` for a date with no year.
 
   ### Examples
 
@@ -5143,7 +5208,7 @@ defmodule Calendrical do
       12
 
   """
-  @spec months_in_year(date()) :: Calendar.month()
+  @spec months_in_year(date()) :: Calendar.month() | {:error, Exception.t()}
   defdelegate months_in_year(date), to: Date
 
   # Error helpers

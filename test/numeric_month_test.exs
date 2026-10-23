@@ -53,7 +53,9 @@ defmodule Calendrical.NumericMonthTest do
 
       assert fiscal.date_from_cardinal_date(2025, 7, 15) == {2026, 1, 15}
       assert fiscal.date_from_cardinal_date(2026, 1, 15) == {2026, 7, 15}
-      assert fiscal.date_from_cardinal_date(2025, 2, 30) == {:error, :invalid_date}
+
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               fiscal.date_from_cardinal_date(2025, 2, 30)
     end
 
     # Week 25's first day is the fifteenth of the sixth month of the pattern.

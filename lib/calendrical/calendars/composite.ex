@@ -35,13 +35,13 @@ defmodule Calendrical.Composite do
 
   A calendar must not number its first year before the last year of the calendar before it. The Hebrew calendar followed by the Gregorian from 1900 would give the Gregorian years from 1900 the numbers of Hebrew years from 1900 to 5660, and the dates of those years could name only one of their days. A year's number may stay the same through a transition, as it does where the day a year begins on changes (see below).
 
-  `use Calendrical.Composite` raises for a configuration it cannot keep, and `new/2` returns `{:error, reason}`:
+  `use Calendrical.Composite` raises a `Calendrical.InvalidCompositeError` for a configuration it cannot keep, and `new/2` returns it:
 
-      iex> Calendrical.Composite.new(MyApp.HebrewThenGregorian,
-      ...>   calendars: [~D[1900-01-01 Calendrical.Gregorian]],
-      ...>   base_calendar: Calendrical.Hebrew
-      ...> )
-      {:error, :years_must_not_go_back}
+      iex> {:error, %Calendrical.InvalidCompositeError{reason: :years_must_not_go_back}} =
+      ...>   Calendrical.Composite.new(MyApp.HebrewThenGregorian,
+      ...>     calendars: [~D[1900-01-01 Calendrical.Gregorian]],
+      ...>     base_calendar: Calendrical.Hebrew
+      ...>   )
 
   ## Julian to Gregorian transition
 
@@ -191,15 +191,7 @@ defmodule Calendrical.Composite do
   The reason `new/2` cannot create a composite calendar.
 
   """
-  @type error_reason ::
-          :no_calendars_configured
-          | :must_be_a_list_of_dates
-          | :invalid_date
-          | :must_not_be_composite_calendars
-          | :must_not_be_week_calendars
-          | :must_take_effect_on_different_days
-          | :years_must_not_go_back
-          | Exception.t()
+  @type error_reason :: Exception.t()
 
   defmacro __using__(options \\ []) do
     quote bind_quoted: [options: options] do
@@ -238,7 +230,7 @@ defmodule Calendrical.Composite do
 
   * `{:module_already_exists, calendar_module}` if a module with the same name already exists. Of the processes that create the same calendar at the same moment, one creates it and the others are answered this.
 
-  * `{:error, reason}` if the calendar cannot be created, where `reason` is `:no_calendars_configured`, `:must_be_a_list_of_dates`, `:invalid_date` for a date its calendar does not have, a `Calendrical.InvalidCalendarModuleError` for a calendar that is no calendar module, `:must_not_be_composite_calendars`, `:must_not_be_week_calendars`, `:must_take_effect_on_different_days`, `:years_must_not_go_back` (see "What a composite calendar can hold" above), or the exception a calendar raises for a date it does not reach.
+  * `{:error, exception}` if the calendar cannot be created: a `Calendrical.InvalidCompositeError` whose `:reason` says what makes no composite (see "What a composite calendar can hold" above), a `Calendrical.InvalidCalendarModuleError` for a calendar that is no calendar module, or the exception a calendar raises for a date it does not reach.
 
   ### Examples
 

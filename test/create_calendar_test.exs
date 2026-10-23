@@ -6,9 +6,9 @@ defmodule Calendrical.Create.Test do
   end
 
   test "that an invalid option is an error" do
-    assert {:error, %ArgumentError{message: message}} =
+    assert {:error, %Calendrical.UnknownOptionError{} = message_error} =
              Calendrical.new(:my_calendar, :week, invalid_option: "blah")
 
-    assert message =~ "unknown options [:invalid_option]"
+    assert Exception.message(message_error) =~ "does not read the options [:invalid_option]"
   end
 end

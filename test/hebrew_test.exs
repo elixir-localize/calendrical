@@ -148,14 +148,22 @@ defmodule Calendrical.HebrewTest do
       assert Hebrew.days_in_month(5784, 6) == 30
     end
 
-    test "a month the year does not have has no days" do
-      assert Hebrew.days_in_month(5785, 13) == 0
-      assert Hebrew.days_in_month(5784, 14) == 0
-      assert Hebrew.days_in_month(5785, 0) == 0
+    test "a month the year does not have is an error" do
+      assert {:error, %Calendrical.InvalidMonthError{year: 5785, month: 13}} =
+               Hebrew.days_in_month(5785, 13)
 
-      for bad <- [nil, "", :"", 1.0, %{}] do
-        assert Hebrew.days_in_month(5785, bad) == 0
-        assert Hebrew.days_in_month(bad, 1) == 0
+      assert {:error, %Calendrical.InvalidMonthError{year: 5784, month: 14}} =
+               Hebrew.days_in_month(5784, 14)
+
+      assert {:error, %Calendrical.InvalidMonthError{year: 5785, month: 0}} =
+               Hebrew.days_in_month(5785, 0)
+
+      assert {:error, %Calendrical.MissingFieldsError{}} = Hebrew.days_in_month(5785, nil)
+      assert {:error, %Calendrical.MissingFieldsError{}} = Hebrew.days_in_month(nil, 1)
+
+      for bad <- ["", :"", 1.0, %{}] do
+        assert {:error, %Calendrical.InvalidMonthError{}} = Hebrew.days_in_month(5785, bad)
+        assert {:error, %Calendrical.InvalidMonthError{}} = Hebrew.days_in_month(bad, 1)
       end
     end
 
@@ -269,8 +277,8 @@ defmodule Calendrical.HebrewTest do
       # Adar I is the leap month that follows traditional month 5
       assert Hebrew.ordinal_month_from_traditional(5784, {5, :leap}) == {:ok, 6}
 
-      assert Hebrew.ordinal_month_from_traditional(5785, {5, :leap}) ==
-               {:error, :invalid_leap_month}
+      assert {:error, %Calendrical.InvalidMonthError{}} =
+               Hebrew.ordinal_month_from_traditional(5785, {5, :leap})
     end
 
     test "ordinal_month_from_traditional/2 and lunar_month_of_year/2 are inverses over every month" do
@@ -294,8 +302,11 @@ defmodule Calendrical.HebrewTest do
       assert Hebrew.traditional_leap_month(5784) == 5
       assert Hebrew.leap_month(5785) == nil
       assert Hebrew.traditional_leap_month(5785) == nil
-      assert Hebrew.leap_month(~D[5784-01-01 Calendrical.Hebrew]) == 6
-      assert Hebrew.traditional_leap_month(~D[5785-01-01 Calendrical.Hebrew]) == nil
+    end
+
+    # The Date forms of leap_month/1 are gone in 2.0: it takes a year.
+    test "leap_month/1 takes a year, not a date" do
+      assert Hebrew.leap_month(~D[5784-01-01 Calendrical.Hebrew]) == nil
     end
 
     test "invalid input is an error, never an exception" do
@@ -304,14 +315,18 @@ defmodule Calendrical.HebrewTest do
       end
 
       for bad_year <- [nil, "", :"", 1.0] do
-        assert Hebrew.ordinal_month_from_traditional(bad_year, 1) == {:error, :invalid_month}
-        assert Hebrew.lunar_month_of_year(bad_year, 1) == {:error, :invalid_month}
+        assert {:error, %Calendrical.InvalidMonthError{}} =
+                 Hebrew.ordinal_month_from_traditional(bad_year, 1)
+
+        assert {:error, %Calendrical.InvalidMonthError{}} =
+                 Hebrew.lunar_month_of_year(bad_year, 1)
+
         assert Hebrew.leap_month(bad_year) == nil
         assert Hebrew.traditional_leap_month(bad_year) == nil
       end
 
-      assert Hebrew.lunar_month_of_year(5785, 13) == {:error, :invalid_month}
-      assert Hebrew.lunar_month_of_year(5785, 0) == {:error, :invalid_month}
+      assert {:error, %Calendrical.InvalidMonthError{}} = Hebrew.lunar_month_of_year(5785, 13)
+      assert {:error, %Calendrical.InvalidMonthError{}} = Hebrew.lunar_month_of_year(5785, 0)
     end
   end
 
@@ -428,17 +443,33 @@ defmodule Calendrical.HebrewTest do
     end
 
     test "returns an error, never raises, on bad input" do
-      assert {:error, {:invalid_day_start, :bogus}} =
+      assert {:error, %Calendrical.InvalidOptionValueError{option: :day_start, value: :bogus}} =
                Hebrew.date_at(~U[2025-03-01 12:00:00Z], day_start: :bogus)
 
-      assert {:error, {:invalid_location, :nope}} =
+      assert {:error, %Calendrical.InvalidOptionValueError{option: :location, value: :nope}} =
                Hebrew.date_at(~U[2025-03-01 12:00:00Z], location: :nope)
 
-      assert {:error, {:invalid_nightfall_angle, :nope}} =
+      assert {:error,
+              %Calendrical.InvalidOptionValueError{option: :nightfall_angle, value: :nope}} =
                Hebrew.date_at(~U[2025-03-01 12:00:00Z],
                  day_start: :nightfall,
                  nightfall_angle: :nope
                )
+    end
+
+    # Tromsø, above the Arctic Circle: the sun does not set in late June.
+    test "a day with no dusk is a NoDuskError" do
+      tromso = %Geo.Point{coordinates: {18.9553, 69.6492}}
+
+      for day_start <- [:sunset, :nightfall] do
+        assert {:error, %Calendrical.NoDuskError{day_start: ^day_start, date: ~D[2024-06-21]}} =
+                 Hebrew.date_at(~U[2024-06-21 12:00:00Z], location: tromso, day_start: day_start)
+      end
+    end
+
+    test "a dusk outside the ephemeris is an UnsupportedDateRangeError" do
+      assert {:error, %Calendrical.UnsupportedDateRangeError{range: :jpl_ephemeris}} =
+               Calendrical.Islamic.UmmAlQura.date_at(~U[1850-06-21 20:00:00Z], day_start: :sunset)
     end
   end
 end

@@ -119,13 +119,25 @@ defmodule Calendrical.Lunisolar do
     "dahan"
   }
 
-  # CHECK THIS was iso_day(45) -> might need to be +/- 365 since our
-  # epoch is different
+  # The months are counted from the year's own number, which is the same
+  # in Reingold's reckoning, so its month name epoch of 57 holds as it is:
+  # the first month of a 癸 year, such as 4660 (2023), is 甲寅.
   @month_name_epoch 57
 
-  # CHECK THIS was iso_day(45) -> might need to be +/- 365 since our
-  # epoch is different
-  @day_name_epoch 45
+  # The Gregorian years whose days the new moon searches answer for: a few
+  # beyond the 40,001 years a lunisolar calendar answers for (see
+  # `Calendrical.Calendar.Lunisolar`), as the searches for a year at its edge
+  # look a little past it. Far beyond them the series for a new moon's moment
+  # drifts from its mean timing faster than a search can follow.
+  @supported_gregorian_years -20_005..20_005
+  @first_supported_day Calendar.ISO.date_to_iso_days(-20_005, 1, 1)
+  @last_supported_day Calendar.ISO.date_to_iso_days(20_005, 12, 31)
+
+  # Reingold's day name epoch is R.D. 45, 14 February 1 CE, counted from
+  # R.D. 1, 1 January 1 CE. ISO days count from 1 January 0, 365 days
+  # earlier, so the epoch is that day's ISO number: 1 October 1949 is then
+  # 甲子, as it is recorded.
+  @day_name_epoch Calendar.ISO.date_to_iso_days(1, 2, 14)
 
   @doc """
   Creates a date in the lunisolar calendar as an ISO day number.
@@ -150,8 +162,8 @@ defmodule Calendrical.Lunisolar do
 
   * The ISO day number of the date.
 
-  * `{:error, :invalid_date}` if the year has no such month or the month
-    no such day.
+  * `{:error, %Calendrical.InvalidDateError{}}` if the year has no such
+    month or the month no such day.
 
   ### Examples
 
@@ -163,25 +175,26 @@ defmodule Calendrical.Lunisolar do
       iex> epoch = Calendrical.Chinese.epoch()
       iex> location = &Calendrical.Chinese.location/1
       iex> Calendrical.Lunisolar.new(4660, 1, 31, epoch, location)
-      {:error, :invalid_date}
+      {:error, %Calendrical.InvalidDateError{value: {4660, 1, 31}}}
 
   """
 
   def new(year, lunar_month, day, epoch, location_fun) do
     case traditional_date(year, lunar_month, day, epoch, location_fun) do
       {:ok, _month, start_of_month} -> start_of_month + day - 1
-      {:error, reason} -> {:error, reason}
+      {:error, _exception} = error -> error
     end
   end
 
   @doc false
   # The ordinal date `{year, month, day}` of a traditional date, as
-  # `{:ok, date}`, or `{:error, :invalid_date}` when the year has no such
-  # month or the month no such day.
+  # `{:ok, date}`, or a `Calendrical.InvalidDateError` with no calendar,
+  # which the engine is not told, when the year has no such month or the
+  # month no such day.
   def ordinal_date(year, lunar_month, day, epoch, location_fun) do
     case traditional_date(year, lunar_month, day, epoch, location_fun) do
       {:ok, month, _start_of_month} -> {:ok, {year, month, day}}
-      {:error, reason} -> {:error, reason}
+      {:error, _exception} = error -> error
     end
   end
 
@@ -191,36 +204,32 @@ defmodule Calendrical.Lunisolar do
        when is_integer(year) and is_integer(day) and day >= 1 do
     {new_year, leap_month} = new_year_and_leap_month(year, epoch, location_fun)
 
-    with {:ok, month} <- ordinal_month(lunar_month, leap_month),
+    with {:ok, month} <- ordinal_month(year, lunar_month, day, leap_month),
          start_of_month = month_start(new_year, month, location_fun),
-         :ok <- day_in_month(day, month_start(new_year, month + 1, location_fun) - start_of_month) do
+         days_in_month = month_start(new_year, month + 1, location_fun) - start_of_month,
+         :ok <- day_in_month(year, lunar_month, day, days_in_month) do
       {:ok, month, start_of_month}
     end
   end
 
-  defp traditional_date(_year, _lunar_month, _day, _epoch, _location_fun),
-    do: {:error, :invalid_date}
+  defp traditional_date(year, lunar_month, day, _epoch, _location_fun),
+    do: invalid_date(year, lunar_month, day)
 
   # A month the year does not have names no date.
-  defp ordinal_month(lunar_month, leap_month) do
+  defp ordinal_month(year, lunar_month, day, leap_month) do
     case traditional_to_ordinal(lunar_month, leap_month) do
       {:ok, month} -> {:ok, month}
-      {:error, _no_such_month} -> {:error, :invalid_date}
+      {:error, _no_such_month} -> invalid_date(year, lunar_month, day)
     end
   end
 
-  defp day_in_month(day, days_in_month) when day <= days_in_month, do: :ok
-  defp day_in_month(_day, _days_in_month), do: {:error, :invalid_date}
+  defp day_in_month(_year, _lunar_month, day, days_in_month) when day <= days_in_month, do: :ok
 
-  @doc false
-  # The ordinal month of a traditional month in `year`, as `{:ok, month}`.
-  def ordinal_month_from_traditional(year, lunar_month, epoch, location_fun)
-      when is_integer(year) do
-    traditional_to_ordinal(lunar_month, leap_month(year, epoch, location_fun))
-  end
+  defp day_in_month(year, lunar_month, day, _days_in_month),
+    do: invalid_date(year, lunar_month, day)
 
-  def ordinal_month_from_traditional(_year, _lunar_month, _epoch, _location_fun),
-    do: {:error, :invalid_month}
+  defp invalid_date(year, lunar_month, day),
+    do: {:error, Calendrical.InvalidDateError.exception(value: {year, lunar_month, day})}
 
   # A leap month repeats the number of the month before it, so the months
   # from it on number one fewer than their ordinal: with a leap month at
@@ -237,11 +246,8 @@ defmodule Calendrical.Lunisolar do
        when lunar_month in 1..@lunar_calendar_months_in_year and leap_month == lunar_month + 1,
        do: {:ok, leap_month}
 
-  defp traditional_to_ordinal({lunar_month, :leap}, _leap_month)
-       when lunar_month in 1..@lunar_calendar_months_in_year,
-       do: {:error, :invalid_leap_month}
-
-  defp traditional_to_ordinal(_lunar_month, _leap_month), do: {:error, :invalid_month}
+  defp traditional_to_ordinal(lunar_month, _leap_month),
+    do: {:error, Calendrical.InvalidMonthError.exception(month: lunar_month)}
 
   @doc false
   # Adds years to an ordinal date keeping its traditional month: the
@@ -329,6 +335,9 @@ defmodule Calendrical.Lunisolar do
 
   * `{year, month, day}` in the Gregorian calendar.
 
+  Raises `ArgumentError` when the lunar year has no such month, or the
+  month no such day.
+
   ### Examples
 
       iex> epoch = Calendrical.Chinese.epoch()
@@ -336,24 +345,30 @@ defmodule Calendrical.Lunisolar do
       iex> Calendrical.Lunisolar.gregorian_date_for_lunar(2023, 1, 1, epoch, location)
       {2023, 1, 22}
 
+      iex> epoch = Calendrical.Chinese.epoch()
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.gregorian_date_for_lunar(2024, {2, :leap}, 1, epoch, location)
+      ** (ArgumentError) the lunar year beginning in 2024 has no month {2, :leap} day 1
+
   """
-  def gregorian_date_for_lunar(gregorian_year, lunar_month, lunar_day, epoch, location_fun) do
+  def gregorian_date_for_lunar(gregorian_year, lunar_month, lunar_day, epoch, location_fun)
+      when is_integer(gregorian_year) do
     mid_year = Calendar.ISO.date_to_iso_days(gregorian_year, 7, 1)
 
     {cycle, cyclic_year, _month, _day} =
       cyclical_date_from_iso_days(mid_year, epoch, location_fun)
 
-    iso_days =
-      alt_cyclical_date_to_iso_days(
-        cycle,
-        cyclic_year,
-        lunar_month,
-        lunar_day,
-        epoch,
-        location_fun
-      )
+    year = elapsed_years(cycle, cyclic_year)
 
-    Calendar.ISO.date_from_iso_days(iso_days)
+    case traditional_date(year, lunar_month, lunar_day, epoch, location_fun) do
+      {:ok, _month, start_of_month} ->
+        Calendar.ISO.date_from_iso_days(start_of_month + lunar_day - 1)
+
+      {:error, %Calendrical.InvalidDateError{}} ->
+        raise ArgumentError,
+              "the lunar year beginning in #{gregorian_year} has no month " <>
+                "#{inspect(lunar_month)} day #{inspect(lunar_day)}"
+    end
   end
 
   # The sexagenary cycle runs with the lunar year, and 4 CE began one
@@ -1165,7 +1180,8 @@ defmodule Calendrical.Lunisolar do
 
   * `{:ok, t:Date.t/0}` in `Calendrical.Gregorian`.
 
-  * `{:error, {:invalid_solar_term, index}}` when `index` is not in `1..24`.
+  * `{:error, %Calendrical.InvalidSolarTermError{}}` when `index` is not
+    in `1..24`.
 
   ### Examples
 
@@ -1178,11 +1194,11 @@ defmodule Calendrical.Lunisolar do
     start = Calendrical.Gregorian.date_to_iso_days(gregorian_year, 1, 1)
     moment = solar_longitude_on_or_after(longitude, start, location_fun)
     {year, month, day} = Calendrical.Gregorian.date_from_iso_days(floor(moment))
-    Date.new(year, month, day, Calendrical.Gregorian)
+    {:ok, %Date{year: year, month: month, day: day, calendar: Calendrical.Gregorian}}
   end
 
   def solar_term(index, _gregorian_year, _location_fun) do
-    {:error, {:invalid_solar_term, index}}
+    {:error, Calendrical.InvalidSolarTermError.exception(index: index)}
   end
 
   @doc """
@@ -1200,7 +1216,8 @@ defmodule Calendrical.Lunisolar do
 
   * `{:ok, name}` with the term's romanised (pinyin) name, such as `"qingming"`.
 
-  * `{:error, {:invalid_solar_term, index}}` when `index` is not in `1..24`.
+  * `{:error, %Calendrical.InvalidSolarTermError{}}` when `index` is not
+    in `1..24`.
 
   ### Examples
 
@@ -1214,17 +1231,17 @@ defmodule Calendrical.Lunisolar do
       {:ok, "dongzhi"}
 
       iex> Calendrical.Lunisolar.solar_term_name(0)
-      {:error, {:invalid_solar_term, 0}}
+      {:error, %Calendrical.InvalidSolarTermError{index: 0}}
 
   """
   @spec solar_term_name(integer()) ::
-          {:ok, String.t()} | {:error, {:invalid_solar_term, integer()}}
+          {:ok, String.t()} | {:error, Exception.t()}
   def solar_term_name(index) when is_integer(index) and index in 1..24 do
     {:ok, elem(@solar_term_names, index - 1)}
   end
 
   def solar_term_name(index) do
-    {:error, {:invalid_solar_term, index}}
+    {:error, Calendrical.InvalidSolarTermError.exception(index: index)}
   end
 
   @doc """
@@ -1365,6 +1382,9 @@ defmodule Calendrical.Lunisolar do
 
   * The ISO day number of the new moon.
 
+  Raises `Calendrical.UnsupportedDateRangeError` for a day outside
+  Gregorian years -20,005 to 20,005.
+
   ### Examples
 
       iex> location = &Calendrical.Chinese.location/1
@@ -1372,6 +1392,10 @@ defmodule Calendrical.Lunisolar do
       739024
 
   """
+  def new_moon_before(iso_days, _location_fun)
+      when iso_days < @first_supported_day or iso_days > @last_supported_day,
+      do: raise(out_of_range(iso_days))
+
   def new_moon_before(iso_days, location_fun) do
     new_moon =
       iso_days
@@ -1399,6 +1423,9 @@ defmodule Calendrical.Lunisolar do
 
   * The ISO day number of the new moon.
 
+  Raises `Calendrical.UnsupportedDateRangeError` for a day outside
+  Gregorian years -20,005 to 20,005.
+
   ### Examples
 
       iex> location = &Calendrical.Chinese.location/1
@@ -1406,6 +1433,10 @@ defmodule Calendrical.Lunisolar do
       739054
 
   """
+  def new_moon_on_or_after(iso_days, _location_fun)
+      when iso_days < @first_supported_day or iso_days > @last_supported_day,
+      do: raise(out_of_range(iso_days))
+
   def new_moon_on_or_after(iso_days, location_fun) do
     new_moon =
       iso_days
@@ -1415,6 +1446,13 @@ defmodule Calendrical.Lunisolar do
     {_lat, _lng, _alt, offset} = location_fun.(new_moon)
 
     Time.standard_from_universal(new_moon, offset) |> floor()
+  end
+
+  defp out_of_range(iso_days) do
+    Calendrical.UnsupportedDateRangeError.exception(
+      value: Date.from_gregorian_days(floor(iso_days)),
+      range: @supported_gregorian_years
+    )
   end
 
   @doc """
@@ -1806,8 +1844,9 @@ defmodule Calendrical.Lunisolar do
 
   ### Examples
 
+      # 22 January 2023, Chinese New Year, was a 庚辰 day
       iex> Calendrical.Lunisolar.day_name(738_907)
-      {2, 10}
+      {7, 5}
 
   """
   def day_name(date) do
@@ -1831,12 +1870,15 @@ defmodule Calendrical.Lunisolar do
   ### Examples
 
       iex> Calendrical.Lunisolar.day_name_on_or_before({1, 1}, 738_907)
-      738856
+      738891
 
   """
+  # A day has the name whose place in the cycle is its distance from the
+  # day name epoch; the place of `name` is its steps on from the cycle's
+  # sixtieth name, `{10, 12}`.
   def day_name_on_or_before(name, date) do
-    name_difference = name_difference(name, stem_and_branch(@day_name_epoch))
-    date - mod(date + name_difference, @years_in_cycle)
+    place = name_difference(stem_and_branch(@years_in_cycle), name)
+    date - mod(date - @day_name_epoch - place, @years_in_cycle)
   end
 
   @doc """

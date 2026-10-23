@@ -1,6 +1,6 @@
 # Calendrical
 
-Localized month- and week-based calendars, fiscal-year support, calendar arithmetic, and 18+ CLDR-based calendar systems for Elixir, built on the [Unicode CLDR](https://cldr.unicode.org/) repository via [Localize](https://hex.pm/packages/localize). Calendrical 1.4 is built on Localize 1.4 and CLDR 49.
+Localized month- and week-based calendars, fiscal-year support, calendar arithmetic, and 18+ CLDR-based calendar systems for Elixir, built on the [Unicode CLDR](https://cldr.unicode.org/) repository via [Localize](https://hex.pm/packages/localize). Calendrical 2.0 is built on Localize 1.4 and CLDR 49.
 
 Calendrical extends Elixir's standard `Calendar` and `Date` modules with comprehensive support for the calendar systems used around the world, including arithmetic and astronomical lunar calendars, year-shifted variants such as Buddhist and ROC, and the official tabular and observational Islamic calendars.
 
@@ -12,7 +12,7 @@ Calendrical extends Elixir's standard `Calendar` and `Date` modules with compreh
 
 * **Composite calendars** — `Calendrical.Composite` lets you build a calendar that uses one base calendar before a specified date and another after, supporting historical Julian-to-Gregorian transitions and similar splices.
 
-* **Localized formatting** — era names, quarter names, month names, day names, day periods (AM/PM), and full date formatting via `Calendrical.localize/3` and `Calendrical.strftime_options!/1`. Falls through to all 657 CLDR locales available from `Localize`.
+* **Localized formatting** — era names, quarter names, month names, day names, day periods (AM/PM), and full date formatting via `Calendrical.localize/3` and `Calendrical.strftime/3`. Falls through to all 657 CLDR locales available from `Localize`.
 
 * **Fiscal-year calendars** — pre-built fiscal calendars for ~50 territories (US, UK, AU, JP, …) plus a configurable `Calendrical.FiscalYear.calendar_for/1` factory.
 
@@ -34,6 +34,8 @@ Calendrical extends Elixir's standard `Calendar` and `Date` modules with compreh
 
 Calendrical requires **Elixir 1.17+** and **Erlang/OTP 26+**.
 
+On OTP 26, also add `{:json_polyfill, "~> 0.2 or ~> 1.0"}` to your dependencies. It provides the OTP 27+ `:json` module that Localize uses. OTP 27 and later need no extra dependency.
+
 ## Installation
 
 Add `calendrical` to your dependencies in `mix.exs`:
@@ -45,6 +47,10 @@ def deps do
   ]
 end
 ```
+
+Localize ships with the `en` locale. Download the data for any other locale your application uses at build time with `mix localize.download_locales`, for example `mix localize.download_locales fr ar he`. Without it, a call for another locale falls back to `en`. See [`mix localize.download_locales`](https://hexdocs.pm/localize/Mix.Tasks.Localize.DownloadLocales.html).
+
+`Calendrical.TimeZone` resolves IANA time zone names through a `Calendar.TimeZoneDatabase`. Add one, such as [`tz`](https://hex.pm/packages/tz), which is used automatically once it is loaded, or configure one with `config :elixir, :time_zone_database, Tz.TimeZoneDatabase`. Without one, IANA names are rejected.
 
 ## Quick start
 
@@ -115,24 +121,25 @@ Calendrical implements every calendar system exposed by CLDR, plus lunisolar var
 A calendar is a kernel of eight callbacks and the facts its `info/0` states; everything else is derived. `use Calendrical.Calendar` makes a hand-written calendar from its spine, `date_to_iso_days/3` and `date_from_iso_days/1`, and the six primitive `Calendar` callbacks:
 
 ```elixir
-defmodule MyApp.MyCalendar do
+defmodule MyApp.Julian do
   use Calendrical.Calendar,
-    epoch: ~D[0001-01-01 Calendar.ISO],
+    epoch: ~D[0001-01-01 Calendrical.Julian],
     cldr_calendar_type: :gregorian,
-    weeks: [first_day: 7]
+    weeks: [first_day: 1, min_days_in_first_week: 1]
 
   @impl Calendar
   def leap_year?(year), do: rem(year, 4) == 0
 
-  @impl true
-  def date_to_iso_days(year, month, day) do
-    # ... calendar-specific calculation
-  end
+  @impl Calendar
+  def days_in_month(year, 2), do: if(leap_year?(year), do: 29, else: 28)
+  def days_in_month(_year, month) when month in [4, 6, 9, 11], do: 30
+  def days_in_month(_year, _month), do: 31
 
   @impl true
-  def date_from_iso_days(iso_days) do
-    # ... calendar-specific calculation
-  end
+  def date_to_iso_days(year, month, day), do: Calendrical.Julian.date_to_iso_days(year, month, day)
+
+  @impl true
+  def date_from_iso_days(iso_days), do: Calendrical.Julian.date_from_iso_days(iso_days)
 end
 ```
 
@@ -156,7 +163,7 @@ iex> Calendrical.localize(date, :day_of_week, locale: "en", style: :wide)
 "Saturday"
 ```
 
-`Calendrical.strftime_options!/1` returns a keyword list compatible with `Calendar.strftime/3` so the standard library's formatter can produce locale-aware output for any Calendrical calendar.
+`Calendrical.strftime/3` formats a date of any calendar with locale-aware names. `Calendrical.strftime_options!/1` returns options for the standard library's `Calendar.strftime/3`, which names a month by its month field, so it suits the Gregorian-based calendars; use `Calendrical.strftime/3` for the Hebrew, lunisolar, fiscal and week calendars.
 
 ## Composite calendars
 

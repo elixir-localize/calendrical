@@ -124,8 +124,8 @@ defmodule Calendrical.LocalizeCalendarISOTest do
               :ordinal_month_from_traditional,
               :day_numbers
             ] do
-          assert apply(@localize, callback, [year, month]) ==
-                   apply(@calendrical, callback, [year, month]),
+          assert answer(apply(@localize, callback, [year, month])) ==
+                   answer(apply(@calendrical, callback, [year, month])),
                  "#{callback}(#{year}, #{month})"
         end
 
@@ -160,7 +160,8 @@ defmodule Calendrical.LocalizeCalendarISOTest do
       assert @localize.months_in_year() == @calendrical.months_in_year()
 
       for month <- 0..13 do
-        assert @localize.days_in_month(month) == @calendrical.days_in_month(month)
+        assert answer(@localize.days_in_month(month)) ==
+                 answer(@calendrical.days_in_month(month))
       end
 
       for month <- 1..12 do
@@ -217,10 +218,16 @@ defmodule Calendrical.LocalizeCalendarISOTest do
 
   # A range of days by its first and last, whichever calendar names them.
   defp day_number(%Date{} = date), do: Date.to_gregorian_days(date)
-  defp day_number(error), do: error
+  defp day_number(other), do: answer(other)
 
   defp days(%Date.Range{first: first, last: last}), do: {fields(first), fields(last)}
-  defp days(error), do: error
+  defp days(other), do: answer(other)
+
+  # An error is compared as an error: Calendrical answers with an
+  # exception, and Localize 1.4.0's `Localize.Calendar.ISO` still answers
+  # with an atom such as `:undefined` or `:invalid_date`.
+  defp answer({:error, _reason}), do: :error
+  defp answer(other), do: other
 
   defp fields(dates) when is_list(dates), do: Enum.map(dates, &fields/1)
   defp fields(%Date{year: year, month: month, day: day}), do: {year, month, day}

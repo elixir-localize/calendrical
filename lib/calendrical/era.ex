@@ -40,7 +40,7 @@ defmodule Calendrical.Era do
 
   ### Returns
 
-  * `{year_of_era, era}`, or `{:error, :invalid_date}` for a year the
+  * `{year_of_era, era}`, or `{:error, %Calendrical.InvalidDateError{}}` for a year the
     calendar does not have, or `{:error, Calendrical.MissingFieldsError.t()}`
     for no year.
 
@@ -54,14 +54,14 @@ defmodule Calendrical.Era do
 
   """
   @spec year_of_era(calendar, Calendar.year()) ::
-          {Calendar.year(), Calendar.era()} | {:error, :invalid_date | Exception.t()}
+          {Calendar.year(), Calendar.era()} | {:error, Exception.t()}
   def year_of_era(calendar, year) when is_integer(year) do
     with %Date.Range{first: first} <- Calendrical.Period.year(calendar, year) do
       year_of_era_on(calendar, first, year)
     end
   end
 
-  def year_of_era(_calendar, year), do: missing_or_invalid("year_of_era", year: year)
+  def year_of_era(calendar, year), do: missing_or_invalid(calendar, "year_of_era", year: year)
 
   @doc """
   Returns the year of era and era of a date of a calendar, by the era
@@ -77,7 +77,7 @@ defmodule Calendrical.Era do
 
   ### Returns
 
-  * `{year_of_era, era}`, or `{:error, :invalid_date}` for a date the
+  * `{year_of_era, era}`, or `{:error, %Calendrical.InvalidDateError{}}` for a date the
     calendar does not have, or `{:error, Calendrical.MissingFieldsError.t()}`
     for no year.
 
@@ -91,7 +91,7 @@ defmodule Calendrical.Era do
 
   """
   @spec year_of_era(calendar, Calendar.year(), Calendar.month() | nil, Calendar.day() | nil) ::
-          {Calendar.year(), Calendar.era()} | {:error, :invalid_date | Exception.t()}
+          {Calendar.year(), Calendar.era()} | {:error, Exception.t()}
   def year_of_era(calendar, year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     case Calendrical.Info.in_effect(calendar, year, month, day) do
@@ -103,11 +103,11 @@ defmodule Calendrical.Era do
   def year_of_era(calendar, year, month, day) when is_integer(year) do
     if is_nil(month) or is_nil(day),
       do: year_of_era(calendar, year),
-      else: {:error, :invalid_date}
+      else: invalid_date(calendar, {year, month, day})
   end
 
-  def year_of_era(_calendar, year, _month, _day),
-    do: missing_or_invalid("year_of_era", year: year)
+  def year_of_era(calendar, year, _month, _day),
+    do: missing_or_invalid(calendar, "year_of_era", year: year)
 
   @doc """
   Returns the day of era and era of a date of a calendar, by the era
@@ -121,7 +121,7 @@ defmodule Calendrical.Era do
 
   ### Returns
 
-  * `{day_of_era, era}`, or `{:error, :invalid_date}` for a date the
+  * `{day_of_era, era}`, or `{:error, %Calendrical.InvalidDateError{}}` for a date the
     calendar does not have, or `{:error, Calendrical.MissingFieldsError.t()}`
     for a missing field.
 
@@ -135,7 +135,7 @@ defmodule Calendrical.Era do
 
   """
   @spec day_of_era(calendar, Calendar.year(), Calendar.month(), Calendar.day()) ::
-          {integer(), Calendar.era()} | {:error, :invalid_date | Exception.t()}
+          {integer(), Calendar.era()} | {:error, Exception.t()}
   def day_of_era(calendar, year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     case Calendrical.Info.in_effect(calendar, year, month, day) do
@@ -144,8 +144,8 @@ defmodule Calendrical.Era do
     end
   end
 
-  def day_of_era(_calendar, year, month, day),
-    do: missing_or_invalid("day_of_era", year: year, month: month, day: day)
+  def day_of_era(calendar, year, month, day),
+    do: missing_or_invalid(calendar, "day_of_era", year: year, month: month, day: day)
 
   @doc """
   Returns the extended year of a date: its year, numbered without a gap
@@ -159,8 +159,11 @@ defmodule Calendrical.Era do
 
   ### Returns
 
-  * An integer, or `{:error, Calendrical.MissingFieldsError.t()}` for no
-    year.
+  * An integer, or
+
+  * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar does not have, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` for no year.
 
   ### Examples
 
@@ -180,8 +183,8 @@ defmodule Calendrical.Era do
     end
   end
 
-  def extended_year(_calendar, year, _month, _day),
-    do: missing_or_invalid("extended_year", year: year)
+  def extended_year(calendar, year, _month, _day),
+    do: missing_or_invalid(calendar, "extended_year", year: year)
 
   @doc """
   Returns the related Gregorian year of a date: the Gregorian year its
@@ -196,7 +199,7 @@ defmodule Calendrical.Era do
 
   ### Returns
 
-  * An integer, or `{:error, :invalid_date}` for a year the calendar does
+  * An integer, or `{:error, %Calendrical.InvalidDateError{}}` for a year the calendar does
     not have, or `{:error, Calendrical.MissingFieldsError.t()}` for no year.
 
   ### Examples
@@ -209,7 +212,7 @@ defmodule Calendrical.Era do
 
   """
   @spec related_gregorian_year(calendar, Calendar.year(), Calendar.month(), Calendar.day()) ::
-          integer() | {:error, :invalid_date | Exception.t()}
+          integer() | {:error, Exception.t()}
   def related_gregorian_year(calendar, year, month, day) when is_integer(year) do
     with :ok <- date_or_year(calendar, year, month, day),
          %Date.Range{first: first} <- Calendrical.Period.year(calendar, year) do
@@ -217,8 +220,8 @@ defmodule Calendrical.Era do
     end
   end
 
-  def related_gregorian_year(_calendar, year, _month, _day),
-    do: missing_or_invalid("related_gregorian_year", year: year)
+  def related_gregorian_year(calendar, year, _month, _day),
+    do: missing_or_invalid(calendar, "related_gregorian_year", year: year)
 
   @doc """
   Returns the cyclic year of a date: its place in the cycle its calendar's
@@ -234,7 +237,7 @@ defmodule Calendrical.Era do
 
   ### Returns
 
-  * An integer, or `{:error, :invalid_date}` for a year the calendar does
+  * An integer, or `{:error, %Calendrical.InvalidDateError{}}` for a year the calendar does
     not have, or `{:error, Calendrical.MissingFieldsError.t()}` for no year.
 
   ### Examples
@@ -247,15 +250,15 @@ defmodule Calendrical.Era do
 
   """
   @spec cyclic_year(calendar, Calendar.year(), Calendar.month(), Calendar.day()) ::
-          integer() | {:error, :invalid_date | Exception.t()}
+          integer() | {:error, Exception.t()}
   def cyclic_year(calendar, year, month, day) when is_integer(year) do
     with :ok <- date_or_year(calendar, year, month, day) do
       cyclic_year_in(calendar, year, month, day)
     end
   end
 
-  def cyclic_year(_calendar, year, _month, _day),
-    do: missing_or_invalid("cyclic_year", year: year)
+  def cyclic_year(calendar, year, _month, _day),
+    do: missing_or_invalid(calendar, "cyclic_year", year: year)
 
   defp cyclic_year_in(calendar, year, month, day) do
     case Calendrical.Info.in_effect(calendar, year, month, day).info().year_cycle do
@@ -271,13 +274,13 @@ defmodule Calendrical.Era do
   end
 
   # A question about a year is answered for a date the calendar has and
-  # for a date with no month or day, and is `:invalid_date` for a date it
-  # does not have.
+  # for a date with no month or day, and is a `Calendrical.InvalidDateError`
+  # for a date it does not have.
   defp date_or_year(calendar, year, month, day) do
     cond do
       is_nil(month) or is_nil(day) -> :ok
       Calendrical.Month.day_in_month?(calendar, year, month, day) -> :ok
-      true -> {:error, :invalid_date}
+      true -> invalid_date(calendar, {year, month, day})
     end
   end
 
@@ -296,12 +299,12 @@ defmodule Calendrical.Era do
       info = calendar.info()
       day_of_era(info.era_calendar_type, calendar.date_to_iso_days(year, month, day))
     else
-      {:error, :invalid_date}
+      invalid_date(calendar, {year, month, day})
     end
   end
 
   # The date itself where the calendar has it, the first day of its month
-  # where the month reaches the day, and `:invalid_date` otherwise.
+  # where the month reaches the day, and an error otherwise.
   defp first_day_reached(calendar, year, month, day) do
     cond do
       calendar.valid_date?(year, month, day) ->
@@ -311,7 +314,7 @@ defmodule Calendrical.Era do
         {:ok, Calendrical.Period.month(calendar, year, month).first}
 
       true ->
-        {:error, :invalid_date}
+        invalid_date(calendar, {year, month, day})
     end
   end
 
@@ -324,10 +327,14 @@ defmodule Calendrical.Era do
 
   # A field that is missing is a missing field; one that is no integer
   # is no date's.
-  defp missing_or_invalid(function, fields) do
+  defp missing_or_invalid(calendar, function, fields) do
     if Enum.any?(fields, fn {_field, value} -> is_nil(value) end),
       do: {:error, %Calendrical.MissingFieldsError{function: function, fields: fields}},
-      else: {:error, :invalid_date}
+      else: invalid_date(calendar, fields)
+  end
+
+  defp invalid_date(calendar, value) do
+    {:error, Calendrical.InvalidDateError.exception(calendar: calendar, value: value)}
   end
 
   @doc """

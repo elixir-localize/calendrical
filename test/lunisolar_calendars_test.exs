@@ -53,7 +53,7 @@ defmodule Calendrical.LunisolarCalendarsTest do
     end
 
     test "a non-intercalary month is rejected in leap notation" do
-      assert Chinese.new(4662, {5, :leap}, 1) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = Chinese.new(4662, {5, :leap}, 1)
     end
 
     test "ordinary years have twelve months, leap years thirteen" do

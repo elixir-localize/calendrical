@@ -6,14 +6,11 @@ defmodule Calendrical.Composite.Compiler do
 
     options =
       Module.get_attribute(env.module, :options)
-      |> Keyword.put(:calendar, env.module)
       |> Calendrical.Composite.Config.extract_options()
 
     config = Macro.escape(options)
     segments = options |> Calendrical.Composite.Config.segments() |> Macro.escape()
     transition_months = Calendrical.Composite.Config.transition_months(options)
-
-    Module.put_attribute(env.module, :calendar_config, options)
 
     quote location: :keep,
           bind_quoted: [
@@ -35,6 +32,9 @@ defmodule Calendrical.Composite.Compiler do
       # the months a transition cuts short or splits.
       @segments segments
       @segment_calendars segments |> Enum.map(& &1.calendar) |> List.to_tuple()
+
+      # The last year the base calendar alone has days in.
+      @base_last_year hd(segments).last_year
 
       @member_calendars config |> Enum.map(&elem(&1, 4)) |> Enum.uniq()
 
@@ -65,9 +65,6 @@ defmodule Calendrical.Composite.Compiler do
                         |> Enum.uniq()
 
       import Localize.Macros
-
-      @doc false
-      def __config__, do: @calendar_config
 
       # The CLDR calendar that names the eras: the one the members share,
       # and otherwise the one that names the months and days.
@@ -162,8 +159,6 @@ defmodule Calendrical.Composite.Compiler do
           end
         end
       end
-
-      @base_last_year hd(segments).last_year
 
       defp segment_for_date(year, _month, _day) when year <= @base_last_year, do: 0
 
@@ -397,7 +392,7 @@ defmodule Calendrical.Composite.Compiler do
 
       @doc """
       Returns the whole number of `date_part`s from one
-      `{year, month, day}` to another, the inverse of `shift/6`,
+      `{year, month, day}` to another, as `shift/6` adds them,
       counted through each calendar a span crosses.
 
       ### Arguments
@@ -480,8 +475,9 @@ defmodule Calendrical.Composite.Compiler do
       * `{:ok, {year, month, day}}` with the date of this calendar the
         figures name.
 
-      * `{:error, :invalid_date}` if no member calendar in effect on the
-        day reads the figures as a date.
+      * `{:error, :invalid_date}` if no member calendar in effect on the day
+        reads the figures as a date, an atom as
+        `c:Calendrical.date_from_written_date/3` answers.
 
       ### Examples
 
@@ -495,9 +491,13 @@ defmodule Calendrical.Composite.Compiler do
       """
       @impl true
       def date_from_written_date(year, month, day) do
-        Enum.find_value(@member_calendars, {:error, :invalid_date}, fn member ->
-          written_in(member, year, month, day)
-        end)
+        Enum.find_value(
+          @member_calendars,
+          # Localize's date parser reads this atom (see c:Calendrical.date_from_written_date/3).
+          # credo:disable-for-next-line Calendrical.Credo.ErrorTuple
+          {:error, :invalid_date},
+          &written_in(&1, year, month, day)
+        )
       end
 
       # The date, in this calendar's fields, of the day a member reads the
@@ -584,20 +584,73 @@ defmodule Calendrical.Composite.Compiler do
 
       ### Returns
 
-      * The number of days that carry the label of `year` and `month`,
-        as a non-negative integer. It is `0` for a month no day carries.
+      * The number of days that carry the label of `year` and `month`, or
+
+      * `{:error, %Calendrical.InvalidMonthError{}}` for a month no day
+        carries, or
+
+      * `{:error, %Calendrical.MissingFieldsError{}}` where `year` or
+        `month` is `nil`.
 
       ### Examples
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
           iex> #{inspect(__MODULE__)}.days_in_month(date.year, date.month) >= date.day
           true
-          iex> #{inspect(__MODULE__)}.days_in_month(date.year, 0)
-          0
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> {:error, %Calendrical.InvalidMonthError{month: 0}} = #{inspect(__MODULE__)}.days_in_month(date.year, 0)
 
       """
       @impl true
+      @spec days_in_month(Calendar.year(), Calendar.month()) ::
+              Calendar.day() | {:error, Exception.t()}
+      def days_in_month(year, month) when is_integer(year) and is_integer(month) do
+        case days_carried(year, month) do
+          0 -> no_days(year, month)
+          days -> days
+        end
+      end
+
+      def days_in_month(year, month) when is_nil(year) or is_nil(month) do
+        {:error,
+         Calendrical.MissingFieldsError.exception(
+           function: "days_in_month",
+           fields: [year: year, month: month]
+         )}
+      end
+
       def days_in_month(year, month) do
+        {:error,
+         Calendrical.InvalidMonthError.exception(calendar: __MODULE__, year: year, month: month)}
+      end
+
+      # A month no day carries: a year the calendar in effect cannot reckon
+      # is that calendar's range error, named for this one, and any other is
+      # a month the year does not have.
+      defp no_days(year, month) do
+        case Calendrical.Info.in_effect(__MODULE__, year, month, 1) do
+          __MODULE__ -> no_such_month(year, month)
+          member -> member_no_days(member.days_in_month(year, month), year, month)
+        end
+      end
+
+      defp member_no_days(
+             {:error, %Calendrical.UnsupportedDateRangeError{} = error},
+             _year,
+             _month
+           ),
+           do: {:error, %{error | calendar: __MODULE__}}
+
+      defp member_no_days(_member_answer, year, month), do: no_such_month(year, month)
+
+      defp no_such_month(year, month) do
+        {:error,
+         Calendrical.InvalidMonthError.exception(calendar: __MODULE__, year: year, month: month)}
+      end
+
+      # The days that carry the label of `year` and `month`: 0 for a month
+      # no day carries, which is how the months of a year are counted.
+      defp days_carried(year, month) do
         cond do
           transition_month?(year, month) ->
             Enum.count(1..31, &valid_date?(year, month, &1))
@@ -626,7 +679,11 @@ defmodule Calendrical.Composite.Compiler do
       ### Returns
 
       * The number of the last month of the year that has days, as a
-        non-negative integer. It is `0` for a year no day carries.
+        non-negative integer. It is `0` for a year no day carries, or
+
+      * `{:error, %Calendrical.MissingFieldsError{}}` where `year` is `nil`, or
+
+      * `{:error, %Calendrical.InvalidDateError{}}` where `year` is no integer.
 
       ### Examples
 
@@ -652,35 +709,9 @@ defmodule Calendrical.Composite.Compiler do
       defp last_month_with_days(0, _year), do: 0
 
       defp last_month_with_days(month, year) do
-        if days_in_month(year, month) > 0,
+        if days_carried(year, month) > 0,
           do: month,
           else: last_month_with_days(month - 1, year)
-      end
-
-      # A year whose months do not divide evenly into the periods — a
-      # split Julian year-start variant's thirteen, or a year a reform
-      # cut short — has no quarters of whole months.
-      defp period_of_year(year, period, periods_in_year) do
-        months_in_year = months_in_year(year)
-
-        if months_in_year > 0 and rem(months_in_year, periods_in_year) == 0 do
-          months_in_period = div(months_in_year, periods_in_year)
-          first_month = months_in_period * (period - 1) + 1
-
-          first_month..(first_month + months_in_period - 1)
-          |> Enum.map(&month(year, &1))
-          |> Enum.filter(&match?(%Date.Range{}, &1))
-          |> quarter_range()
-        else
-          {:error, :not_defined}
-        end
-      end
-
-      defp quarter_range([]), do: {:error, :invalid_date}
-
-      defp quarter_range([%Date.Range{first: first} | _] = months) do
-        %Date.Range{last: last} = List.last(months)
-        Date.range(first, last)
       end
 
       defp first_day_of_month(year, month) do
@@ -701,7 +732,7 @@ defmodule Calendrical.Composite.Compiler do
       # starts at `iso_days`: the month's last day, unless the month is
       # cut short, split or has a gap, when the run is followed day by day.
       defp month_end(iso_days, year, month) do
-        last = iso_days + days_in_month(year, month) - 1
+        last = iso_days + days_carried(year, month) - 1
 
         if month_run?(last, year, month) and not month_run?(last + 1, year, month) do
           last
@@ -736,7 +767,8 @@ defmodule Calendrical.Composite.Compiler do
       ### Returns
 
       * `true` if the member calendar in effect on month 1 day 1 of
-        `year` counts it a leap year, otherwise `false`.
+        `year` counts it a leap year, otherwise `false`, as for a year
+        with no days of its own (`months_in_year/1` is `0`).
 
       ### Examples
 
@@ -747,9 +779,13 @@ defmodule Calendrical.Composite.Compiler do
 
       """
       @impl true
-      def leap_year?(year) do
-        calendar = calendar_for_date(year, 1, 1)
-        calendar.leap_year?(year)
+      def leap_year?(year) when is_integer(year) do
+        if months_in_year(year) == 0 do
+          false
+        else
+          calendar = calendar_for_date(year, 1, 1)
+          calendar.leap_year?(year)
+        end
       end
 
       @doc """
@@ -780,45 +816,6 @@ defmodule Calendrical.Composite.Compiler do
       @impl true
       def date_to_iso_days(year, month, day) do
         calendar_for_date(year, month, day).date_to_iso_days(year, month, day)
-      end
-
-      @doc """
-      Returns the number of days since the ISO epoch for the
-      given date struct.
-
-      A date of this calendar is counted from its year, month and day. A
-      date of any other calendar is first converted to this calendar.
-
-      ### Arguments
-
-      * `date` is any date map with `:year`, `:month`, `:day` and
-        `:calendar` fields, such as a `t:Date.t/0`.
-
-      ### Returns
-
-      * The number of days since the ISO epoch, as an integer.
-
-      * Raises if a date of another calendar cannot be converted to
-        this calendar.
-
-      ### Examples
-
-          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
-          iex> #{inspect(__MODULE__)}.date_to_iso_days(date) == Date.to_gregorian_days(~D[2024-06-01])
-          true
-          iex> #{inspect(__MODULE__)}.date_to_iso_days(~D[2024-06-01]) ==
-          ...>   #{inspect(__MODULE__)}.date_to_iso_days(date)
-          true
-
-      """
-      def date_to_iso_days(%{year: year, month: month, day: day, calendar: __MODULE__}) do
-        date_to_iso_days(year, month, day)
-      end
-
-      def date_to_iso_days(%{calendar: _calendar} = date) do
-        date
-        |> Date.convert!(__MODULE__)
-        |> date_to_iso_days()
       end
 
       @doc """
@@ -904,7 +901,12 @@ defmodule Calendrical.Composite.Compiler do
 
       ### Returns
 
-      * `{year, month, day}`, the date of this calendar reached.
+      * `{year, month, day}`, the date of this calendar reached, or
+
+      * `{:error, %Calendrical.InvalidDateError{}}` where `year`, `month` and
+        `day` are no date of this calendar, or
+
+      * `{:error, %Calendrical.MissingFieldsError{}}` where a field is `nil`.
 
       ### Examples
 

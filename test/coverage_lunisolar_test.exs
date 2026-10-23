@@ -72,6 +72,13 @@ defmodule Calendrical.Coverage.LunisolarTest do
     test "gregorian_date_for_lunar/3 with a leap month" do
       assert Chinese.gregorian_date_for_lunar(2025, {6, :leap}, 1) == ~D[2025-07-25]
     end
+
+    # A lunar date the year lacks raises rather than naming another date.
+    test "gregorian_date_for_lunar/3 raises for a date the lunar year lacks" do
+      for {month, day} <- [{1, 30}, {1, 40}, {13, 1}, {0, 1}, {{2, :leap}, 1}] do
+        assert_raise ArgumentError, fn -> Chinese.gregorian_date_for_lunar(2024, month, day) end
+      end
+    end
   end
 
   describe "Chinese leap year and leap month" do
@@ -130,26 +137,26 @@ defmodule Calendrical.Coverage.LunisolarTest do
     end
 
     test "new/3 with the wrong leap month is invalid" do
-      assert Chinese.new(4662, {5, :leap}, 1) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = Chinese.new(4662, {5, :leap}, 1)
     end
 
     test "new/3 with a leap month in an ordinary year is invalid" do
-      assert Chinese.new(4663, {6, :leap}, 1) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = Chinese.new(4663, {6, :leap}, 1)
     end
 
     test "new/3 with a traditional month above 12 is invalid" do
-      assert Chinese.new(4663, 13, 1) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = Chinese.new(4663, 13, 1)
     end
 
     test "new/3 with an invalid day is invalid" do
-      assert Chinese.new(4663, 1, 31) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = Chinese.new(4663, 1, 31)
     end
 
     test "new!/3 returns a date and raises on invalid input" do
       assert Chinese.new!(4663, 1, 1) == Date.new!(4663, 1, 1, Chinese)
       assert Date.convert(Chinese.new!(4663, 1, 1), Calendar.ISO) == {:ok, ~D[2026-02-17]}
 
-      assert_raise ArgumentError, ~r/invalid_date/, fn ->
+      assert_raise Calendrical.InvalidDateError, fn ->
         Chinese.new!(4663, {6, :leap}, 1)
       end
     end
@@ -294,15 +301,15 @@ defmodule Calendrical.Coverage.LunisolarTest do
     end
 
     test "new/3 error paths" do
-      assert Korean.new(4358, {5, :leap}, 1) == {:error, :invalid_date}
-      assert Korean.new(4359, 13, 1) == {:error, :invalid_date}
-      assert Korean.new(4359, 1, 31) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = Korean.new(4358, {5, :leap}, 1)
+      assert {:error, %Calendrical.InvalidDateError{}} = Korean.new(4359, 13, 1)
+      assert {:error, %Calendrical.InvalidDateError{}} = Korean.new(4359, 1, 31)
     end
 
     test "new!/3 returns a date and raises on invalid input" do
       assert Korean.new!(4359, 1, 1) == Date.new!(4359, 1, 1, Korean)
 
-      assert_raise ArgumentError, ~r/invalid_date/, fn ->
+      assert_raise Calendrical.InvalidDateError, fn ->
         Korean.new!(4359, 13, 1)
       end
     end
@@ -410,14 +417,14 @@ defmodule Calendrical.Coverage.LunisolarTest do
     end
 
     test "new/3 error paths" do
-      assert LunarJapanese.new(1381, {5, :leap}, 1) == {:error, :invalid_date}
-      assert LunarJapanese.new(1382, 13, 1) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} = LunarJapanese.new(1381, {5, :leap}, 1)
+      assert {:error, %Calendrical.InvalidDateError{}} = LunarJapanese.new(1382, 13, 1)
     end
 
     test "new!/3 returns a date and raises on invalid input" do
       assert LunarJapanese.new!(1382, 1, 1) == Date.new!(1382, 1, 1, LunarJapanese)
 
-      assert_raise ArgumentError, ~r/invalid_date/, fn ->
+      assert_raise Calendrical.InvalidDateError, fn ->
         LunarJapanese.new!(1382, 13, 1)
       end
     end
@@ -483,14 +490,17 @@ defmodule Calendrical.Coverage.LunisolarTest do
     end
 
     test "new/5 error paths" do
-      assert Lunisolar.new(4662, {5, :leap}, 1, epoch(), &location/1) ==
-               {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Lunisolar.new(4662, {5, :leap}, 1, epoch(), &location/1)
 
-      assert Lunisolar.new(4663, {6, :leap}, 1, epoch(), &location/1) ==
-               {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Lunisolar.new(4663, {6, :leap}, 1, epoch(), &location/1)
 
-      assert Lunisolar.new(4663, 13, 1, epoch(), &location/1) == {:error, :invalid_date}
-      assert Lunisolar.new(4663, 1, 31, epoch(), &location/1) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Lunisolar.new(4663, 13, 1, epoch(), &location/1)
+
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Lunisolar.new(4663, 1, 31, epoch(), &location/1)
     end
 
     test "gregorian_date_for_lunar/5" do
@@ -611,8 +621,22 @@ defmodule Calendrical.Coverage.LunisolarTest do
              ) == 1
 
       assert Lunisolar.month_name(1, 4663) == {7, 3}
-      assert Lunisolar.day_name(iso_days) == {7, 5}
-      assert Lunisolar.day_name_on_or_before(Lunisolar.stem_and_branch(1), iso_days) == 739_936
+      assert Lunisolar.day_name(iso_days) == {2, 12}
+      assert Lunisolar.day_name_on_or_before(Lunisolar.stem_and_branch(1), iso_days) == 739_971
+    end
+
+    # Days whose sexagenary names are recorded: 1 October 1949 was 甲子,
+    # 1 January 1900 甲戌 and 1 January 2000 戊午.
+    test "day_name/1 names recorded days" do
+      for {date, name} <- [
+            {~D[1949-10-01], {1, 1}},
+            {~D[1900-01-01], {1, 11}},
+            {~D[2000-01-01], {5, 7}}
+          ] do
+        assert Lunisolar.day_name(Date.to_gregorian_days(date)) == name, inspect(date)
+      end
+
+      assert Lunisolar.day_name(Lunisolar.day_name_on_or_before({1, 1}, 738_907)) == {1, 1}
     end
 
     test "location/2 returns a Geo.PointZ with the offset" do

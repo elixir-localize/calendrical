@@ -246,7 +246,7 @@ iex> Calendrical.parse("11 am", locale: :en, as: :map)
 {:ok, %{hour: 11}}
 
 iex> Calendrical.parse("11:30 PST", locale: :en, as: :map)
-{:ok, %{hour: 11, minute: 30, time_zone: "PST"}}
+{:ok, %{hour: 11, minute: 30, time_zone: "America/Los_Angeles"}}
 
 iex> Calendrical.Date.parse_range("May 5 – May 10, 2026", locale: :en, as: :map)
 {:ok,

@@ -59,6 +59,24 @@ defmodule Calendrical.Reform.JapanTest do
       assert Japan.extended_year(year, month, day) == year
     end
 
+    # A partial date wholly inside one member is that member's: 1228 is
+    # lunisolar throughout, so its cyclic year needs no day.
+    test "a partial date wholly inside a member answers as that member" do
+      assert Japan.cyclic_year(1228, 1, nil) == Japan.cyclic_year(1228, 1, 1)
+      assert Japan.cyclic_year(1228, nil, nil) == Japan.cyclic_year(1228, 1, 1)
+      refute Japan.cyclic_year(1228, 1, nil) == 1228
+    end
+
+    # A year that begins with a change of member is that member's
+    # throughout: 1873 is Japanese from its first day.
+    test "a year beginning with a change of member answers as that member" do
+      assert Calendrical.Info.in_effect(Japan, 1873, nil, nil) == Calendrical.Japanese
+      assert Calendrical.Info.in_effect(Japan, 1873, 1, nil) == Calendrical.Japanese
+
+      assert Calendrical.Info.in_effect(Calendrical.Reform.England, 1155, nil, nil) ==
+               Calendrical.Julian.March25
+    end
+
     test "a post-reform date answers as the Japanese calendar" do
       assert Japan.year_of_era(2025, 3, 15) == {7, 236}
       assert Japan.related_gregorian_year(2025, 3, 15) == 2025

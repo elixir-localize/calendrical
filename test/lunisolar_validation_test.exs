@@ -62,8 +62,11 @@ defmodule Calendrical.LunisolarValidation.Test do
       assert {:ok, ~D[4660-03-29 Calendrical.Chinese]} =
                Calendrical.Chinese.new(4660, {2, :leap}, 29)
 
-      assert {:error, :invalid_date} = Calendrical.Chinese.new(4660, {2, :leap}, 30)
-      assert {:error, :invalid_date} = Calendrical.Chinese.new(4660, {2, :leap}, 45)
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.Chinese.new(4660, {2, :leap}, 30)
+
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.Chinese.new(4660, {2, :leap}, 45)
     end
 
     test "a month after the leap month is checked against its own length" do
@@ -83,9 +86,11 @@ defmodule Calendrical.LunisolarValidation.Test do
     end
 
     test "a 30th day of a 29-day month is rejected, not rolled into the next month" do
-      assert {:error, :invalid_date} = Calendrical.Chinese.new(4497, 4, 30)
-      assert {:error, :invalid_date} = Calendrical.Korean.new(4084, 6, 30)
-      assert {:error, :invalid_date} = Calendrical.LunarJapanese.new(1408, 9, 30)
+      assert {:error, %Calendrical.InvalidDateError{}} = Calendrical.Chinese.new(4497, 4, 30)
+      assert {:error, %Calendrical.InvalidDateError{}} = Calendrical.Korean.new(4084, 6, 30)
+
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.LunarJapanese.new(1408, 9, 30)
     end
 
     for calendar <- @lunisolar do
@@ -103,7 +108,7 @@ defmodule Calendrical.LunisolarValidation.Test do
               {{13, :leap}, 1},
               {:first, 1}
             ] do
-          assert {:error, :invalid_date} = calendar.new(year, month, day)
+          assert {:error, %Calendrical.InvalidDateError{}} = calendar.new(year, month, day)
         end
       end
     end
@@ -149,7 +154,7 @@ defmodule Calendrical.LunisolarValidation.Test do
                        {:ok, date.month}
 
             {:error, _} ->
-              assert {:error, :invalid_leap_month} =
+              assert {:error, %Calendrical.InvalidMonthError{}} =
                        calendar.ordinal_month_from_traditional(year, lunar_month)
           end
         end
@@ -158,11 +163,11 @@ defmodule Calendrical.LunisolarValidation.Test do
 
     test "anything but a traditional month is not one" do
       for lunar_month <- [0, 13, {0, :leap}, {13, :leap}, :first, "1"] do
-        assert {:error, :invalid_month} =
+        assert {:error, %Calendrical.InvalidMonthError{}} =
                  Calendrical.Chinese.ordinal_month_from_traditional(4662, lunar_month)
       end
 
-      assert {:error, :invalid_month} =
+      assert {:error, %Calendrical.InvalidMonthError{}} =
                Calendrical.Chinese.ordinal_month_from_traditional("4662", 1)
     end
   end
@@ -173,7 +178,9 @@ defmodule Calendrical.LunisolarValidation.Test do
         calendar = unquote(calendar)
 
         for month <- 1..13, do: assert(calendar.days_in_month(month) == {:ambiguous, 29..30})
-        for month <- [0, 14], do: assert(calendar.days_in_month(month) == {:error, :undefined})
+
+        for month <- [0, 14],
+            do: assert({:error, %Calendrical.NotDefinedError{}} = calendar.days_in_month(month))
 
         for year <- sample_years(calendar), month <- 1..calendar.months_in_year(year) do
           assert calendar.days_in_month(year, month) in 29..30

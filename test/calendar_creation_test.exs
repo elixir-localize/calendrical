@@ -76,11 +76,11 @@ defmodule Calendrical.CalendarCreationTest do
     end
 
     test "answers for its options before it creates anything" do
-      assert Calendrical.Composite.new(Creation.NoOptions, []) ==
-               {:error, :no_calendars_configured}
+      assert Calendrical.Composite.new(Creation.NoOptions, []) |> composite_reason() ==
+               :no_calendars_configured
 
-      assert Calendrical.Composite.new(Creation.NoDates, calendars: [:nope]) ==
-               {:error, :must_be_a_list_of_dates}
+      assert Calendrical.Composite.new(Creation.NoDates, calendars: [:nope]) |> composite_reason() ==
+               :must_be_a_list_of_dates
 
       assert Calendrical.Composite.new(Calendrical.Gregorian, calendars: [:nope]) ==
                {:module_already_exists, Calendrical.Gregorian}
@@ -156,4 +156,6 @@ defmodule Calendrical.CalendarCreationTest do
       assert Enum.uniq(fiscal) == [{:ok, Calendrical.FiscalYear.US}]
     end
   end
+
+  defp composite_reason({:error, %Calendrical.InvalidCompositeError{reason: reason}}), do: reason
 end

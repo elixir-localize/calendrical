@@ -96,8 +96,11 @@ defmodule Calendrical.SolarTermTest do
 
     test "is an error for what is no term" do
       for calendar <- [Calendrical.Gregorian, Calendrical.Chinese] do
-        assert calendar.solar_term(25, 2025) == {:error, {:invalid_solar_term, 25}}
-        assert calendar.solar_term(0, 2025) == {:error, {:invalid_solar_term, 0}}
+        assert calendar.solar_term(25, 2025) ==
+                 {:error, Calendrical.InvalidSolarTermError.exception(index: 25)}
+
+        assert calendar.solar_term(0, 2025) ==
+                 {:error, Calendrical.InvalidSolarTermError.exception(index: 0)}
       end
     end
   end

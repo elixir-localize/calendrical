@@ -162,8 +162,8 @@ defmodule Calendrical.YearDaysTest do
         assert Calendrical.date_from_day_of_year(year, 1, calendar) == first, context
         assert Calendrical.date_from_day_of_year(year, days_in_year, calendar) == last, context
 
-        assert Calendrical.date_from_day_of_year(year, days_in_year + 1, calendar) ==
-                 {:error, :invalid_date},
+        assert {:error, %Calendrical.InvalidDateError{}} =
+                 Calendrical.date_from_day_of_year(year, days_in_year + 1, calendar),
                context
 
         if calendar != Calendar.ISO do
@@ -231,7 +231,8 @@ defmodule Calendrical.YearDaysTest do
       assert Calendrical.date_from_day_of_year(1155, 366, England) ==
                ~D[1155-13-24 Calendrical.Reform.England]
 
-      assert Calendrical.date_from_day_of_year(1155, 367, England) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.date_from_day_of_year(1155, 367, England)
 
       assert Calendrical.date_from_day_of_year(1700, 1, Russia) ==
                ~D[1700-01-01 Calendrical.Russia]
@@ -239,7 +240,8 @@ defmodule Calendrical.YearDaysTest do
       assert Calendrical.date_from_day_of_year(1700, 366, Russia) ==
                ~D[1700-12-31 Calendrical.Russia]
 
-      assert Calendrical.date_from_day_of_year(1700, 367, Russia) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.date_from_day_of_year(1700, 367, Russia)
     end
 
     # England's 1155 ends on its month 13 day 24, the Julian 24 March
@@ -282,26 +284,39 @@ defmodule Calendrical.YearDaysTest do
           ] do
         context = "#{inspect(calendar)} #{inspect(year)}"
 
-        assert Calendrical.first_day_of_year(year, calendar) == {:error, :invalid_date}, context
-        assert Calendrical.last_day_of_year(year, calendar) == {:error, :invalid_date}, context
-
-        assert Calendrical.first_gregorian_day_of_year(year, calendar) ==
-                 {:error, :invalid_date},
+        assert {:error, %Calendrical.InvalidDateError{}} =
+                 Calendrical.first_day_of_year(year, calendar),
                context
 
-        assert Calendrical.last_gregorian_day_of_year(year, calendar) == {:error, :invalid_date},
+        assert {:error, %Calendrical.InvalidDateError{}} =
+                 Calendrical.last_day_of_year(year, calendar),
                context
 
-        assert Calendrical.date_from_day_of_year(year, 1, calendar) == {:error, :invalid_date},
+        assert {:error, %Calendrical.InvalidDateError{}} =
+                 Calendrical.first_gregorian_day_of_year(year, calendar),
+               context
+
+        assert {:error, %Calendrical.InvalidDateError{}} =
+                 Calendrical.last_gregorian_day_of_year(year, calendar),
+               context
+
+        assert {:error, %Calendrical.InvalidDateError{}} =
+                 Calendrical.date_from_day_of_year(year, 1, calendar),
                context
       end
     end
 
     test "a day of the year below 1 or beyond the year is an error" do
-      assert Calendrical.date_from_day_of_year(2019, 0) == {:error, :invalid_date}
-      assert Calendrical.date_from_day_of_year(2019, 366) == {:error, :invalid_date}
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.date_from_day_of_year(2019, 0)
+
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.date_from_day_of_year(2019, 366)
+
       assert Calendrical.date_from_day_of_year(2020, 366) == ~D[2020-12-31 Calendrical.Gregorian]
-      assert Calendrical.date_from_day_of_year(2019, 1.5) == {:error, :invalid_date}
+
+      assert {:error, %Calendrical.InvalidDateError{}} =
+               Calendrical.date_from_day_of_year(2019, 1.5)
     end
   end
 end

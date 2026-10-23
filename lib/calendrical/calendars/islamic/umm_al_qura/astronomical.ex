@@ -151,8 +151,11 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
   * `{:ok, date}` where `date` is the Gregorian `t:Date.t/0` of the
     first day of the month.
 
-  * `{:error, reason}` if the year or month falls outside the
-    supported range (before 1392 AH, or an invalid month).
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a year before
+    1392 AH, or a month the installed ephemeris does not cover, or
+
+  * `{:error, %Calendrical.InvalidMonthError{}}` for a month not from 1
+    to 12.
 
   ### Examples
 
@@ -167,7 +170,7 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
 
   """
   @spec first_day_of_month(pos_integer(), 1..12) ::
-          {:ok, Date.t()} | {:error, term()}
+          {:ok, Date.t()} | {:error, Exception.t()}
 
   # Era 4: full Umm al-Qura rule (1423 AH onward)
   def first_day_of_month(hijri_year, hijri_month)
@@ -204,8 +207,24 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
     end
   end
 
-  def first_day_of_month(_year, _month),
-    do: {:error, :year_out_of_range}
+  def first_day_of_month(hijri_year, hijri_month)
+      when is_integer(hijri_year) and hijri_year >= @era2_start do
+    {:error,
+     Calendrical.InvalidMonthError.exception(
+       calendar: __MODULE__,
+       year: hijri_year,
+       month: hijri_month
+     )}
+  end
+
+  def first_day_of_month(hijri_year, _hijri_month) do
+    {:error,
+     Calendrical.UnsupportedDateRangeError.exception(
+       calendar: __MODULE__,
+       value: hijri_year,
+       range: {:from, @era2_start}
+     )}
+  end
 
   # ---------------------------------------------------------------------------
   # Private helpers
@@ -332,8 +351,11 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
     * `:new_month_starts_next_day?` is `true` when both conditions
       are met, otherwise `false`.
 
-  * `{:error, reason}` if the conjunction or the sunset cannot be
-    calculated.
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a date the
+    installed ephemeris does not cover, or
+
+  * `{:error, %Calendrical.AstronomyError{}}` where the sun does not set
+    at Mecca that day.
 
   ### Examples
 
@@ -343,7 +365,7 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
       true
 
   """
-  @spec evaluate_era_4_conditions(Date.t()) :: {:ok, map()} | {:error, term()}
+  @spec evaluate_era_4_conditions(Date.t()) :: {:ok, map()} | {:error, Exception.t()}
   def evaluate_era_4_conditions(%Date{} = date) do
     with {:ok, conjunction} <- Astro.date_time_new_moon_at_or_after(Date.add(date, -2)),
          {:ok, sunset_at_mecca} <- sunset_utc_at_mecca(date) do
@@ -407,10 +429,9 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
     # not depend on a time zone database for resolution.
     moment = Astro.Time.date_time_to_moment(date)
 
-    Astro.Solar.SunRiseSet.sunset(@mecca_location, moment,
-      solar_elevation: 90.5667,
-      time_zone: :utc
-    )
+    @mecca_location
+    |> Astro.Solar.SunRiseSet.sunset(moment, solar_elevation: 90.5667, time_zone: :utc)
+    |> Calendrical.Base.Astro.result(__MODULE__, date)
   end
 
   # Returns the UTC DateTime of moonset in Mecca on `date`.
@@ -439,6 +460,6 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
     month = rem(div(h, 153) + 2, 12) + 1
     year = div(e, 1_461) - 4_716 + div(14 - month, 12)
 
-    Date.new(year, month, day)
+    {:ok, Date.new!(year, month, day)}
   end
 end

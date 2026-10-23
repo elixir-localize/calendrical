@@ -154,7 +154,7 @@ defmodule Calendrical.Indian do
   """
   @impl true
   @spec leap_year?(year) :: boolean()
-  def leap_year?(year) do
+  def leap_year?(year) when is_integer(year) do
     Calendrical.Gregorian.leap_year?(gregorian_year(year))
   end
 
@@ -172,7 +172,13 @@ defmodule Calendrical.Indian do
 
   ### Returns
 
-  * The number of days in the month (`30..31`).
+  * The number of days in the month (`30..31`), or
+
+  * `{:error, %Calendrical.InvalidMonthError{}}` for a month the year
+    does not have, or
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` where the year or the
+    month is `nil`.
 
   ### Examples
 
@@ -184,7 +190,7 @@ defmodule Calendrical.Indian do
 
   """
   @impl true
-  @spec days_in_month(year, month) :: 30..31
+  @spec days_in_month(year, month) :: 30..31 | {:error, Exception.t()}
   def days_in_month(year, month) when month in 1..12 do
     table = if leap_year?(year), do: @month_lengths_leap, else: @month_lengths_ordinary
     elem(table, month - 1)

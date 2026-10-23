@@ -11,6 +11,27 @@ defmodule Calendrical.StrftimeTest do
 
   use ExUnit.Case, async: true
 
+  # The calendars every month and day name is checked in.
+  {:ok, fiscal_year_us} = Calendrical.FiscalYear.calendar_for(:US)
+
+  @calendars [
+    Calendrical.Gregorian,
+    Calendrical.IL,
+    Calendrical.Julian,
+    Calendrical.Coptic,
+    Calendrical.Ethiopic,
+    Calendrical.Hebrew,
+    Calendrical.Islamic.Civil,
+    Calendrical.Islamic.UmmAlQura,
+    Calendrical.Japanese,
+    Calendrical.Reform.England,
+    Calendrical.Fiscal.US,
+    Calendrical.Fiscal.AU,
+    fiscal_year_us,
+    Calendrical.ISOWeek,
+    Calendrical.NRF
+  ]
+
   defp strftime(date, format), do: Calendrical.strftime!(date, format, locale: :en)
 
   defp convert(gregorian, calendar) do
@@ -91,8 +112,13 @@ defmodule Calendrical.StrftimeTest do
 
     assert {:error, %ArgumentError{}} = Calendrical.strftime(~D[2019-11-03], "%Q", locale: :en)
     assert {:error, %ArgumentError{}} = Calendrical.strftime(~D[2019-11-03], "%B", unknown: 1)
-    assert {:error, %ArgumentError{}} = Calendrical.strftime(~D[2019-11-03], "%B", :not_options)
-    assert {:error, %ArgumentError{}} = Calendrical.strftime(~D[2019-11-03], "%B", [1, 2])
+
+    assert {:error, %Calendrical.InvalidOptionValueError{option: :options}} =
+             Calendrical.strftime(~D[2019-11-03], "%B", :not_options)
+
+    assert {:error, %Calendrical.InvalidOptionValueError{option: :options}} =
+             Calendrical.strftime(~D[2019-11-03], "%B", [1, 2])
+
     assert {:error, _exception} = Calendrical.strftime(nil, "%B", locale: :en)
     assert {:error, _exception} = Calendrical.strftime(~D[2019-11-03], nil, locale: :en)
     assert {:error, _exception} = Calendrical.strftime(%{year: 2019, month: 13, day: 1}, "%B")
@@ -105,26 +131,6 @@ defmodule Calendrical.StrftimeTest do
 
     assert_raise ArgumentError, fn -> Calendrical.strftime!(~D[2019-11-03], "%Q") end
   end
-
-  {:ok, fiscal_year_us} = Calendrical.FiscalYear.calendar_for(:US)
-
-  @calendars [
-    Calendrical.Gregorian,
-    Calendrical.IL,
-    Calendrical.Julian,
-    Calendrical.Coptic,
-    Calendrical.Ethiopic,
-    Calendrical.Hebrew,
-    Calendrical.Islamic.Civil,
-    Calendrical.Islamic.UmmAlQura,
-    Calendrical.Japanese,
-    Calendrical.Reform.England,
-    Calendrical.Fiscal.US,
-    Calendrical.Fiscal.AU,
-    fiscal_year_us,
-    Calendrical.ISOWeek,
-    Calendrical.NRF
-  ]
 
   for calendar <- @calendars do
     test "#{inspect(calendar)} names every month and day as Localize does" do
@@ -148,5 +154,36 @@ defmodule Calendrical.StrftimeTest do
       {:ok, name} = Localize.Calendar.localize(date, part, locale: :en, style: style)
       name
     end)
+  end
+
+  # A partial date names its month from the date, as a whole date does,
+  # rather than by its month field.
+  describe "a partial date's month name" do
+    test "is the calendar's name for the month" do
+      {:ok, fiscal} =
+        Calendrical.new(Calendrical.StrftimeTest.FiscalJuly, :month,
+          year_begins: {7, 1},
+          year_number: :ending
+        )
+
+      japan = %{year: 1228, month: 1, day: nil, calendar: Calendrical.Reform.Japan}
+
+      assert Calendrical.strftime(japan, "%B", locale: :en) ==
+               Calendrical.strftime(Date.new!(1228, 1, 1, Calendrical.Reform.Japan), "%B",
+                 locale: :en
+               )
+
+      assert Calendrical.strftime(%{year: nil, month: 3, day: nil, calendar: fiscal}, "%B",
+               locale: :en
+             ) == {:ok, "September"}
+
+      assert fiscal.month_of_year(nil, 3, nil) == 9
+      assert fiscal.month_of_year(2025, 3, nil) == 9
+    end
+  end
+
+  test "options that are not a keyword list are an error" do
+    assert {:error, %Calendrical.InvalidOptionValueError{option: :options, value: [1, 2]}} =
+             Calendrical.strftime(~D[2024-06-01], "%B", [1, 2])
   end
 end

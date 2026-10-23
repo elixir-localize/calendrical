@@ -7,6 +7,9 @@
     %{
       name: "default",
       strict: true,
+      # The house checks: an error tuple holds an exception
+      # (`Calendrical.Credo.ErrorTuple`).
+      requires: [".credo/checks/*.ex"],
       files: %{
         included: ["lib/", "test/"],
         excluded: []
@@ -20,6 +23,11 @@
           {Credo.Check.Design.AliasUsage, []}
         ],
         extra: [
+          # An error is `{:error, exception}` in the library. Tests assert
+          # the atoms Elixir's own Calendar callbacks return, so only `lib/`
+          # is checked.
+          {Calendrical.Credo.ErrorTuple, files: %{included: ["lib/"]}},
+
           # Test support fixtures do not need moduledocs.
           {Credo.Check.Readability.ModuleDoc, files: %{excluded: ["test/"]}},
 
