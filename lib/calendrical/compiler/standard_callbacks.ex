@@ -483,7 +483,10 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       ### Returns
 
       * The month of the date's `written_date/3`: a month number, or
-        `{month, :leap}` for a leap month of a lunisolar calendar.
+        `{month, :leap}` for a leap month of a lunisolar calendar, or
+
+      * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar
+        does not have.
 
       ### Examples
 
@@ -494,8 +497,10 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       """
       def numeric_month(year, month, day) do
-        {_year, written_month, _day} = written_date(year, month, day)
-        written_month
+        with :ok <- Calendrical.Compiler.DateCheck.check_figures(__MODULE__, year, month, day) do
+          {_year, written_month, _day} = written_date(year, month, day)
+          written_month
+        end
       end
 
       @doc """
@@ -508,7 +513,10 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       ### Returns
 
-      * The day of the date's `written_date/3`.
+      * The day of the date's `written_date/3`, or
+
+      * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar
+        does not have.
 
       ### Examples
 
@@ -519,8 +527,10 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       """
       def cardinal_day(year, month, day) do
-        {_year, _month, written_day} = written_date(year, month, day)
-        written_day
+        with :ok <- Calendrical.Compiler.DateCheck.check_figures(__MODULE__, year, month, day) do
+          {_year, _month, written_day} = written_date(year, month, day)
+          written_day
+        end
       end
 
       @doc """
@@ -533,7 +543,10 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       ### Returns
 
-      * The year of the date's `written_date/3`.
+      * The year of the date's `written_date/3`, or
+
+      * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar
+        does not have.
 
       ### Examples
 
@@ -544,8 +557,10 @@ defmodule Calendrical.Compiler.StandardCallbacks do
 
       """
       def cardinal_year(year, month, day) do
-        {written_year, _month, _day} = written_date(year, month, day)
-        written_year
+        with :ok <- Calendrical.Compiler.DateCheck.check_figures(__MODULE__, year, month, day) do
+          {written_year, _month, _day} = written_date(year, month, day)
+          written_year
+        end
       end
 
       @doc """

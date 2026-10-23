@@ -39,7 +39,10 @@ defmodule Calendrical.LawsTest do
 
   # The laws an existing calendar breaks, by calendar and law, with the
   # reason: each is a finding for the user to rule on, not a defect of
-  # the law test. See the moduledoc for how to run them.
+  # the law test. See the moduledoc for how to run them. Ruled on
+  # 2026-10-24: the exemption below stays, with the composite's documented
+  # behaviour, that a day with no date of its own answers the first later
+  # day that has one.
   @known_failures %{
     # Law 6 says a month within the fewest exists in every year, which
     # reads the fewest as a count of months numbered from 1. England's

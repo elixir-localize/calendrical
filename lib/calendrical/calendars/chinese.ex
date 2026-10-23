@@ -61,6 +61,15 @@ defmodule Calendrical.Chinese do
   the intercalary; `traditional_leap_month/1` returns the **traditional**
   number that the intercalary repeats.
 
+  ## The meridian
+
+  Month starts are reckoned at Beijing in local mean time (UTC+7:46)
+  before 1929 and at UTC+8 from 1929, as Dershowitz and Reingold give
+  them. Against the Hong Kong Observatory's conversion tables for 1901 to
+  1928 this rule misses one month start, 24 April 1906, whose new moon
+  fell 14 minutes before midnight in mean time and after it at UTC+8;
+  reckoning those years at UTC+8, as ICU does, would miss three.
+
   """
 
   use Calendrical.Calendar.Lunisolar,

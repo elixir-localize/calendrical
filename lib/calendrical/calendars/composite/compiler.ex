@@ -762,8 +762,9 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
-      Returns whether the given year is a leap year, in the context
-      of the calendar in effect on the first day of that year.
+      Returns whether the given year is a leap year: the calendar in
+      effect on its first day counts it one, and the day the leap year
+      adds is a date of this calendar.
 
       ### Arguments
 
@@ -771,9 +772,13 @@ defmodule Calendrical.Composite.Compiler do
 
       ### Returns
 
-      * `true` if the member calendar in effect on month 1 day 1 of
-        `year` counts it a leap year, otherwise `false`, as for a year
-        with no days of its own (`months_in_year/1` is `0`).
+      * `true` if the member calendar in effect on the first day of
+        `year` counts it a leap year and the day its leap year adds, the
+        last day of a lengthened month or the first day of a leap month,
+        is a date of this calendar; otherwise `false`, as for a year with
+        no days of its own (`months_in_year/1` is `0`) and for a year a
+        change of calendar took the leap day from, as Sweden's 1700 has
+        no 29 February.
 
       ### Examples
 
@@ -789,8 +794,35 @@ defmodule Calendrical.Composite.Compiler do
           false
         else
           calendar = calendar_for_date(year, 1, 1)
-          calendar.leap_year?(year)
+          calendar.leap_year?(year) and leap_day_present?(calendar, year)
         end
+      end
+
+      # The day the member's leap year adds is a date of this calendar: the
+      # first day of the leap month in a lunisolar member, and in a member
+      # of months the last day of each month that is as long as it ever is,
+      # where its length varies. A reform that took the day out, as
+      # Sweden's 1700 lost its 29 February, leaves the year no leap year.
+      defp leap_day_present?(calendar, year) do
+        case calendar.leap_month(year) do
+          nil ->
+            Enum.all?(
+              lengthened_months(calendar, year),
+              &valid_date?(year, elem(&1, 0), elem(&1, 1))
+            )
+
+          month ->
+            valid_date?(year, month, 1)
+        end
+      end
+
+      defp lengthened_months(calendar, year) do
+        for month <- 1..calendar.months_in_year(year)//1,
+            {fewest, most} = calendar.days_in_month_bounds(month),
+            is_integer(fewest) and is_integer(most) and fewest < most,
+            days = calendar.days_in_month(year, month),
+            days == most,
+            do: {month, days}
       end
 
       @doc """

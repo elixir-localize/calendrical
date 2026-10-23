@@ -114,8 +114,6 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 * `Calendrical.Persian` computes its new year from the bundled ephemeris for Persian years 1279 to 1479 and uses ICU's arithmetic cycle outside them. `new_year_gregorian/1` and `year_end_gregorian/1` cover Gregorian years 1900 to 2100.
 
-* `Calendrical.Gregorian` and `Calendrical.ISO` are hand-written calendars over `Calendar.ISO`.
-
 * Japanese era boundaries before Meiji are the proleptic Gregorian dates Localize publishes, and `Calendrical.LunarJapanese` counts an era's years from the lunar year of its proclamation.
 
 * `Calendrical.Preference` resolves `-u-ca-iso8601` to `Calendrical.ISO`, the Gregorian calendar with ISO 8601's week rules, instead of `Calendrical.ISOWeek`.
@@ -214,13 +212,13 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 * `Calendrical.Reform.Sweden.Transitional` has no year 0, as the Julian calendar has none, and round-trips every day from 1700 to 1712.
 
-* The exported calendar arithmetic guards its integer arguments, so a non-integer raises `FunctionClauseError` instead of computing a float.
-
-* An exception's `message/1` is written whatever its fields hold.
-
 * `Calendrical.Era.year_of_era/4`, `day_of_era/4` and every calendar's `year_of_era/1` answer as the calendar's own `year_of_era/3` and `day_of_era/3` do, where they reckoned from `info/0` and disagreed with a calendar that defines its own: `Calendrical.Reform.Japan.year_of_era(1000)` is `{21, 198}`, as `year_of_era(1000, 1, 1)` is.
 
 * `Calendrical.Reform.TR` changes calendar on 1 January 1926, where its data said 1927.
+
+* A composite calendar's `leap_year?/1` is `false` for a year a change of calendar took the leap day from, so Sweden's 1700, with no 29 February, is no leap year, where it answered the Julian calendar's `true`.
+
+* `numeric_month/3`, `cardinal_day/3` and `cardinal_year/3` return `Calendrical.InvalidDateError` for a date the calendar does not have, where they echoed its figures.
 
 * `Calendrical.Persian` and `Calendrical.LunarJapanese` state the first day of their year 1 as `info().epoch`, where the Persian fact was two days after it and the Lunar Japanese fact the Taika proclamation day, five months after it; the default `:lunar_japanese_epoch` is `~D[0645-02-05]`.
 

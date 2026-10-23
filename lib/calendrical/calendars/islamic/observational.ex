@@ -53,6 +53,12 @@ defmodule Calendrical.Islamic.Observational do
   at Mecca, and `Calendrical.Islamic.UmmAlQura` for the official
   Saudi tabular calendar.
 
+  ICU's `islamic` calendar, and its `islamic-rgsa` alias, begin a month
+  on the day after the conjunction rather than on a sighting, so they run
+  a day ahead of this calendar in most months. Against the dates Saudi
+  Arabia announces, this calendar is within a day and ICU is sometimes a
+  day early.
+
   """
 
   use Calendrical.Calendar,

@@ -12,6 +12,8 @@ defmodule Calendrical.Era do
 
   A before era's days count back from its last day, as `Calendar.ISO` counts the days before the common era. A date before a calendar's first era, which TR35 gives no era, belongs to the first era counted back from its start: the year before its first is year 0, as ICU numbers the Japanese years before Taika, and the day before its first is day 0.
 
+  A calendar of one era with no before era, such as the Buddhist, Persian and Indian calendars, numbers the years before its year 1 as 0, -1 and so on in that era, as ICU does, where `Calendar.ISO` counts them in a second era.
+
   """
 
   @typedoc "A CLDR calendar type, such as `:gregorian` or `:persian`."

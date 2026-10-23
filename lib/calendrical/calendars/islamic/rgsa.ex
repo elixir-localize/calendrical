@@ -43,6 +43,12 @@ defmodule Calendrical.Islamic.Rgsa do
   * Dershowitz & Reingold, *Calendrical Calculations* (4th ed.),
     Chapter 14.
 
+  ICU's `islamic-rgsa` calendar is an alias of its `islamic` calendar,
+  which begins a month on the day after the conjunction rather than on a
+  sighting, so it runs a day ahead of this calendar in most months.
+  Against the dates Saudi Arabia announces, this calendar is within a day
+  and ICU is sometimes a day early.
+
   """
 
   use Calendrical.Calendar,

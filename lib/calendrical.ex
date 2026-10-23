@@ -3723,35 +3723,8 @@ defmodule Calendrical do
         get_in(months_data, [type, style, cardinal_month])
 
       {month, :leap} when is_number(month) ->
-        cardinal_month = month
-
         months_data = unwrap!(Localize.Calendar.months(locale, calendar_type))
-
-        # Calendars such as Hebrew encode the leap-year variant of a
-        # month directly in the months data under a `_yeartype_leap`
-        # key. Try that first; if no variant exists, fall back to the
-        # `month_patterns` substitution mechanism used by lunisolar
-        # calendars.
-        leap_variant_key = :"#{cardinal_month}_yeartype_leap"
-        variant = get_in(months_data, [type, style, leap_variant_key])
-
-        if is_binary(variant) do
-          variant
-        else
-          month_patterns =
-            unwrap!(Localize.Calendar.month_patterns(locale, calendar_type))
-
-          month = get_in(months_data, [type, style, cardinal_month])
-
-          if is_map(month_patterns) do
-            leap_pattern = get_in(month_patterns, [type, style, :leap])
-
-            Localize.Substitution.substitute([to_string(month)], leap_pattern)
-            |> :erlang.iolist_to_binary()
-          else
-            month
-          end
-        end
+        leap_month_name(months_data, locale, calendar_type, type, style, month)
 
       error ->
         error
@@ -3800,6 +3773,35 @@ defmodule Calendrical do
 
     day_periods_data = unwrap!(Localize.Calendar.day_periods(locale, calendar_type))
     get_in(day_periods_data, [type, style, day_period])
+  end
+
+  # Calendars such as Hebrew encode the leap-year variant of a month
+  # directly in the months data under a `_yeartype_leap` key; where no
+  # variant exists, the `month_patterns` substitution of the lunisolar
+  # calendars names the leap month from the month it follows.
+  defp leap_month_name(months_data, locale, calendar_type, type, style, month) do
+    case get_in(months_data, [type, style, :"#{month}_yeartype_leap"]) do
+      variant when is_binary(variant) ->
+        variant
+
+      _no_variant ->
+        substituted_leap_month(months_data, locale, calendar_type, type, style, month)
+    end
+  end
+
+  defp substituted_leap_month(months_data, locale, calendar_type, type, style, month) do
+    month_patterns = unwrap!(Localize.Calendar.month_patterns(locale, calendar_type))
+    name = get_in(months_data, [type, style, month])
+
+    if is_map(month_patterns) do
+      leap_pattern = get_in(month_patterns, [type, style, :leap])
+
+      [to_string(name)]
+      |> Localize.Substitution.substitute(leap_pattern)
+      |> :erlang.iolist_to_binary()
+    else
+      name
+    end
   end
 
   # CLDR cyclic names are keyed by the position in the sexagesimal cycle
@@ -5005,15 +5007,18 @@ defmodule Calendrical do
 
       :error ->
         with {:ok, calendar_type} <- Localize.validate_calendar(calendar_type) do
-          calendar_module = Calendrical.Preference.calendar_module(calendar_type)
-
-          if is_atom(calendar_module) and Code.ensure_loaded?(calendar_module) do
-            {:ok, calendar_module}
-          else
-            {:error, unknown_calendar_error(calendar_type)}
-          end
+          cldr_calendar_module(calendar_type)
         end
     end
+  end
+
+  # The module a CLDR calendar type resolves to, where it is loaded.
+  defp cldr_calendar_module(calendar_type) do
+    calendar_module = Calendrical.Preference.calendar_module(calendar_type)
+
+    if is_atom(calendar_module) and Code.ensure_loaded?(calendar_module),
+      do: {:ok, calendar_module},
+      else: {:error, unknown_calendar_error(calendar_type)}
   end
 
   # Resolve a non-CLDR calendar identifier (atom or its string form) to its

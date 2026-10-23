@@ -148,6 +148,22 @@ defmodule Calendrical.Compiler.DateCheck do
     do: {:error, Calendrical.InvalidDateError.exception(calendar: calendar, value: other)}
 
   @doc false
+  # The figures a date is written with are asked of a whole date, or of a
+  # partial date with `nil` fields, as a format with no day asks them: a
+  # date the calendar does not have is a `Calendrical.InvalidDateError`.
+  @spec check_figures(module(), term(), term(), term()) :: :ok | {:error, Exception.t()}
+  def check_figures(calendar, year, month, day) do
+    case check(calendar, [], {year, month, day}, false) do
+      :invalid ->
+        {:error,
+         Calendrical.InvalidDateError.exception(calendar: calendar, value: {year, month, day})}
+
+      _ok_or_partial ->
+        :ok
+    end
+  end
+
+  @doc false
   @spec check_part(term()) :: :ok | {:error, Exception.t()}
   def check_part(part) when part in @valid_parts, do: :ok
 

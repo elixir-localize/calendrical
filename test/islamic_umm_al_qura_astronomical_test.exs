@@ -442,7 +442,7 @@ defmodule Calendrical.Islamic.UmmAlQura.AstronomicalTest do
 
           {:ok, actual} ->
             diff = Date.diff(actual, expected)
-            sign = if diff > 0, do: "+", else: ""
+            sign = (diff > 0 && "+") || ""
             ["#{year}/#{month}: expected #{expected}, got #{actual} (diff #{sign}#{diff})"]
 
           {:error, reason} ->

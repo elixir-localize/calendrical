@@ -48,6 +48,16 @@ defmodule Calendrical.Korean do
   the intercalary; `traditional_leap_month/1` returns the **traditional**
   number that the intercalary repeats.
 
+  ## The meridian
+
+  Month starts are reckoned at Seoul: local mean time (UTC+8:27:52)
+  before 1908, UTC+8:30 from 1908 to 1911 and from 1954 to 1961, and
+  UTC+9 otherwise, as Dershowitz and Reingold give them. ICU reckons the
+  years before 1912 at UTC+8, so five month starts in those years differ
+  from ICU's by a day. A new moon within a minute of midnight, as in
+  August 2051 and August 2074, is inside the uncertainty of the
+  ephemeris, and the month it begins is uncertain by a day.
+
   """
   use Calendrical.Calendar.Lunisolar,
     epoch: Application.compile_env(:calendrical, :korean_epoch, ~D[-2332-02-15]),

@@ -33,7 +33,7 @@
 
           # The compiler modules build calendars from large quoted
           # blocks; Credo measures the quoted AST as if it were a
-          # single function, producing cyclomatic/arity/nesting/quote
+          # single function, producing cyclomatic/arity/quote
           # figures that reflect the generated surface rather than
           # any real function. The additional named files below are
           # acknowledged complexity debt (branchy CLDR-fallback
@@ -58,18 +58,6 @@
                "lib/calendrical/compiler/",
                "lib/calendrical/calendars/composite/compiler.ex",
                "lib/calendrical.ex"
-             ]
-           }},
-          {Credo.Check.Refactor.Nesting,
-           files: %{
-             excluded: [
-               "lib/calendrical/compiler/",
-               "lib/calendrical/calendars/composite/compiler.ex",
-               "lib/calendrical/parse.ex",
-               "lib/calendrical/time_zone.ex",
-               "lib/calendrical/era.ex",
-               "lib/calendrical.ex",
-               "test/"
              ]
            }},
           {Credo.Check.Refactor.LongQuoteBlocks,
