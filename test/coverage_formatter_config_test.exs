@@ -205,7 +205,7 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
 
     test "extract_options/1 prepends the base transition and sorts" do
       assert [
-               {-3_651_771, -9999, 1, 1, Calendrical.Julian},
+               {nil, -9999, 1, 1, Calendrical.Julian},
                {640_162, 1752, 9, 14, Calendrical.Gregorian}
              ] = Config.extract_options(calendars: ~D[1752-09-14 Calendrical.Gregorian])
     end

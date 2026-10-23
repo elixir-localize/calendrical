@@ -18,10 +18,12 @@ defmodule Calendrical.UnsupportedDateRangeTest do
 
   use ExUnit.Case, async: true
 
-  describe "Calendrical.Persian's equinox outside Gregorian years 1000..3000" do
+  describe "Calendrical.Persian's new year outside Gregorian years 1900..2100" do
     test "new_year_gregorian/1 returns a tagged error" do
       assert {:error, :year_out_of_range} = Calendrical.Persian.new_year_gregorian(900)
       assert {:error, :year_out_of_range} = Calendrical.Persian.new_year_gregorian(3500)
+      assert {:error, :year_out_of_range} = Calendrical.Persian.new_year_gregorian(1899)
+      assert {:error, :year_out_of_range} = Calendrical.Persian.new_year_gregorian(2101)
     end
 
     test "new_year_gregorian/1 still succeeds inside the range" do

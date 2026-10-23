@@ -16,13 +16,15 @@ defmodule Calendrical.Persian do
 
   This calendar is observational: each year begins on the day of the
   vernal equinox in Tehran (the day after, when the equinox falls after
-  noon), computed by `Astro.equinox/2`, which is accurate only for
-  Gregorian years 1000 to 3000. Persian years 380 to 2378 begin there.
+  true noon there), computed by `Astro.equinox/2` and `Astro.solar_noon/2`.
+  True noon comes from the JPL ephemeris Astro bundles, which covers
+  Gregorian years 1900 to 2100, so Persian years 1279 to 1479 begin
+  there.
 
   Every other year begins as ICU's Persian calendar has it: by the
-  33-year arithmetic cycle, with ICU's table of corrections for the
-  years after 2378. The two agree on when years 379, 380, 2378 and 2379
-  begin, so no year at either join is lengthened or shortened. Years
+  33-year arithmetic cycle, with ICU's table of corrections. The two
+  agree on when every year from 1279 to 1479 begins, so no year at
+  either join is lengthened or shortened. Years
   are numbered astronomically, as ICU numbers them: the year before 1
   is 0.
 
@@ -33,23 +35,57 @@ defmodule Calendrical.Persian do
     cldr_calendar_type: :persian,
     weeks: [first_day: 6]
 
-  # `Astro.equinox/2` is accurate to within two minutes only for
-  # this span of Gregorian years; outside it the equinox — and
-  # therefore Nowruz — cannot be computed.
-  @supported_gregorian_years 1000..3000
+  # The Gregorian years whose Nowruz is computed: `Astro.solar_noon/2`
+  # finds true noon in Tehran from the JPL ephemeris Astro bundles, which
+  # covers these years, and `Astro.equinox/2` is accurate within them.
+  @supported_gregorian_years 1900..2100
 
   # The Persian years whose start is computed from the equinox: year `y`
   # begins in Gregorian year `y + 621`.
-  @astronomical_years 380..2378
+  @astronomical_years 1279..1479
 
   # ICU's arithmetic Persian calendar (`persncal.cpp`): 1 Farvardin 1 is
   # its julian day 1948320, Gregorian 21 March 622, and year `y` begins
   # `365 * (y - 1) + floor((8 * y + 21) / 33)` days later, a day earlier
   # when ICU lists `y - 1` as a common year the cycle makes leap. Only
-  # the corrections after the astronomical years are kept.
+  # the corrections outside the astronomical years matter, and ICU lists
+  # none before 1502.
   @arithmetic_epoch 227_260
 
   @arithmetic_common_years MapSet.new([
+                             1502,
+                             1601,
+                             1634,
+                             1667,
+                             1700,
+                             1733,
+                             1766,
+                             1799,
+                             1832,
+                             1865,
+                             1898,
+                             1931,
+                             1964,
+                             1997,
+                             2030,
+                             2059,
+                             2063,
+                             2096,
+                             2129,
+                             2158,
+                             2162,
+                             2191,
+                             2195,
+                             2224,
+                             2228,
+                             2257,
+                             2261,
+                             2290,
+                             2294,
+                             2323,
+                             2327,
+                             2356,
+                             2360,
                              2389,
                              2393,
                              2422,
@@ -212,8 +248,7 @@ defmodule Calendrical.Persian do
   * `{:ok, date}` where `date` is a `t:Date.t/0` in `Calendar.ISO`.
 
   * `{:error, :year_out_of_range}` if `year` is outside the
-    Gregorian years 1000 to 3000 for which the equinox can be
-    computed.
+    Gregorian years 1900 to 2100 the ephemeris Astro bundles covers.
 
   ### Examples
 
@@ -254,8 +289,7 @@ defmodule Calendrical.Persian do
     one day before the next Persian new year.
 
   * `{:error, :year_out_of_range}` if `year + 1` is outside the
-    Gregorian years 1000 to 3000 for which the equinox can be
-    computed.
+    Gregorian years 1900 to 2100 the ephemeris Astro bundles covers.
 
   ### Examples
 

@@ -122,8 +122,8 @@ defmodule Calendrical.CalendarArithmetic.Test do
     end
 
     test "the Persian calendar has dates outside its astronomical years" do
-      assert Calendrical.Persian.valid_date?(379, 12, 29)
-      assert Calendrical.Persian.valid_date?(2379, 1, 1)
+      assert Calendrical.Persian.valid_date?(1278, 12, 29)
+      assert Calendrical.Persian.valid_date?(1480, 1, 1)
       assert Calendrical.Persian.valid_date?(3000, 1, 1)
       assert {:ok, %Date{}} = Date.new(3000, 1, 1, Calendrical.Persian)
     end

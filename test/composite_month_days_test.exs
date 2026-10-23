@@ -61,8 +61,11 @@ defmodule Calendrical.CompositeMonthDaysTest do
     end
   end
 
+  # The base calendar has no first day, so the years around a change are
+  # those around each calendar that takes effect after it.
   defp years_around_changes(calendar) do
     calendar.__config__()
+    |> Enum.drop(1)
     |> Enum.flat_map(fn {iso_days, _year, _month, _day, _calendar} ->
       [iso_days - 400, iso_days - 1, iso_days, iso_days + 400]
     end)

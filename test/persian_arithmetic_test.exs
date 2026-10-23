@@ -1,7 +1,7 @@
 defmodule Calendrical.PersianArithmeticTest do
   @moduledoc """
   The Persian calendar outside the years whose new year is computed from
-  the equinox (Persian 380 to 2378) follows ICU's arithmetic Persian
+  the equinox (Persian 1279 to 1479) follows ICU's arithmetic Persian
   calendar, and joins the astronomical years without a gap or overlap.
 
   The oracles are ICU4C's: the day counts of `persianTestCases1` in
@@ -46,8 +46,41 @@ defmodule Calendrical.PersianArithmeticTest do
     {1_317_875, 2988, 1, 2}
   ]
 
-  # ICU's years after 2378 that its 33-year cycle makes leap and are common.
+  # ICU's years that its 33-year cycle makes leap and are common.
   @icu_common_years [
+    1502,
+    1601,
+    1634,
+    1667,
+    1700,
+    1733,
+    1766,
+    1799,
+    1832,
+    1865,
+    1898,
+    1931,
+    1964,
+    1997,
+    2030,
+    2059,
+    2063,
+    2096,
+    2129,
+    2158,
+    2162,
+    2191,
+    2195,
+    2224,
+    2228,
+    2257,
+    2261,
+    2290,
+    2294,
+    2323,
+    2327,
+    2356,
+    2360,
     2389,
     2393,
     2422,
@@ -111,7 +144,7 @@ defmodule Calendrical.PersianArithmeticTest do
   end
 
   test "the arithmetic years are leap as ICU has them" do
-    for year <- Enum.concat(-1000..379, 2379..3100) do
+    for year <- Enum.concat(-1000..1278, 1480..3100) do
       assert Persian.leap_year?(year) == icu_leap_year?(year), "year #{year}"
       assert Persian.days_in_year(year) == if(icu_leap_year?(year), do: 366, else: 365)
     end
@@ -124,7 +157,7 @@ defmodule Calendrical.PersianArithmeticTest do
   end
 
   test "every day across both joins follows the day before" do
-    for {first, last} <- [{~D[0999-01-01], ~D[1003-12-31]}, {~D[2997-01-01], ~D[3002-12-31]}] do
+    for {first, last} <- [{~D[1898-01-01], ~D[1902-12-31]}, {~D[2098-01-01], ~D[2103-12-31]}] do
       days = Date.to_gregorian_days(first)..Date.to_gregorian_days(last)
 
       days

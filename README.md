@@ -41,7 +41,7 @@ Add `calendrical` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:calendrical, "~> 1.4"}
+    {:calendrical, "~> 2.0"}
   ]
 end
 ```

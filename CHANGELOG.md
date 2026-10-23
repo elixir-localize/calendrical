@@ -6,7 +6,7 @@ The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] — Unreleased
+## [2.0.0] — 2026-10-23
 
 Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and derives the rest. The guides describe the design; the entries here are what a consumer of 1.x sees change.
 
@@ -116,7 +116,11 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 * `Calendrical.UnsupportedDateRangeError`'s `:range` is data, `:jpl_ephemeris` from the Islamic visibility calculations, written as a whole translated sentence, where an English phrase was bound untranslated into the message.
 
-* Requires the Localize release made with Calendrical 2.0, which implements the date, time, datetime and interval parsers, asks a calendar for its kernel, and names months through `cldr_month/2`.
+* Requires `localize ~> 1.4`, which implements the date, time, datetime and interval parsers, asks a calendar for its kernel, and names months through `cldr_month/2`.
+
+* Requires `astro ~> 2.8`, which computes positions from the JPL ephemeris it bundles.
+
+* `Calendrical.Persian.new_year_gregorian/1` and `year_end_gregorian/1` compute Gregorian years 1900 to 2100, the ephemeris Astro bundles, and return `{:error, :year_out_of_range}` outside them, where they took 1000 to 3000.
 
 * Japanese era boundaries before Meiji are the proleptic Gregorian dates Localize now publishes, read as they are instead of converted from CLDR's lunisolar values, and `Calendrical.LunarJapanese` counts an era's years from the lunar year of its proclamation.
 
@@ -164,7 +168,7 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 * `Calendrical.Islamic.UmmAlQura` has dates before 1 AH and after 1500 AH, outside KACST's tables, by `Calendrical.Islamic.Civil`, as ICU falls back to it; the civil years join the tables without a gap. Its callbacks and `Date.convert/2` raised `Calendrical.IslamicYearOutOfRangeError` there.
 
-* `Calendrical.Persian` has dates outside Persian years 380 to 2378, where the equinox cannot be computed, by ICU's arithmetic Persian calendar (its 33-year cycle and corrections), which agrees with the equinox at both joins. Its callbacks and `Date.convert/2` raised `Calendrical.UnsupportedDateRangeError` there; years before 1 are numbered 0, -1, as in ICU.
+* `Calendrical.Persian` has dates outside Persian years 1279 to 1479, the years the ephemeris Astro bundles covers, by ICU's arithmetic Persian calendar (its 33-year cycle and corrections), which agrees with the astronomical new year on every year from 1279 to 1479. Its callbacks and `Date.convert/2` raised `Calendrical.UnsupportedDateRangeError` there; years before 1 are numbered 0, -1, as in ICU.
 
 * `Calendrical.strftime/3` names the month and the day of the week from the date, as `Localize.Calendar.localize/3` does, where it named them by the date's fields: a calendar of weeks raised from week 13, Hebrew, Chinese leap and fiscal months were misnamed, and calendars whose weeks begin on another day than Monday named the wrong day.
 

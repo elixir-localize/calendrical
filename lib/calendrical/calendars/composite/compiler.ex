@@ -2,6 +2,8 @@ defmodule Calendrical.Composite.Compiler do
   @moduledoc false
 
   defmacro __before_compile__(env) do
+    start_astro!()
+
     options =
       Module.get_attribute(env.module, :options)
       |> Keyword.put(:calendar, env.module)
@@ -786,6 +788,25 @@ defmodule Calendrical.Composite.Compiler do
       defp from_civil(%{calendar: calendar}, year, month, day) do
         calendar.date_from_base_date(year, month, day)
       end
+    end
+  end
+
+  # A composite calendar finds the day each of its calendars takes effect
+  # on as it compiles, and an astronomical calendar such as
+  # `Calendrical.LunarJapanese` finds a date from the JPL ephemeris, which
+  # Astro loads when its application starts. Starting it here, which does
+  # nothing when it has started, gives the composite's calendars the
+  # ephemeris at compile time as they have it at run time.
+  defp start_astro! do
+    case Application.ensure_all_started(:astro) do
+      {:ok, _started} ->
+        :ok
+
+      {:error, reason} ->
+        raise CompileError,
+          description:
+            "a composite calendar compiles its calendars' dates with Astro, " <>
+              "which could not start: #{inspect(reason)}"
     end
   end
 end

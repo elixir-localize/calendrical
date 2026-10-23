@@ -3,14 +3,15 @@ defmodule Calendrical.Composite.Config do
 
   @default_base_calendar Calendrical.Julian
 
-  # The base calendar has no first day. This is the date it is listed by.
+  # The base calendar has no first day. This is the date it is listed by,
+  # never converted: an astronomical base calendar has no day so far back.
   @base_date {-9999, 1, 1}
 
   @doc false
   # The calendars of a composite calendar as `{iso_days, year, month, day,
-  # calendar}`: the base calendar, which has no first day and is listed by
-  # its 1 January -9999, and then each calendar that takes effect, in the
-  # order of the days they take effect on. The options are those of
+  # calendar}`: the base calendar, which has no first day, so its ISO day is
+  # `nil` and it is listed by its 1 January -9999, and then each calendar
+  # that takes effect, in the order of the days they take effect on. The options are those of
   # `use Calendrical.Composite`, so options that do not make a calendar
   # raise, at compile time.
   def extract_options(options) when is_list(options) do
@@ -23,7 +24,7 @@ defmodule Calendrical.Composite.Config do
   defp config(options) do
     {year, month, day} = @base_date
     base_calendar = Keyword.get(options, :base_calendar, @default_base_calendar)
-    base = change(%{year: year, month: month, day: day, calendar: base_calendar})
+    base = {nil, year, month, day, member(base_calendar)}
 
     changes =
       options
