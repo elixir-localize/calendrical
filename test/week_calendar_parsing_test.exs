@@ -86,17 +86,18 @@ defmodule Calendrical.WeekCalendarParsing.Test do
   end
 
   # The calendar's own formats come first. en.xml's generic short date writes
-  # the era, so "2/1/2024 AD" is the first day of the calendar's second
-  # month, Monday 29 January 2024 in the ISO week calendar and Sunday 3 March
-  # in NRF, where the same digits without the era, which none of its formats
-  # writes, are 1 February 2024.
+  # the era, so "2/1/2024 AD" is the first day of the month named "M02": the
+  # ISO week calendar's second month, Monday 29 January 2024, and NRF's
+  # first, Sunday 4 February 2024, since a year begun in February names its
+  # months from there. The same digits without the era, which none of its
+  # formats writes, are 1 February 2024.
   test "the digits of a date are the calendar's own where one of its formats reads them" do
     assert Date.convert!(~D[2024-02-01 Calendrical.ISOWeek], Calendar.ISO) == ~D[2024-01-29]
-    assert Date.convert!(~D[2024-02-01 Calendrical.NRF], Calendar.ISO) == ~D[2024-03-03]
+    assert Date.convert!(~D[2024-01-01 Calendrical.NRF], Calendar.ISO) == ~D[2024-02-04]
 
     for {calendar, own, gregorian} <- [
           {ISOWeek, ~D[2024-02-01 Calendrical.ISOWeek], ~D[2024-02-04 Calendrical.ISOWeek]},
-          {NRF, ~D[2024-02-01 Calendrical.NRF], ~D[2023-12-33 Calendrical.NRF]}
+          {NRF, ~D[2024-01-01 Calendrical.NRF], ~D[2023-12-33 Calendrical.NRF]}
         ] do
       for text <- ["2/1/2024 AD", "M02 1, 2024 AD"] do
         assert Localize.Date.parse(text, locale: :en, calendar: calendar) == {:ok, own}, text

@@ -11,17 +11,16 @@ defmodule Calendrical.LunarJapanese do
   can vary between 29 and 30 days and a normal year can
   have 353, 354, or 355 days.
 
-  We define the epoch to the first new moon in the first
-  year of the [Taika era](https://en.wikipedia.org/wiki/Taika_(era))
-  which is recorded as the first imperial era.
+  The epoch, the first day of year 1, is the lunar new year of the year
+  in which the [Taika era](https://en.wikipedia.org/wiki/Taika_(era)),
+  the first imperial era, was proclaimed: 5 February 645 in the
+  proleptic Gregorian calendar.
 
   The epoch can be changed by setting the `:lunar_japanese_epoch`
-  configuration key in `config.exs`:
+  configuration key in `config.exs`; its default is:
 
-      # Alternative epoch starting from the reign of Emperor
-      # Huangdi
       config :calendrical,
-        lunar_japanese_epoch: ~D[0645-07-20]
+        lunar_japanese_epoch: ~D[0645-02-05]
 
   ## Two month numbering conventions
 
@@ -73,7 +72,7 @@ defmodule Calendrical.LunarJapanese do
   """
 
   use Calendrical.Calendar.Lunisolar,
-    epoch: Application.compile_env(:calendrical, :lunar_japanese_epoch, ~D[0645-07-20]),
+    epoch: Application.compile_env(:calendrical, :lunar_japanese_epoch, ~D[0645-02-05]),
     cldr_calendar_type: :chinese,
     location: &__MODULE__.location/1,
     era_calendar_type: :japanese
@@ -170,30 +169,6 @@ defmodule Calendrical.LunarJapanese do
     else
       Calendrical.Era.year_of_era(:japanese, iso_days, year + @gregorian_year_offset)
     end
-  end
-
-  @doc """
-  Returns the year of era and era number for the first day of a
-  lunisolar Japanese year.
-
-  ### Arguments
-
-  * `year` is any `#{inspect(__MODULE__)}` year as an integer.
-
-  ### Returns
-
-  * A two-tuple `{year_of_era, era}` where `era` is the CLDR
-    Japanese era index.
-
-  ### Examples
-
-      iex> Calendrical.LunarJapanese.year_of_era(1382)
-      {8, 236}
-
-  """
-  @spec year_of_era(Calendar.year()) :: {Calendar.year(), Calendar.era()}
-  def year_of_era(year) do
-    year_of_era(year, 1, 1)
   end
 
   @doc """

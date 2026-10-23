@@ -6,6 +6,7 @@ defmodule Calendrical.IncompatibleTimeZoneError do
   ### Fields
 
   * `:from` — the first datetime (or its time zone).
+
   * `:to` — the second datetime (or its time zone).
 
   """

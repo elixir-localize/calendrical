@@ -2,9 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
-[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [2.0.0] — 2026-10-23
 
@@ -22,7 +20,7 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 * `Calendrical.Reform` returns `Calendrical.UnknownReformError` for a territory it has no reform for, and the lunisolar `new!/3` raises `Calendrical.InvalidDateError`.
 
-* `shift/6` returns `Calendrical.InvalidDateError` for a `{year, month, day}` that is no date, where it shifted the fields to another non-date; `Date.shift/2` raises it.
+* `shift/6` returns `Calendrical.InvalidDateError` for a `{year, month, day}` that is no date, where it shifted the fields to another non-date; `Date.shift/2` raises it. `diff/3` returns the same error, and `Calendrical.MissingFieldsError` for a date missing a field, where it counted or raised by calendar, and both return `Calendrical.InvalidPartError` for a part other than `:years`, `:quarters`, `:months`, `:weeks` and `:days`.
 
 * `months_in_year/1` returns `Calendrical.MissingFieldsError` for a `nil` year in every calendar, where some raised and others answered a count.
 
@@ -32,7 +30,7 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 * Every calendar numbers whole weeks by TR35's rule from its own first day of the week, and `weeks_in_year/1` answers an integer. The hand-written, Julian and composite calendars cut their weeks at the year's ends in 1.3.
 
-* A Hebrew date's month is its position in the year (Adar is 6 and Nisan 7 in an ordinary year), as `Date.new/4` and ICU expect, while its name stays CLDR's. `days_in_month/2` is 0 for a month the year lacks.
+* A Hebrew date's month is its position in the year (Adar is 6 and Nisan 7 in an ordinary year), as `Date.new/4` and ICU expect, while its name stays CLDR's. The calendar has a year 0, as its `info/0` states and the other calendars of one era do, so the years before 1 are 0, -1 and so on.
 
 * `month_of_year/3` is the CLDR month a date's month is named by, which `cardinal_month/1` used to add: a fiscal year begun in July answers 7 for its month 1.
 
@@ -44,7 +42,7 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 * A date of a calendar of weeks (`Calendrical.ISOWeek`, `Calendrical.NRF`) is a year, a month of its pattern and a day of that month, so the second day of week 25 is `~D[2026-06-16 Calendrical.NRF]`. `week_of_year/3` and `date_from_week_date/3` convert, and `~D` still reads `2026-W25-2`.
 
-* A calendar of weeks names its months "M01" to "M12" from CLDR's generic calendar (`cldr_calendar_type/0` is `:generic`) and keeps Gregorian era names.
+* A calendar of weeks names its months "M01" to "M12" from CLDR's generic calendar (`cldr_calendar_type/0` is `:generic`), from the Gregorian month its year begins in, so NRF's first month, which begins in February, is "M02"; it keeps Gregorian era names.
 
 * `days_in_month/1` answers a composite with the range its members span, and month lengths that are not consecutive are a list, `[28, 35]` for a week calendar's last month.
 
@@ -62,9 +60,9 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 * A composite's member counts its own months, so England's 1155 is the Lady Day year from 25 March 1155 to 24 March 1156. The Julian days 1 January to 24 March 1155, whose dates it takes, have no dates of their own.
 
-* `Calendrical.Composite.new/2` and `use Calendrical.Composite` refuse a configuration a composite cannot keep with a `Calendrical.InvalidCompositeError`, where `new/2` returned atoms such as `:no_calendars_configured`, and an option other than `:calendars` and `:base_calendar` with a `Calendrical.UnknownOptionError`.
+* `Calendrical.Composite.new/2` and `use Calendrical.Composite` refuse a configuration a composite cannot keep with a `Calendrical.InvalidCompositeError`, where `new/2` returned atoms such as `:no_calendars_configured`, and an option other than `:calendars` and `:base_calendar` with a `Calendrical.UnknownOptionError`. `new/2` returns `{:ok, module}` for a module that exists already, as `Calendrical.new/3` does, where it returned `{:module_already_exists, module}`.
 
-* Every calendar maker, and `Calendrical.new/3`, refuses an option it does not read with a `Calendrical.UnknownOptionError` and a value it cannot take with a `Calendrical.InvalidOptionValueError`.
+* Every calendar maker, and `Calendrical.new/3`, refuses an option it does not read with a `Calendrical.UnknownOptionError` and a value it cannot take with a `Calendrical.InvalidOptionValueError`, which `Calendrical.new/3` also returns for a kind other than `:month` and `:week`. `Calendrical.FiscalYear.calendar_for/1` returns `Calendrical.UnknownFiscalYearError` for a territory with no fiscal calendar.
 
 * `date_at/2`, `solar_term/2` and `Calendrical.Lunisolar.solar_term_name/1` return exceptions for errors: `Calendrical.InvalidOptionValueError`, `Calendrical.UnsupportedDateRangeError`, `Calendrical.NoDuskError` and `Calendrical.InvalidSolarTermError`.
 
@@ -86,7 +84,7 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 * `solar_term/2` on every calendar and `Calendrical.Lunisolar.solar_term_name/1` give the date and name of each of the 24 solar terms.
 
-* `Calendrical.Vietnamese`, the Chinese lunisolar calendar observed from Hanoi's meridian, so Tết differs from the Chinese New Year in 1985, 2007, 2030 and 2053.
+* `Calendrical.Vietnamese`, the Chinese lunisolar calendar observed from Hanoi's meridian, so Tết differs from the Chinese New Year in 1968, 1969, 1985, 2007, 2030 and 2053.
 
 * `Calendrical.Reform.England`, England's 1155, 1751 and 1752 calendar reforms as a composite calendar.
 
@@ -148,7 +146,7 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 * A Julian year-start variant's or fiscal calendar's written and base dates answer a partial date with `nil` fields, where they raised `ArithmeticError`.
 
-* `gregorian_date_for_lunar/3` raises `ArgumentError` for a lunar month or day the year lacks, where it returned another day's date.
+* `gregorian_date_for_lunar/3` raises `Calendrical.InvalidDateError` for a lunar month or day the year lacks, where it returned another day's date.
 
 * `valid_date?/3` is `false` rather than raising for a month or day below 1, for non-integer parts and for a date outside a calendar's supported range.
 
@@ -219,6 +217,16 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 * The exported calendar arithmetic guards its integer arguments, so a non-integer raises `FunctionClauseError` instead of computing a float.
 
 * An exception's `message/1` is written whatever its fields hold.
+
+* `Calendrical.Era.year_of_era/4`, `day_of_era/4` and every calendar's `year_of_era/1` answer as the calendar's own `year_of_era/3` and `day_of_era/3` do, where they reckoned from `info/0` and disagreed with a calendar that defines its own: `Calendrical.Reform.Japan.year_of_era(1000)` is `{21, 198}`, as `year_of_era(1000, 1, 1)` is.
+
+* `Calendrical.Reform.TR` changes calendar on 1 January 1926, where its data said 1927.
+
+* `Calendrical.Persian` and `Calendrical.LunarJapanese` state the first day of their year 1 as `info().epoch`, where the Persian fact was two days after it and the Lunar Japanese fact the Taika proclamation day, five months after it; the default `:lunar_japanese_epoch` is `~D[0645-02-05]`.
+
+* `Calendrical.Hebrew.date_from_iso_days/1` reads the days before year 1, where its estimate of the year was one too high.
+
+* `Calendrical.Era.era_data/1` raises `Localize.UnknownCalendarError` for a type CLDR does not define, and `day_of_week/4` raises `Calendrical.InvalidOptionValueError` for a `starting_on` that is no weekday, where both raised `ArgumentError`.
 
 ## [1.3.0] — 2026-08-26
 

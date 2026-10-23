@@ -46,10 +46,7 @@ defmodule Calendrical.CalendarCreationTest do
           )
         end)
 
-      assert Enum.frequencies(results) == %{
-               {:ok, Creation.Composite} => 1,
-               {:module_already_exists, Creation.Composite} => @processes - 1
-             }
+      assert Enum.frequencies(results) == %{{:ok, Creation.Composite} => @processes}
 
       # Bound from the result, since the module exists only once the
       # test has run.
@@ -83,7 +80,7 @@ defmodule Calendrical.CalendarCreationTest do
                :must_be_a_list_of_dates
 
       assert Calendrical.Composite.new(Calendrical.Gregorian, calendars: [:nope]) ==
-               {:module_already_exists, Calendrical.Gregorian}
+               {:ok, Calendrical.Gregorian}
     end
   end
 

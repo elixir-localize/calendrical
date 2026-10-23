@@ -16,6 +16,7 @@ defmodule Calendrical.Islamic.Tabular do
   Returns whether the given Hijri `year` is a leap year under the standard
   Type II ("Kūshyār") 30-year cycle. Years 2, 5, 7, 10, 13, 16, 18, 21,
   24, 26, and 29 of each cycle are leap years (354 → 355 days).
+
   """
   @spec leap_year?(integer()) :: boolean()
   def leap_year?(year) when is_integer(year) do
@@ -28,6 +29,7 @@ defmodule Calendrical.Islamic.Tabular do
   Months 1, 3, 5, 7, 9, and 11 always have 30 days; months 2, 4, 6, 8,
   and 10 always have 29 days; month 12 (Dhū al-Ḥijja) has 29 days in an
   ordinary year and 30 days in a leap year.
+
   """
   @spec days_in_month(integer(), 1..12) :: 29..30
   def days_in_month(year, 12) do
@@ -45,6 +47,7 @@ defmodule Calendrical.Islamic.Tabular do
   @doc """
   Converts a tabular Islamic date to an ISO day number using the supplied
   `epoch` (in ISO days).
+
   """
   @spec date_to_iso_days(integer(), 1..12, 1..30, integer()) :: integer()
   def date_to_iso_days(year, month, day, epoch)
@@ -60,6 +63,7 @@ defmodule Calendrical.Islamic.Tabular do
   @doc """
   Converts an ISO day number to a tabular Islamic `{year, month, day}`
   using the supplied `epoch` (in ISO days).
+
   """
   @spec date_from_iso_days(integer(), integer()) :: {integer(), 1..12, 1..30}
   def date_from_iso_days(iso_days, epoch) do

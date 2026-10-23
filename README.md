@@ -1,12 +1,12 @@
 # Calendrical
 
-Localized month- and week-based calendars, fiscal-year support, calendar arithmetic, and 18+ CLDR-based calendar systems for Elixir, built on the [Unicode CLDR](https://cldr.unicode.org/) repository via [Localize](https://hex.pm/packages/localize). Calendrical 2.0 is built on Localize 1.4 and CLDR 49.
+Localized month- and week-based calendars, fiscal-year support, calendar arithmetic, and 21 calendar systems for Elixir, built on the [Unicode CLDR](https://cldr.unicode.org/) repository via [Localize](https://hex.pm/packages/localize). Calendrical 2.0 is built on Localize 1.4 and CLDR 49.
 
 Calendrical extends Elixir's standard `Calendar` and `Date` modules with comprehensive support for the calendar systems used around the world, including arithmetic and astronomical lunar calendars, year-shifted variants such as Buddhist and ROC, and the official tabular and observational Islamic calendars.
 
 ## Features
 
-* **18 CLDR-aligned calendar implementations** — Gregorian, Persian, Coptic, Ethiopic (two eras), Japanese, Chinese, Korean (Dangi), Lunar Japanese, Vietnamese, four Islamic variants (Civil, TBLA, Umm al-Qura, observational), Hebrew, Buddhist, Republic of China (Minguo), Indian National (Saka), and Julian.
+* **21 calendar implementations** — Gregorian, Persian, Coptic, Ethiopic (two eras), Japanese, Chinese, Korean (Dangi), Lunar Japanese, Vietnamese, six Islamic variants (Civil, TBLA, tabular and astronomical Umm al-Qura, and the observational calendars of Cairo and Mecca), Hebrew, Buddhist, Republic of China (Minguo), Indian National (Saka), and Julian: every calendar CLDR defines, and more.
 
 * **Five makers** — `use Calendrical.Calendar` for a hand-written calendar, `Calendrical.Calendar.Shifted` for a year begun elsewhere in a base calendar's year, `Calendrical.Calendar.Weeks` for a year of whole weeks, `Calendrical.Calendar.Lunisolar` for a calendar reckoned from the sky and `Calendrical.Composite` for calendars in sequence. Each implements a kernel of eight callbacks from its options, and every other answer is derived from the kernel, so a new calendar is its spine and a handful of facts.
 
@@ -14,7 +14,7 @@ Calendrical extends Elixir's standard `Calendar` and `Date` modules with compreh
 
 * **Localized formatting** — era names, quarter names, month names, day names, day periods (AM/PM), and full date formatting via `Calendrical.localize/3` and `Calendrical.strftime/3`. Falls through to all 657 CLDR locales available from `Localize`.
 
-* **Fiscal-year calendars** — pre-built fiscal calendars for ~50 territories (US, UK, AU, JP, …) plus a configurable `Calendrical.FiscalYear.calendar_for/1` factory.
+* **Fiscal-year calendars** — `Calendrical.FiscalYear.calendar_for/1` builds the fiscal calendar of any of ~50 territories (US, GB, AU, JP, …) on first use, and `Calendrical.new/3` makes any other.
 
 * **Date arithmetic** — the standard `Date.shift/2` and `NaiveDateTime.shift/2` work across every Calendrical calendar.
 
@@ -78,7 +78,8 @@ iex> {:ok, buddhist} = Date.convert(gregorian, Calendrical.Buddhist)
 iex> buddhist.year
 2567
 
-iex> # Get a date range for a fiscal year quarter
+iex> # Get a date range for a fiscal year quarter. The US fiscal year
+iex> # 2024 begins on 1 October 2023, which its calendar counts as month 1
 iex> {:ok, calendar} = Calendrical.FiscalYear.calendar_for(:US)
 iex> Calendrical.Interval.quarter(2024, 1, calendar)
 Date.range(~D[2024-01-01 Calendrical.FiscalYear.US], ~D[2024-03-31 Calendrical.FiscalYear.US])
@@ -107,14 +108,14 @@ Calendrical implements every calendar system exposed by CLDR, plus lunisolar var
 
 | Family | Calendars |
 |---|---|
-| **Gregorian-based** (year-offset over `Calendrical.Gregorian`) | `Calendrical.Gregorian`, `Calendrical.ISOWeek`, `Calendrical.NRF`, `Calendrical.Buddhist`, `Calendrical.Roc`, `Calendrical.Japanese`, `Calendrical.Indian` |
+| **Gregorian-based** (Gregorian months, or whole weeks of them) | `Calendrical.Gregorian`, `Calendrical.ISO`, `Calendrical.ISOWeek`, `Calendrical.NRF`, `Calendrical.Buddhist`, `Calendrical.Roc`, `Calendrical.Japanese` |
 | **Julian-based** (proleptic Julian + variants) | `Calendrical.Julian`, `Calendrical.Julian.Jan1`, `Calendrical.Julian.March1`, `Calendrical.Julian.March25`, `Calendrical.Julian.Sept1`, `Calendrical.Julian.Dec25` |
-| **Solar (non-Gregorian)** | `Calendrical.Persian` (astronomical) |
-| **Lunar (tabular)** | `Calendrical.Coptic`, `Calendrical.Ethiopic`, `Calendrical.Ethiopic.AmeteAlem`, `Calendrical.Islamic.Civil`, `Calendrical.Islamic.Tbla`, `Calendrical.Islamic.UmmAlQura` |
+| **Solar (non-Gregorian)** | `Calendrical.Persian` (astronomical), `Calendrical.Indian`, `Calendrical.Coptic`, `Calendrical.Ethiopic`, `Calendrical.Ethiopic.AmeteAlem` |
+| **Lunar (tabular)** | `Calendrical.Islamic.Civil`, `Calendrical.Islamic.Tbla`, `Calendrical.Islamic.UmmAlQura` |
 | **Lunar (observational/astronomical)** | `Calendrical.Islamic.Observational` (Cairo), `Calendrical.Islamic.Rgsa` (Mecca), `Calendrical.Islamic.UmmAlQura.Astronomical` |
 | **Lunisolar** | `Calendrical.Hebrew` (arithmetic), `Calendrical.Chinese`, `Calendrical.Korean` (Dangi), `Calendrical.LunarJapanese`, `Calendrical.Vietnamese` (Hanoi meridian) |
 | **Composite** | `Calendrical.Composite` (user-defined; e.g. England with Julian-to-Gregorian transition) |
-| **Fiscal-year** | `Calendrical.FiscalYear.US`, `.AU`, `.UK`, … (50+ territories) |
+| **Fiscal-year** | `Calendrical.FiscalYear.US`, `.AU`, `.GB`, … (50+ territories, built by `Calendrical.FiscalYear.calendar_for/1`) |
 
 ## Defining your own calendar
 
@@ -196,14 +197,14 @@ Calendrical inherits the locale and provider configuration from `Localize`. The 
 config :calendrical,
   chinese_epoch: ~D[-2636-02-15],
   korean_epoch: ~D[-2332-02-15],
-  lunar_japanese_epoch: ~D[0645-07-20]
+  lunar_japanese_epoch: ~D[0645-02-05]
 ```
 
 | Option | Default | Description |
 |---|---|---|
 | `:chinese_epoch` | `~D[-2636-02-15]` | The first sexagesimal cycle origin used by the Chinese calendar. |
 | `:korean_epoch` | `~D[-2332-02-15]` | The founding-of-Korea origin used by the Korean (Dangi) calendar. |
-| `:lunar_japanese_epoch` | `~D[0645-07-20]` | The Taika-era origin used by the Lunar Japanese calendar. |
+| `:lunar_japanese_epoch` | `~D[0645-02-05]` | The lunar new year of the year the Taika era was proclaimed, the first day of year 1 of the Lunar Japanese calendar. |
 | `:vietnamese_epoch` | `~D[-2636-02-15]` | The sexagesimal cycle origin used by the Vietnamese calendar (shared with the Chinese calendar). |
 
 For Calendrical's underlying locale, default-locale, and locale-cache configuration, see the [Localize configuration documentation](https://hexdocs.pm/localize).

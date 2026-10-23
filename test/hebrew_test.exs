@@ -212,9 +212,12 @@ defmodule Calendrical.HebrewTest do
       refute Hebrew.valid_date?(5785, 1, 31)
     end
 
-    test "rejects negative or zero years" do
-      refute Hebrew.valid_date?(0, 1, 1)
-      refute Hebrew.valid_date?(-1, 1, 1)
+    # The calendar has a year 0 (`info().year_zero?`), as the other
+    # calendars of one era do, so the years before 1 are 0, -1 and so on.
+    test "accepts the years before 1" do
+      assert Hebrew.valid_date?(0, 1, 1)
+      assert Hebrew.valid_date?(-1, 1, 1)
+      assert Date.add(~D[0001-01-01 Calendrical.Hebrew], -1) == ~D[0000-13-29 Calendrical.Hebrew]
     end
   end
 

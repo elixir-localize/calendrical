@@ -24,17 +24,13 @@ defmodule Calendrical.Compiler do
         use unquote(maker), unquote(Macro.escape(options))
       end
 
-    case create_module(calendar_module, contents, Macro.Env.location(__ENV__)) do
-      {:module_already_exists, module} -> {:ok, module}
-      other -> other
-    end
+    create_module(calendar_module, contents, Macro.Env.location(__ENV__))
   end
 
   # Creates `module` from its quoted `contents`, in this server. Returns
-  # `{:ok, module}` when it is created, `{:module_already_exists, module}`
-  # when it is loaded already, as it is for the later of two callers
-  # creating the same module at once, and `{:error, exception}` when it
-  # does not compile.
+  # `{:ok, module}` when it is created, and when it is loaded already, as
+  # it is for the later of two callers creating the same module at once,
+  # and `{:error, exception}` when it does not compile.
   def create_module(module, contents, env) do
     GenServer.call(__MODULE__, {:compile, module, contents, env}, @compile_timeout)
   end
@@ -55,7 +51,7 @@ defmodule Calendrical.Compiler do
   @impl true
   def handle_call({:compile, module, contents, env}, _from, state) do
     if Code.ensure_loaded?(module) do
-      {:reply, {:module_already_exists, module}, state}
+      {:reply, {:ok, module}, state}
     else
       try do
         {:module, ^module, _binary, _last} = Module.create(module, contents, env)

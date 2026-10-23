@@ -35,13 +35,13 @@ msgctxt "date"
 msgid "The date {$value} is outside the supported range of {$range}"
 msgstr ""
 
-#: lib/calendrical/exception/incompatible_time_zone_error.ex:29
+#: lib/calendrical/exception/incompatible_time_zone_error.ex:30
 #, elixir-autogen, icu-format
 msgctxt "date"
 msgid "The two values must be in the same time zone. Found {$from} and {$to}"
 msgstr ""
 
-#: lib/calendrical/exception/invalid_date_order_error.ex:29
+#: lib/calendrical/exception/invalid_date_order_error.ex:30
 #, elixir-autogen, icu-format
 msgctxt "date"
 msgid "The values must be ordered from earlier to later. Found {$from} and {$to}"
@@ -71,25 +71,25 @@ msgctxt "format"
 msgid "Invalid formatter {$formatter}"
 msgstr ""
 
-#: lib/calendrical/exception/invalid_type_error.ex:29
+#: lib/calendrical/exception/invalid_type_error.ex:30
 #, elixir-autogen, icu-format
 msgctxt "format"
 msgid "The date format type {$type} is not known. Valid format types are {$valid_types}"
 msgstr ""
 
-#: lib/calendrical/exception/invalid_part_error.ex:29
+#: lib/calendrical/exception/invalid_part_error.ex:30
 #, elixir-autogen, icu-format
 msgctxt "format"
 msgid "The date part {$part} is not known. Valid date parts are {$valid_parts}"
 msgstr ""
 
-#: lib/calendrical/exception/invalid_option_error.ex:29
+#: lib/calendrical/exception/invalid_option_error.ex:30
 #, elixir-autogen, icu-format
 msgctxt "option"
 msgid "Invalid option or option value. Found option {$option} with value {$value}"
 msgstr ""
 
-#: lib/calendrical/exception/invalid_style_error.ex:29
+#: lib/calendrical/exception/invalid_style_error.ex:30
 #, elixir-autogen, icu-format
 msgctxt "style"
 msgid "The date style {$style} is not known. Valid styles are {$valid_styles}"
@@ -321,4 +321,10 @@ msgstr ""
 #, elixir-autogen, icu-format
 msgctxt "date"
 msgid "{$value} is not a date of the {$calendar} calendar"
+msgstr ""
+
+#: lib/calendrical/exception/unknown_fiscal_year_error.ex:26
+#, elixir-autogen, icu-format
+msgctxt "calendar"
+msgid "No fiscal year is known for the territory {$territory}"
 msgstr ""

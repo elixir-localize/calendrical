@@ -177,6 +177,7 @@ defmodule Calendrical.Calendar.Lunisolar do
 
           iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
           iex> %Date{month: 1, day: 1} = #{inspect(__MODULE__)}.new!(today.year, 1, 1)
+
       """
       def new!(year, lunar_month, day) do
         case new(year, lunar_month, day) do
@@ -237,16 +238,17 @@ defmodule Calendrical.Calendar.Lunisolar do
 
       * A `t:Date.t/0` in `Calendar.ISO`.
 
-      Raises `ArgumentError` when the lunar year has no such month, or
-      the month no such day, and `Calendrical.UnsupportedDateRangeError`
-      for a Gregorian year outside -20,000 to 20,000.
+      Raises `Calendrical.InvalidDateError` when the lunar year has no such
+      month, or the month no such day, and
+      `Calendrical.UnsupportedDateRangeError` for a Gregorian year outside
+      -20,000 to 20,000.
 
       ### Examples
 
           iex> %Date{calendar: Calendar.ISO, year: 2024} = #{inspect(__MODULE__)}.gregorian_date_for_lunar(2024, 1, 1)
 
           iex> #{inspect(__MODULE__)}.gregorian_date_for_lunar(2024, 1, 40)
-          ** (ArgumentError) the lunar year beginning in 2024 has no month 1 day 40
+          ** (Calendrical.InvalidDateError) [gregorian_year: 2024, lunar_month: 1, lunar_day: 40] is not a date
 
       """
       def gregorian_date_for_lunar(gregorian_year, _lunar_month, _lunar_day)
@@ -282,6 +284,7 @@ defmodule Calendrical.Calendar.Lunisolar do
 
           iex> #{inspect(__MODULE__)}.new_year_for_gregorian_year(2024) == #{inspect(__MODULE__)}.gregorian_date_for_lunar(2024, 1, 1)
           true
+
       """
       def new_year_for_gregorian_year(gregorian_year) do
         gregorian_date_for_lunar(gregorian_year, 1, 1)
@@ -311,6 +314,7 @@ defmodule Calendrical.Calendar.Lunisolar do
           iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
           iex> #{inspect(__MODULE__)}.leap_year?(today.year) == (#{inspect(__MODULE__)}.months_in_year(today.year) == 13)
           true
+
       """
       @impl Calendar
       def leap_year?(year) when is_integer(year) do
@@ -400,6 +404,7 @@ defmodule Calendrical.Calendar.Lunisolar do
           true
           iex> #{inspect(__MODULE__)}.valid_date?(today.year, today.month, 31)
           false
+
       """
       @impl true
       def valid_date?(year, _month, _day) when is_integer(year) and year not in @supported_years,
@@ -436,6 +441,7 @@ defmodule Calendrical.Calendar.Lunisolar do
           iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
           iex> #{inspect(__MODULE__)}.days_in_month(today.year, today.month) in [29, 30]
           true
+
       """
       @impl true
       # A year outside the supported years, a month the year does not have
@@ -461,13 +467,19 @@ defmodule Calendrical.Calendar.Lunisolar do
 
       ### Returns
 
-      * The number of whole units, negative when `to` is before `from`.
+      * The number of whole units, negative when `to` is before `from`, or
+
+      * `{:error, %Calendrical.InvalidDateError{}}` for a `from` or `to` the
+        calendar does not have, `{:error, %Calendrical.MissingFieldsError{}}`
+        for one missing a field, or `{:error, %Calendrical.InvalidPartError{}}`
+        for a `date_part` other than the five.
 
       ### Examples
 
           iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
           iex> #{inspect(__MODULE__)}.diff({today.year, 1, 1}, {today.year + 1, 1, 1}, :years)
           1
+
       """
       @impl true
       def diff(from, to, date_part) do
@@ -525,6 +537,7 @@ defmodule Calendrical.Calendar.Lunisolar do
           iex> {year, _month, day} = #{inspect(__MODULE__)}.written_date(today.year, today.month, today.day)
           iex> {year, day} == {today.year, today.day}
           true
+
       """
       @impl true
       def written_date(year, month, day) do
@@ -556,6 +569,7 @@ defmodule Calendrical.Calendar.Lunisolar do
           iex> {year, month, day} = #{inspect(__MODULE__)}.written_date(today.year, today.month, today.day)
           iex> #{inspect(__MODULE__)}.date_from_written_date(year, month, day)
           {:ok, {today.year, today.month, today.day}}
+
       """
       @impl true
       # A year outside the supported years names no date, as any other

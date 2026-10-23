@@ -57,7 +57,8 @@ defmodule Calendrical.Reform.England do
   See `Calendrical.Reform` for the reform dates of other territories and the
   sources they are drawn from.
 
-  * <https://www.legislation.gov.uk/apgb/Geo2/24/23#commentary-c918471>
+  * <https://www.legislation.gov.uk/apgb/Geo2/24/23#commentary-c918471>.
+
   * *Handbook of Dates for Students of British History* (Cheney & Jones).
 
   """

@@ -6,6 +6,7 @@ defmodule Calendrical.InvalidTypeError do
   ### Fields
 
   * `:type` — the unknown type that was supplied.
+
   * `:valid_types` — the list of valid format types.
 
   """

@@ -335,8 +335,8 @@ defmodule Calendrical.Lunisolar do
 
   * `{year, month, day}` in the Gregorian calendar.
 
-  Raises `ArgumentError` when the lunar year has no such month, or the
-  month no such day.
+  Raises `Calendrical.InvalidDateError` when the lunar year has no such
+  month, or the month no such day.
 
   ### Examples
 
@@ -348,7 +348,7 @@ defmodule Calendrical.Lunisolar do
       iex> epoch = Calendrical.Chinese.epoch()
       iex> location = &Calendrical.Chinese.location/1
       iex> Calendrical.Lunisolar.gregorian_date_for_lunar(2024, {2, :leap}, 1, epoch, location)
-      ** (ArgumentError) the lunar year beginning in 2024 has no month {2, :leap} day 1
+      ** (Calendrical.InvalidDateError) [gregorian_year: 2024, lunar_month: {2, :leap}, lunar_day: 1] is not a date
 
   """
   def gregorian_date_for_lunar(gregorian_year, lunar_month, lunar_day, epoch, location_fun)
@@ -365,9 +365,9 @@ defmodule Calendrical.Lunisolar do
         Calendar.ISO.date_from_iso_days(start_of_month + lunar_day - 1)
 
       {:error, %Calendrical.InvalidDateError{}} ->
-        raise ArgumentError,
-              "the lunar year beginning in #{gregorian_year} has no month " <>
-                "#{inspect(lunar_month)} day #{inspect(lunar_day)}"
+        raise Calendrical.InvalidDateError,
+          calendar: nil,
+          value: [gregorian_year: gregorian_year, lunar_month: lunar_month, lunar_day: lunar_day]
     end
   end
 
@@ -1081,10 +1081,11 @@ defmodule Calendrical.Lunisolar do
   # `new_year_on_or_before/2` finds that year's new year in a single pass.
   #
   # Half a year after the epoch's anniversary is mid-year only when the
-  # epoch is itself a new year. For an epoch mid-year (Calendrical.LunarJapanese
-  # counts from 645-07-20) it lands between the December solstice and the
-  # new year, so every lookup computed two sui instead of one, and for an
-  # epoch in late July or August it duplicated or skipped years.
+  # epoch is itself a new year. For an epoch mid-year (a configured
+  # `:lunar_japanese_epoch` such as 645-07-20) it lands between the
+  # December solstice and the new year, so every lookup computed two sui
+  # instead of one, and for an epoch in late July or August it duplicated
+  # or skipped years.
   # Snapping to the nearest mean mid-lunar-year keeps the year the
   # estimate points into while staying months clear of either new year.
   # The year that begins on `new_year`, as `mid_year/3` places years: the

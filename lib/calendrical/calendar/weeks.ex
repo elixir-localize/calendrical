@@ -129,7 +129,7 @@ defmodule Calendrical.Calendar.Weeks do
       # year before each month, the days of each month in a short year, and
       # the month each week of the year falls in, worked out once from the
       # pattern.
-      @naming_months Calendrical.Calendar.Weeks.naming_months(@anchor_month)
+      @naming_months Calendrical.Calendar.Weeks.naming_months(@anchor, @anchor_month)
       @weeks_before_month Calendrical.Calendar.Weeks.weeks_before_month(@pattern)
       @days_in_pattern_month Calendrical.Calendar.Weeks.days_in_pattern_month(@pattern)
       @month_of_week Calendrical.Calendar.Weeks.month_of_week(@pattern)
@@ -502,7 +502,7 @@ defmodule Calendrical.Calendar.Weeks do
       """
       def date_from_written_date(year, named_month, day)
           when is_integer(named_month) and named_month in 1..unquote(@months_in_year)//1 do
-        month = Calendrical.Calendar.Weeks.month_named(named_month, @anchor_month)
+        month = Calendrical.Calendar.Weeks.month_named(named_month, @anchor, @anchor_month)
         Calendrical.Base.Written.own_date(__MODULE__, year, month, day)
       end
 
@@ -785,20 +785,30 @@ defmodule Calendrical.Calendar.Weeks do
   @doc false
   # The Gregorian month that names each month of the pattern: a year
   # begun or ended in another month than January numbers its months from
-  # there.
-  def naming_months(anchor_month) do
+  # the month it begins in, which is the rule's month for a year that
+  # begins by its rule and the month after it for a year that ends.
+  def naming_months(anchor, anchor_month) do
+    first = first_naming_month(anchor, anchor_month)
+
     List.to_tuple(
       for month <- 1..@months_in_year do
-        Localize.Utils.Math.amod(month + anchor_month - 1, @months_in_year)
+        Localize.Utils.Math.amod(month + first - 1, @months_in_year)
       end
     )
   end
 
   @doc false
   # The month of the pattern a Gregorian month names: the inverse of
-  # `naming_months/1`.
-  def month_named(named_month, anchor_month),
-    do: Localize.Utils.Math.amod(named_month - anchor_month + 1, @months_in_year)
+  # `naming_months/2`.
+  def month_named(named_month, anchor, anchor_month) do
+    first = first_naming_month(anchor, anchor_month)
+    Localize.Utils.Math.amod(named_month - first + 1, @months_in_year)
+  end
+
+  defp first_naming_month(:begins, anchor_month), do: anchor_month
+
+  defp first_naming_month(:ends, anchor_month),
+    do: Localize.Utils.Math.amod(anchor_month + 1, @months_in_year)
 
   @doc false
   # The weeks of the year before each month: the quarters before it and

@@ -6,6 +6,7 @@ defmodule Calendrical.InvalidPartError do
   ### Fields
 
   * `:part` — the unknown part that was supplied.
+
   * `:valid_parts` — the list of valid date parts.
 
   """

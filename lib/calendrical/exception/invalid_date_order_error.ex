@@ -6,6 +6,7 @@ defmodule Calendrical.InvalidDateOrderError do
   ### Fields
 
   * `:from` — the earlier value (as supplied).
+
   * `:to` — the later value (as supplied).
 
   """

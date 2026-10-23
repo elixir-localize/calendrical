@@ -31,8 +31,8 @@ A *month-based* Gregorian calendar lays out years as 12 months of 28–31 days f
 | `Calendrical.Buddhist` | `:buddhist` | +543 | January | Thai Buddhist Era (BE). 1 BE = -542 proleptic Gregorian (= 543 BCE). 2024 CE = 2567 BE. |
 | `Calendrical.Roc` | `:roc` | -1911 | January | Republic of China (Minguo). 1 ROC = 1912 CE. 2024 CE = 113 ROC. Used officially in Taiwan. |
 | `Calendrical.Japanese` | `:japanese` | none | January | Same arithmetic as `Calendrical.Gregorian` but advertises Japanese era data (Reiwa, Heisei, Shōwa, …) for localization. |
-| `Calendrical.NRF` | (n/a, week) | none | January | US National Retail Federation 4-4-5 fiscal calendar. *Week-based*: see below. |
-| `Calendrical.FiscalYear.<TERR>` | (n/a) | none | configurable | Pre-built fiscal calendars for 50+ territories (US Oct 1 → Sep 30, AU Jul 1 → Jun 30, …). |
+| `Calendrical.NRF` | (n/a, week) | none | January | US National Retail Federation 4-5-4 retail calendar; the year ends on the Saturday nearest 31 January. *Week-based*: see below. |
+| `Calendrical.FiscalYear.<TERR>` | (n/a) | none | configurable | Fiscal calendars for 50+ territories (US Oct 1 → Sep 30, AU Jul 1 → Jun 30, …), built on first use by `Calendrical.FiscalYear.calendar_for/1`. |
 
 **Worked example.** Buddhist year 2567:
 

@@ -279,12 +279,12 @@ defmodule Calendrical.Coverage.FormatterConfigTest do
     end
 
     test "returns an error for a territory with no fiscal data" do
-      assert {:error, %Localize.UnknownCalendarError{calendar: :AQ}} =
+      assert {:error, %Calendrical.UnknownFiscalYearError{territory: :AQ}} =
                FiscalYear.calendar_for(:AQ)
     end
 
     test "returns an error for an unknown territory" do
-      assert {:error, %Localize.UnknownCalendarError{calendar: :ZZ}} =
+      assert {:error, %Calendrical.UnknownFiscalYearError{territory: :ZZ}} =
                FiscalYear.calendar_for(:ZZ)
     end
   end

@@ -34,8 +34,8 @@ defmodule Calendrical.CompositeTest do
       assert denmark.valid_date?(1700, 1, 1)
     end
 
-    test "returns :module_already_exists if the module is already loaded" do
-      assert {:module_already_exists, Calendrical.Russia} =
+    test "returns the module unchanged if it is already loaded" do
+      assert {:ok, Calendrical.Russia} =
                Calendrical.Composite.new(Calendrical.Russia, calendars: [~D[1900-01-01]])
     end
   end

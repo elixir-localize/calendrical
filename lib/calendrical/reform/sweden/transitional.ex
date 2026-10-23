@@ -237,38 +237,9 @@ defmodule Calendrical.Reform.Sweden.Transitional do
   end
 
   @doc """
-  Returns the year of the era and the era of `year`: era 1 from AD 1 and
-  era 0 before it, where year -1 is 1 BC.
-
-  ### Arguments
-
-  * `year` is any year but 0.
-
-  ### Returns
-
-  * A `{year_of_era, era}` tuple.
-
-  * `{:error, %Calendrical.MissingFieldsError{}}` when `year` is not
-    an integer, as for a partial date with no year.
-
-  ### Examples
-
-      iex> Calendrical.Reform.Sweden.Transitional.year_of_era(1712)
-      {1712, 1}
-
-      iex> Calendrical.Reform.Sweden.Transitional.year_of_era(-1)
-      {1, 0}
-
-  """
-  @spec year_of_era(Calendar.year()) ::
-          {Calendar.year(), Calendar.era()} | Calendrical.date_error()
-  def year_of_era(year) do
-    Calendrical.Julian.year_of_era(year)
-  end
-
-  @doc """
   Returns the year of the era and the era of the date `year`, `month` and
-  `day`, as `year_of_era/1` gives them for its year.
+  `day`, as the Julian calendar numbers them: year 1 is 1 of era 1, and
+  the year before it, -1, is 1 of era 0.
 
   ### Arguments
 
@@ -293,9 +264,8 @@ defmodule Calendrical.Reform.Sweden.Transitional do
   @impl true
   @spec year_of_era(Calendar.year(), Calendar.month(), Calendar.day()) ::
           {Calendar.year(), Calendar.era()} | Calendrical.date_error()
-  def year_of_era(year, _month, _day) do
-    year_of_era(year)
-  end
+  def year_of_era(year, _month, _day) when year > 0, do: {year, 1}
+  def year_of_era(year, _month, _day), do: {abs(year), 0}
 
   @doc """
   Returns the day of the era and the era of the date `year`, `month` and

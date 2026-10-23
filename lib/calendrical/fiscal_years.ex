@@ -139,15 +139,18 @@ defmodule Calendrical.FiscalYear do
   ### Arguments
 
   * `territory` is any value accepted by `Localize.validate_territory/1`,
-    typically an atom such as `:US`, `:UK`, `:AU`, `:JP`.
+    typically an atom such as `:US`, `:GB`, `:AU`, `:JP`.
 
   ### Returns
 
   * `{:ok, calendar_module}` where `calendar_module` implements both the
     `Calendar` and `Calendrical` behaviours.
 
-  * `{:error, exception}` if the territory is unknown or has no pre-built
-    fiscal calendar.
+  * `{:error, %Localize.UnknownTerritoryError{}}` for a value that is no
+    territory.
+
+  * `{:error, %Calendrical.UnknownFiscalYearError{}}` for a territory
+    with no fiscal calendar.
 
   ### Examples
 
@@ -155,8 +158,7 @@ defmodule Calendrical.FiscalYear do
       {:ok, Calendrical.FiscalYear.US}
 
   """
-  @spec calendar_for(atom() | String.t()) ::
-          {:ok, module()} | {:error, Exception.t() | String.t()}
+  @spec calendar_for(atom() | String.t()) :: {:ok, module()} | {:error, Exception.t()}
   def calendar_for(territory) do
     with {:ok, territory} <- Localize.validate_territory(territory),
          {:ok, territory} <- known_fiscal_calendar(territory) do
@@ -168,7 +170,7 @@ defmodule Calendrical.FiscalYear do
     if territory in @known_fiscal_calendars do
       {:ok, territory}
     else
-      {:error, Localize.UnknownCalendarError.exception(calendar: territory)}
+      {:error, Calendrical.UnknownFiscalYearError.exception(territory: territory)}
     end
   end
 

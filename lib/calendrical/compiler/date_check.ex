@@ -32,6 +32,10 @@ defmodule Calendrical.Compiler.DateCheck do
   # as the month's first day, where a reform began the month after its 1st.
   @dayless_questions [:year_of_era]
 
+  # The parts `shift/6` adds and `diff/3` counts; any other is a
+  # `Calendrical.InvalidPartError`, as `Calendrical.diff/3` answers one.
+  @valid_parts [:years, :quarters, :months, :weeks, :days]
+
   defmacro __before_compile__(env), do: wrap(env.module)
 
   defp wrap(module) do
@@ -47,6 +51,7 @@ defmodule Calendrical.Compiler.DateCheck do
         needed = @whole_date
         dayless? = name in @dayless_questions
         function = Atom.to_string(name)
+        call = super_call(name, arguments)
 
         quote do
           def unquote(name)(unquote_splicing(arguments)) do
@@ -57,7 +62,7 @@ defmodule Calendrical.Compiler.DateCheck do
                    unquote(dayless?)
                  ) do
               :ok ->
-                super(unquote_splicing(arguments))
+                unquote(call)
 
               :missing ->
                 {:error,
@@ -82,10 +87,72 @@ defmodule Calendrical.Compiler.DateCheck do
     quote do
       defoverridable unquote(callbacks)
       unquote_splicing(wrappers)
+      unquote(diff_wrapper(module))
       unquote(month_wrapper(module))
       unquote(year_wrapper(module))
     end
   end
+
+  # `shift/6` adds one of the five parts, so the part is checked once the
+  # date is.
+  defp super_call(:shift, arguments) do
+    part = Enum.at(arguments, 3)
+
+    quote do
+      case Calendrical.Compiler.DateCheck.check_part(unquote(part)) do
+        :ok -> super(unquote_splicing(arguments))
+        {:error, _exception} = error -> error
+      end
+    end
+  end
+
+  defp super_call(_name, arguments), do: quote(do: super(unquote_splicing(arguments)))
+
+  # `diff/3` counts between two dates the calendar has, in one of the five
+  # parts: what is no date, or no part, is an error, never a count.
+  defp diff_wrapper(module) do
+    if Module.defines?(module, {:diff, 3}, :def) do
+      quote do
+        defoverridable diff: 3
+
+        def diff(from, to, date_part) do
+          with :ok <- Calendrical.Compiler.DateCheck.check_date(__MODULE__, "diff", from),
+               :ok <- Calendrical.Compiler.DateCheck.check_date(__MODULE__, "diff", to),
+               :ok <- Calendrical.Compiler.DateCheck.check_part(date_part) do
+            super(from, to, date_part)
+          end
+        end
+      end
+    end
+  end
+
+  @doc false
+  # A `{year, month, day}` the calendar has is `:ok`; one missing a field is
+  # a `Calendrical.MissingFieldsError`, and anything else a
+  # `Calendrical.InvalidDateError`.
+  @spec check_date(module(), String.t(), term()) :: :ok | {:error, Exception.t()}
+  def check_date(calendar, function, {year, month, day} = date) do
+    case check(calendar, @whole_date, date, false) do
+      :ok ->
+        :ok
+
+      :missing ->
+        {:error, Calendrical.missing_date_error(function, year, month, day)}
+
+      :invalid ->
+        {:error, Calendrical.InvalidDateError.exception(calendar: calendar, value: date)}
+    end
+  end
+
+  def check_date(calendar, _function, other),
+    do: {:error, Calendrical.InvalidDateError.exception(calendar: calendar, value: other)}
+
+  @doc false
+  @spec check_part(term()) :: :ok | {:error, Exception.t()}
+  def check_part(part) when part in @valid_parts, do: :ok
+
+  def check_part(part),
+    do: {:error, Calendrical.InvalidPartError.exception(part: part, valid_parts: @valid_parts)}
 
   # A year that is missing, or no integer, is answered before
   # `months_in_year/1` is asked: `nil` as a missing field, as

@@ -97,6 +97,7 @@ defmodule Calendrical do
   All date fields are optional however many functions
   will require the presence of one or more - and
   often all - fields be present.
+
   """
   @type date :: %{
           optional(:year) => year(),
@@ -110,6 +111,7 @@ defmodule Calendrical do
   All time fields are optional however many functions
   will require the presence of one or more - and
   often all - fields be present.
+
   """
   @type time :: %{
           optional(:calendar) => Calendar.calendar(),
@@ -124,6 +126,7 @@ defmodule Calendrical do
   All naive date time fields are optional however many functions
   will require the presence of one or more - and
   often all - fields be present.
+
   """
   @type naive_date_time :: %{
           optional(:calendar) => calendar(),
@@ -141,6 +144,7 @@ defmodule Calendrical do
   All date time fields are optional however many functions
   will require the presence of one or more - and
   often all - fields be present.
+
   """
   @type date_time :: %{
           optional(:calendar) => calendar(),
@@ -167,24 +171,28 @@ defmodule Calendrical do
   @typedoc """
   Specifies the year of a date as either
   a positive integer or nil.
+
   """
   @type era :: non_neg_integer() | nil
 
   @typedoc """
   Specifies the year of a date as either
   a positive integer or nil.
+
   """
   @type year :: Calendar.year() | nil
 
   @typedoc """
   Specifies the month of a date as either
   a positive integer or nil.
+
   """
   @type month :: Calendar.month() | nil
 
   @typedoc """
   Specifies the day of a date as either
   a positive integer or nil.
+
   """
   @type day :: Calendar.day() | nil
 
@@ -237,6 +245,7 @@ defmodule Calendrical do
   Note that a calendar can be configured to start
   on any day of the week. `day_of_week` is only a
   way of encoding the days as an integer.
+
   """
   @type day_of_week :: 1..7
 
@@ -262,11 +271,13 @@ defmodule Calendrical do
 
   @typedoc """
   The precision for date intervals
+
   """
   @type precision :: :years | :quarters | :months | :weeks | :days
 
   @typedoc """
   The types of relationship between two Date.Range intervals
+
   """
   @type interval_relation ::
           :precedes
@@ -363,8 +374,9 @@ defmodule Calendrical do
   (`false`); where it is not given, the calendar's own default applies.
 
   A `{year, month, day}` that is no date of the calendar is
-  `{:error, %Calendrical.InvalidDateError{}}`, and one missing a field a
-  `Calendrical.MissingFieldsError`.
+  `{:error, %Calendrical.InvalidDateError{}}`, one missing a field a
+  `Calendrical.MissingFieldsError`, and a `date_part` other than the five
+  a `Calendrical.InvalidPartError`.
 
   """
   @callback shift(
@@ -384,12 +396,17 @@ defmodule Calendrical do
   the day into a shorter month, can add to the earlier date without
   passing the later one; it is negative when `to` is before `from`.
 
+  A `{year, month, day}` that is no date of the calendar is
+  `{:error, %Calendrical.InvalidDateError{}}`, one missing a field a
+  `Calendrical.MissingFieldsError`, and a `date_part` other than the five
+  a `Calendrical.InvalidPartError`.
+
   """
   @callback diff(
               from :: {year(), month() | week(), day()},
               to :: {year(), month() | week(), day()},
               date_part :: :years | :quarters | :months | :weeks | :days
-            ) :: integer()
+            ) :: integer() | {:error, Exception.t()}
 
   @doc """
   Returns the static facts about this calendar, as `t:Calendrical.Info.t/0`.
@@ -532,7 +549,7 @@ defmodule Calendrical do
 
   * `{:ok, calendar_module}` or
 
-  * `{:error, exception}` where `exception` is an exception struct
+  * `{:error, exception}` where `exception` is an exception struct.
 
   ### Examples
 
@@ -683,7 +700,9 @@ defmodule Calendrical do
     returned unchanged (it is not verified to be a calendar module
     in that case).
 
-  * `{:error, exception}` if the options are not valid.
+  * `{:error, exception}` if the options are not valid, or a
+    `Calendrical.InvalidOptionValueError` if `calendar_type` is neither
+    `:month` nor `:week`.
 
   ### Examples
 
@@ -718,6 +737,15 @@ defmodule Calendrical do
     end
   end
 
+  def new(calendar_module, calendar_type, _config) when is_atom(calendar_module) do
+    {:error,
+     Calendrical.InvalidOptionValueError.exception(
+       option: :calendar_type,
+       value: calendar_type,
+       maker: nil
+     )}
+  end
+
   @doc """
   Returns a calendar configured according to
   the preferences defined for a territory.
@@ -728,8 +756,15 @@ defmodule Calendrical do
     an `t:String.t/0` or upcased `atom`.
 
   * `config` is a Keyword list defining the configuration
-    of the calendar. See `Calendrical.new/3` for the
-    available options. The default is `[]`.
+    of the calendar. The default is `[]`.
+
+  ### Options
+
+  * The options of a `:month` calendar of `Calendrical.new/3`:
+    `:base`, `:year_begins`, `:year_number`, `:written_year`, `:weeks`,
+    `:cldr_calendar_type`, `:era_calendar_type`, `:parsing_calendar` and
+    `:years_in_cycle`. The territory's own week rule is the default
+    `:weeks`.
 
   ### Returns
 
@@ -1454,7 +1489,8 @@ defmodule Calendrical do
 
   * a `t:Calendar.date/0`  or
 
-  * `{:error, %Calendrical.InvalidDateError{}}`
+  * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar
+    does not have.
 
   ### Examples
 
@@ -1508,7 +1544,8 @@ defmodule Calendrical do
 
   * a `t:Calendar.date/0`  or
 
-  * `{:error, %Calendrical.InvalidDateError{}}`
+  * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar
+    does not have.
 
   ### Examples
 
@@ -1537,13 +1574,14 @@ defmodule Calendrical do
 
   * `calendar` is any module that implements
     the `Calendar` and `Calendrical`
-    behaviours
+    behaviours.
 
   ### Returns
 
   * a `t:Calendar.date/0`  or
 
-  * `{:error, %Calendrical.InvalidDateError{}}`
+  * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar
+    does not have.
 
   ### Examples
 
@@ -1578,7 +1616,8 @@ defmodule Calendrical do
 
   * a `t:Calendar.date/0`  or
 
-  * `{:error, %Calendrical.InvalidDateError{}}`
+  * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar
+    does not have.
 
   ### Examples
 
@@ -1606,7 +1645,7 @@ defmodule Calendrical do
   * `year` is any integer year number.
 
   * `calendar` is any module that implements the `Calendar` and
-    `Calendrical` behaviours or `Calendar.ISO`
+    `Calendrical` behaviours or `Calendar.ISO`.
 
   ### Returns
 
@@ -1951,7 +1990,7 @@ defmodule Calendrical do
 
   ### Arguments
 
-  * `mjd` is a number representing days passed since November 17, 1858 (Julian Calendar)
+  * `mjd` is a number representing days passed since November 17, 1858 (Julian Calendar).
 
   ### Returns
 
@@ -2095,8 +2134,7 @@ defmodule Calendrical do
 
   ### Returns
 
-  * a the quarter of the year as an
-    integer
+  * The quarter of the year as an integer.
 
   ### Examples
 
@@ -2130,8 +2168,9 @@ defmodule Calendrical do
 
   ### Returns
 
-  * the month of the year as an
-    integer
+  * The month of the year as an integer: the CLDR month the date's
+    month is named by, which for a calendar of weeks is the Gregorian
+    month its year begins in, counted on.
 
   ### Examples
 
@@ -2139,10 +2178,14 @@ defmodule Calendrical do
       1
       iex> Calendrical.month_of_year(~D[2019-12-01])
       12
+
+  The NRF year begins in February, so its twelfth month is named by
+  January and its sixth, which holds week 26, by July:
+
       iex> Calendrical.month_of_year(~D[2019-W52-1 Calendrical.NRF])
-      12
+      1
       iex> Calendrical.month_of_year(~D[2019-W26-1 Calendrical.NRF])
-      6
+      7
 
   """
   @spec month_of_year(date()) ::
@@ -2410,8 +2453,7 @@ defmodule Calendrical do
 
   ### Returns
 
-  * a the day of the year as an
-    integer
+  * The day of the year as an integer, counting the year's first day as 1.
 
   ### Examples
 
@@ -3529,7 +3571,10 @@ defmodule Calendrical do
     when `part` is `:days_of_week`. The days are in week order for
     the given date's calendar, or
 
-  * `{error, {exception_module, message}}` if an error is detected
+  * `{:error, exception}` for a `part`, `:type` or `:style` that is not
+    known, a `Calendrical.InvalidPartError`, `Calendrical.InvalidTypeError`
+    or `Calendrical.InvalidStyleError`, or for a date its calendar does
+    not have, a `Calendrical.InvalidDateError`.
 
   ### Examples
 
@@ -4202,7 +4247,7 @@ defmodule Calendrical do
 
   ### Returns
 
-  * A list of dates
+  * A list of dates.
 
   ### Examples
 
@@ -4542,7 +4587,7 @@ defmodule Calendrical do
 
   ### Returns
 
-  * a `t:Calendar.date/0`
+  * A `t:Calendar.date/0`.
 
   ### Examples
 
@@ -4636,7 +4681,8 @@ defmodule Calendrical do
 
   * a `t:Calendar.date/0` or
 
-  * `{:error, %Calendrical.InvalidDateError{}}`
+  * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar
+    does not have.
 
   ### Examples
 
@@ -4685,7 +4731,8 @@ defmodule Calendrical do
 
   * a `t:Calendar.date/0` or
 
-  * `{:error, %Calendrical.InvalidDateError{}}`
+  * `{:error, %Calendrical.InvalidDateError{}}` for a date the calendar
+    does not have.
 
   ### Examples
 
@@ -4775,7 +4822,7 @@ defmodule Calendrical do
 
   * `{:ok, calendar_module}` or
 
-  * `{:error, exception}` where `exception` is an exception struct
+  * `{:error, exception}` where `exception` is an exception struct.
 
   ### Examples
 

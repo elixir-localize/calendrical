@@ -6,6 +6,7 @@ defmodule Calendrical.Formatter.InvalidOptionError do
   ### Fields
 
   * `:option` — the option name that was supplied.
+
   * `:value` — the value that was supplied for the option.
 
   """

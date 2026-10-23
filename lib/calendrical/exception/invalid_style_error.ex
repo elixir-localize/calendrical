@@ -6,6 +6,7 @@ defmodule Calendrical.InvalidStyleError do
   ### Fields
 
   * `:style` — the unknown style that was supplied.
+
   * `:valid_styles` — the list of valid style widths.
 
   """

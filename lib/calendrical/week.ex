@@ -529,6 +529,9 @@ defmodule Calendrical.Week do
     calendar does not have, or `{:error, Calendrical.MissingFieldsError.t()}`
     for a missing field.
 
+  Raises `Calendrical.InvalidOptionValueError` for a `starting_on` that is
+  neither `:default` nor a weekday, as `Date.day_of_week/2` expects.
+
   ### Examples
 
       iex> Calendrical.Week.day_of_week(Calendrical.Gregorian, 2026, 1, 1, :default)
@@ -564,7 +567,7 @@ defmodule Calendrical.Week do
 
   defp week_begins_on(_calendar, _year, starting_on) do
     case Enum.find_index(@weekdays, &(&1 == starting_on)) do
-      nil -> raise ArgumentError, "starting_on #{inspect(starting_on)} is not supported"
+      nil -> raise Calendrical.InvalidOptionValueError, option: :starting_on, value: starting_on
       index -> index + 1
     end
   end

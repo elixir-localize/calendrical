@@ -17,7 +17,7 @@ defmodule Calendrical.Roc do
 
   ## Reference
 
-  - CLDR `:roc` calendar type. The CLDR era data places the start of
+  * CLDR `:roc` calendar type. The CLDR era data places the start of
     the *Minguo Era* (`:roc`) at proleptic Gregorian `1912-01-01` and
     the *Before R.O.C.* era (`:broc`) at all earlier dates.
 

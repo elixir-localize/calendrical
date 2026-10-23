@@ -29,9 +29,10 @@ defmodule Calendrical.Buddhist do
 
   ## Reference
 
-  - CLDR `:buddhist` calendar type. The CLDR era data places 1 BE
+  * CLDR `:buddhist` calendar type. The CLDR era data places 1 BE
     (`:be`) at proleptic Gregorian `−542-01-01`.
-  - This module follows Reingold & Dershowitz's *Calendrical
+
+  * This module follows Reingold & Dershowitz's *Calendrical
     Calculations* (4th ed.) practice of treating year-shifted Gregorian
     variants as a thin wrapper around the Gregorian implementation.
 

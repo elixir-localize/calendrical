@@ -33,6 +33,7 @@ defmodule Calendrical.Islamic.Visibility do
   @typedoc """
   A crescent-visibility criterion: the Odeh (2004), Yallop (1997)
   or Schaefer empirical model.
+
   """
   @type method :: :odeh | :schaefer | :yallop
 
@@ -44,6 +45,7 @@ defmodule Calendrical.Islamic.Visibility do
   This is the *first day of the lunar month* containing `iso_days`.
   Raises `Calendrical.UnsupportedDateRangeError` when the installed
   ephemeris does not cover the search.
+
   """
   @spec phasis_on_or_before(integer(), Geo.PointZ.t(), method()) :: integer()
   def phasis_on_or_before(iso_days, location, method \\ @default_method) do
@@ -57,6 +59,7 @@ defmodule Calendrical.Islamic.Visibility do
   Returns the first day of the lunar month containing `iso_days`, as
   `{:ok, iso_days}`, or `{:error, %Calendrical.UnsupportedDateRangeError{}}`
   naming a date the installed ephemeris does not cover.
+
   """
   @spec find_phasis_on_or_before(integer(), Geo.PointZ.t(), method()) ::
           {:ok, integer()} | {:error, Exception.t()}
@@ -97,6 +100,7 @@ defmodule Calendrical.Islamic.Visibility do
   month containing `iso_days + 30` otherwise. Raises
   `Calendrical.UnsupportedDateRangeError` when the installed ephemeris
   does not cover the search.
+
   """
   @spec phasis_on_or_after(integer(), Geo.PointZ.t(), method()) :: integer()
   def phasis_on_or_after(iso_days, location, method \\ @default_method) do

@@ -410,6 +410,11 @@ defmodule Calendrical.Composite.Compiler do
         earlier date without passing the later one, as an integer. It is
         negative when `to` is before `from`.
 
+      * `{:error, %Calendrical.InvalidDateError{}}` for a `from` or `to` the
+        calendar does not have, `{:error, %Calendrical.MissingFieldsError{}}`
+        for one missing a field, or `{:error, %Calendrical.InvalidPartError{}}`
+        for a `date_part` other than the five.
+
       ### Examples
 
           iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})

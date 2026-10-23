@@ -73,7 +73,10 @@ defmodule Calendrical.Calendar do
   `months_in_year/1`, `days_in_month/2`, `valid_date?/3`, `year_of_era/3`
   and `day_of_era/3`, and the kernel, `leap_month/1`, `written_date/3`,
   `date_from_written_date/3`, `shift/6` and `diff/3`, may be defined by
-  the calendar; every other generated function is final.
+  the calendar. Every other generated function is a delegation defined
+  before the calendar's own code, so a later definition of one is
+  unreachable: the compiler warns that its clause can never match, and
+  the generated answer stands.
 
   """
 

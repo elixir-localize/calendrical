@@ -82,6 +82,7 @@ defmodule Calendrical.Hebrew do
   @typedoc """
   A traditional Hebrew month (RFC 7529): `1..12`, or `{5, :leap}` for
   *Adar I*.
+
   """
   @type traditional_month :: 1..12 | {5, :leap}
 
@@ -213,7 +214,7 @@ defmodule Calendrical.Hebrew do
 
   ### Arguments
 
-  * `year` is any positive Hebrew year as an integer.
+  * `year` is any Hebrew year as an integer.
 
   ### Returns
 
@@ -240,7 +241,7 @@ defmodule Calendrical.Hebrew do
 
   ### Arguments
 
-  * `year` is any positive Hebrew year as an integer.
+  * `year` is any Hebrew year as an integer.
 
   ### Returns
 
@@ -270,7 +271,7 @@ defmodule Calendrical.Hebrew do
 
   ### Arguments
 
-  * `year` is any positive Hebrew year as an integer.
+  * `year` is any Hebrew year as an integer.
 
   * `month` is the month's position in the year,
     `1..months_in_year(year)`.
@@ -348,7 +349,7 @@ defmodule Calendrical.Hebrew do
   @spec valid_date?(year, month, day) :: boolean()
   def valid_date?(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) and
-             year >= 1 and month in 1..13 and day in 1..30 do
+             month in 1..13 and day in 1..30 do
     month <= months_in_year(year) and day <= days_in_month(year, month)
   end
 
@@ -377,7 +378,12 @@ defmodule Calendrical.Hebrew do
   ### Returns
 
   * The whole number of `date_part`s from `from` to `to`, as an
-    integer.
+    integer, or
+
+  * `{:error, %Calendrical.InvalidDateError{}}` for a `from` or `to` the
+    calendar does not have, `{:error, %Calendrical.MissingFieldsError{}}`
+    for one missing a field, or `{:error, %Calendrical.InvalidPartError{}}`
+    for a `date_part` other than the five.
 
   ### Examples
 
@@ -390,7 +396,8 @@ defmodule Calendrical.Hebrew do
 
   """
   @impl true
-  @spec diff({year, month, day}, {year, month, day}, atom()) :: integer()
+  @spec diff({year, month, day}, {year, month, day}, atom()) ::
+          integer() | {:error, Exception.t()}
   def diff(from, to, date_part) do
     Calendrical.Base.Common.diff(__MODULE__, from, to, date_part, &months_between/3)
   end
@@ -459,7 +466,7 @@ defmodule Calendrical.Hebrew do
 
   ### Arguments
 
-  * `year` is any positive Hebrew year as an integer.
+  * `year` is any Hebrew year as an integer.
 
   * `month` is the month's position in the year.
 
@@ -506,9 +513,10 @@ defmodule Calendrical.Hebrew do
   @impl true
   def date_from_iso_days(iso_days) do
     # Approximate year using the average Hebrew year length
-    # (35975351/98496 ≈ 365.2468 days). The result may be one less
-    # than the true year, so we search forward from `approx - 1`.
-    approx = div((iso_days - epoch()) * 98_496, 35_975_351) + 1
+    # (35975351/98496 ≈ 365.2468 days), floored so that a day before the
+    # epoch estimates low as well. The result may be one less than the
+    # true year, so we search forward from `approx - 1`.
+    approx = Integer.floor_div((iso_days - epoch()) * 98_496, 35_975_351) + 1
     year = find_year(iso_days, approx - 1)
     new_year = hebrew_new_year(year)
     year_length = hebrew_new_year(year + 1) - new_year
@@ -525,7 +533,7 @@ defmodule Calendrical.Hebrew do
 
   ### Arguments
 
-  * `year` is any positive Hebrew year as an integer.
+  * `year` is any Hebrew year as an integer.
 
   ### Returns
 

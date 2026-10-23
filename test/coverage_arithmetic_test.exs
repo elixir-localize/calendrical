@@ -635,7 +635,7 @@ defmodule CoverageArithmeticTest do
     end
 
     test "era_data raises for an unknown calendar type" do
-      assert_raise ArgumentError, ~r/unknown CLDR calendar type :bogus/, fn ->
+      assert_raise Localize.UnknownCalendarError, fn ->
         Era.era_data(:bogus)
       end
     end

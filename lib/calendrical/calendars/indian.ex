@@ -40,11 +40,13 @@ defmodule Calendrical.Indian do
 
   ## Reference
 
-  - Indian Calendar Reform Committee, *Report of the Calendar Reform
+  * Indian Calendar Reform Committee, *Report of the Calendar Reform
     Committee*, Government of India (1955).
-  - Dershowitz & Reingold, *Calendrical Calculations* (4th ed.),
+
+  * Dershowitz & Reingold, *Calendrical Calculations* (4th ed.),
     Chapter 11, "The Modern Hindu Calendars".
-  - CLDR `:indian` calendar type.
+
+  * CLDR `:indian` calendar type.
 
   """
 

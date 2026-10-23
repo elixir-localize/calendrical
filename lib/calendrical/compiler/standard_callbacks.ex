@@ -1619,7 +1619,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       unquote(calendar_impl)
 
       def year_of_era(year, month, day),
-        do: Calendrical.Era.year_of_era(__MODULE__, year, month, day)
+        do: Calendrical.Era.default_year_of_era(__MODULE__, year, month, day)
 
       @doc """
       Returns the day of era and era of a date (`Calendrical.Era.day_of_era/4`).
@@ -1654,7 +1654,7 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       unquote(calendar_impl)
 
       def day_of_era(year, month, day),
-        do: Calendrical.Era.day_of_era(__MODULE__, year, month, day)
+        do: Calendrical.Era.default_day_of_era(__MODULE__, year, month, day)
 
       @doc """
       Returns the extended year of a date (`Calendrical.Era.extended_year/4`).
@@ -1761,7 +1761,12 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       ### Returns
 
       * The largest number of `date_part`s that can be added to `from`
-        without passing `to`, negative where `to` is before `from`.
+        without passing `to`, negative where `to` is before `from`, or
+
+      * `{:error, %Calendrical.InvalidDateError{}}` for a `from` or `to`
+        the calendar does not have, `{:error, %Calendrical.MissingFieldsError{}}`
+        for one missing a field, or `{:error, %Calendrical.InvalidPartError{}}`
+        for a `date_part` other than the five.
 
       ### Examples
 
@@ -2229,7 +2234,6 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       defoverridable leap_month: 1,
                      written_date: 3,
                      date_from_written_date: 3,
-                     year_of_era: 1,
                      year_of_era: 3,
                      day_of_era: 3,
                      diff: 3

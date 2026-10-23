@@ -56,18 +56,20 @@ defmodule Calendrical.Era do
   @spec year_of_era(calendar, Calendar.year()) ::
           {Calendar.year(), Calendar.era()} | {:error, Exception.t()}
   def year_of_era(calendar, year) when is_integer(year) do
-    with %Date.Range{first: first} <- Calendrical.Period.year(calendar, year) do
-      year_of_era_on(calendar, first, year)
+    with %Date.Range{first: %Date{year: y, month: m, day: d}} <-
+           Calendrical.Period.year(calendar, year) do
+      calendar.year_of_era(y, m, d)
     end
   end
 
   def year_of_era(calendar, year), do: missing_or_invalid(calendar, "year_of_era", year: year)
 
   @doc """
-  Returns the year of era and era of a date of a calendar, by the era
-  calendar its `info/0` names (the member's, in a composite calendar) and
-  its year-zero rule. A date with no month or day is taken on the first
-  day of its year.
+  Returns the year of era and era of a date of a calendar, as the
+  calendar answers them: by its own `year_of_era/3` where it defines
+  one, and otherwise by the era calendar its `info/0` names (the
+  member's, in a composite calendar) and its year-zero rule. A date with
+  no month or day is taken on the first day of its year.
 
   ### Arguments
 
@@ -93,6 +95,25 @@ defmodule Calendrical.Era do
   @spec year_of_era(calendar, Calendar.year(), Calendar.month() | nil, Calendar.day() | nil) ::
           {Calendar.year(), Calendar.era()} | {:error, Exception.t()}
   def year_of_era(calendar, year, month, day)
+      when is_integer(year) and is_integer(month) and is_integer(day),
+      do: calendar.year_of_era(year, month, day)
+
+  def year_of_era(calendar, year, month, day),
+    do: default_year_of_era(calendar, year, month, day)
+
+  @doc false
+  # The year of era a calendar answers where it defines no `year_of_era/3`
+  # of its own: by the era calendar its `info/0` names (the member's, in a
+  # composite calendar) and its year-zero rule. Every maker generates
+  # `year_of_era/3` as a call to this, so it must not ask the calendar.
+  @spec default_year_of_era(
+          calendar,
+          Calendar.year(),
+          Calendar.month() | nil,
+          Calendar.day() | nil
+        ) ::
+          {Calendar.year(), Calendar.era()} | {:error, Exception.t()}
+  def default_year_of_era(calendar, year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     case Calendrical.Info.in_effect(calendar, year, month, day) do
       ^calendar -> year_of_era_in(calendar, year, month, day)
@@ -100,18 +121,20 @@ defmodule Calendrical.Era do
     end
   end
 
-  def year_of_era(calendar, year, month, day) when is_integer(year) do
+  def default_year_of_era(calendar, year, month, day) when is_integer(year) do
     if is_nil(month) or is_nil(day),
       do: year_of_era(calendar, year),
       else: invalid_date(calendar, {year, month, day})
   end
 
-  def year_of_era(calendar, year, _month, _day),
+  def default_year_of_era(calendar, year, _month, _day),
     do: missing_or_invalid(calendar, "year_of_era", year: year)
 
   @doc """
-  Returns the day of era and era of a date of a calendar, by the era
-  calendar its `info/0` names (the member's, in a composite calendar).
+  Returns the day of era and era of a date of a calendar, as the
+  calendar answers them: by its own `day_of_era/3` where it defines one,
+  and otherwise by the era calendar its `info/0` names (the member's, in
+  a composite calendar).
 
   ### Arguments
 
@@ -137,6 +160,20 @@ defmodule Calendrical.Era do
   @spec day_of_era(calendar, Calendar.year(), Calendar.month(), Calendar.day()) ::
           {integer(), Calendar.era()} | {:error, Exception.t()}
   def day_of_era(calendar, year, month, day)
+      when is_integer(year) and is_integer(month) and is_integer(day),
+      do: calendar.day_of_era(year, month, day)
+
+  def day_of_era(calendar, year, month, day),
+    do: missing_or_invalid(calendar, "day_of_era", year: year, month: month, day: day)
+
+  @doc false
+  # The day of era a calendar answers where it defines no `day_of_era/3`
+  # of its own: by the era calendar its `info/0` names (the member's, in a
+  # composite calendar). Every maker generates `day_of_era/3` as a call to
+  # this, so it must not ask the calendar.
+  @spec default_day_of_era(calendar, Calendar.year(), Calendar.month(), Calendar.day()) ::
+          {integer(), Calendar.era()} | {:error, Exception.t()}
+  def default_day_of_era(calendar, year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
     case Calendrical.Info.in_effect(calendar, year, month, day) do
       ^calendar -> day_of_era_in(calendar, year, month, day)
@@ -144,7 +181,7 @@ defmodule Calendrical.Era do
     end
   end
 
-  def day_of_era(calendar, year, month, day),
+  def default_day_of_era(calendar, year, month, day),
     do: missing_or_invalid(calendar, "day_of_era", year: year, month: month, day: day)
 
   @doc """
@@ -486,6 +523,8 @@ defmodule Calendrical.Era do
   * A map with the era records (most recent era first), the
     year-numbering mode and the forward/before era numbers.
 
+  Raises `Localize.UnknownCalendarError` for a type CLDR does not define.
+
   ### Examples
 
       iex> era_data = Calendrical.Era.era_data(:japanese)
@@ -585,9 +624,7 @@ defmodule Calendrical.Era do
         eras
 
       _other ->
-        raise ArgumentError,
-              "unknown CLDR calendar type #{inspect(cldr_calendar_type)}. " <>
-                "Known types are #{inspect(Map.keys(Localize.SupplementalData.calendars()))}"
+        raise Localize.UnknownCalendarError, calendar: cldr_calendar_type
     end
   end
 end

@@ -14,11 +14,13 @@ defmodule Calendrical.ISOWeek.Test do
 
   # A calendar of weeks' months are the unnamed periods of its pattern of
   # weeks, so CLDR's generic calendar names them, "M01" to "M12" in root,
-  # while its days and eras keep the Gregorian names. 16 June 2026 is ISO
-  # 2026-W25-2, in the sixth 4-5-4 period (weeks 23 to 26), and NRF
-  # 2026-W20-3, in its fifth (weeks 18 to 22).
+  # while its days and eras keep the Gregorian names. A year names its
+  # months from the Gregorian month it begins in: ISO weeks from January,
+  # NRF from February. 16 June 2026 is ISO 2026-W25-2, in the sixth 4-5-4
+  # period (weeks 23 to 26), and NRF 2026-W20-3, in its fifth (weeks 18
+  # to 22), which February names "M06".
   test "a calendar of weeks names its months from CLDR's generic calendar" do
-    for {calendar, month} <- [{Calendrical.ISOWeek, "M06"}, {Calendrical.NRF, "M05"}] do
+    for {calendar, month} <- [{Calendrical.ISOWeek, "M06"}, {Calendrical.NRF, "M06"}] do
       date = Date.convert!(~D[2026-06-16], calendar)
 
       assert calendar.cldr_calendar_type() == :generic

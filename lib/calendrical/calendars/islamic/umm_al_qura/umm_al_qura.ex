@@ -53,10 +53,11 @@ defmodule Calendrical.Islamic.UmmAlQura do
 
   ## Reference
 
-  - KACST official month lengths,
-    <https://umqserv.kacst.gov.sa/api/v1/DateConversion/GetHijriMonthLengths>
-  - R.H. van Gent, "The Umm al-Qura Calendar of Saudi Arabia",
-    <https://webspace.science.uu.nl/~gent0113/islam/ummalqura.htm>
+  * KACST official month lengths,
+    <https://umqserv.kacst.gov.sa/api/v1/DateConversion/GetHijriMonthLengths>.
+
+  * R.H. van Gent, "The Umm al-Qura Calendar of Saudi Arabia",
+    <https://webspace.science.uu.nl/~gent0113/islam/ummalqura.htm>.
 
   """
 

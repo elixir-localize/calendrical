@@ -37,9 +37,10 @@ defmodule Calendrical.Islamic.Rgsa do
 
   ## Reference
 
-  - CLDR `:islamic_rgsa` calendar type. The `rgsa` suffix denotes
+  * CLDR `:islamic_rgsa` calendar type. The `rgsa` suffix denotes
     "*Religious Saudi Arabia*".
-  - Dershowitz & Reingold, *Calendrical Calculations* (4th ed.),
+
+  * Dershowitz & Reingold, *Calendrical Calculations* (4th ed.),
     Chapter 14.
 
   """

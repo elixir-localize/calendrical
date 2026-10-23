@@ -18,9 +18,10 @@ defmodule Calendrical.Ethiopic.AmeteAlem do
 
   ## Reference
 
-  - Dershowitz & Reingold, *Calendrical Calculations* (4th ed.),
+  * Dershowitz & Reingold, *Calendrical Calculations* (4th ed.),
     §4.2 ("Ethiopic and Coptic Calendars").
-  - CLDR `:ethiopic_amete_alem` calendar type. The CLDR era data
+
+  * CLDR `:ethiopic_amete_alem` calendar type. The CLDR era data
     places the *aa* era at proleptic Gregorian `-5492-07-17`.
 
   See `Calendrical.Ethiopic` for the month structure and the

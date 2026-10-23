@@ -226,9 +226,11 @@ defmodule Calendrical.Composite do
 
   ### Returns
 
-  * `{:ok, module}` if the calendar is successfully created, or
-
-  * `{:module_already_exists, calendar_module}` if a module with the same name already exists. Of the processes that create the same calendar at the same moment, one creates it and the others are answered this.
+  * `{:ok, module}` if the calendar is successfully created. The call is
+    idempotent: a module of the name that exists already is returned
+    unchanged, and is not verified to be a calendar module. Of the
+    processes that create the same calendar at the same moment, one
+    creates it and the others are answered the module it created.
 
   * `{:error, exception}` if the calendar cannot be created: a `Calendrical.InvalidCompositeError` whose `:reason` says what makes no composite (see "What a composite calendar can hold" above), a `Calendrical.InvalidCalendarModuleError` for a calendar that is no calendar module, or the exception a calendar raises for a date it does not reach.
 
@@ -239,16 +241,11 @@ defmodule Calendrical.Composite do
       {:ok, MyApp.Denmark}
 
   """
-  @spec new(module(), Keyword.t()) ::
-          {:ok, Calendrical.calendar()}
-          | {:module_already_exists, module()}
-          | {:error, error_reason()}
+  @spec new(module(), Keyword.t()) :: {:ok, Calendrical.calendar()} | {:error, error_reason()}
   def new(calendar_module, options) when is_atom(calendar_module) and is_list(options) do
-    if Code.ensure_loaded?(calendar_module) do
-      {:module_already_exists, calendar_module}
-    else
-      create_calendar(calendar_module, options)
-    end
+    if Code.ensure_loaded?(calendar_module),
+      do: {:ok, calendar_module},
+      else: create_calendar(calendar_module, options)
   end
 
   # The module is created in the `Calendrical.Compiler` server, as every

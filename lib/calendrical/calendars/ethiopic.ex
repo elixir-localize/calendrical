@@ -61,50 +61,6 @@ defmodule Calendrical.Ethiopic do
   end
 
   @doc """
-  Returns the year and era for the given Ethiopic `year`.
-
-  The Ethiopic calendar has two eras: Amete Mihret, the Era of
-  Mercy (era `1`), which numbers the years from 1; and Amete Alem,
-  the Era of the World (era `0`), which begins 5500 years earlier
-  and numbers the years before it, as CLDR defines it: year 0 is
-  Amete Alem 5500.
-
-  ### Arguments
-
-  * `year` is any Ethiopic year as an integer.
-
-  ### Returns
-
-  * A two-tuple `{year_in_era, era}` where `era` is `0` or `1`.
-
-  * `{:error, %Calendrical.MissingFieldsError{}}` when `year` is not
-    an integer, as for a partial date with no year.
-
-  ### Examples
-
-      iex> Calendrical.Ethiopic.year_of_era(2018)
-      {2018, 1}
-
-      iex> Calendrical.Ethiopic.year_of_era(0)
-      {5500, 0}
-
-      iex> Calendrical.Ethiopic.year_of_era(-50)
-      {5450, 0}
-
-  """
-  @spec year_of_era(year) :: {integer(), 0..1} | Calendrical.date_error()
-  def year_of_era(year) when not is_integer(year),
-    do: {:error, Calendrical.missing_year_error("year_of_era", year)}
-
-  def year_of_era(year) when year >= 1 do
-    {year, 1}
-  end
-
-  def year_of_era(year) do
-    {Calendrical.Ethiopic.AmeteAlem.amete_alem_year(year), 0}
-  end
-
-  @doc """
   Returns the year and era for the Ethiopic date given by `year`,
   `month`, and `day`.
 
@@ -128,10 +84,16 @@ defmodule Calendrical.Ethiopic do
       iex> Calendrical.Ethiopic.year_of_era(2018, 1, 1)
       {2018, 1}
 
+      iex> Calendrical.Ethiopic.year_of_era(-50, 1, 1)
+      {5450, 0}
+
   """
   @impl true
   @spec year_of_era(year, month, day) :: {integer(), 0..1} | Calendrical.date_error()
-  def year_of_era(year, _month, _day), do: year_of_era(year)
+  def year_of_era(year, _month, _day) when year >= 1, do: {year, 1}
+
+  def year_of_era(year, _month, _day),
+    do: {Calendrical.Ethiopic.AmeteAlem.amete_alem_year(year), 0}
 
   @doc """
   Returns the day-of-era and era for the given Ethiopic `year`,

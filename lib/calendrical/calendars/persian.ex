@@ -30,8 +30,12 @@ defmodule Calendrical.Persian do
 
   """
 
+  # The first day of year 1 by ICU's arithmetic rule, which the calendar
+  # follows outside the years it reckons from the ephemeris: 21 March 622
+  # in the proleptic Gregorian calendar, the day before Dershowitz and
+  # Reingold's epoch of 19 March 622 (Julian).
   use Calendrical.Calendar,
-    epoch: ~D[0622-03-20 Calendrical.Julian],
+    epoch: ~D[0622-03-18 Calendrical.Julian],
     cldr_calendar_type: :persian,
     weeks: [first_day: 6]
 

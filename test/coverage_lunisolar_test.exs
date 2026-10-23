@@ -76,7 +76,9 @@ defmodule Calendrical.Coverage.LunisolarTest do
     # A lunar date the year lacks raises rather than naming another date.
     test "gregorian_date_for_lunar/3 raises for a date the lunar year lacks" do
       for {month, day} <- [{1, 30}, {1, 40}, {13, 1}, {0, 1}, {{2, :leap}, 1}] do
-        assert_raise ArgumentError, fn -> Chinese.gregorian_date_for_lunar(2024, month, day) end
+        assert_raise Calendrical.InvalidDateError, fn ->
+          Chinese.gregorian_date_for_lunar(2024, month, day)
+        end
       end
     end
   end

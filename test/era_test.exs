@@ -273,8 +273,8 @@ defmodule Calendrical.EraTest do
       assert reiwa.from == Date.to_gregorian_days(~D[2019-05-01])
     end
 
-    test "an unknown calendar type raises with the known types listed" do
-      assert_raise ArgumentError, ~r/unknown CLDR calendar type/, fn ->
+    test "an unknown calendar type raises Localize.UnknownCalendarError" do
+      assert_raise Localize.UnknownCalendarError, fn ->
         Era.era_data(:no_such_calendar)
       end
     end

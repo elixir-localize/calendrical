@@ -22,6 +22,7 @@ defmodule Calendrical.Info do
   1 for Monday to 7 for Sunday or `:first_day_of_year` where weeks are
   counted from the first day of the year whatever its weekday, and the
   fewest days of a year or a month that its week 1 holds.
+
   """
   @type week_rule :: %{
           first_day: Calendar.day_of_week() | :first_day_of_year,
@@ -33,6 +34,7 @@ defmodule Calendrical.Info do
   month has as many in every year, the range of its lengths where every
   length between the fewest and the most occurs, and otherwise the list
   of the lengths that do.
+
   """
   @type month_lengths :: %{
           optional(Calendar.month()) => Calendar.day() | Range.t() | [Calendar.day(), ...]
@@ -42,6 +44,7 @@ defmodule Calendrical.Info do
   The place an astronomical calendar is reckoned at, as a function of the
   ISO day number: the latitude and longitude in degrees, the altitude in
   metres and the offset from UTC in days, as `Astro` takes them.
+
   """
   @type location :: (integer() -> {number(), number(), number(), number()})
 
@@ -49,6 +52,7 @@ defmodule Calendrical.Info do
   A member of a composite calendar: the calendar and the ISO day number
   of the first day it is in effect on, which is `nil` for the base
   calendar in effect before every other.
+
   """
   @type member :: {integer() | nil, module()}
 

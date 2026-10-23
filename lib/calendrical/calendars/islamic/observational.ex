@@ -41,11 +41,13 @@ defmodule Calendrical.Islamic.Observational do
 
   ## Reference
 
-  - Dershowitz & Reingold, *Calendrical Calculations* (4th ed.),
+  * Dershowitz & Reingold, *Calendrical Calculations* (4th ed.),
     Chapter 14, "The Islamic and Saudi Arabian Calendars".
-  - Odeh, M. Sh. (2004), *New Criterion for Lunar Crescent
+
+  * Odeh, M. Sh. (2004), *New Criterion for Lunar Crescent
     Visibility*. Experimental Astronomy 18, 39–64.
-  - CLDR `:islamic` calendar type.
+
+  * CLDR `:islamic` calendar type.
 
   See also `Calendrical.Islamic.Rgsa` for the same algorithm applied
   at Mecca, and `Calendrical.Islamic.UmmAlQura` for the official

@@ -289,11 +289,7 @@ defmodule Calendrical.Reform do
   end
 
   defp create_calendar(module, config) do
-    case Calendrical.Composite.new(module, config) do
-      {:ok, module} -> {:ok, module}
-      {:module_already_exists, module} -> {:ok, module}
-      other -> other
-    end
+    Calendrical.Composite.new(module, config)
   end
 
   defp normalize_territory(%Localize.LanguageTag{} = locale) do

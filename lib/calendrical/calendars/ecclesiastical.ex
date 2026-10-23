@@ -100,10 +100,10 @@ defmodule Calendrical.Ecclesiastical do
 
   ## Reference
 
-  - Dershowitz & Reingold, *Calendrical Calculations* (4th ed.),
+  * Dershowitz & Reingold, *Calendrical Calculations* (4th ed.),
     Chapter 9 ("Ecclesiastical Calendars").
 
-  - World Council of Churches, *Towards a Common Date for Easter*,
+  * World Council of Churches, *Towards a Common Date for Easter*,
     Aleppo Consultation, 1997.
 
   """

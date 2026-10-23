@@ -62,45 +62,6 @@ defmodule Calendrical.Coptic do
   end
 
   @doc """
-  Returns the year and era for the given Coptic `year`.
-
-  The Coptic calendar has one era, anno martyrum (era `1`), whose
-  year 1 began on 29 August 284. CLDR defines no era before it, so
-  the years before its first are year 0, -1 and so on of the same
-  era, as Temporal numbers them.
-
-  ### Arguments
-
-  * `year` is any Coptic year as an integer.
-
-  ### Returns
-
-  * A two-tuple `{year, 1}`.
-
-  * `{:error, %Calendrical.MissingFieldsError{}}` when `year` is not
-    an integer, as for a partial date with no year.
-
-  ### Examples
-
-      iex> Calendrical.Coptic.year_of_era(1742)
-      {1742, 1}
-
-      iex> Calendrical.Coptic.year_of_era(0)
-      {0, 1}
-
-      iex> Calendrical.Coptic.year_of_era(-50)
-      {-50, 1}
-
-  """
-  @spec year_of_era(year) :: {year, 1} | Calendrical.date_error()
-  def year_of_era(year) when not is_integer(year),
-    do: {:error, Calendrical.missing_year_error("year_of_era", year)}
-
-  def year_of_era(year) do
-    {year, 1}
-  end
-
-  @doc """
   Returns the year and era for the Coptic date given by `year`,
   `month`, and `day`.
 
@@ -127,7 +88,7 @@ defmodule Calendrical.Coptic do
   """
   @impl true
   @spec year_of_era(year, month, day) :: {year, 1} | Calendrical.date_error()
-  def year_of_era(year, _month, _day), do: year_of_era(year)
+  def year_of_era(year, _month, _day), do: {year, 1}
 
   @doc """
   Returns the day-of-era and era for the given Coptic `year`,

@@ -62,10 +62,13 @@ defmodule Calendrical.StrftimeTest do
     assert strftime(convert(~D[2018-10-01], fiscal_year_us), "%B %b") == "October Oct"
   end
 
+  # A calendar of weeks names its months from the Gregorian month its year
+  # begins in: the ISO week year from January, the NRF year from February,
+  # so NRF's first month, which 3 February 2019 begins, is "M02".
   test "a calendar of weeks names the month its week falls in" do
     assert strftime(convert(~D[2019-04-01], Calendrical.ISOWeek), "%B") == "M04"
     assert strftime(convert(~D[2020-12-28], Calendrical.ISOWeek), "%B %b") == "M12 M12"
-    assert strftime(convert(~D[2019-02-03], Calendrical.NRF), "%B") == "M01"
+    assert strftime(convert(~D[2019-02-03], Calendrical.NRF), "%B") == "M02"
   end
 
   test "the day is named by the day it is, whichever day the weeks begin on" do

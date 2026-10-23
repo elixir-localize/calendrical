@@ -18,7 +18,29 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 * `month_of_year/3` is the CLDR month a date's month is named by, which `cardinal_month/1` used to add. Every calendar numbers whole weeks from its own first day of the week, and a Hebrew date is written with its month's place in the year while its name stays CLDR's.
 
-* `calendar_year/3`, `__config__/0`, the identity functions `first_day_of_week/0`, `last_day_of_week/0` and `epoch_day_of_week/0`, and the forms of `leap_year?/1`, `leap_month/1`, `leap_month?/2`, `cyclic_year/3`, `lunar_month_of_year/2` and `date_to_iso_days/3` that took a `Date` or a tuple are gone. A Julian year-start variant's `date_from_julian_date/3` is `date_from_base_date/3`, beside a new `base_date/3`.
+* `calendar_year/3`, `__config__/0`, `Calendrical.start_end_gregorian_years/2`, the identity functions `first_day_of_week/0`, `last_day_of_week/0` and `epoch_day_of_week/0`, and the forms of `leap_year?/1`, `leap_month/1`, `leap_month?/2`, `cyclic_year/3`, `lunar_month_of_year/2` and `date_to_iso_days/3` that took a `Date` or a tuple are gone. A Julian year-start variant's `date_from_julian_date/3` is `date_from_base_date/3`, beside a new `base_date/3`.
+
+* `shift/6` returns `Calendrical.InvalidDateError` for a `{year, month, day}` that is no date, where it shifted the fields, and `Date.shift/2` raises it. `diff/3` returns the same error, and `Calendrical.MissingFieldsError` for a date missing a field, and both return `Calendrical.InvalidPartError` for a part other than `:years`, `:quarters`, `:months`, `:weeks` and `:days`. `months_in_year/1` returns `Calendrical.MissingFieldsError` for a `nil` year, and the lunisolar `new!/3` raises `Calendrical.InvalidDateError`.
+
+* `weeks_in_year/1` answers an integer in every calendar, numbering whole weeks by TR35's rule from the calendar's own first day of the week.
+
+* The Julian year-start variants carry counted months, so `Calendrical.Julian.March25` and `Dec25` have thirteen; `Dec25` and `Sept1` number a year by the Julian year it ends in, and a variant takes a date's era from its label year.
+
+* A calendar of weeks names its months "M01" to "M12" from CLDR's generic calendar (`cldr_calendar_type/0` is `:generic`), from the Gregorian month its year begins in, and keeps Gregorian era names. A month or week calendar's `day_of_era/3` counts era 1 from the first day of calendar year 1, so NRF's days count 34 fewer than in 1.3.
+
+* `days_in_month/1` answers a composite with the range its members span, and month lengths that are not consecutive as a list, `[28, 35]` for a week calendar's last month.
+
+* `Calendrical.TimeZone.resolve/3` delegates to `Localize.DateTime.Timezone.resolve/3`: its errors are exceptions, an abbreviation resolves only in a locale whose CLDR data writes it, and a repeated hour is read in standard time.
+
+* `Calendrical.strftime/3` returns `{:ok, string}` or `{:error, exception}` where it raised, and `Calendrical.strftime!/3` returns the string; both pass `Calendar.strftime/3`'s own options through.
+
+* The parse functions delegate to Localize's parsers and return its errors: `Calendrical.DateParseError`, `DateRangeParseError`, `DateTimeParseError`, `TimeParseError` and `ParseError` are removed in favour of `Localize.DateParseError`, `Localize.DateRangeParseError`, `Localize.DateTimeParseError` and `Localize.TimeParseError`. `week N of YYYY` counts the calendar's own weeks and an ISO 8601 offset is kept. The `:calendar` option is a calendar module and the date is returned in it; `:return_calendar` is removed and returns `Calendrical.RemovedOptionError`, and a CLDR calendar name such as `:hebrew` is `Localize.UnknownCalendarError`.
+
+* `Calendrical.Coptic` has CLDR 49's single era, so its years before 1 are 0, -1 and so on, as `Calendrical.Hebrew`'s are, where `Calendrical.Hebrew.valid_date?/3` rejected them; `Calendrical.Ethiopic` gives them to Amete Alem, so year -50 is `{5450, 0}`.
+
+* A composite's member counts its own months, so England's 1155 is the Lady Day year from 25 March 1155 to 24 March 1156, and the Julian days 1 January to 24 March 1155 have no dates of their own.
+
+* `Calendrical.Composite.new/2` returns `Calendrical.InvalidCompositeError` where it returned atoms such as `:no_calendars_configured`, `Calendrical.UnknownOptionError` for an option other than `:calendars` and `:base_calendar`, and `{:ok, module}` for a module that exists already, where it returned `{:module_already_exists, module}`. `Calendrical.FiscalYear.calendar_for/1` returns `Calendrical.UnknownFiscalYearError` for a territory with no fiscal calendar, and `Calendrical.new/3` returns `Calendrical.InvalidOptionValueError` for a kind other than `:month` and `:week`.
 
 ## Overview
 
@@ -164,6 +186,7 @@ New exceptions introduced by this refactor (replacing inline `{ArgumentError, ".
 | `Calendrical.InvalidDateError` | `:calendar`, `:value` | every function given a date, a week or a day of the year the calendar does not have |
 | `Calendrical.NotDefinedError` | `:calendar`, `:question`, `:value` | `days_in_month/1`, `months_in_year/0`, `Calendrical.Info.years_in_cycle/1` |
 | `Calendrical.UnknownReformError` | `:territory` | `Calendrical.Reform.reform_date/1`, `Calendrical.Reform.calendar_for/1` |
+| `Calendrical.UnknownFiscalYearError` | `:territory` | `Calendrical.FiscalYear.calendar_for/1` |
 | `Calendrical.AstronomyError` | `:calendar`, `:value`, `:reason` | the astronomical calendars, for an `Astro` failure other than its range |
 
 The 1.x atoms each became an exception:
@@ -174,7 +197,8 @@ The 1.x atoms each became an exception:
 | `{:error, :invalid_month}`, `{:error, :invalid_leap_month}` | `{:error, %Calendrical.InvalidMonthError{}}` |
 | `{:error, :undefined}`, `{:error, :not_defined}` | `{:error, %Calendrical.NotDefinedError{}}` |
 | `{:error, :year_out_of_range}`, `{:error, :not_found}` | `{:error, %Calendrical.UnsupportedDateRangeError{}}` |
-| `{:error, :unknown_territory}` | `{:error, %Calendrical.UnknownReformError{}}` |
+| `{:error, :unknown_territory}` | `{:error, %Calendrical.UnknownReformError{}}` from `Calendrical.Reform`, `{:error, %Calendrical.UnknownFiscalYearError{}}` from `Calendrical.FiscalYear` |
+| `{:error, :no_calendars_configured}` and the other atoms of `Calendrical.Composite.new/2` | `{:error, %Calendrical.InvalidCompositeError{reason: atom}}` |
 | `{:error, :incompatible_calendars}` | `{:error, %Calendrical.IncompatibleCalendarError{reason: :day_rollover}}` |
 
 `days_in_month/2` returns `{:error, %Calendrical.InvalidMonthError{}}` in every calendar for a month its year does not have, where it raised, answered `0` or gave another month's length in 1.x.

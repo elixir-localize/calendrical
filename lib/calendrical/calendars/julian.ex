@@ -177,45 +177,6 @@ defmodule Calendrical.Julian do
   end
 
   @doc """
-  Returns the year and era for the given Julian `year`.
-
-  The Julian calendar has two eras: the current era which starts in
-  year 1 and is defined as era `1`; and a second era for years less
-  than 1, defined as era `0`.
-
-  ### Arguments
-
-  * `year` is any non-zero Julian year as an integer.
-
-  ### Returns
-
-  * A two-tuple `{year_in_era, era}` where `era` is `0` or `1`.
-
-  * `{:error, %Calendrical.MissingFieldsError{}}` when `year` is not
-    an integer, as for a partial date with no year.
-
-  ### Examples
-
-      iex> Calendrical.Julian.year_of_era(2025)
-      {2025, 1}
-
-      iex> Calendrical.Julian.year_of_era(-50)
-      {50, 0}
-
-  """
-  @spec year_of_era(year) :: {year, era :: 0..1} | Calendrical.date_error()
-  def year_of_era(year) when not is_integer(year),
-    do: {:error, Calendrical.missing_year_error("year_of_era", year)}
-
-  def year_of_era(year) when year > 0 do
-    {year, 1}
-  end
-
-  def year_of_era(year) when year <= 0 do
-    {abs(year), 0}
-  end
-
-  @doc """
   Returns the year and era for the Julian date given by `year`,
   `month`, and `day`.
 
@@ -239,14 +200,16 @@ defmodule Calendrical.Julian do
       iex> Calendrical.Julian.year_of_era(2025, 1, 1)
       {2025, 1}
 
+      iex> Calendrical.Julian.year_of_era(-50, 1, 1)
+      {50, 0}
+
   """
   @impl Calendar
   @spec year_of_era(year, month, day) ::
           {year :: Calendar.year(), era :: 0..1} | Calendrical.date_error()
 
-  def year_of_era(year, _month, _day) do
-    year_of_era(year)
-  end
+  def year_of_era(year, _month, _day) when year > 0, do: {year, 1}
+  def year_of_era(year, _month, _day), do: {abs(year), 0}
 
   @doc """
   Returns the day-of-era and era for the given Julian date.
@@ -468,7 +431,12 @@ defmodule Calendrical.Julian do
   ### Returns
 
   * The whole number of `date_part`s from `from` to `to`, as an
-    integer.
+    integer, or
+
+  * `{:error, %Calendrical.InvalidDateError{}}` for a `from` or `to` the
+    calendar does not have, `{:error, %Calendrical.MissingFieldsError{}}`
+    for one missing a field, or `{:error, %Calendrical.InvalidPartError{}}`
+    for a `date_part` other than the five.
 
   ### Examples
 
@@ -480,7 +448,8 @@ defmodule Calendrical.Julian do
 
   """
   @impl Calendrical
-  @spec diff({year, month, day}, {year, month, day}, atom()) :: integer()
+  @spec diff({year, month, day}, {year, month, day}, atom()) ::
+          integer() | {:error, Exception.t()}
   def diff(from, to, date_part) do
     Calendrical.Base.Common.diff(__MODULE__, from, to, date_part)
   end
