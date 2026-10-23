@@ -12,4 +12,6 @@ defmodule Calendrical.DocCoverage.Test do
   doctest Calendrical.Julian
   doctest Calendrical.Lunisolar
   doctest Calendrical.NRF
+  doctest Calendrical.Period
+  doctest Calendrical.Shift
 end

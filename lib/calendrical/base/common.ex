@@ -1,12 +1,10 @@
 defmodule Calendrical.Base.Common do
   @moduledoc false
 
-  # Logic shared by the makers and the derived API: the week every
-  # calendar's weeks have, the calendar-aligned week numbering every
-  # calendar without its own weeks shares, and `diff/5`. See
-  # ARCHITECTURE.md for the division of labour between the layers.
-
-  @days_in_week 7
+  # Logic shared by the makers and the derived API: the days of a
+  # composite's year that have dates of their own, the date of a day of a
+  # year, the test of a calendar module, and `diff/5`. See ARCHITECTURE.md
+  # for the division of labour between the layers.
 
   # The behaviours a calendar implements. A loaded module that declares
   # both is a calendar, and what it then answers for each callback is its
@@ -14,87 +12,6 @@ defmodule Calendrical.Base.Common do
   # neither is not. `Calendrical.calendar_module?/1` and a composite's check
   # of its members ask here, each once the module is loaded.
   @calendar_behaviours [Calendar, Calendrical]
-
-  # The middle field is a month where the three are the fields of a date,
-  # and a week where a caller counts in its own year, week and day of the
-  # week.
-  defguard is_date(year, month_or_week, day)
-           when is_integer(year) and is_integer(month_or_week) and is_integer(day)
-
-  def days_in_week do
-    @days_in_week
-  end
-
-  def days_in_week(_year, _month_or_week) do
-    @days_in_week
-  end
-
-  # Calendar-aligned week numbering, which every calendar that does not
-  # compile its own weeks shares: weeks run on the calendar's own week
-  # boundary (the day its `day_of_week/4` numbers 1) and week 1 is the
-  # week containing the first day of the year, so a year that opens
-  # mid-week has a short week 1 and one that closes mid-week a short last
-  # week. Every date numbers within its own year — no ISO-style spill into
-  # the adjacent year's numbering. The year is the calendar's own
-  # `year/1`, which need not begin on the first day of its first month (a
-  # Julian year counted from 25 March).
-  def week_of_year(calendar, year, month, day) when is_date(year, month, day) do
-    with :ok <- valid_date(calendar, year, month, day),
-         {:ok, first, _days_in_year, offset} <- year_frame(calendar, year) do
-      day_of_year = calendar.date_to_iso_days(year, month, day) - first + 1
-      {year, div(day_of_year - 2 + offset, @days_in_week) + 1}
-    end
-  end
-
-  def week_of_year(calendar, year, month, day),
-    do: invalid_date(calendar, {year, month, day})
-
-  def weeks_in_year(calendar, year) do
-    case year_frame(calendar, year) do
-      {:ok, _first, days_in_year, offset} ->
-        weeks = weeks(days_in_year, offset)
-        {weeks, days_in_year + offset - 1 - (weeks - 1) * @days_in_week}
-
-      {:error, %Calendrical.InvalidDateError{}} = error ->
-        error
-    end
-  end
-
-  # The days of week `week` of `year`: the calendar week holding them,
-  # cut to the year.
-  def week(calendar, year, week) when is_integer(week) do
-    with {:ok, first, days_in_year, offset} <- year_frame(calendar, year),
-         :ok <- week_in_year(calendar, year, week, days_in_year, offset) do
-      first_day = first + max((week - 1) * @days_in_week - (offset - 1), 0)
-      last_day = min(first + week * @days_in_week - offset, first + days_in_year - 1)
-
-      week_range(calendar, first_day, last_day, year: year, week: week)
-    end
-  end
-
-  def week(calendar, year, week), do: invalid_date(calendar, year: year, week: week)
-
-  # The dates of a week, from its first day to its last. A day of a
-  # composite calendar can have no date of its own, its year, month and day
-  # naming another day: its week is cut to the days that have one, and is no
-  # range of dates where none has.
-  defp week_range(calendar, first_day, last_day, week) do
-    days =
-      if composite?(calendar),
-        do: dated_days(calendar, first_day, last_day),
-        else: {first_day, last_day}
-
-    case days do
-      {first_day, last_day} ->
-        Date.range(
-          date_from_iso_days(calendar, first_day),
-          date_from_iso_days(calendar, last_day)
-        )
-
-      nil ->
-        invalid_date(calendar, week)
-    end
-  end
 
   # The first and the last of the days from `first_day` to `last_day` that
   # have a date of their own, one that names the day itself, or nil where
@@ -110,79 +27,6 @@ defmodule Calendrical.Base.Common do
   defp date?(calendar, iso_days) do
     {year, month, day} = calendar.date_from_iso_days(iso_days)
     calendar.date_to_iso_days(year, month, day) == iso_days
-  end
-
-  # The weeks of a month, numbered as `week_of_year/4` numbers the weeks of
-  # a year: week 1 holds the month's first day and a week turns over on the
-  # calendar's own week boundary. Days count from the month's first in ISO
-  # days, so a month a calendar reform cuts short counts only its own.
-  def week_of_month(calendar, year, month, day) when is_date(year, month, day) do
-    with :ok <- valid_date(calendar, year, month, day),
-         {:ok, %Date.Range{first: first}} <- month_range(calendar, year, month) do
-      first_days = calendar.date_to_iso_days(first.year, first.month, first.day)
-      day_of_month = calendar.date_to_iso_days(year, month, day) - first_days + 1
-
-      {first_dow, _first, _last} =
-        calendar.day_of_week(first.year, first.month, first.day, :default)
-
-      {month, div(day_of_month - 2 + first_dow, @days_in_week) + 1}
-    end
-  end
-
-  def week_of_month(calendar, year, month, day),
-    do: invalid_date(calendar, {year, month, day})
-
-  defp valid_date(calendar, year, month, day) do
-    if calendar.valid_date?(year, month, day),
-      do: :ok,
-      else: invalid_date(calendar, {year, month, day})
-  end
-
-  defp week_in_year(calendar, year, week, days_in_year, offset) do
-    if week >= 1 and week <= weeks(days_in_year, offset),
-      do: :ok,
-      else: invalid_date(calendar, year: year, week: week)
-  end
-
-  # The days of a month as a range, where the calendar has the month.
-  defp month_range(calendar, year, month) do
-    case calendar.month(year, month) do
-      %Date.Range{} = range -> {:ok, range}
-      _no_month -> {:error, no_such_month(calendar, year, month)}
-    end
-  end
-
-  # The ISO 8601 week of the day, whichever calendar names it, as a
-  # week-based calendar's `iso_week_of_year/3` gives it.
-  def iso_week_of_year(calendar, year, month, day) when is_date(year, month, day) do
-    if calendar.valid_date?(year, month, day) do
-      {year, month, day} =
-        year
-        |> calendar.date_to_iso_days(month, day)
-        |> Calendrical.Gregorian.date_from_iso_days()
-
-      Calendrical.Gregorian.iso_week_of_year(year, month, day)
-    else
-      invalid_date(calendar, {year, month, day})
-    end
-  end
-
-  def iso_week_of_year(calendar, year, month, day),
-    do: invalid_date(calendar, {year, month, day})
-
-  defp weeks(days_in_year, offset), do: div(days_in_year - 2 + offset, @days_in_week) + 1
-
-  # The year's first day in ISO days, its length, and the position of its
-  # first day within its (calendar-native) week, 1-based: 1 when the year
-  # opens on the week's first day.
-  defp year_frame(calendar, year) do
-    case year_days(calendar, year) do
-      {:ok, first_days, last_days} ->
-        {:ok, first_days, last_days - first_days + 1, day_of_week_on(calendar, first_days)}
-
-      {:error, %Calendrical.InvalidDateError{}} = error ->
-        error
-    end
   end
 
   # The first and last days of a calendar's year, in ISO days. They are
@@ -207,64 +51,6 @@ defmodule Calendrical.Base.Common do
   end
 
   def year_days(calendar, year), do: invalid_date(calendar, year: year)
-
-  # The months a year has and the days a month of a year has, as the
-  # numbers themselves: runs of them, in order, and none for a year or a
-  # month the calendar does not have. A count (`months_in_year/1`,
-  # `days_in_month/2`) says which numbers they are only where they run from
-  # 1 with none missing, which is every year and month of a calendar that is
-  # no composite.
-  def month_numbers(calendar, year) when is_integer(year),
-    do: counted_from_one(months_in(calendar, year))
-
-  def month_numbers(_calendar, _year), do: []
-
-  def day_numbers(calendar, year, month)
-      when is_integer(year) and is_integer(month) and month >= 1 do
-    if month <= months_in(calendar, year),
-      do: counted_from_one(calendar.days_in_month(year, month)),
-      else: []
-  end
-
-  def day_numbers(_calendar, _year, _month), do: []
-
-  defp counted_from_one(count) when is_integer(count) and count >= 1, do: [1..count//1]
-  defp counted_from_one(_no_count), do: []
-
-  # A composite calendar changes from one calendar to another on a day, so
-  # the year and the month that day is in have the months and the days that
-  # are left: `Calendrical.Reform.England`'s 1751 has the months 3 to 12,
-  # and its September 1752 the days 1, 2 and 14 to 30. Its months are those
-  # that have days, and a month's days those of its dates.
-  def dated_month_numbers(calendar, year) when is_integer(year) do
-    1..months_in(calendar, year)//1
-    |> Enum.filter(&has_days?(calendar.days_in_month(year, &1)))
-    |> runs()
-  end
-
-  def dated_month_numbers(_calendar, _year), do: []
-
-  # A month has days where the calendar counts some in it: the count is
-  # asked, and the month's dates are not built to find that there are any.
-  defp has_days?(days), do: is_integer(days) and days > 0
-
-  def dated_day_numbers(calendar, year, month) when is_integer(year) and is_integer(month) do
-    case calendar.month(year, month) do
-      %Date.Range{} = dates -> dates |> Enum.map(& &1.day) |> runs()
-      _no_such_month -> []
-    end
-  end
-
-  def dated_day_numbers(_calendar, _year, _month), do: []
-
-  # Whole numbers in order as the runs they make: `[1, 2, 14, 15]` is
-  # `[1..2, 14..15]`.
-  defp runs([]), do: []
-  defp runs([first | rest]), do: runs(rest, first, first)
-
-  defp runs([number | rest], first, last) when number == last + 1, do: runs(rest, first, number)
-  defp runs([number | rest], first, last), do: [first..last//1 | runs(rest, number, number)]
-  defp runs([], first, last), do: [first..last//1]
 
   # A day of a year as the calendar wrote it. In a composite calendar that
   # is the date the calendar in effect on the day gives it, even where the
@@ -293,59 +79,6 @@ defmodule Calendrical.Base.Common do
   def date_from_day_of_year(calendar, year, day_of_year),
     do: invalid_date(calendar, year: year, day_of_year: day_of_year)
 
-  # The days of a named month in a year, in the order of time: one range
-  # for each month the year counts that carries the name. A month carries
-  # the name its own dates are of (`month_of_year/3`, named once by
-  # `cardinal_month/1`), which is not the name of its number in every
-  # calendar: the ninth month of a Hebrew year of twelve is of the tenth
-  # month CLDR names, Sivan.
-  def named_month(calendar, year, named_month) when is_integer(year) do
-    for month <- 1..months_in(calendar, year)//1,
-        %Date.Range{first: first} = range <- [calendar.month(year, month)],
-        month_named(calendar, first) == named_month do
-      range
-    end
-  end
-
-  def named_month(_calendar, _year, _named_month), do: []
-
-  # The date a written date names in a calendar whose dates are written as
-  # its own: the year and the day as written, and the month of the year
-  # whose name, its `cardinal_month/1` of its month of the year, is the one
-  # written. A leap month's name is its own (`{month, :leap}`), so the
-  # month written alone is the year's other month of that number, where it
-  # has one.
-  def date_from_cardinal_date(calendar, year, named_month, day)
-      when is_integer(year) and is_integer(named_month) and is_integer(day) do
-    month =
-      Enum.find(
-        1..months_in(calendar, year)//1,
-        &(written_month(calendar, year, &1) == named_month)
-      )
-
-    if month && calendar.valid_date?(year, month, day),
-      do: {year, month, day},
-      else: invalid_date(calendar, year: year, month: named_month, day: day)
-  end
-
-  def date_from_cardinal_date(calendar, year, named_month, day),
-    do: invalid_date(calendar, year: year, month: named_month, day: day)
-
-  defp written_month(calendar, year, month) do
-    case calendar.month_of_year(year, month, 1) do
-      month_of_year when is_integer(month_of_year) -> calendar.cardinal_month(month_of_year)
-      _leap_or_no_month -> nil
-    end
-  end
-
-  defp month_named(calendar, %Date{year: year, month: month, day: day}) do
-    case calendar.month_of_year(year, month, day) do
-      {month_of_year, :leap} -> calendar.cardinal_month(month_of_year)
-      month_of_year when is_integer(month_of_year) -> calendar.cardinal_month(month_of_year)
-      _no_month -> nil
-    end
-  end
-
   def calendar_behaviours?(module) do
     declared =
       :attributes
@@ -356,120 +89,14 @@ defmodule Calendrical.Base.Common do
     Enum.all?(@calendar_behaviours, &(&1 in declared))
   end
 
-  # The traditional months of a calendar whose months are their own
-  # numbering: each is named by its place in the year, and none is a leap
-  # month. A lunisolar calendar answers the first two for itself.
-  def lunar_month_of_year(calendar, year, month)
-      when is_integer(year) and is_integer(month) and month >= 1 do
-    if month <= months_in(calendar, year),
-      do: month,
-      else: {:error, no_such_month(calendar, year, month)}
-  end
-
-  def lunar_month_of_year(calendar, year, month),
-    do: {:error, no_such_month(calendar, year, month)}
-
-  def ordinal_month_from_traditional(calendar, year, month)
-      when is_integer(year) and is_integer(month) and month >= 1 do
-    if month <= months_in(calendar, year),
-      do: {:ok, month},
-      else: {:error, no_such_month(calendar, year, month)}
-  end
-
-  def ordinal_month_from_traditional(calendar, year, month),
-    do: {:error, no_such_month(calendar, year, month)}
-
-  # A year's months in order as they are named: the months it numbers, and
-  # its leap month after the month it follows. Both are the calendar's own
-  # to say (`traditional_leap_month/1`, `months_in_year/1`), so a year is
-  # asked for its leap month once, and no month for its name.
-  def traditional_months(calendar, year) when is_integer(year) do
-    months = months_in(calendar, year)
-
-    case calendar.traditional_leap_month(year) do
-      follows when is_integer(follows) ->
-        Enum.flat_map(1..(months - 1)//1, &with_leap_month_after(&1, follows))
-
-      _no_leap_month ->
-        Enum.to_list(1..months//1)
-    end
-  end
-
-  def traditional_months(_calendar, _year), do: []
-
-  defp with_leap_month_after(month, month), do: [month, {month, :leap}]
-  defp with_leap_month_after(month, _follows), do: [month]
-
-  # A month as the calendar names it, and the inverse: the calendar's own
-  # `lunar_month_of_year/2` and `ordinal_month_from_traditional/2`, asked
-  # only for a month the year has (`month_numbers/1`), since a lunisolar
-  # calendar answers a place beyond its year with a month of the next, and
-  # answered with the month or an error naming the month.
-  def traditional_month(calendar, year, month) when is_integer(year) and is_integer(month) do
-    if month_of_year?(calendar, year, month),
-      do: named_month(calendar.lunar_month_of_year(year, month), calendar, year, month),
-      else: {:error, no_such_month(calendar, year, month)}
-  end
-
-  def traditional_month(calendar, year, month), do: {:error, no_such_month(calendar, year, month)}
-
-  def month_from_traditional(calendar, year, traditional_month) when is_integer(year) do
-    with {:ok, month} <- calendar.ordinal_month_from_traditional(year, traditional_month),
-         true <- month_of_year?(calendar, year, month) do
-      month
-    end
-    |> named_month(calendar, year, traditional_month)
-  end
-
-  def month_from_traditional(calendar, year, traditional_month),
-    do: {:error, no_such_month(calendar, year, traditional_month)}
-
-  defp named_month(month, _calendar, _year, _asked) when is_integer(month), do: month
-  defp named_month({month, :leap}, _calendar, _year, _asked), do: {month, :leap}
-
-  defp named_month(_no_month, calendar, year, asked),
-    do: {:error, no_such_month(calendar, year, asked)}
-
-  defp month_of_year?(calendar, year, month) do
-    Enum.any?(calendar.month_numbers(year), &(month in &1))
-  end
-
-  defp no_such_month(calendar, year, month) do
-    Calendrical.InvalidMonthError.exception(calendar: calendar, year: year, month: month)
-  end
-
   defp invalid_date(calendar, value) do
     {:error, Calendrical.InvalidDateError.exception(calendar: calendar, value: value)}
-  end
-
-  # The months a year has, which is none for a year the calendar lacks.
-  defp months_in(calendar, year) do
-    case calendar.months_in_year(year) do
-      months when is_integer(months) -> months
-      _no_such_year -> 0
-    end
   end
 
   # A composite calendar answers for the days of its years, and for a shift
   # of years and months, itself.
   def composite?(calendar) do
     Code.ensure_loaded?(calendar) and function_exported?(calendar, :year_bounds, 1)
-  end
-
-  # The day of the week of a day, as the calendar in effect on it numbers
-  # the days of the week.
-  defp day_of_week_on(calendar, iso_days) do
-    calendar =
-      if composite?(calendar), do: calendar.calendar_for_iso_days(iso_days), else: calendar
-
-    {year, month, day} = calendar.date_from_iso_days(iso_days)
-    {day_of_week, _first, _last} = calendar.day_of_week(year, month, day, :default)
-    day_of_week
-  end
-
-  defp date_from_iso_days(calendar, iso_days) do
-    {year, month, day} = calendar.date_from_iso_days(iso_days)
-    %Date{year: year, month: month, day: day, calendar: calendar}
   end
 
   # The whole number of `date_part`s from `from` to `to` in `calendar`: the

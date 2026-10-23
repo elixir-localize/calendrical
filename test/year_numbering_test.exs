@@ -62,6 +62,21 @@ defmodule Calendrical.YearNumberingTest do
     calendar
   end
 
+  # The calendars are built once, here, through the one `Calendrical.Compiler`
+  # server, which compiles one calendar at a time: built in the tests, the
+  # four tests queue on it and a slow runner outlasts the test timeout.
+  setup_all do
+    calendars =
+      for anchor <- [:begins, :ends],
+          year_option <- [:beginning, :ending],
+          month <- 1..12,
+          into: %{} do
+        {{anchor, year_option, month}, week_calendar(anchor, month, year_option)}
+      end
+
+    {:ok, calendars: calendars}
+  end
+
   # The Gregorian years holding the first and the last week of `year`.
   defp beginning_and_ending(calendar, year) do
     first = calendar.first_gregorian_day_of_year(year)
@@ -74,11 +89,12 @@ defmodule Calendrical.YearNumberingTest do
   defp named_year(:ending, _beginning, ending), do: ending
 
   for anchor <- [:begins, :ends], year_option <- [:beginning, :ending] do
-    test "a calendar of weeks that #{anchor} by its rule, year_number: #{year_option}" do
+    test "a calendar of weeks that #{anchor} by its rule, year_number: #{year_option}",
+         %{calendars: calendars} do
       year_option = unquote(year_option)
 
       for month <- 1..12, year <- @years do
-        calendar = week_calendar(unquote(anchor), month, year_option)
+        calendar = Map.fetch!(calendars, {unquote(anchor), year_option, month})
         {beginning, ending} = beginning_and_ending(calendar, year)
         named = named_year(year_option, beginning, ending)
         context = "#{inspect(calendar)}, year #{year}"
