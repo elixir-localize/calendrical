@@ -95,6 +95,20 @@ defmodule Calendrical.Composite.Compiler do
       is in effect on, its base member's year 0 and the weeks of the
       member in effect last.
 
+      ### Returns
+
+      * A `t:Calendrical.Info.t/0` describing this calendar, whose
+        `:members` are `{first_iso_day, calendar}` tuples in the order the
+        member calendars take effect, the base calendar's first day being
+        `nil`.
+
+      ### Examples
+
+          iex> #{inspect(__MODULE__)}.info().calendar
+          #{inspect(__MODULE__)}
+          iex> match?([{nil, _base_calendar} | _], #{inspect(__MODULE__)}.info().members)
+          true
+
       """
       @impl true
       def info do
@@ -171,11 +185,59 @@ defmodule Calendrical.Composite.Compiler do
       This function derives the calendar we delegate to for a given
       date based upon the configuration.
 
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      * `month` is a month of the year.
+
+      * `day` is a day of the month.
+
+      ### Returns
+
+      * The member calendar module in effect on the date.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> calendar = #{inspect(__MODULE__)}.calendar_for_date(date.year, date.month, date.day)
+          iex> calendar in Enum.map(#{inspect(__MODULE__)}.info().members, &elem(&1, 1))
+          true
+
       """
       def calendar_for_date(year, month, day) do
         elem(@segment_calendars, segment_for_date(year, month, day))
       end
 
+      @doc """
+      Identify the member calendar in effect on a given date struct.
+
+      A date of this calendar is looked up by its year, month and day. A
+      date of any other calendar is first converted to this calendar.
+
+      ### Arguments
+
+      * `date` is any date map with `:year`, `:month`, `:day` and
+        `:calendar` fields, such as a `t:Date.t/0`.
+
+      ### Returns
+
+      * The member calendar module in effect on the date.
+
+      * Raises if a date of another calendar cannot be converted to
+        this calendar.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.calendar_for_date(date) ==
+          ...>   #{inspect(__MODULE__)}.calendar_for_date(date.year, date.month, date.day)
+          true
+          iex> #{inspect(__MODULE__)}.calendar_for_date(~D[2024-06-01]) ==
+          ...>   #{inspect(__MODULE__)}.calendar_for_date(date)
+          true
+
+      """
       def calendar_for_date(%{year: year, month: month, day: day, calendar: __MODULE__}) do
         calendar_for_date(year, month, day)
       end
@@ -189,6 +251,22 @@ defmodule Calendrical.Composite.Compiler do
       @doc """
       Identify the base calendar for a given iso_days.
 
+      ### Arguments
+
+      * `iso_days` is an integer number of days since the ISO epoch.
+
+      ### Returns
+
+      * The member calendar module in effect on that day.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> iso_days = Date.to_gregorian_days(~D[2024-06-01])
+          iex> #{inspect(__MODULE__)}.calendar_for_iso_days(iso_days) ==
+          ...>   #{inspect(__MODULE__)}.calendar_for_date(date.year, date.month, date.day)
+          true
+
       """
       def calendar_for_iso_days(iso_days) do
         elem(@segment_calendars, segment_index(iso_days))
@@ -196,6 +274,31 @@ defmodule Calendrical.Composite.Compiler do
 
       @doc """
       Determines if the date given is valid according to this calendar.
+
+      A date is valid when the member calendar in effect on it accepts it
+      and the day it names is one that calendar governs, so a date a
+      change of calendar took out is not valid.
+
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      * `month` is a month of the year.
+
+      * `day` is a day of the month.
+
+      ### Returns
+
+      * `true` if the year, month and day are a date of this calendar,
+        otherwise `false`.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.valid_date?(date.year, date.month, date.day)
+          true
+          iex> #{inspect(__MODULE__)}.valid_date?(date.year, date.month, 0)
+          false
 
       """
       @impl true
@@ -225,6 +328,27 @@ defmodule Calendrical.Composite.Compiler do
       and `day`. The result is in the context of the calendar in
       effect on that date.
 
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      * `month` is a month of the year.
+
+      * `day` is a day of the month.
+
+      ### Returns
+
+      * `{year_of_era, era}` where `year_of_era` is the year within the
+        era and `era` is the era's index, as the member calendar in effect
+        on the date gives them.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> {year_of_era, era} = #{inspect(__MODULE__)}.year_of_era(date.year, date.month, date.day)
+          iex> is_integer(year_of_era) and is_integer(era)
+          true
+
       """
       @spec year_of_era(year, month, day) :: {year, era :: non_neg_integer}
       @impl true
@@ -243,6 +367,27 @@ defmodule Calendrical.Composite.Compiler do
       its last. So the day after 2 September 1752 in England, 14
       September, is the next day of the era.
 
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      * `month` is a month of the year.
+
+      * `day` is a day of the month.
+
+      ### Returns
+
+      * `{day_of_era, era}` where `day_of_era` is the day within the era
+        and `era` is the era's index, the same era `year_of_era/3` gives.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> {day_of_era, era} = #{inspect(__MODULE__)}.day_of_era(date.year, date.month, date.day)
+          iex> {_year_of_era, year_era} = #{inspect(__MODULE__)}.year_of_era(date.year, date.month, date.day)
+          iex> day_of_era >= 1 and era == year_era
+          true
+
       """
       @impl true
       def day_of_era(year, month, day) do
@@ -255,6 +400,31 @@ defmodule Calendrical.Composite.Compiler do
       `{year, month, day}` to another, the inverse of `shift/6`,
       counted through each calendar a span crosses.
 
+      ### Arguments
+
+      * `from` is the `{year, month, day}` the count starts from.
+
+      * `to` is the `{year, month, day}` the count ends at.
+
+      * `date_part` is one of `:years`, `:quarters`, `:months`, `:weeks`
+        or `:days`.
+
+      ### Returns
+
+      * The largest whole number of `date_part`s `shift/6` can add to the
+        earlier date without passing the later one, as an integer. It is
+        negative when `to` is before `from`.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> from = {date.year, date.month, date.day}
+          iex> to = #{inspect(__MODULE__)}.shift(date.year, date.month, date.day, :months, 3)
+          iex> #{inspect(__MODULE__)}.diff(from, to, :months)
+          3
+          iex> #{inspect(__MODULE__)}.diff(to, from, :months)
+          -3
+
       """
       @impl true
       def diff(from, to, date_part) do
@@ -263,6 +433,27 @@ defmodule Calendrical.Composite.Compiler do
 
       @doc """
       Returns the figures a date is written with: the member calendar's.
+
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      * `month` is a month of the year.
+
+      * `day` is a day of the month.
+
+      ### Returns
+
+      * `{year, month, day}` as the member calendar in effect on the date
+        writes it, where `month` may be `{number, :leap}` for the leap
+        month of a lunisolar member.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> {year, month, day} = #{inspect(__MODULE__)}.written_date(date.year, date.month, date.day)
+          iex> #{inspect(__MODULE__)}.date_from_written_date(year, month, day)
+          {:ok, {date.year, date.month, date.day}}
 
       """
       @impl true
@@ -274,6 +465,32 @@ defmodule Calendrical.Composite.Compiler do
       Returns the date of this calendar that written figures name: the
       date of the member calendar in effect on the day they name, in this
       calendar's own fields.
+
+      ### Arguments
+
+      * `year` is the written year.
+
+      * `month` is the written month, an integer or `{number, :leap}`
+        for the leap month of a lunisolar member.
+
+      * `day` is the written day.
+
+      ### Returns
+
+      * `{:ok, {year, month, day}}` with the date of this calendar the
+        figures name.
+
+      * `{:error, :invalid_date}` if no member calendar in effect on the
+        day reads the figures as a date.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> {year, month, day} = #{inspect(__MODULE__)}.written_date(date.year, date.month, date.day)
+          iex> #{inspect(__MODULE__)}.date_from_written_date(year, month, day)
+          {:ok, {date.year, date.month, date.day}}
+          iex> #{inspect(__MODULE__)}.date_from_written_date(date.year, 13, 40)
+          {:error, :invalid_date}
 
       """
       @impl true
@@ -359,6 +576,25 @@ defmodule Calendrical.Composite.Compiler do
       has none: England's January and February 1751, since its 1751 began
       on 25 March.
 
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      * `month` is a month of the year.
+
+      ### Returns
+
+      * The number of days that carry the label of `year` and `month`,
+        as a non-negative integer. It is `0` for a month no day carries.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.days_in_month(date.year, date.month) >= date.day
+          true
+          iex> #{inspect(__MODULE__)}.days_in_month(date.year, 0)
+          0
+
       """
       @impl true
       def days_in_month(year, month) do
@@ -383,8 +619,22 @@ defmodule Calendrical.Composite.Compiler do
       answers 12; Russia's 1492, which ended on 31 August, answers 8. A
       year no day carries answers `0`.
 
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      ### Returns
+
+      * The number of the last month of the year that has days, as a
+        non-negative integer. It is `0` for a year no day carries.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.months_in_year(date.year) >= date.month
+          true
+
       """
-      @impl true
       @impl true
       def months_in_year(year) do
         year
@@ -479,6 +729,22 @@ defmodule Calendrical.Composite.Compiler do
       Returns whether the given year is a leap year, in the context
       of the calendar in effect on the first day of that year.
 
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      ### Returns
+
+      * `true` if the member calendar in effect on month 1 day 1 of
+        `year` counts it a leap year, otherwise `false`.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> calendar = #{inspect(__MODULE__)}.calendar_for_date(date.year, 1, 1)
+          iex> #{inspect(__MODULE__)}.leap_year?(date.year) == calendar.leap_year?(date.year)
+          true
+
       """
       @impl true
       def leap_year?(year) do
@@ -487,8 +753,28 @@ defmodule Calendrical.Composite.Compiler do
       end
 
       @doc """
-      Returns the number of days since the calendar epoch for the
+      Returns the number of days since the ISO epoch for the
       given `year-month-day`.
+
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      * `month` is a month of the year.
+
+      * `day` is a day of the month.
+
+      ### Returns
+
+      * The number of days since the ISO epoch, as an integer, computed by
+        the member calendar in effect on the date.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.date_to_iso_days(date.year, date.month, date.day) ==
+          ...>   Date.to_gregorian_days(~D[2024-06-01])
+          true
 
       """
       @impl true
@@ -496,6 +782,35 @@ defmodule Calendrical.Composite.Compiler do
         calendar_for_date(year, month, day).date_to_iso_days(year, month, day)
       end
 
+      @doc """
+      Returns the number of days since the ISO epoch for the
+      given date struct.
+
+      A date of this calendar is counted from its year, month and day. A
+      date of any other calendar is first converted to this calendar.
+
+      ### Arguments
+
+      * `date` is any date map with `:year`, `:month`, `:day` and
+        `:calendar` fields, such as a `t:Date.t/0`.
+
+      ### Returns
+
+      * The number of days since the ISO epoch, as an integer.
+
+      * Raises if a date of another calendar cannot be converted to
+        this calendar.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.date_to_iso_days(date) == Date.to_gregorian_days(~D[2024-06-01])
+          true
+          iex> #{inspect(__MODULE__)}.date_to_iso_days(~D[2024-06-01]) ==
+          ...>   #{inspect(__MODULE__)}.date_to_iso_days(date)
+          true
+
+      """
       def date_to_iso_days(%{year: year, month: month, day: day, calendar: __MODULE__}) do
         date_to_iso_days(year, month, day)
       end
@@ -515,6 +830,21 @@ defmodule Calendrical.Composite.Compiler do
       later day that has one, as a shift into the days a reform took out
       reaches the day after them: England's 1 January to 24 March 1156,
       whose dates are 1155's, are written as 25 March 1156.
+
+      ### Arguments
+
+      * `iso_days` is an integer number of days since the ISO epoch.
+
+      ### Returns
+
+      * `{year, month, day}`, the date of this calendar for the day, as
+        the member calendar in effect on it writes it.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.date_from_iso_days(Date.to_gregorian_days(~D[2024-06-01]))
+          {date.year, date.month, date.day}
 
       """
       @impl true
@@ -549,6 +879,43 @@ defmodule Calendrical.Composite.Compiler do
       exists, or its last day: one month after 5 August 1752 is
       14 September 1752 and one month after 31 January is the last day
       of February. Weeks and days count days.
+
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      * `month` is a month of the year.
+
+      * `day` is a day of the month.
+
+      * `date_part` is one of `:years`, `:quarters`, `:months`, `:weeks`
+        or `:days`.
+
+      * `increment` is the positive or negative integer number of
+        `date_part`s to add.
+
+      * `options` is a keyword list of options.
+
+      ### Options
+
+      * `:clamp` is accepted for the `c:Calendrical.shift/6` callback but
+        has no effect: a day the resulting month does not have is always
+        brought into it as described above.
+
+      ### Returns
+
+      * `{year, month, day}`, the date of this calendar reached.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> {year, month, day} = #{inspect(__MODULE__)}.shift(date.year, date.month, date.day, :days, 10)
+          iex> #{inspect(__MODULE__)}.date_to_iso_days(year, month, day) -
+          ...>   #{inspect(__MODULE__)}.date_to_iso_days(date.year, date.month, date.day)
+          10
+          iex> to = #{inspect(__MODULE__)}.shift(date.year, date.month, date.day, :years, 1)
+          iex> #{inspect(__MODULE__)}.diff({date.year, date.month, date.day}, to, :years)
+          1
 
       """
       @impl true
@@ -746,23 +1113,31 @@ defmodule Calendrical.Composite.Compiler do
         %{first_month: first, last_month: last} = segment = Enum.at(@segments, index)
 
         before =
-          with true <- civil_month == first,
-               %{last_month: ^civil_month} = previous <- Enum.at(@segments, index - 1) do
-            [previous]
-          else
-            _not_shared -> []
-          end
+          shared_neighbour(
+            civil_month == first,
+            Enum.at(@segments, index - 1),
+            :last_month,
+            civil_month
+          )
 
         later =
-          with true <- civil_month == last,
-               %{first_month: ^civil_month} = next <- Enum.at(@segments, index + 1) do
-            [next]
-          else
-            _not_shared -> []
-          end
+          shared_neighbour(
+            civil_month == last,
+            Enum.at(@segments, index + 1),
+            :first_month,
+            civil_month
+          )
 
         [segment | before ++ later]
       end
+
+      # The neighbouring segment, as a list, where the month is at this
+      # segment's edge and the neighbour labels its own edge month the same.
+      defp shared_neighbour(true, %{} = neighbour, edge, civil_month) do
+        if Map.fetch!(neighbour, edge) == civil_month, do: [neighbour], else: []
+      end
+
+      defp shared_neighbour(_at_edge?, _neighbour, _edge, _civil_month), do: []
 
       defp civil_day(segments, {civil_year, civil_month}, day) do
         Enum.find_value(segments, fn %{calendar: calendar} = segment ->

@@ -93,6 +93,15 @@ defmodule Calendrical.Vietnamese do
   alias Astro.Time
   alias Calendrical.Lunisolar
 
+  @mid_autumn_month 8
+  @mid_autumn_day 15
+
+  # 1 January 1968: North Vietnam's switch from UTC+8 to UTC+7 (decree of
+  # 8 August 1967). No new moon or solstice falls near a day boundary between
+  # the decree and the year boundary, so 1968-01-01 and 1967-08-08 yield
+  # identical dates.
+  @vietnam_1968 Calendrical.Gregorian.date_to_iso_days(1968, 1, 1)
+
   @doc """
   Returns the Gregorian date of Tết (Vietnamese Lunar New Year) for a
   given Gregorian year.
@@ -147,9 +156,6 @@ defmodule Calendrical.Vietnamese do
       ~D[2023-09-29]
 
   """
-  @mid_autumn_month 8
-  @mid_autumn_day 15
-
   @spec mid_autumn_for_gregorian_year(Calendar.year()) :: Date.t()
   def mid_autumn_for_gregorian_year(gregorian_year) when is_integer(gregorian_year) do
     gregorian_date_for_lunar(gregorian_year, @mid_autumn_month, @mid_autumn_day)
@@ -159,12 +165,6 @@ defmodule Calendrical.Vietnamese do
   def new_moon_on_or_after(iso_days) do
     Lunisolar.new_moon_on_or_after(iso_days, &location/1)
   end
-
-  # 1 January 1968: North Vietnam's switch from UTC+8 to UTC+7 (decree of
-  # 8 August 1967). No new moon or solstice falls near a day boundary between
-  # the decree and the year boundary, so 1968-01-01 and 1967-08-08 yield
-  # identical dates.
-  @vietnam_1968 Calendrical.Gregorian.date_to_iso_days(1968, 1, 1)
 
   # A reference longitude and UT offset are required to place new moons and
   # solar terms on a civil day. From 1968 the Vietnamese calendar is computed

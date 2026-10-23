@@ -135,11 +135,24 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
 
   * **Era 4** (≥ 1423 AH): full Umm al-Qura rule (conjunction before sunset AND
     moonset after sunset).
+
   * **Era 3** (1420–1422 AH): moonset-after-sunset only.
+
   * **Era 2** (1392–1419 AH): conjunction within 3 h of 0 h UTC.
 
-  Returns `{:ok, %Date{}}` on success, or `{:error, reason}` if the year/month
-  falls outside the supported range (< 1392 AH or invalid month).
+  ### Arguments
+
+  * `hijri_year` is the Hijri year, from 1392 AH.
+
+  * `hijri_month` is the Hijri month, from `1` to `12`.
+
+  ### Returns
+
+  * `{:ok, date}` where `date` is the Gregorian `t:Date.t/0` of the
+    first day of the month.
+
+  * `{:error, reason}` if the year or month falls outside the
+    supported range (before 1392 AH, or an invalid month).
 
   ### Examples
 
@@ -293,14 +306,42 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
   Umm al-Qura rule for the given Gregorian date (which should be the 29th day
   of the current Hijri month).
 
-  Returned map keys:
-    - `:date`               – the candidate 29th Gregorian date
-    - `:conjunction_utc`    – `DateTime` of geocentric conjunction (new moon)
-    - `:sunset_mecca`       – `DateTime` of sunset in Mecca (UTC)
-    - `:moonset_mecca`      – `DateTime` of moonset in Mecca (UTC), or `:no_time`
-    - `:conjunction_before_sunset` – boolean
-    - `:moonset_after_sunset`      – boolean
-    - `:new_month_starts_next_day` – boolean (true iff both conditions are met)
+  ### Arguments
+
+  * `date` is the Gregorian `t:Date.t/0` of the candidate 29th day
+    of the Hijri month.
+
+  ### Returns
+
+  * `{:ok, map}` where the map has these keys:
+
+    * `:date` is the candidate 29th Gregorian date.
+
+    * `:conjunction_utc` is the `t:DateTime.t/0` of the geocentric
+      conjunction (new moon).
+
+    * `:sunset_mecca` is the `t:DateTime.t/0` of sunset in Mecca (UTC).
+
+    * `:moonset_mecca` is the `t:DateTime.t/0` of moonset in Mecca
+      (UTC), or `:no_time`.
+
+    * `:conjunction_before_sunset?` is a boolean.
+
+    * `:moonset_after_sunset?` is a boolean.
+
+    * `:new_month_starts_next_day?` is `true` when both conditions
+      are met, otherwise `false`.
+
+  * `{:error, reason}` if the conjunction or the sunset cannot be
+    calculated.
+
+  ### Examples
+
+      iex> {:ok, evaluation} =
+      ...>   Calendrical.Islamic.UmmAlQura.Astronomical.evaluate_era_4_conditions(~D[2025-02-28])
+      iex> evaluation.new_month_starts_next_day?
+      true
+
   """
   @spec evaluate_era_4_conditions(Date.t()) :: {:ok, map()} | {:error, term()}
   def evaluate_era_4_conditions(%Date{} = date) do

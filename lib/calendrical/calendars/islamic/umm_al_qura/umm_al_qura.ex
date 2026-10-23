@@ -189,6 +189,16 @@ defmodule Calendrical.Islamic.UmmAlQura do
   @doc """
   Returns the first Hijri year covered by the embedded Umm al-Qura
   tables.
+
+  ### Returns
+
+  * The first Hijri year of the tables, as an integer.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.UmmAlQura.min_year()
+      1
+
   """
   # The literal bound of the shipped table; dialyzer keeps this spec
   # synchronized with the data.
@@ -198,6 +208,16 @@ defmodule Calendrical.Islamic.UmmAlQura do
   @doc """
   Returns the last Hijri year covered by the embedded Umm al-Qura
   tables: KACST's to 1500 AH, then ICU's.
+
+  ### Returns
+
+  * The last Hijri year of the tables, as an integer.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.UmmAlQura.max_year()
+      1600
+
   """
   # The literal bound of the shipped reference table; dialyzer
   # keeps this spec synchronized with the data.
@@ -208,9 +228,28 @@ defmodule Calendrical.Islamic.UmmAlQura do
   Returns the Gregorian `t:Calendar.date/0` of the first day of the given
   Hijri month according to the official Umm al-Qura tables.
 
-  Returns `{:error, %Calendrical.IslamicYearOutOfRangeError{}}` if the
-  requested month falls outside the embedded data range, where the
-  calendar's months are the civil calendar's.
+  ### Arguments
+
+  * `hijri_year` is the Hijri year.
+
+  * `hijri_month` is the Hijri month, from `1` to `12`.
+
+  ### Returns
+
+  * `{:ok, date}` where `date` is the Gregorian `t:Date.t/0` of the
+    first day of the month.
+
+  * `{:error, %Calendrical.IslamicYearOutOfRangeError{}}` if the
+    requested month falls outside the embedded data range, where the
+    calendar's months are the civil calendar's.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.UmmAlQura.first_day_of_month(1446, 9)
+      {:ok, ~D[2025-03-01]}
+
+      iex> {:error, %Calendrical.IslamicYearOutOfRangeError{}} =
+      ...>   Calendrical.Islamic.UmmAlQura.first_day_of_month(1700, 1)
 
   """
   @spec first_day_of_month(year, month) ::
@@ -241,6 +280,27 @@ defmodule Calendrical.Islamic.UmmAlQura do
   A date is valid if its `month` is in `1..12` and its `day` is between
   1 and the number of days in that month: by the published tables for
   1 AH to 1500 AH, and by the civil calendar for other years.
+
+  ### Arguments
+
+  * `year` is the Hijri year.
+
+  * `month` is the Hijri month.
+
+  * `day` is the day of the month.
+
+  ### Returns
+
+  * `true` if the date is valid, otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.UmmAlQura.valid_date?(1446, 9, 1)
+      true
+
+      iex> Calendrical.Islamic.UmmAlQura.valid_date?(1446, 13, 1)
+      false
+
   """
   @impl true
   def valid_date?(year, month, day)
@@ -260,6 +320,23 @@ defmodule Calendrical.Islamic.UmmAlQura do
 
   @doc """
   Returns whether the given Hijri `year` is a leap year (355 days).
+
+  ### Arguments
+
+  * `year` is the Hijri year.
+
+  ### Returns
+
+  * `true` if the year has 355 days, otherwise `false`.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.UmmAlQura.leap_year?(1447)
+      true
+
+      iex> Calendrical.Islamic.UmmAlQura.leap_year?(1446)
+      false
+
   """
   @impl true
   def leap_year?(year) do
@@ -275,6 +352,22 @@ defmodule Calendrical.Islamic.UmmAlQura do
   Returns the number of days in the given Hijri `year` and `month`.
   Months are 29 or 30 days as determined by the published Umm al-Qura
   tables, or by the civil calendar outside them.
+
+  ### Arguments
+
+  * `year` is the Hijri year.
+
+  * `month` is the Hijri month, from `1` to `12`.
+
+  ### Returns
+
+  * The number of days in the month, `29` or `30`.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.UmmAlQura.days_in_month(1446, 9)
+      29
+
   """
   @impl true
   @spec days_in_month(year, month) :: 29..30
@@ -290,6 +383,25 @@ defmodule Calendrical.Islamic.UmmAlQura do
   Returns the number of ISO days for the given Umm al-Qura
   `year`, `month`, and `day`, by the civil calendar outside the
   published tables.
+
+  ### Arguments
+
+  * `year` is the Hijri year.
+
+  * `month` is the Hijri month.
+
+  * `day` is the day of the month.
+
+  ### Returns
+
+  * The number of days since the ISO epoch, as an integer.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.UmmAlQura.date_to_iso_days(1446, 9, 1) ==
+      ...>   Date.to_gregorian_days(~D[2025-03-01])
+      true
+
   """
   @spec date_to_iso_days(year, month, day) :: integer()
   @impl true
@@ -308,6 +420,21 @@ defmodule Calendrical.Islamic.UmmAlQura do
   @doc """
   Returns the Umm al-Qura `{year, month, day}` for the given ISO day
   number, by the civil calendar outside the published tables.
+
+  ### Arguments
+
+  * `iso_days` is the number of days since the ISO epoch.
+
+  ### Returns
+
+  * A `{year, month, day}` tuple.
+
+  ### Examples
+
+      iex> iso_days = Date.to_gregorian_days(~D[2025-03-01])
+      iex> Calendrical.Islamic.UmmAlQura.date_from_iso_days(iso_days)
+      {1446, 9, 1}
+
   """
   @spec date_from_iso_days(integer()) :: {year, month, day}
   @impl true

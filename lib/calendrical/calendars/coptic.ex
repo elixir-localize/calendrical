@@ -77,6 +77,9 @@ defmodule Calendrical.Coptic do
 
   * A two-tuple `{year, 1}`.
 
+  * `{:error, %Calendrical.MissingFieldsError{}}` when `year` is not
+    an integer, as for a partial date with no year.
+
   ### Examples
 
       iex> Calendrical.Coptic.year_of_era(1742)
@@ -89,7 +92,10 @@ defmodule Calendrical.Coptic do
       {-50, 1}
 
   """
-  @spec year_of_era(year) :: {year, 1}
+  @spec year_of_era(year) :: {year, 1} | Calendrical.date_error()
+  def year_of_era(year) when not is_integer(year),
+    do: {:error, Calendrical.missing_year_error("year_of_era", year)}
+
   def year_of_era(year) do
     {year, 1}
   end
@@ -110,6 +116,9 @@ defmodule Calendrical.Coptic do
 
   * A two-tuple `{year, 1}`.
 
+  * `{:error, %Calendrical.MissingFieldsError{}}` when `year` is not
+    an integer, as for a partial date with no year.
+
   ### Examples
 
       iex> Calendrical.Coptic.year_of_era(1742, 1, 1)
@@ -117,7 +126,7 @@ defmodule Calendrical.Coptic do
 
   """
   @impl true
-  @spec year_of_era(year, month, day) :: {year, 1}
+  @spec year_of_era(year, month, day) :: {year, 1} | Calendrical.date_error()
   def year_of_era(year, _month, _day), do: year_of_era(year)
 
   @doc """

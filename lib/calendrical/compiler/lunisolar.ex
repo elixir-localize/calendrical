@@ -90,30 +90,80 @@ defmodule Calendrical.Lunisolar do
   # mean tropical years from here is also the middle of a lunar year.
   @mean_mid_lunar_year Calendar.ISO.date_to_iso_days(2000, 8, 6)
 
+  # The 24 solar terms in index order, from `lichun` (index 1, 315°) every 15°
+  # of solar ecliptic longitude — the order `solar_term/3` numbers them in.
+  @solar_term_names {
+    "lichun",
+    "yushui",
+    "jingzhe",
+    "chunfen",
+    "qingming",
+    "guyu",
+    "lixia",
+    "xiaoman",
+    "mangzhong",
+    "xiazhi",
+    "xiaoshu",
+    "dashu",
+    "liqiu",
+    "chushu",
+    "bailu",
+    "qiufen",
+    "hanlu",
+    "shuangjiang",
+    "lidong",
+    "xiaoxue",
+    "daxue",
+    "dongzhi",
+    "xiaohan",
+    "dahan"
+  }
+
+  # CHECK THIS was iso_day(45) -> might need to be +/- 365 since our
+  # epoch is different
+  @month_name_epoch 57
+
+  # CHECK THIS was iso_day(45) -> might need to be +/- 365 since our
+  # epoch is different
+  @day_name_epoch 45
+
   @doc """
-  Create a new date in the lunisolar calendar.
+  Creates a date in the lunisolar calendar as an ISO day number.
 
   ### Arguments
 
-  * `year` is a year in the lunisolar calendar.
+  * `year` is a year of the lunisolar calendar.
 
-  * `month` is a month in the lunisolar calendar
-  as either a positive integer or a tuple of the
-  form `{month, :leap}` representing the leap month.
+  * `lunar_month` is a month of the year, as a positive integer or as
+    `{month, :leap}` for the leap month.
 
-  * `day` is a day of month.
+  * `day` is a day of the month.
 
-  * `epoch` is the epoch in iso days for the lunisolar
-    calendar.
+  * `epoch` is the ISO day number of the first day of the calendar's
+    year 1, as a calendar's `epoch/0` returns it.
 
-  * `location_fun` is a 1-arity function that returns
-    the tuple of the form `{latitude, longitude, altitude, hour_offset}`
-    for  the lunisolar calendar.
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
 
   ### Returns
 
-  * `iso_days` begin the iso_days for the given date in
-    based upon the given location.
+  * The ISO day number of the date.
+
+  * `{:error, :invalid_date}` if the year has no such month or the month
+    no such day.
+
+  ### Examples
+
+      iex> epoch = Calendrical.Chinese.epoch()
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.new(4660, 1, 1, epoch, location)
+      738907
+
+      iex> epoch = Calendrical.Chinese.epoch()
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.new(4660, 1, 31, epoch, location)
+      {:error, :invalid_date}
 
   """
 
@@ -141,17 +191,26 @@ defmodule Calendrical.Lunisolar do
        when is_integer(year) and is_integer(day) and day >= 1 do
     {new_year, leap_month} = new_year_and_leap_month(year, epoch, location_fun)
 
-    with {:ok, month} <- traditional_to_ordinal(lunar_month, leap_month),
+    with {:ok, month} <- ordinal_month(lunar_month, leap_month),
          start_of_month = month_start(new_year, month, location_fun),
-         true <- day <= month_start(new_year, month + 1, location_fun) - start_of_month do
+         :ok <- day_in_month(day, month_start(new_year, month + 1, location_fun) - start_of_month) do
       {:ok, month, start_of_month}
-    else
-      _invalid -> {:error, :invalid_date}
     end
   end
 
   defp traditional_date(_year, _lunar_month, _day, _epoch, _location_fun),
     do: {:error, :invalid_date}
+
+  # A month the year does not have names no date.
+  defp ordinal_month(lunar_month, leap_month) do
+    case traditional_to_ordinal(lunar_month, leap_month) do
+      {:ok, month} -> {:ok, month}
+      {:error, _no_such_month} -> {:error, :invalid_date}
+    end
+  end
+
+  defp day_in_month(day, days_in_month) when day <= days_in_month, do: :ok
+  defp day_in_month(_day, _days_in_month), do: {:error, :invalid_date}
 
   @doc false
   # The ordinal month of a traditional month in `year`, as `{:ok, month}`.
@@ -250,6 +309,33 @@ defmodule Calendrical.Lunisolar do
   Returns the Gregorian date for the lunar month and day in a
   given Gregorian year.
 
+  ### Arguments
+
+  * `gregorian_year` is a Gregorian year.
+
+  * `lunar_month` is a month of the lunar year that begins in that
+    Gregorian year.
+
+  * `lunar_day` is a day of that month.
+
+  * `epoch` is the ISO day number of the first day of the calendar's
+    year 1, as a calendar's `epoch/0` returns it.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * `{year, month, day}` in the Gregorian calendar.
+
+  ### Examples
+
+      iex> epoch = Calendrical.Chinese.epoch()
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.gregorian_date_for_lunar(2023, 1, 1, epoch, location)
+      {2023, 1, 22}
+
   """
   def gregorian_date_for_lunar(gregorian_year, lunar_month, lunar_day, epoch, location_fun) do
     mid_year = Calendar.ISO.date_to_iso_days(gregorian_year, 7, 1)
@@ -292,8 +378,7 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Returns if the given year is a leap
-  year.
+  Returns whether the given year is a leap year.
 
   Leap years have 13 months. To determine if a year
   is a leap year, calculate the number of new moons
@@ -314,6 +399,30 @@ defmodule Calendrical.Lunisolar do
   a leap year is detected, the leap month could be in
   the current lunar year or the next lunar year.
 
+  ### Arguments
+
+  * `year` is a year of the lunisolar calendar.
+
+  * `epoch` is the ISO day number of the first day of the calendar's
+    year 1, as a calendar's `epoch/0` returns it.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * `true` if the year has 13 months, otherwise `false`.
+
+  ### Examples
+
+      iex> epoch = Calendrical.Chinese.epoch()
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.leap_year?(4660, epoch, location)
+      true
+      iex> Calendrical.Lunisolar.leap_year?(4661, epoch, location)
+      false
+
   """
 
   def leap_year?(year, epoch, location_fun) do
@@ -331,6 +440,8 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
+  Returns whether the given month of a year is its leap month.
+
   Approximately every three years (7 times in 19 years),
   a leap month is added to the Chinese calendar.
 
@@ -349,11 +460,67 @@ defmodule Calendrical.Lunisolar do
   Unlike all other months, the leap month does not
   contain a principal term (Zhongqi).
 
+  ### Arguments
+
+  * `year` is a year of the lunisolar calendar.
+
+  * `month` is an ordinal month of the year, counting the leap month.
+
+  * `epoch` is the ISO day number of the first day of the calendar's
+    year 1, as a calendar's `epoch/0` returns it.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * `true` if `month` is the year's leap month, otherwise `false`.
+
+  ### Examples
+
+      iex> epoch = Calendrical.Chinese.epoch()
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.leap_month?(4660, 3, epoch, location)
+      true
+      iex> Calendrical.Lunisolar.leap_month?(4660, 4, epoch, location)
+      false
+
   """
   def leap_month?(year, month, epoch, location_fun) do
     leap_month(year, epoch, location_fun) == month
   end
 
+  @doc """
+  Returns whether `month` is the leap month of the year given as a
+  cycle and the year within the cycle.
+
+  ### Arguments
+
+  * `cycle` is the 60-year cycle.
+
+  * `cyclical_year` is the year within the cycle, from `1` to `60`.
+
+  * `month` is the ordinal month of the year.
+
+  * `epoch` is the calendar's epoch in ISO days.
+
+  * `location_fun` is a function that takes a moment and returns the
+    `{latitude, longitude, altitude, offset}` of the calendar's
+    reference location.
+
+  ### Returns
+
+  * `true` if `month` is the year's leap month, otherwise `false`.
+
+  ### Examples
+
+      iex> epoch = Calendrical.Chinese.epoch()
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.leap_month?(78, 40, 3, epoch, location)
+      true
+
+  """
   def leap_month?(cycle, cyclical_year, month, epoch, location_fun) do
     cycle
     |> elapsed_years(cyclical_year)
@@ -361,8 +528,32 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Returns the leap month number for a given year
-  or nil if its not a leap year.
+  Returns the ordinal number of a year's leap month.
+
+  ### Arguments
+
+  * `year` is a year of the lunisolar calendar.
+
+  * `epoch` is the ISO day number of the first day of the calendar's
+    year 1, as a calendar's `epoch/0` returns it.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * The ordinal month that is the leap month, counting it among the
+    year's months, or `nil` if the year has none.
+
+  ### Examples
+
+      iex> epoch = Calendrical.Chinese.epoch()
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.leap_month(4660, epoch, location)
+      3
+      iex> Calendrical.Lunisolar.leap_month(4661, epoch, location)
+      nil
 
   """
   def leap_month(year, epoch, location_fun) do
@@ -415,14 +606,41 @@ defmodule Calendrical.Lunisolar do
 
   defp leap_month_possible?(_start, _next_solstice, _leap, next_leap), do: next_leap != :none
 
-  # Version which uses ordinal numbers in a monotonic sequence 1..12
-  # or 1..13 for month numbers. Leap months are not marked but can
-  # be later calculated.
-
   # This makes clear how simple the calendar is - just a sequence of
   # months aligned to new moons. The complication is only determining
   # the start of the year and leap months.
 
+  @doc """
+  Returns the ISO day number of a lunisolar date whose months are
+  ordinal: numbered 1 to 12, or 1 to 13 in a leap year, with the
+  leap month unmarked.
+
+  ### Arguments
+
+  * `year` is the year counted from the calendar's epoch.
+
+  * `month` is the ordinal month of the year.
+
+  * `day` is the day of the month.
+
+  * `epoch` is the calendar's epoch in ISO days.
+
+  * `location_fun` is a function that takes a moment and returns the
+    `{latitude, longitude, altitude, offset}` of the calendar's
+    reference location.
+
+  ### Returns
+
+  * The number of days since the ISO epoch, as an integer.
+
+  ### Examples
+
+      iex> epoch = Calendrical.Chinese.epoch()
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.date_to_iso_days(4660, 1, 1, epoch, location)
+      738907
+
+  """
   @spec date_to_iso_days(
           integer,
           integer,
@@ -440,6 +658,39 @@ defmodule Calendrical.Lunisolar do
   #   date_to_iso_days(year, month, day, epoch, location_fun)
   # end
 
+  @doc """
+  Returns the ISO day number of a lunisolar date whose year is given
+  as a cycle and the year within the cycle, and whose months are
+  ordinal.
+
+  ### Arguments
+
+  * `cycle` is the 60-year cycle.
+
+  * `cyclical_year` is the year within the cycle, from `1` to `60`.
+
+  * `month` is the ordinal month of the year.
+
+  * `day` is the day of the month.
+
+  * `epoch` is the calendar's epoch in ISO days.
+
+  * `location_fun` is a function that takes a moment and returns the
+    `{latitude, longitude, altitude, offset}` of the calendar's
+    reference location.
+
+  ### Returns
+
+  * The number of days since the ISO epoch, as an integer.
+
+  ### Examples
+
+      iex> epoch = Calendrical.Chinese.epoch()
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.cyclical_date_to_iso_days(78, 40, 1, 1, epoch, location)
+      738907
+
+  """
   @spec cyclical_date_to_iso_days(
           integer,
           integer,
@@ -500,8 +751,33 @@ defmodule Calendrical.Lunisolar do
   #   cyclical_date_to_iso_days(cycle, cyclical_year, month, day, epoch, location_fun)
   # end
 
-  # Here we return months that monotonically increase
-  # from 1 to 12 (or 13 in a leap year).
+  @doc """
+  Returns the lunisolar date of an ISO day number, with ordinal
+  months that run from 1 to 12, or 1 to 13 in a leap year.
+
+  ### Arguments
+
+  * `iso_days` is the number of days since the ISO epoch.
+
+  * `epoch` is the calendar's epoch in ISO days.
+
+  * `location_fun` is a function that takes a moment and returns the
+    `{latitude, longitude, altitude, offset}` of the calendar's
+    reference location.
+
+  ### Returns
+
+  * A `{year, month, day}` tuple, the year counted from the
+    calendar's epoch.
+
+  ### Examples
+
+      iex> epoch = Calendrical.Chinese.epoch()
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.date_from_iso_days(738907, epoch, location)
+      {4660, 1, 1}
+
+  """
   def date_from_iso_days(iso_days, epoch, location_fun) do
     {cycle, cyclical_year, month, day} =
       cyclical_date_from_iso_days(iso_days, epoch, location_fun)
@@ -550,6 +826,7 @@ defmodule Calendrical.Lunisolar do
     (cycle - 1) * @years_in_cycle + cyclic_year
   end
 
+  @doc false
   def elapsed_years({cycle, cyclic_year}) do
     elapsed_years(cycle, cyclic_year)
   end
@@ -820,7 +1097,32 @@ defmodule Calendrical.Lunisolar do
   @doc """
   Return moment at `location` of the first date on or after
   `iso_days` when the solar longitude
-  will be 'lambda' degrees.
+  will be `lambda` degrees.
+
+  ### Arguments
+
+  * `lambda` is the solar longitude in degrees.
+
+  * `iso_days` is the moment, in days since the ISO epoch, from which
+    to search.
+
+  * `location_fun` is a function that takes a moment and returns the
+    `{latitude, longitude, altitude, offset}` of the calendar's
+    reference location.
+
+  ### Returns
+
+  * The moment, in days since the ISO epoch at the location's standard
+    time, when the sun reaches `lambda` degrees.
+
+  ### Examples
+
+      # 大寒 (sun at 300 degrees) falls on 2026-01-20 Beijing time
+      iex> iso_days = Calendar.ISO.date_to_iso_days(2026, 1, 1)
+      iex> location = &Calendrical.Chinese.location/1
+      iex> moment = Calendrical.Lunisolar.solar_longitude_on_or_after(300, iso_days, location)
+      iex> Calendar.ISO.date_from_iso_days(floor(moment))
+      {2026, 1, 20}
 
   """
   @spec solar_longitude_on_or_after(
@@ -883,35 +1185,6 @@ defmodule Calendrical.Lunisolar do
     {:error, {:invalid_solar_term, index}}
   end
 
-  # The 24 solar terms in index order, from `lichun` (index 1, 315°) every 15°
-  # of solar ecliptic longitude — the order `solar_term/3` numbers them in.
-  @solar_term_names {
-    "lichun",
-    "yushui",
-    "jingzhe",
-    "chunfen",
-    "qingming",
-    "guyu",
-    "lixia",
-    "xiaoman",
-    "mangzhong",
-    "xiazhi",
-    "xiaoshu",
-    "dashu",
-    "liqiu",
-    "chushu",
-    "bailu",
-    "qiufen",
-    "hanlu",
-    "shuangjiang",
-    "lidong",
-    "xiaoxue",
-    "daxue",
-    "dongzhi",
-    "xiaohan",
-    "dahan"
-  }
-
   @doc """
   The name of the solar term (jié-qì) at a 1-based index.
 
@@ -955,8 +1228,26 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return last Chinese major solar term (zhongqi) before
+  Returns the last Chinese major solar term (zhongqi) before
   `iso_days`.
+
+  ### Arguments
+
+  * `iso_days` is an ISO day number.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * The major solar term, 1 to 12.
+
+  ### Examples
+
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.current_major_solar_term(739_038, location)
+      4
 
   """
   def current_major_solar_term(iso_days, location_fun) do
@@ -967,10 +1258,27 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return moment at `location` of the first major
-  solar term (zhongqi) on or after `iso_days`.  The
-  major terms begin when the sun's longitude is a
-  multiple of 30 degrees.
+  Returns the moment of the first major solar term (zhongqi) on or
+  after `iso_days`. The major terms begin when the sun's longitude is
+  a multiple of 30 degrees.
+
+  ### Arguments
+
+  * `iso_days` is an ISO day number.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * The moment, in fractional ISO days.
+
+  ### Examples
+
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.major_solar_term_on_or_after(739_038, location) |> floor()
+      739057
 
   """
   def major_solar_term_on_or_after(iso_days, location_fun) do
@@ -980,7 +1288,26 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return last minor solar term (jieqi) before `iso_days`.
+  Returns the last minor solar term (jieqi) before `iso_days`.
+
+  ### Arguments
+
+  * `iso_days` is an ISO day number.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * The minor solar term, 1 to 12.
+
+  ### Examples
+
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.current_minor_solar_term(739_038, location)
+      4
+
   """
   def current_minor_solar_term(iso_days, location_fun) do
     {_lat, _lng, _alt, offset} = location_fun.(iso_days)
@@ -992,9 +1319,27 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return moment at `location` of the first minor solar
-  term (jieqi) on or after `iso_days`.  The minor terms
-  begin when the sun's longitude is an odd multiple of 15 degrees.
+  Returns the moment of the first minor solar term (jieqi) on or
+  after `iso_days`. The minor terms begin when the sun's longitude is
+  an odd multiple of 15 degrees.
+
+  ### Arguments
+
+  * `iso_days` is an ISO day number.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * The moment, in fractional ISO days.
+
+  ### Examples
+
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.minor_solar_term_on_or_after(739_038, location) |> floor()
+      739042
 
   """
   def minor_solar_term_on_or_after(iso_days, location_fun) do
@@ -1005,8 +1350,26 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return `iso_day` at `location` of first new moon
-  before `iso_days`.
+  Returns the day of the first new moon before `iso_days`, at the
+  calendar's place.
+
+  ### Arguments
+
+  * `iso_days` is an ISO day number.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * The ISO day number of the new moon.
+
+  ### Examples
+
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.new_moon_before(739_038, location)
+      739024
 
   """
   def new_moon_before(iso_days, location_fun) do
@@ -1021,8 +1384,26 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return `iso_day` at `location` of first new moon on or after
-  `iso_days`.
+  Returns the day of the first new moon on or after `iso_days`, at
+  the calendar's place.
+
+  ### Arguments
+
+  * `iso_days` is an ISO day number.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * The ISO day number of the new moon.
+
+  ### Examples
+
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.new_moon_on_or_after(739_038, location)
+      739054
 
   """
   def new_moon_on_or_after(iso_days, location_fun) do
@@ -1037,8 +1418,28 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return `true` if lunar month starting on `iso_days`
-  at `location` has no major solar term.
+  Returns whether the lunar month starting on `iso_days` has no
+  major solar term, as only a leap month has none.
+
+  ### Arguments
+
+  * `iso_days` is the ISO day number of the first day of a lunar month.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * `true` if the month has no major solar term, otherwise `false`.
+
+  ### Examples
+
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.no_major_solar_term?(Date.to_gregorian_days(~D[2023-03-22]), location)
+      true
+      iex> Calendrical.Lunisolar.no_major_solar_term?(Date.to_gregorian_days(~D[2023-04-20]), location)
+      false
 
   """
   def no_major_solar_term?(iso_days, location_fun) do
@@ -1049,8 +1450,26 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return Universal time of (clock) midnight at start of `iso_days`,
-  at `location`.
+  Returns the universal time of the (clock) midnight that begins
+  `iso_days` at the calendar's place.
+
+  ### Arguments
+
+  * `iso_days` is an ISO day number.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * The moment, in fractional ISO days.
+
+  ### Examples
+
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.midnight_in_location(738_907, location)
+      738906.6666666666
 
   """
   def midnight_in_location(iso_days, location_fun) do
@@ -1059,8 +1478,26 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return iso_days, in the `location` zone, of winter solstice
-  on or before `iso_days`.
+  Returns the day of the winter solstice on or before `iso_days`, at
+  the calendar's place.
+
+  ### Arguments
+
+  * `iso_days` is an ISO day number.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * The ISO day number of the solstice.
+
+  ### Examples
+
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.december_solstice_on_or_before(739_038, location)
+      738876
 
   """
   def december_solstice_on_or_before(iso_days, location_fun) do
@@ -1077,9 +1514,26 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return `iso_day` of Lunar New Year in sui
-  (period from solstice to solstice)
-  containing `iso_days`.
+  Returns the day of the Lunar New Year in the sui (the period from
+  one winter solstice to the next) that contains `iso_days`.
+
+  ### Arguments
+
+  * `iso_days` is an ISO day number.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * The ISO day number of the new year.
+
+  ### Examples
+
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.new_year_in_sui(739_038, location)
+      738907
 
   """
   def new_year_in_sui(iso_days, location_fun) do
@@ -1092,8 +1546,26 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return `iso_day` of Lunar New Year on or
-  before `iso_days` at `location`.
+  Returns the day of the Lunar New Year on or before `iso_days`, at
+  the calendar's place.
+
+  ### Arguments
+
+  * `iso_days` is an ISO day number.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * The ISO day number of the new year.
+
+  ### Examples
+
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.new_year_on_or_before(739_038, location)
+      738907
 
   """
   def new_year_on_or_before(iso_days, location_fun) do
@@ -1151,8 +1623,26 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return iso_days of Lunar New Year at `location` for a
-  Gregorian year.
+  Returns the day of the Lunar New Year in a Gregorian year, at the
+  calendar's place.
+
+  ### Arguments
+
+  * `gregorian_year` is a Gregorian year.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * The ISO day number of the new year.
+
+  ### Examples
+
+      iex> location = &Calendrical.Chinese.location/1
+      iex> Calendrical.Lunisolar.chinese_new_year_for_gregorian_year(2023, location)
+      738907
 
   """
   def chinese_new_year_for_gregorian_year(gregorian_year, location_fun) do
@@ -1161,9 +1651,33 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return `true` if there is a Lunar leap month on or after lunar
-  month starting on `m_prime` and at or before
-  lunar month starting at `m`.
+  Returns whether there is a leap month from the lunar month starting
+  on `m_prime` up to and including the lunar month starting on `m`.
+
+  ### Arguments
+
+  * `m_prime` is the ISO day number of the first day of the earlier
+    lunar month.
+
+  * `m` is the ISO day number of the first day of the later lunar
+    month.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, the place the
+    calendar is reckoned at, as a calendar's `location/1` does.
+
+  ### Returns
+
+  * `true` if a leap month falls in that span, otherwise `false`.
+
+  ### Examples
+
+      iex> location = &Calendrical.Chinese.location/1
+      iex> new_year = Date.to_gregorian_days(~D[2023-01-22])
+      iex> Calendrical.Lunisolar.prior_leap_month?(new_year, Date.to_gregorian_days(~D[2023-05-19]), location)
+      true
+      iex> Calendrical.Lunisolar.prior_leap_month?(new_year, Date.to_gregorian_days(~D[2023-02-20]), location)
+      false
 
   """
   def prior_leap_month?(m_prime, m, location_fun) when m >= m_prime do
@@ -1176,8 +1690,25 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return the name of the Lunar
-  sexagesimal cycle.
+  Returns the name of a year in the Lunar sexagesimal cycle, as its
+  celestial stem and terrestrial branch.
+
+  ### Arguments
+
+  * `year` is a position in the sexagesimal cycle, a lunisolar date as
+    `{year, month, day}` or a traditional date as
+    `{cycle, cyclical_year, month, leap_month?, day}`.
+
+  ### Returns
+
+  * `{stem, branch}`, the stem 1 to 10 and the branch 1 to 12.
+
+  ### Examples
+
+      iex> Calendrical.Lunisolar.stem_and_branch(40)
+      {10, 4}
+      iex> Calendrical.Lunisolar.stem_and_branch({4660, 1, 1})
+      {10, 4}
 
   """
   def stem_and_branch({_cycle, cyclical_year, _month, _leap_month?, _day}) do
@@ -1206,8 +1737,23 @@ defmodule Calendrical.Lunisolar do
   end
 
   @doc """
-  Return the number of names from Lunar name c_name1 to the
-  next occurrence of Lunar name c_name2.
+  Returns the number of names from one Lunar name to the next
+  occurrence of another.
+
+  ### Arguments
+
+  * `c_name1` is a `{stem, branch}` name.
+
+  * `c_name2` is a `{stem, branch}` name.
+
+  ### Returns
+
+  * The number of names, 1 to 60.
+
+  ### Examples
+
+      iex> Calendrical.Lunisolar.name_difference({1, 1}, {10, 4})
+      39
 
   """
   def name_difference(c_name1, c_name2) do
@@ -1223,32 +1769,69 @@ defmodule Calendrical.Lunisolar do
     1 + mod(stem_difference - 1 + 25 * (branch_difference - stem_difference), @years_in_cycle)
   end
 
-  # CHECK THIS was iso_day(45) -> might need to be +/- 365 since our
-  # epoch is different
-  @month_name_epoch 57
-
   @doc """
-  Return sexagesimal name for month, month, of Chinese year, year.
+  Returns the sexagesimal name of a month of a Chinese year.
+
+  ### Arguments
+
+  * `month` is a month of the year.
+
+  * `year` is a year of the Chinese calendar.
+
+  ### Returns
+
+  * `{stem, branch}`.
+
+  ### Examples
+
+      iex> Calendrical.Lunisolar.month_name(1, 4660)
+      {1, 3}
+
   """
   def month_name(month, year) do
     elapsed_months = 12 * (year - 1) + (month - 1)
     stem_and_branch(elapsed_months - @month_name_epoch)
   end
 
-  # CHECK THIS was iso_day(45) -> might need to be +/- 365 since our
-  # epoch is different
-  @day_name_epoch 45
-
   @doc """
-  Return sexagesimal name for date, date.
+  Returns the sexagesimal name of a day.
+
+  ### Arguments
+
+  * `date` is an ISO day number.
+
+  ### Returns
+
+  * `{stem, branch}`.
+
+  ### Examples
+
+      iex> Calendrical.Lunisolar.day_name(738_907)
+      {2, 10}
+
   """
   def day_name(date) do
     stem_and_branch(date - @day_name_epoch)
   end
 
   @doc """
-  Return iso_days of latest date on or before iso_days, that
-  has Chinese name, name.
+  Returns the latest day on or before `date` that has the given
+  sexagesimal name.
+
+  ### Arguments
+
+  * `name` is a `{stem, branch}` name.
+
+  * `date` is an ISO day number.
+
+  ### Returns
+
+  * The ISO day number of that day.
+
+  ### Examples
+
+      iex> Calendrical.Lunisolar.day_name_on_or_before({1, 1}, 738_907)
+      738856
 
   """
   def day_name_on_or_before(name, date) do
@@ -1256,6 +1839,31 @@ defmodule Calendrical.Lunisolar do
     date - mod(date + name_difference, @years_in_cycle)
   end
 
+  @doc """
+  Returns the place a lunisolar calendar is reckoned at on a day, as
+  the point Astro takes.
+
+  ### Arguments
+
+  * `iso_days` is an ISO day number.
+
+  * `location_fun` is a 1-arity function of the ISO day number that
+    returns `{latitude, longitude, altitude, offset}`, as a calendar's
+    `location/1` does.
+
+  ### Returns
+
+  * A `Geo.PointZ` of the longitude, latitude and altitude, with the
+    offset from UTC, in days, as its `:offset` property.
+
+  ### Examples
+
+      iex> location = &Calendrical.Chinese.location/1
+      iex> %Geo.PointZ{properties: %{offset: offset}} = Calendrical.Lunisolar.location(738_907, location)
+      iex> offset
+      0.3333333333333333
+
+  """
   def location(iso_days, location_fun) do
     {latitude, longitude, altitude, offset} = location_fun.(iso_days)
     properties = %{offset: offset}

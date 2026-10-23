@@ -77,6 +77,12 @@ defmodule Calendrical.Chinese do
   alias Astro.Time
   alias Calendrical.Lunisolar
 
+  @dragon_month 5
+  @dragon_day 5
+  @beijing_local_offset Astro.Time.hours_to_days(1397 / 180)
+  @china_standard_offset Astro.Time.hours_to_days(8)
+  @china_1929 Calendrical.Gregorian.date_to_iso_days(1929, 1, 1)
+
   @doc """
   Returns the gregorian date of the
   dragon festival (5th day of 5th lunar month)
@@ -103,9 +109,6 @@ defmodule Calendrical.Chinese do
       ~D[2023-06-22]
 
   """
-  @dragon_month 5
-  @dragon_day 5
-
   @spec dragon_festival_for_gregorian_year(Calendar.year()) :: Date.t()
   def dragon_festival_for_gregorian_year(gregorian_year) when is_integer(gregorian_year) do
     gregorian_date_for_lunar(gregorian_year, @dragon_month, @dragon_day)
@@ -133,10 +136,6 @@ defmodule Calendrical.Chinese do
   # Prior to 1929, the longitude of Beijing was
   # used. Since 1929, the longitude of the
   # standard China timezone (GMT+8) is used.
-
-  @beijing_local_offset Astro.Time.hours_to_days(1397 / 180)
-  @china_standard_offset Astro.Time.hours_to_days(8)
-  @china_1929 Calendrical.Gregorian.date_to_iso_days(1929, 1, 1)
 
   @doc false
   @spec location(Time.time()) :: {Astro.angle(), Astro.angle(), Astro.meters(), Time.hours()}

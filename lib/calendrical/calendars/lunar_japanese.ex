@@ -88,6 +88,20 @@ defmodule Calendrical.LunarJapanese do
   alias Astro.Time
   alias Calendrical.Lunisolar
 
+  # The Japanese era (元号) year offset: LunarJapanese year 1 began
+  # in 645 CE, so the Gregorian year containing the start of lunar
+  # year Y is Y + 644. The Japanese era table counts years in
+  # Gregorian labels, so the offset normalizes between the two.
+  @gregorian_year_offset 644
+
+  # Japan counted era years in lunisolar years until it adopted the
+  # Gregorian calendar on 1873-01-01 (`Calendrical.Reform.Japan`), and
+  # in Gregorian years since.
+  @gregorian_reform_iso_days Date.to_gregorian_days(~D[1873-01-01])
+  @tokyo_local_offset Astro.Time.hours_to_days(9 + 143 / 450)
+  @japan_standard_offset Astro.Time.hours_to_days(9)
+  @japan_1888 Calendrical.Gregorian.date_to_iso_days(1888, 1, 1)
+
   @doc false
   def cycle_and_year(iso_days) do
     Lunisolar.cycle_and_year(iso_days)
@@ -107,17 +121,6 @@ defmodule Calendrical.LunarJapanese do
   def new_moon_on_or_after(iso_days) do
     Lunisolar.new_moon_on_or_after(iso_days, &location/1)
   end
-
-  # The Japanese era (元号) year offset: LunarJapanese year 1 began
-  # in 645 CE, so the Gregorian year containing the start of lunar
-  # year Y is Y + 644. The Japanese era table counts years in
-  # Gregorian labels, so the offset normalizes between the two.
-  @gregorian_year_offset 644
-
-  # Japan counted era years in lunisolar years until it adopted the
-  # Gregorian calendar on 1873-01-01 (`Calendrical.Reform.Japan`), and
-  # in Gregorian years since.
-  @gregorian_reform_iso_days Date.to_gregorian_days(~D[1873-01-01])
 
   @doc """
   Returns the year of era and era number for a lunisolar Japanese
@@ -241,10 +244,6 @@ defmodule Calendrical.LunarJapanese do
   # Prior to 1888, the longitude of Tokyo was
   # used. Since 1889, the longitude of the
   # standard Japan timezone (GMT+8) is used.
-
-  @tokyo_local_offset Astro.Time.hours_to_days(9 + 143 / 450)
-  @japan_standard_offset Astro.Time.hours_to_days(9)
-  @japan_1888 Calendrical.Gregorian.date_to_iso_days(1888, 1, 1)
 
   @doc false
   @spec location(Time.time()) :: {Astro.angle(), Astro.angle(), Astro.meters(), Time.hours()}

@@ -38,11 +38,20 @@ defmodule Calendrical.Base.WeekDate do
 
   # The week-year, the week and the day of the week of a date.
   def week_date_from_date(calendar, year, month, day) do
-    with true <- calendar.valid_date?(year, month, day),
-         {week_year, week} when is_integer(week) <- calendar.week_of_year(year, month, day) do
+    with :ok <- valid_date(calendar, year, month, day),
+         {:ok, week_year, week} <- week_of_year(calendar, year, month, day) do
       {week_year, week, day_of_week(calendar, %Date{year: year, month: month, day: day})}
-    else
-      _invalid -> {:error, :invalid_date}
+    end
+  end
+
+  defp valid_date(calendar, year, month, day) do
+    if calendar.valid_date?(year, month, day), do: :ok, else: {:error, :invalid_date}
+  end
+
+  defp week_of_year(calendar, year, month, day) do
+    case calendar.week_of_year(year, month, day) do
+      {week_year, week} when is_integer(week) -> {:ok, week_year, week}
+      _no_week -> {:error, :invalid_date}
     end
   end
 

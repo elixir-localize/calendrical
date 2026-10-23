@@ -123,11 +123,22 @@ defmodule Calendrical.Composite.Era do
     %{calendar: old, last: last} = Enum.at(segments, index - 1)
     %{calendar: new, first: first} = Enum.at(segments, index)
 
-    with true <- old.era_calendar_type() == new.era_calendar_type(),
-         {count_on_first, ^era} <- member_day_of_era(new, first),
-         {count_on_last, ^era} <- member_day_of_era(old, last) do
+    if old.era_calendar_type() == new.era_calendar_type() do
+      era_on_both_days(old, last, new, first, era)
+    end
+  end
+
+  defp era_on_both_days(old, last, new, first, era) do
+    with {:ok, count_on_first} <- day_count_in_era(new, first, era),
+         {:ok, count_on_last} <- day_count_in_era(old, last, era) do
       {last, count_on_last, first, count_on_first}
-    else
+    end
+  end
+
+  # The count of a day in `era`, or nil where the day is in another era.
+  defp day_count_in_era(calendar, iso_days, era) do
+    case member_day_of_era(calendar, iso_days) do
+      {count, ^era} -> {:ok, count}
       _another_era -> nil
     end
   end

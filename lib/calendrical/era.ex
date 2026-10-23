@@ -24,6 +24,10 @@ defmodule Calendrical.Era do
   @typedoc "A calendar module."
   @type calendar :: module()
 
+  # The Japanese calendar numbers years in Gregorian years while
+  # its eras begin mid-year.
+  @gregorian_offset_types [:japanese]
+
   @doc """
   Returns the year of era and era of a year of a calendar: of its first
   day, by the era calendar its `info/0` names and its year-zero rule.
@@ -475,6 +479,12 @@ defmodule Calendrical.Era do
   * A map with the era records (most recent era first), the
     year-numbering mode and the forward/before era numbers.
 
+  ### Examples
+
+      iex> era_data = Calendrical.Era.era_data(:japanese)
+      iex> era_data.year_mode
+      :gregorian_offset
+
   """
   @spec era_data(cldr_calendar_type()) :: map()
   def era_data(cldr_calendar_type) when is_atom(cldr_calendar_type) do
@@ -509,10 +519,6 @@ defmodule Calendrical.Era do
     |> Enum.filter(&is_map_key(&1, :from))
     |> Enum.min_by(& &1.from)
   end
-
-  # The Japanese calendar numbers years in Gregorian years while
-  # its eras begin mid-year.
-  @gregorian_offset_types [:japanese]
 
   defp build_era_data(cldr_calendar_type) do
     records =

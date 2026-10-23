@@ -8,6 +8,13 @@ defmodule Calendrical.Base.Common do
 
   @days_in_week 7
 
+  # The behaviours a calendar implements. A loaded module that declares
+  # both is a calendar, and what it then answers for each callback is its
+  # author's to keep; one that exports some of their functions and declares
+  # neither is not. `Calendrical.calendar_module?/1` and a composite's check
+  # of its members ask here, each once the module is loaded.
+  @calendar_behaviours [Calendar, Calendrical]
+
   # The middle field is a month where the three are the fields of a date,
   # and a week where a caller counts in its own year, week and day of the
   # week.
@@ -32,12 +39,10 @@ defmodule Calendrical.Base.Common do
   # `year/1`, which need not begin on the first day of its first month (a
   # Julian year counted from 25 March).
   def week_of_year(calendar, year, month, day) when is_date(year, month, day) do
-    with true <- calendar.valid_date?(year, month, day),
+    with :ok <- valid_date(calendar, year, month, day),
          {:ok, first, _days_in_year, offset} <- year_frame(calendar, year) do
       day_of_year = calendar.date_to_iso_days(year, month, day) - first + 1
       {year, div(day_of_year - 2 + offset, @days_in_week) + 1}
-    else
-      _invalid -> {:error, :invalid_date}
     end
   end
 
@@ -49,8 +54,8 @@ defmodule Calendrical.Base.Common do
         weeks = weeks(days_in_year, offset)
         {weeks, days_in_year + offset - 1 - (weeks - 1) * @days_in_week}
 
-      :error ->
-        {:error, :invalid_date}
+      {:error, :invalid_date} = error ->
+        error
     end
   end
 
@@ -58,13 +63,11 @@ defmodule Calendrical.Base.Common do
   # cut to the year.
   def week(calendar, year, week) when is_integer(week) do
     with {:ok, first, days_in_year, offset} <- year_frame(calendar, year),
-         true <- week >= 1 and week <= weeks(days_in_year, offset) do
+         :ok <- week_in_year(week, days_in_year, offset) do
       first_day = first + max((week - 1) * @days_in_week - (offset - 1), 0)
       last_day = min(first + week * @days_in_week - offset, first + days_in_year - 1)
 
       week_range(calendar, first_day, last_day)
-    else
-      _invalid -> {:error, :invalid_date}
     end
   end
 
@@ -113,8 +116,8 @@ defmodule Calendrical.Base.Common do
   # calendar's own week boundary. Days count from the month's first in ISO
   # days, so a month a calendar reform cuts short counts only its own.
   def week_of_month(calendar, year, month, day) when is_date(year, month, day) do
-    with true <- calendar.valid_date?(year, month, day),
-         %Date.Range{first: first} <- calendar.month(year, month) do
+    with :ok <- valid_date(calendar, year, month, day),
+         {:ok, %Date.Range{first: first}} <- month_range(calendar, year, month) do
       first_days = calendar.date_to_iso_days(first.year, first.month, first.day)
       day_of_month = calendar.date_to_iso_days(year, month, day) - first_days + 1
 
@@ -122,12 +125,26 @@ defmodule Calendrical.Base.Common do
         calendar.day_of_week(first.year, first.month, first.day, :default)
 
       {month, div(day_of_month - 2 + first_dow, @days_in_week) + 1}
-    else
-      _invalid -> {:error, :invalid_date}
     end
   end
 
   def week_of_month(_calendar, _year, _month, _day), do: {:error, :invalid_date}
+
+  defp valid_date(calendar, year, month, day) do
+    if calendar.valid_date?(year, month, day), do: :ok, else: {:error, :invalid_date}
+  end
+
+  defp week_in_year(week, days_in_year, offset) do
+    if week >= 1 and week <= weeks(days_in_year, offset), do: :ok, else: {:error, :invalid_date}
+  end
+
+  # The days of a month as a range, where the calendar has the month.
+  defp month_range(calendar, year, month) do
+    case calendar.month(year, month) do
+      %Date.Range{} = range -> {:ok, range}
+      _no_month -> {:error, :invalid_date}
+    end
+  end
 
   # The ISO 8601 week of the day, whichever calendar names it, as a
   # week-based calendar's `iso_week_of_year/3` gives it.
@@ -156,8 +173,8 @@ defmodule Calendrical.Base.Common do
       {:ok, first_days, last_days} ->
         {:ok, first_days, last_days - first_days + 1, day_of_week_on(calendar, first_days)}
 
-      {:error, :invalid_date} ->
-        :error
+      {:error, :invalid_date} = error ->
+        error
     end
   end
 
@@ -319,13 +336,6 @@ defmodule Calendrical.Base.Common do
       _no_month -> nil
     end
   end
-
-  # The behaviours a calendar implements. A loaded module that declares
-  # both is a calendar, and what it then answers for each callback is its
-  # author's to keep; one that exports some of their functions and declares
-  # neither is not. `Calendrical.calendar_module?/1` and a composite's check
-  # of its members ask here, each once the module is loaded.
-  @calendar_behaviours [Calendar, Calendrical]
 
   def calendar_behaviours?(module) do
     declared =

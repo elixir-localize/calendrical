@@ -19,6 +19,41 @@ defmodule Calendrical.Interval do
   """
 
   @doc """
+  Returns a `t:Date.Range.t/0` that represents the year containing
+  `date`.
+
+  The range is enumerable.
+
+  ### Arguments
+
+  * `date` is any `t:Calendar.date/0`.
+
+  ### Returns
+
+  * A `t:Date.Range.t/0` representing the enumerable days in the
+    year containing `date`, in `date`'s calendar.
+
+  * `{:error, reason}` if the calendar cannot form the year.
+
+  ### Examples
+
+      iex> Calendrical.Interval.year(~D[2019-06-15])
+      Date.range(~D[2019-01-01], ~D[2019-12-31])
+
+  """
+  @spec year(Date.t()) :: Date.Range.t() | {:error, :not_defined | :invalid_date}
+
+  def year(%{calendar: Calendar.ISO} = date) do
+    %{date | calendar: Calendrical.Gregorian}
+    |> year
+    |> coerce_iso_calendar
+  end
+
+  def year(%{year: _, month: _, day: _} = date) do
+    year(date.year, date.calendar)
+  end
+
+  @doc """
   Returns a `t:Date.Range.t/0` that represents the `year`.
 
   The range is enumerable.
@@ -45,20 +80,47 @@ defmodule Calendrical.Interval do
   """
   @spec year(Calendar.year(), Calendrical.calendar()) ::
           Date.Range.t() | {:error, :not_defined | :invalid_date}
-  @spec year(Date.t()) :: Date.Range.t() | {:error, :not_defined | :invalid_date}
+  def year(year, calendar \\ Calendrical.Gregorian) do
+    calendar.year(year)
+  end
 
-  def year(%{calendar: Calendar.ISO} = date) do
+  @doc """
+  Returns a `t:Date.Range.t/0` that represents the quarter containing
+  `date`.
+
+  The range is enumerable.
+
+  ### Arguments
+
+  * `date` is any `t:Calendar.date/0`.
+
+  ### Returns
+
+  * A `t:Date.Range.t/0` representing the enumerable days in the
+    quarter containing `date`, in `date`'s calendar.
+
+  * `{:error, reason}` if the calendar has no quarters.
+
+  ### Examples
+
+      iex> Calendrical.Interval.quarter(~D[2019-06-15])
+      Date.range(~D[2019-04-01], ~D[2019-06-30])
+
+  """
+  @spec quarter(Date.t()) ::
+          Date.Range.t() | {:error, :not_defined | :invalid_date} | {:error, Exception.t()}
+
+  def quarter(%{calendar: Calendar.ISO} = date) do
     %{date | calendar: Calendrical.Gregorian}
-    |> year
+    |> quarter
     |> coerce_iso_calendar
   end
 
-  def year(%{year: _, month: _, day: _} = date) do
-    year(date.year, date.calendar)
-  end
-
-  def year(year, calendar \\ Calendrical.Gregorian) do
-    calendar.year(year)
+  def quarter(date) do
+    case Calendrical.quarter_of_year(date) do
+      quarter when is_integer(quarter) -> quarter(date.year, quarter, date.calendar)
+      {:error, _reason} = error -> error
+    end
   end
 
   @doc """
@@ -90,22 +152,6 @@ defmodule Calendrical.Interval do
   """
   @spec quarter(Calendar.year(), Calendrical.quarter(), Calendrical.calendar()) ::
           Date.Range.t() | {:error, :not_defined | :invalid_date}
-  @spec quarter(Date.t()) ::
-          Date.Range.t() | {:error, :not_defined | :invalid_date} | {:error, Exception.t()}
-
-  def quarter(%{calendar: Calendar.ISO} = date) do
-    %{date | calendar: Calendrical.Gregorian}
-    |> quarter
-    |> coerce_iso_calendar
-  end
-
-  def quarter(date) do
-    case Calendrical.quarter_of_year(date) do
-      quarter when is_integer(quarter) -> quarter(date.year, quarter, date.calendar)
-      {:error, _reason} = error -> error
-    end
-  end
-
   def quarter(year, quarter, calendar \\ Calendrical.Gregorian) do
     calendar.quarter(year, quarter)
   end
@@ -179,34 +225,28 @@ defmodule Calendrical.Interval do
   end
 
   @doc """
-  Returns a `t:Date.Range.t/0` that represents the `month`.
+  Returns a `t:Date.Range.t/0` that represents the month containing
+  `date`.
 
   The range is enumerable.
 
   ### Arguments
 
-  * `year` is any `year` for `calendar`.
-
-  * `month` is any `month` in the `year` for `calendar`.
-
-  * `calendar` is any module that implements the `Calendar` and `Calendrical`
-    behaviours. The default is `Calendrical.Gregorian`.
+  * `date` is any `t:Calendar.date/0`.
 
   ### Returns
 
-  * A `t:Date.Range.t/0` representing the enumerable days in the `month`.
+  * A `t:Date.Range.t/0` representing the enumerable days in the
+    month containing `date`, in `date`'s calendar.
+
+  * `{:error, reason}` if no month of the calendar holds the date.
 
   ### Examples
 
-      iex> Calendrical.Interval.month 2019, 3, Calendrical.Fiscal.UK
-      Date.range(~D[2019-03-01 Calendrical.Fiscal.UK], ~D[2019-03-30 Calendrical.Fiscal.UK])
-
-      iex> Calendrical.Interval.month 2019, 3, Calendrical.Fiscal.US
-      Date.range(~D[2019-03-01 Calendrical.Fiscal.US], ~D[2019-03-31 Calendrical.Fiscal.US])
+      iex> Calendrical.Interval.month(~D[2019-06-15])
+      Date.range(~D[2019-06-01], ~D[2019-06-30])
 
   """
-  @spec month(Calendar.year(), Calendar.month(), Calendrical.calendar()) ::
-          Date.Range.t() | {:error, :not_defined | :invalid_date}
   @spec month(Date.t()) :: Date.Range.t() | {:error, :invalid_date}
 
   def month(%{calendar: Calendar.ISO} = date) do
@@ -241,6 +281,35 @@ defmodule Calendrical.Interval do
     end
   end
 
+  @doc """
+  Returns a `t:Date.Range.t/0` that represents the `month`.
+
+  The range is enumerable.
+
+  ### Arguments
+
+  * `year` is any `year` for `calendar`.
+
+  * `month` is any `month` in the `year` for `calendar`.
+
+  * `calendar` is any module that implements the `Calendar` and `Calendrical`
+    behaviours. The default is `Calendrical.Gregorian`.
+
+  ### Returns
+
+  * A `t:Date.Range.t/0` representing the enumerable days in the `month`.
+
+  ### Examples
+
+      iex> Calendrical.Interval.month 2019, 3, Calendrical.Fiscal.UK
+      Date.range(~D[2019-03-01 Calendrical.Fiscal.UK], ~D[2019-03-30 Calendrical.Fiscal.UK])
+
+      iex> Calendrical.Interval.month 2019, 3, Calendrical.Fiscal.US
+      Date.range(~D[2019-03-01 Calendrical.Fiscal.US], ~D[2019-03-31 Calendrical.Fiscal.US])
+
+  """
+  @spec month(Calendar.year(), Calendar.month(), Calendrical.calendar()) ::
+          Date.Range.t() | {:error, :not_defined | :invalid_date}
   def month(year, month, calendar \\ Calendrical.Gregorian) do
     calendar.month(year, month)
   end
@@ -249,6 +318,44 @@ defmodule Calendrical.Interval do
     do: first <= iso_days and iso_days <= last
 
   defp holds?(_not_a_range, _iso_days), do: false
+
+  @doc """
+  Returns a `t:Date.Range.t/0` that represents the week containing
+  `date`.
+
+  The range is enumerable.
+
+  ### Arguments
+
+  * `date` is any `t:Calendar.date/0`.
+
+  ### Returns
+
+  * A `t:Date.Range.t/0` representing the enumerable days in the
+    week containing `date`, in `date`'s calendar.
+
+  * `{:error, reason}` if the calendar does not support the concept of weeks.
+
+  ### Examples
+
+      iex> Calendrical.Interval.week(~D[2019-06-15])
+      Date.range(~D[2019-06-10], ~D[2019-06-16])
+
+  """
+  @spec week(Date.t()) :: Date.Range.t() | {:error, :not_defined | :invalid_date}
+
+  def week(%{calendar: Calendar.ISO} = date) do
+    %{date | calendar: Calendrical.Gregorian}
+    |> week
+    |> coerce_iso_calendar
+  end
+
+  def week(date) do
+    case Calendrical.week_of_year(date) do
+      {year, week} when is_integer(year) and is_integer(week) -> week(year, week, date.calendar)
+      {:error, _reason} = error -> error
+    end
+  end
 
   @doc """
   Returns a `t:Date.Range.t/0` that represents the `week`.
@@ -288,25 +395,46 @@ defmodule Calendrical.Interval do
   """
   @spec week(Calendar.year(), Calendrical.week(), Calendrical.calendar()) ::
           Date.Range.t() | {:error, :not_defined | :invalid_date}
-  @spec week(Date.t()) :: Date.Range.t() | {:error, :not_defined | :invalid_date}
-
-  def week(%{calendar: Calendar.ISO} = date) do
-    %{date | calendar: Calendrical.Gregorian}
-    |> week
-    |> coerce_iso_calendar
-  end
-
-  def week(date) do
-    case Calendrical.week_of_year(date) do
-      {year, week} when is_integer(year) and is_integer(week) -> week(year, week, date.calendar)
-      {:error, _reason} = error -> error
-    end
-  end
-
   def week(year, week, calendar \\ Calendrical.Gregorian) do
     calendar.week(year, week)
   end
 
+  @doc """
+  Returns a `t:Date.Range.t/0` that represents the day containing
+  `date`.
+
+  The range is enumerable.
+
+  ### Arguments
+
+  * `date` is any `t:Calendar.date/0`.
+
+  ### Returns
+
+  * A `t:Date.Range.t/0` representing the enumerable days in the
+    day containing `date`, in `date`'s calendar.
+
+  ### Examples
+
+      iex> Calendrical.Interval.day(~D[2019-06-15])
+      Date.range(~D[2019-06-15], ~D[2019-06-15])
+
+  """
+  @spec day(Date.t()) :: Date.Range.t()
+
+  def day(%{calendar: Calendar.ISO} = date) do
+    %{date | calendar: Calendrical.Gregorian}
+    |> day()
+    |> coerce_iso_calendar()
+  end
+
+  def day(date) do
+    Date.range(date, date)
+  end
+
+  # The day is counted through the year's own range, which every
+  # calendar answers, where `first_gregorian_day_of_year/1` is only the
+  # month and week compilers' own.
   @doc """
   Returns a `t:Date.Range.t/0` containing a single `day`.
 
@@ -342,21 +470,6 @@ defmodule Calendrical.Interval do
   """
   @spec day(Calendar.year(), Calendar.day(), Calendrical.calendar()) ::
           Date.Range.t() | {:error, :invalid_date}
-  @spec day(Date.t()) :: Date.Range.t()
-
-  def day(%{calendar: Calendar.ISO} = date) do
-    %{date | calendar: Calendrical.Gregorian}
-    |> day()
-    |> coerce_iso_calendar()
-  end
-
-  def day(date) do
-    Date.range(date, date)
-  end
-
-  # The day is counted through the year's own range, which every
-  # calendar answers, where `first_gregorian_day_of_year/1` is only the
-  # month and week compilers' own.
   def day(year, day, calendar \\ Calendrical.Gregorian) do
     with %Date.Range{first_in_iso_days: first, last_in_iso_days: last} <- calendar.year(year) do
       day_of_the_year(first + day - 1, day, last, calendar)

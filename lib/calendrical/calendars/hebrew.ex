@@ -353,6 +353,20 @@ defmodule Calendrical.Hebrew do
   leap year's Adar I, and come from the months elapsed before each year
   (235 in every 19), so a span of any length costs the same.
 
+  ### Arguments
+
+  * `from` is the starting `{year, month, day}`.
+
+  * `to` is the ending `{year, month, day}`.
+
+  * `date_part` is `:years`, `:quarters`, `:months`, `:weeks` or
+    `:days`.
+
+  ### Returns
+
+  * The whole number of `date_part`s from `from` to `to`, as an
+    integer.
+
   ### Examples
 
       # 5784 is a leap year of thirteen months, 5785 an ordinary one

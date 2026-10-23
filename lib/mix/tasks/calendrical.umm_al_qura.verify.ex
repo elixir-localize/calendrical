@@ -229,15 +229,24 @@ defmodule Mix.Tasks.Calendrical.UmmAlQura.Verify do
 
   defp round_trip_problems(%{year: year, month: month, days: days} = record) do
     Enum.flat_map([1, days], fn day ->
-      with {:ok, date} <- Date.new(year, month, day, UmmAlQura),
-           {:ok, gregorian} <- Date.convert(date, Calendar.ISO),
-           {:ok, ^date} <- Date.convert(gregorian, UmmAlQura) do
-        []
-      else
-        _other -> ["#{label(key(record))} day #{day} does not round-trip"]
-      end
+      if round_trips?(year, month, day),
+        do: [],
+        else: ["#{label(key(record))} day #{day} does not round-trip"]
     end)
   end
+
+  # Whether the date converts to the Gregorian calendar and back to itself.
+  defp round_trips?(year, month, day) do
+    case Date.new(year, month, day, UmmAlQura) do
+      {:ok, date} -> date |> Date.convert(Calendar.ISO) |> converts_back?(date)
+      {:error, _invalid} -> false
+    end
+  end
+
+  defp converts_back?({:ok, gregorian}, date),
+    do: Date.convert(gregorian, UmmAlQura) == {:ok, date}
+
+  defp converts_back?({:error, _invalid}, _date), do: false
 
   defp differences(left, right) do
     right_first_days = Map.new(right, &{key(&1), &1.first_day})
@@ -331,16 +340,38 @@ defmodule Mix.Tasks.Calendrical.UmmAlQura.Verify do
   end
 
   defp parse_line(line, number, path) do
-    with [year, month, first_day] <- String.split(line),
-         {year, ""} <- Integer.parse(year),
-         {month, ""} when month in 1..12 <- Integer.parse(month),
-         {:ok, first_day} <- Date.from_iso8601(first_day) do
-      {year, month, first_day}
-    else
-      _other ->
+    case line |> String.split() |> parsed_line() do
+      {:ok, entry} ->
+        entry
+
+      _invalid ->
         Mix.raise(
           "#{path}:#{number}: expected \"YEAR MONTH YYYY-MM-DD\", got #{inspect(String.trim(line))}"
         )
+    end
+  end
+
+  defp parsed_line([year, month, first_day]) do
+    with {:ok, year} <- whole_number(year),
+         {:ok, month} <- month_number(month),
+         {:ok, first_day} <- Date.from_iso8601(first_day) do
+      {:ok, {year, month, first_day}}
+    end
+  end
+
+  defp parsed_line(_fields), do: :error
+
+  defp whole_number(text) do
+    case Integer.parse(text) do
+      {number, ""} -> {:ok, number}
+      _not_a_number -> :error
+    end
+  end
+
+  defp month_number(text) do
+    case whole_number(text) do
+      {:ok, month} when month in 1..12 -> {:ok, month}
+      _not_a_month -> :error
     end
   end
 

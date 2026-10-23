@@ -76,7 +76,7 @@ defmodule Calendrical.Calendar.Shifted do
   @written_years [:base, :label]
 
   defmacro __using__(options) do
-    [facts(options), naming(), kernel(), written_and_shift()]
+    [facts(options), naming(), kernel(), months(), written_and_shift(), shift()]
   end
 
   # The options as attributes, `info/0` and `base/0`.
@@ -118,6 +118,15 @@ defmodule Calendrical.Calendar.Shifted do
       Returns the static facts about this calendar, as
       `t:Calendrical.Info.t/0`.
 
+      ### Returns
+
+      * A `t:Calendrical.Info.t/0` describing this calendar.
+
+      ### Examples
+
+          iex> #{inspect(__MODULE__)}.info().calendar
+          #{inspect(__MODULE__)}
+
       """
       def info do
         Calendrical.Info.new(__MODULE__,
@@ -135,6 +144,15 @@ defmodule Calendrical.Calendar.Shifted do
 
       @doc """
       Returns the base calendar this calendar's years are cut from.
+
+      ### Returns
+
+      * The base calendar module.
+
+      ### Examples
+
+          iex> #{inspect(__MODULE__)}.base() |> Code.ensure_loaded?()
+          true
 
       """
       def base, do: @base
@@ -241,6 +259,13 @@ defmodule Calendrical.Calendar.Shifted do
 
       * `{year, month, day}` in the base calendar.
 
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> {year, month, day} = #{inspect(__MODULE__)}.base_date(today.year, today.month, today.day)
+          iex> #{inspect(__MODULE__)}.date_from_base_date(year, month, day)
+          {today.year, today.month, today.day}
+
       """
       def base_date(year, month, day) do
         named_month = counted_to_named(month)
@@ -260,6 +285,13 @@ defmodule Calendrical.Calendar.Shifted do
 
       * `{year, month, day}` in this calendar.
 
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> {year, month, day} = #{inspect(__MODULE__)}.base_date(today.year, today.month, today.day)
+          iex> #{inspect(__MODULE__)}.date_from_base_date(year, month, day)
+          {today.year, today.month, today.day}
+
       """
       def date_from_base_date(year, month, day) do
         {counted_month, counted_day} = named_to_counted(month, day)
@@ -269,6 +301,21 @@ defmodule Calendrical.Calendar.Shifted do
       @doc """
       Returns the ISO day number of a date of this calendar.
 
+      ### Arguments
+
+      * `year`, `month` and `day` are a date of this calendar.
+
+      ### Returns
+
+      * The ISO day number.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.date_to_iso_days(today.year, today.month, today.day) ==
+          ...>   Date.to_gregorian_days(~D[2024-06-01])
+          true
+
       """
       def date_to_iso_days(year, month, day) do
         {base_year, base_month, base_day} = base_date(year, month, day)
@@ -277,6 +324,20 @@ defmodule Calendrical.Calendar.Shifted do
 
       @doc """
       Returns the date of this calendar of an ISO day number.
+
+      ### Arguments
+
+      * `iso_days` is an ISO day number.
+
+      ### Returns
+
+      * `{year, month, day}` in this calendar.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.date_from_iso_days(Date.to_gregorian_days(~D[2024-06-01]))
+          {today.year, today.month, today.day}
 
       """
       def date_from_iso_days(iso_days) do
@@ -288,13 +349,50 @@ defmodule Calendrical.Calendar.Shifted do
       Returns the number of months in a year: the base calendar's, and one
       more where the year begins within a base month.
 
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      ### Returns
+
+      * The number of months.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.months_in_year(today.year) in [12, 13]
+          true
+
       """
       def months_in_year(_year), do: @counted_months
+    end
+  end
 
+  # The days of the months, leap years and the valid dates.
+  # The generated definitions branch on the options once, at compile time.
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
+  defp months do
+    quote location: :keep do
       @doc """
       Returns the number of days in a month of a year: the base month's,
       and a part of it for the two months a year begun within a base month
       splits it into.
+
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      * `month` is a month of the year.
+
+      ### Returns
+
+      * The number of days, or `0` for a month the year does not have.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.days_in_month(today.year, today.month) >= today.day
+          true
 
       """
       if @split_months do
@@ -316,6 +414,20 @@ defmodule Calendrical.Calendar.Shifted do
       @doc """
       Returns whether a year is a leap year: whether it holds 366 days.
 
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      ### Returns
+
+      * `true` if the year holds 366 days, otherwise `false`.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.leap_year?(today.year) in [true, false]
+          true
+
       """
       def leap_year?(year) do
         Calendrical.Period.days_in_year(__MODULE__, year) == 366
@@ -323,6 +435,22 @@ defmodule Calendrical.Calendar.Shifted do
 
       @doc """
       Returns whether a year, month and day are a date of this calendar.
+
+      ### Arguments
+
+      * `year`, `month` and `day` are a date of this calendar.
+
+      ### Returns
+
+      * `true` if they are a date of this calendar, otherwise `false`.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.valid_date?(today.year, today.month, today.day)
+          true
+          iex> #{inspect(__MODULE__)}.valid_date?(today.year, today.month, 0)
+          false
 
       """
       if @year_zero? do
@@ -343,7 +471,7 @@ defmodule Calendrical.Calendar.Shifted do
     end
   end
 
-  # The written date, the day of era and the arithmetic.
+  # The written date and the day of era.
   # The generated definitions branch on the options once, at compile time.
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defp written_and_shift do
@@ -353,6 +481,21 @@ defmodule Calendrical.Calendar.Shifted do
       that name it, with the base year or this calendar's own year as
       `:written_year` says.
 
+      ### Arguments
+
+      * `year`, `month` and `day` are a date of this calendar.
+
+      ### Returns
+
+      * `{year, month, day}` as the date is written.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> {year, month, day} = #{inspect(__MODULE__)}.written_date(today.year, today.month, today.day)
+          iex> #{inspect(__MODULE__)}.date_from_written_date(year, month, day)
+          {:ok, {today.year, today.month, today.day}}
+
       """
       if @written_year == :base do
         def written_date(year, month, day), do: base_date(year, month, day)
@@ -360,6 +503,23 @@ defmodule Calendrical.Calendar.Shifted do
         @doc """
         Returns the date of this calendar that written figures name: the
         inverse of `written_date/3`.
+
+        ### Arguments
+
+        * `year`, `month` and `day` are the written figures of a date.
+
+        ### Returns
+
+        * `{:ok, {year, month, day}}` in this calendar.
+
+        * `{:error, :invalid_date}` for figures that name no date.
+
+        ### Examples
+
+            iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+            iex> {year, month, day} = #{inspect(__MODULE__)}.written_date(today.year, today.month, today.day)
+            iex> #{inspect(__MODULE__)}.date_from_written_date(year, month, day)
+            {:ok, {today.year, today.month, today.day}}
 
         """
         def date_from_written_date(year, month, day)
@@ -378,6 +538,23 @@ defmodule Calendrical.Calendar.Shifted do
         @doc """
         Returns the date of this calendar that written figures name: the
         inverse of `written_date/3`.
+
+        ### Arguments
+
+        * `year`, `month` and `day` are the written figures of a date.
+
+        ### Returns
+
+        * `{:ok, {year, month, day}}` in this calendar.
+
+        * `{:error, :invalid_date}` for figures that name no date.
+
+        ### Examples
+
+            iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+            iex> {year, month, day} = #{inspect(__MODULE__)}.written_date(today.year, today.month, today.day)
+            iex> #{inspect(__MODULE__)}.date_from_written_date(year, month, day)
+            {:ok, {today.year, today.month, today.day}}
 
         """
         def date_from_written_date(year, month, day)
@@ -398,6 +575,21 @@ defmodule Calendrical.Calendar.Shifted do
       calendar's year 1, and back from the day before it for the era
       before.
 
+      ### Arguments
+
+      * `year`, `month` and `day` are a date of this calendar.
+
+      ### Returns
+
+      * `{day, era}`.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> {day, 1} = #{inspect(__MODULE__)}.day_of_era(today.year, today.month, today.day)
+          iex> day > 0
+          true
+
       """
       def day_of_era(year, month, day) do
         {_year, era} = year_of_era(year, month, day)
@@ -405,17 +597,43 @@ defmodule Calendrical.Calendar.Shifted do
         epoch = date_to_iso_days(1, 1, 1)
         if era == 1, do: {days - epoch + 1, era}, else: {epoch - days, era}
       end
+    end
+  end
 
+  # Shifting a date by years, months, weeks or days.
+  defp shift do
+    quote location: :keep do
       @doc """
       Returns the date a number of years, quarters, months, weeks or days
       from a date: the base calendar's arithmetic on the base date,
       relabelled, for years, quarters and months, and a count of days
       otherwise.
 
+      ### Arguments
+
+      * `year`, `month` and `day` are a date of this calendar.
+
+      * `date_part` is one of `:years`, `:quarters`, `:months`, `:weeks`
+        or `:days`.
+
+      * `increment` is the number of units, which may be negative.
+
+      * `options` is a keyword list of options.
+
       ### Options
 
       * `:clamp` keeps a day the month reached lacks as its last day, as
         the base calendar's `shift/6` does. The default is `true`.
+
+      ### Returns
+
+      * `{year, month, day}` of this calendar.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.shift(today.year, today.month, today.day, :days, 0)
+          {today.year, today.month, today.day}
 
       """
       def shift(year, month, day, date_part, increment, options \\ [])

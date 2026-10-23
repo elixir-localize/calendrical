@@ -133,6 +133,8 @@ defmodule Calendrical.Persian do
                              2987
                            ])
 
+  @tehran %Geo.PointZ{coordinates: {51.3890, 35.6892, 1100}}
+
   @doc """
   Returns whether the given Persian year is a leap year.
 
@@ -303,8 +305,6 @@ defmodule Calendrical.Persian do
       {:ok, Date.add(new_year, -1)}
     end
   end
-
-  @tehran %Geo.PointZ{coordinates: {51.3890, 35.6892, 1100}}
 
   defp midday_in_tehran(date) do
     Astro.solar_noon(@tehran, date)

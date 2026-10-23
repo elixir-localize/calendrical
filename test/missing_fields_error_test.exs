@@ -33,4 +33,20 @@ defmodule Calendrical.MissingFieldsErrorTest do
                    end
     end
   end
+
+  describe "year_of_era/1 without a year" do
+    # These calendars define their own year_of_era/1, whose comparison
+    # guards a nil year would otherwise pass, since atoms sort after numbers.
+    for calendar <- [
+          Calendrical.Coptic,
+          Calendrical.Ethiopic,
+          Calendrical.Julian,
+          Calendrical.Reform.Sweden.Transitional
+        ] do
+      test "#{inspect(calendar)} returns a MissingFieldsError" do
+        assert {:error, %Calendrical.MissingFieldsError{fields: [year: nil]}} =
+                 unquote(calendar).year_of_era(nil)
+      end
+    end
+  end
 end

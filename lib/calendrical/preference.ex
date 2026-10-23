@@ -68,6 +68,45 @@ defmodule Calendrical.Preference do
   @day_codes [:mon, :tue, :wed, :thu, :fri, :sat, :sun]
   @first_day Enum.zip([@day_codes, @days]) |> Map.new()
 
+  @known_calendars Localize.known_calendars()
+
+  # CLDR calendar types whose Calendrical module name is not a direct
+  # CamelCase of the type atom. Mostly nested modules (Islamic variants,
+  # Ethiopic.AmeteAlem) and the Korean lunisolar calendar which uses the
+  # `:dangi` CLDR type.
+  @calendar_module_overrides %{
+    islamic: Calendrical.Islamic.Observational,
+    islamic_civil: Calendrical.Islamic.Civil,
+    islamic_rgsa: Calendrical.Islamic.Rgsa,
+    islamic_tbla: Calendrical.Islamic.Tbla,
+    islamic_umalqura: Calendrical.Islamic.UmmAlQura,
+    ethiopic_amete_alem: Calendrical.Ethiopic.AmeteAlem,
+    dangi: Calendrical.Korean
+  }
+
+  # Some territories observe a lunisolar calendar computed from a different
+  # meridian than the CLDR calendar type's default module. Vietnam uses the
+  # Chinese lunisolar calendar observed from Hanoi (105° East), so a request
+  # for the `:chinese` calendar in a Vietnamese context resolves to
+  # `Calendrical.Vietnamese` rather than the Beijing-observed
+  # `Calendrical.Chinese`. This refines an explicit calendar choice; it does
+  # not change a territory's default (civil) calendar, which stays Gregorian.
+  @territory_calendar_overrides %{
+    {:VN, :chinese} => Calendrical.Vietnamese
+  }
+
+  # The module of each CLDR calendar type. `iso8601`, the Gregorian
+  # calendar with ISO 8601's week rules, is in
+  # `Calendrical.additional_calendars/0` with the other names CLDR's types
+  # do not reach, and is not repeated here.
+  @calendar_modules @known_calendars
+                    |> Enum.map(fn c ->
+                      {c,
+                       Module.concat(@base_calendar, c |> Atom.to_string() |> Macro.camelize())}
+                    end)
+                    |> Map.new()
+                    |> Map.merge(@calendar_module_overrides)
+
   @doc false
   def territory_preferences do
     @territory_preferences
@@ -147,6 +186,38 @@ defmodule Calendrical.Preference do
     end
   end
 
+  @doc """
+  Returns the Calendrical calendar module for a territory and a
+  preferred calendar type.
+
+  The calendar type is chosen when the territory lists it among its
+  preferences, or the territory has its own variant of it. Otherwise
+  the territory's first loaded preference is returned, as
+  `calendar_from_territory/1` does.
+
+  ### Arguments
+
+  * `territory` is any valid ISO 3166 alpha-2 code as an upcased
+    `t:atom/0` (e.g. `:US`, `:IR`, `:JP`).
+
+  * `calendar` is a CLDR calendar type such as `:persian` or
+    `:buddhist`.
+
+  ### Returns
+
+  * `{:ok, calendar_module}` on success.
+
+  * `{:error, exception}` if the territory is unknown.
+
+  ### Examples
+
+      iex> Calendrical.Preference.calendar_from_territory(:IR, :persian)
+      {:ok, Calendrical.Persian}
+
+      iex> Calendrical.Preference.calendar_from_territory(:US, :persian)
+      {:ok, Calendrical.US}
+
+  """
   def calendar_from_territory(territory, calendar) when is_atom(territory) do
     case territory_calendar_override_module(territory, calendar) do
       nil -> calendar_from_territory_preference(territory, calendar)
@@ -307,58 +378,19 @@ defmodule Calendrical.Preference do
     Localize.Territory.territory_from_locale(locale)
   end
 
-  @known_calendars Localize.known_calendars()
-
-  # CLDR calendar types whose Calendrical module name is not a direct
-  # CamelCase of the type atom. Mostly nested modules (Islamic variants,
-  # Ethiopic.AmeteAlem) and the Korean lunisolar calendar which uses the
-  # `:dangi` CLDR type.
-  @calendar_module_overrides %{
-    islamic: Calendrical.Islamic.Observational,
-    islamic_civil: Calendrical.Islamic.Civil,
-    islamic_rgsa: Calendrical.Islamic.Rgsa,
-    islamic_tbla: Calendrical.Islamic.Tbla,
-    islamic_umalqura: Calendrical.Islamic.UmmAlQura,
-    ethiopic_amete_alem: Calendrical.Ethiopic.AmeteAlem,
-    dangi: Calendrical.Korean
-  }
-
-  # Some territories observe a lunisolar calendar computed from a different
-  # meridian than the CLDR calendar type's default module. Vietnam uses the
-  # Chinese lunisolar calendar observed from Hanoi (105° East), so a request
-  # for the `:chinese` calendar in a Vietnamese context resolves to
-  # `Calendrical.Vietnamese` rather than the Beijing-observed
-  # `Calendrical.Chinese`. This refines an explicit calendar choice; it does
-  # not change a territory's default (civil) calendar, which stays Gregorian.
-  @territory_calendar_overrides %{
-    {:VN, :chinese} => Calendrical.Vietnamese
-  }
-
   defp territory_calendar_override_module(territory, calendar) do
     Map.get(@territory_calendar_overrides, {territory, calendar})
   end
 
   defp territory_calendar_override(%LanguageTag{} = locale, calendar) do
-    with {:ok, territory} <- territory_from(locale),
-         module when not is_nil(module) <-
-           territory_calendar_override_module(territory, calendar) do
-      {:ok, module}
-    else
-      _ -> :none
+    case territory_from(locale) do
+      {:ok, territory} -> override(territory_calendar_override_module(territory, calendar))
+      _no_territory -> :none
     end
   end
 
-  # The module of each CLDR calendar type. `iso8601`, the Gregorian
-  # calendar with ISO 8601's week rules, is in
-  # `Calendrical.additional_calendars/0` with the other names CLDR's types
-  # do not reach, and is not repeated here.
-  @calendar_modules @known_calendars
-                    |> Enum.map(fn c ->
-                      {c,
-                       Module.concat(@base_calendar, c |> Atom.to_string() |> Macro.camelize())}
-                    end)
-                    |> Map.new()
-                    |> Map.merge(@calendar_module_overrides)
+  defp override(nil), do: :none
+  defp override(module), do: {:ok, module}
 
   @doc false
   def calendar_modules do

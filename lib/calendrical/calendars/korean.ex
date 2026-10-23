@@ -63,6 +63,13 @@ defmodule Calendrical.Korean do
   alias Astro.Time
   alias Calendrical.Lunisolar
 
+  @thanksgiving_month 8
+  @thanksgiving_day 15
+  @korea_1908 Calendrical.Gregorian.date_to_iso_days(1908, 4, 1)
+  @korea_1912 Calendrical.Gregorian.date_to_iso_days(1912, 1, 1)
+  @korea_1954 Calendrical.Gregorian.date_to_iso_days(1954, 3, 21)
+  @korea_1961 Calendrical.Gregorian.date_to_iso_days(1961, 8, 10)
+
   @doc """
   Returns the Gregorian date of Korean thanksgiving
   (15th day of 8th lunar month) for a given Gregorian year.
@@ -88,9 +95,6 @@ defmodule Calendrical.Korean do
       ~D[2023-09-29]
 
   """
-  @thanksgiving_month 8
-  @thanksgiving_day 15
-
   @spec thanksgiving_for_gregorian_year(Calendar.year()) :: Date.t()
   def thanksgiving_for_gregorian_year(gregorian_year) when is_integer(gregorian_year) do
     gregorian_date_for_lunar(gregorian_year, @thanksgiving_month, @thanksgiving_day)
@@ -111,11 +115,6 @@ defmodule Calendrical.Korean do
     offset = korean_offset(iso_days)
     {angle(37, 34, 0), angle(126, 58, 0), mt(0), Astro.Time.hours_to_days(offset)}
   end
-
-  @korea_1908 Calendrical.Gregorian.date_to_iso_days(1908, 4, 1)
-  @korea_1912 Calendrical.Gregorian.date_to_iso_days(1912, 1, 1)
-  @korea_1954 Calendrical.Gregorian.date_to_iso_days(1954, 3, 21)
-  @korea_1961 Calendrical.Gregorian.date_to_iso_days(1961, 8, 10)
 
   @doc false
   def korean_offset(iso_days) do

@@ -77,6 +77,9 @@ defmodule Calendrical.Ethiopic do
 
   * A two-tuple `{year_in_era, era}` where `era` is `0` or `1`.
 
+  * `{:error, %Calendrical.MissingFieldsError{}}` when `year` is not
+    an integer, as for a partial date with no year.
+
   ### Examples
 
       iex> Calendrical.Ethiopic.year_of_era(2018)
@@ -89,7 +92,10 @@ defmodule Calendrical.Ethiopic do
       {5450, 0}
 
   """
-  @spec year_of_era(year) :: {integer(), 0..1}
+  @spec year_of_era(year) :: {integer(), 0..1} | Calendrical.date_error()
+  def year_of_era(year) when not is_integer(year),
+    do: {:error, Calendrical.missing_year_error("year_of_era", year)}
+
   def year_of_era(year) when year >= 1 do
     {year, 1}
   end
@@ -114,6 +120,9 @@ defmodule Calendrical.Ethiopic do
 
   * A two-tuple `{year_in_era, era}` where `era` is `0` or `1`.
 
+  * `{:error, %Calendrical.MissingFieldsError{}}` when `year` is not
+    an integer, as for a partial date with no year.
+
   ### Examples
 
       iex> Calendrical.Ethiopic.year_of_era(2018, 1, 1)
@@ -121,7 +130,7 @@ defmodule Calendrical.Ethiopic do
 
   """
   @impl true
-  @spec year_of_era(year, month, day) :: {integer(), 0..1}
+  @spec year_of_era(year, month, day) :: {integer(), 0..1} | Calendrical.date_error()
   def year_of_era(year, _month, _day), do: year_of_era(year)
 
   @doc """

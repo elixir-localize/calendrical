@@ -142,6 +142,8 @@ Calendrical 2.0 rebuilds every calendar on a kernel of eight callbacks and deriv
 
 ### Fixed
 
+* `year_of_era/1` returns a `Calendrical.MissingFieldsError` for a missing year in the Coptic, Ethiopic, Julian and transitional Swedish calendars, as every other calendar does, rather than `{nil, 1}`.
+
 * A Julian year-start variant's years and months, and a composite's across a change of new-year day, are counted in the Julian months that name the dates: two years on from 25 March 1750 in England is 25 March 1752, where it was 1 April 1752, and a month on from 20 March is 20 April. A year holds twelve months, though a year reckoned from 25 March counts thirteen.
 
 * A solar term of a year before 0 is the day its moment is in: `Calendrical.Chinese.solar_term(5, -3000)` is 6 April, where rounding the moment towards zero gave 7 April.

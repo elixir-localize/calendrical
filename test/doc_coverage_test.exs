@@ -8,6 +8,7 @@ defmodule Calendrical.DocCoverage.Test do
   doctest Calendrical.ISO
   doctest Calendrical.ISOWeek
   doctest Calendrical.Islamic.UmmAlQura.Astronomical
+  doctest Calendrical.Islamic.UmmAlQura.ReferenceData
   doctest Calendrical.Julian
   doctest Calendrical.Lunisolar
   doctest Calendrical.NRF

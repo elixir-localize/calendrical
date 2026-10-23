@@ -80,7 +80,7 @@ defmodule Calendrical.Calendar.Weeks do
   }
 
   defmacro __using__(options) do
-    [facts(options), structure(), kernel(), written(), shift()]
+    [facts(options), structure(), months(), kernel(), written(), shift()]
   end
 
   # The options as attributes and `info/0`.
@@ -138,6 +138,15 @@ defmodule Calendrical.Calendar.Weeks do
       Returns the static facts about this calendar, as
       `t:Calendrical.Info.t/0`.
 
+      ### Returns
+
+      * A `t:Calendrical.Info.t/0` describing this calendar.
+
+      ### Examples
+
+          iex> #{inspect(__MODULE__)}.info().calendar
+          #{inspect(__MODULE__)}
+
       """
       def info do
         Calendrical.Info.new(__MODULE__,
@@ -166,6 +175,22 @@ defmodule Calendrical.Calendar.Weeks do
       that begins by the rule, and the day after the year before ends for
       one that ends by it.
 
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      ### Returns
+
+      * The ISO day number of the day.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> first = #{inspect(__MODULE__)}.first_gregorian_day_of_year(today.year)
+          iex> last = #{inspect(__MODULE__)}.last_gregorian_day_of_year(today.year)
+          iex> rem(last - first + 1, 7)
+          0
+
       """
       if @anchor == :begins do
         def first_gregorian_day_of_year(year) when is_integer(year) do
@@ -184,6 +209,21 @@ defmodule Calendrical.Calendar.Weeks do
         Returns the number of `iso_days` that is the last day of a year of
         this calendar: the day before the next year begins.
 
+        ### Arguments
+
+        * `year` is a year of this calendar.
+
+        ### Returns
+
+        * The ISO day number of the day.
+
+        ### Examples
+
+            iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+            iex> last = #{inspect(__MODULE__)}.last_gregorian_day_of_year(today.year)
+            iex> #{inspect(__MODULE__)}.first_gregorian_day_of_year(today.year + 1) - last
+            1
+
         """
         def last_gregorian_day_of_year(year) when is_integer(year) do
           first_gregorian_day_of_year(year + 1) - 1
@@ -196,6 +236,21 @@ defmodule Calendrical.Calendar.Weeks do
         @doc """
         Returns the number of `iso_days` that is the last day of a year of
         this calendar: the rule's weekday on or after its day.
+
+        ### Arguments
+
+        * `year` is a year of this calendar.
+
+        ### Returns
+
+        * The ISO day number of the day.
+
+        ### Examples
+
+            iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+            iex> last = #{inspect(__MODULE__)}.last_gregorian_day_of_year(today.year)
+            iex> #{inspect(__MODULE__)}.first_gregorian_day_of_year(today.year + 1) - last
+            1
 
         """
         def last_gregorian_day_of_year(year) when is_integer(year) do
@@ -210,9 +265,32 @@ defmodule Calendrical.Calendar.Weeks do
             Integer.mod(@anchor_weekday - Calendrical.Calendar.Weeks.day_of_week(anchor), 7)
         end
       end
+    end
+  end
 
+  # Whether a year is long, the days of its months and the valid dates.
+  # The generated definitions branch on the options once, at compile time.
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
+  defp months do
+    quote location: :keep do
       @doc """
       Returns whether a year is a long year, one of fifty-three weeks.
+
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      ### Returns
+
+      * `true` if the year has fifty-three weeks, otherwise `false`.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> first = #{inspect(__MODULE__)}.first_gregorian_day_of_year(today.year)
+          iex> last = #{inspect(__MODULE__)}.last_gregorian_day_of_year(today.year)
+          iex> #{inspect(__MODULE__)}.leap_year?(today.year) == (last - first + 1 == 371)
+          true
 
       """
       def leap_year?(year) when is_integer(year) do
@@ -240,6 +318,12 @@ defmodule Calendrical.Calendar.Weeks do
 
       * `{:error, :invalid_date}` for a month the year does not have.
 
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> rem(#{inspect(__MODULE__)}.days_in_month(today.year, today.month), 7)
+          0
+
       """
       @spec days_in_month(year :: Calendrical.year(), month :: Calendrical.month()) ::
               days ::
@@ -263,6 +347,22 @@ defmodule Calendrical.Calendar.Weeks do
       @doc """
       Returns whether a year, month and day are a date of this calendar.
 
+      ### Arguments
+
+      * `year`, `month` and `day` are a date of this calendar.
+
+      ### Returns
+
+      * `true` if they are a date of this calendar, otherwise `false`.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.valid_date?(today.year, today.month, today.day)
+          true
+          iex> #{inspect(__MODULE__)}.valid_date?(today.year, 13, 1)
+          false
+
       """
       def valid_date?(year, month, day)
           when is_integer(year) and is_integer(month) and is_integer(day) and
@@ -282,6 +382,21 @@ defmodule Calendrical.Calendar.Weeks do
       year's first day, the weeks of the months before the month, and the
       day.
 
+      ### Arguments
+
+      * `year`, `month` and `day` are a date of this calendar.
+
+      ### Returns
+
+      * The ISO day number.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.date_to_iso_days(today.year, today.month, today.day) ==
+          ...>   Date.to_gregorian_days(~D[2024-06-01])
+          true
+
       """
       def date_to_iso_days(year, month, day)
           when is_integer(year) and is_integer(month) and is_integer(day) do
@@ -293,6 +408,20 @@ defmodule Calendrical.Calendar.Weeks do
       Returns `{year, month, day}` calculated from the number of
       `iso_days`: the year whose days hold it, and the month of the
       pattern its week of the year falls in.
+
+      ### Arguments
+
+      * `iso_days` is an ISO day number.
+
+      ### Returns
+
+      * `{year, month, day}` in this calendar.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.date_from_iso_days(Date.to_gregorian_days(~D[2024-06-01]))
+          {today.year, today.month, today.day}
 
       """
       def date_from_iso_days(iso_days) when is_integer(iso_days) do
@@ -326,6 +455,21 @@ defmodule Calendrical.Calendar.Weeks do
       Returns the figures a date is written with: its year, the Gregorian
       month that names its month, and its day of the month.
 
+      ### Arguments
+
+      * `year`, `month` and `day` are a date of this calendar.
+
+      ### Returns
+
+      * `{year, month, day}` as the date is written.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> {year, month, day} = #{inspect(__MODULE__)}.written_date(today.year, today.month, today.day)
+          iex> #{inspect(__MODULE__)}.date_from_written_date(year, month, day)
+          {:ok, {today.year, today.month, today.day}}
+
       """
       def written_date(year, month, day)
           when is_integer(month) and month in 1..unquote(@months_in_year)//1 do
@@ -339,6 +483,23 @@ defmodule Calendrical.Calendar.Weeks do
       month of the year the named month is, with the year and the day as
       written, where they are a date.
 
+      ### Arguments
+
+      * `year`, `named_month` and `day` are the written figures of a date.
+
+      ### Returns
+
+      * `{:ok, {year, month, day}}` in this calendar.
+
+      * `{:error, :invalid_date}` for figures that name no date.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> {year, month, day} = #{inspect(__MODULE__)}.written_date(today.year, today.month, today.day)
+          iex> #{inspect(__MODULE__)}.date_from_written_date(year, month, day)
+          {:ok, {today.year, today.month, today.day}}
+
       """
       def date_from_written_date(year, named_month, day)
           when is_integer(named_month) and named_month in 1..unquote(@months_in_year)//1 do
@@ -351,6 +512,21 @@ defmodule Calendrical.Calendar.Weeks do
       @doc """
       Returns the day of era of a date: counted from the first day of
       year 1, and back from the last day of year 0 for the era before.
+
+      ### Arguments
+
+      * `year`, `month` and `day` are a date of this calendar.
+
+      ### Returns
+
+      * `{day, era}`.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> {day, 1} = #{inspect(__MODULE__)}.day_of_era(today.year, today.month, today.day)
+          iex> day > 0
+          true
 
       """
       def day_of_era(year, month, day)
@@ -375,11 +551,32 @@ defmodule Calendrical.Calendar.Weeks do
       of the week; a month on, its day of the month; a week or a day on is
       a count of days.
 
+      ### Arguments
+
+      * `year`, `month` and `day` are a date of this calendar.
+
+      * `date_part` is one of `:years`, `:quarters`, `:months`, `:weeks`
+        or `:days`.
+
+      * `increment` is the number of units, which may be negative.
+
+      * `options` is a keyword list of options.
+
       ### Options
 
       * `:clamp` brings a fifty-third week into the last week of a year
         of fifty-two, and a day the month reached lacks to its last day.
         The default is `true`.
+
+      ### Returns
+
+      * `{year, month, day}` of this calendar.
+
+      ### Examples
+
+          iex> {:ok, today} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.shift(today.year, today.month, today.day, :days, 0)
+          {today.year, today.month, today.day}
 
       """
       def shift(year, month, day, date_part, increment, options \\ [])

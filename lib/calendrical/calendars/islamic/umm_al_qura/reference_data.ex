@@ -29,90 +29,6 @@ defmodule Calendrical.Islamic.UmmAlQura.ReferenceData do
 
   @type entry :: {pos_integer(), 1..12, Date.t()}
 
-  @doc """
-  Returns the complete sequence of Umm al-Qura first-day dates as a list of maps.
-
-  ### Arguments
-
-  * `hijiri_list_of_days_since_epoch` is a list of integers
-    marking the start of each Hijiri month. There are two source
-    available in this module:
-
-    * `van_gent_data/0` (the default) and
-    * `akmal_data/0`
-
-  Each map has three keys:
-    - `:hijri_year`  — Hijri year (integer)
-    - `:hijri_month` — Hijri month number, 1–12 (1 = Muharram)
-    - `:gregorian`   — `t:Calendar.date/0` of the 1st day of that Hijri month
-
-  The sequence starts at 1 Muharram #{@hijri_start_year} AH
-  (#{@hijri_start_date}) and covers approximately 145 years.
-
-  """
-  @spec umm_al_qura_dates(hijiri_list_of_days_since_epoch :: [pos_integer]) :: [
-          %{hijri_year: pos_integer(), hijri_month: 1..12, gregorian: Date.t()}
-        ]
-  def umm_al_qura_dates(hijiri_list_of_days_since_epoch \\ van_gent_data()) do
-    dates =
-      to_gregorian(hijiri_list_of_days_since_epoch, [@hijri_start_date])
-      |> Enum.reverse()
-
-    dates
-    |> Enum.with_index()
-    |> Enum.map(fn {date, index} ->
-      hijri_year = @hijri_start_year + div(index, 12)
-      hijri_month = rem(index, 12) + @hijri_start_month
-      %{hijri_year: hijri_year, hijri_month: hijri_month, gregorian: date}
-    end)
-  end
-
-  @doc """
-  Returns a table of days since epoch for Hikiri months
-  in the Umm al-Qura calendar sourced from R.H. van Gent's
-  Umm al-Qura tables at Utrecht University.
-
-  Source: <https://webspace.science.uu.nl/~gent0113/islam/ummalqura.htm>
-  on March 13th, 2026.
-
-  The <https://github.com/dralshehri/hijridate> library also uses the
-  van Gent data.
-
-  ## Comparison with `akmal_data/0`
-
-  The two datasets are identical for **1,738 of 1,741 months** (99.8 %).
-  All differences fall within Era 4 (≥ 1423 AH) and involve extreme
-  boundary cases where moonset and sunset at Mecca are within seconds
-  of each other:
-
-  | Hijri date | Month | akmal | ghent | Margin |
-  |---|---|---|---|---|
-  | 1427/6 | Jumada al-Thani | 2006-06-26 | 2006-06-27 | conjunction 75 s before sunset |
-  | 1446/6 | Jumada al-Thani | 2024-12-03 | 2024-12-02 | moonset 5 s before sunset |
-  | 1485/10 | **Shawwal (Eid al-Fitr)** | 2063-01-31 | 2063-01-30 | moonset 8 s before sunset |
-
-  The discrepancies are likely caused by differences in the underlying
-  astronomical algorithms (ephemeris model, atmospheric refraction,
-  lunar parallax). At these razor-thin margins a few arcseconds of
-  difference in the moon's computed position flips the binary
-  moonset-before/after-sunset decision.
-
-  The 1485/10 case is the most consequential: 1 Shawwal determines
-  **Eid al-Fitr** (end of Ramadan). However, it is a future date
-  (2063) and both values are predictions; the official determination
-  has not yet been made.
-
-  Era 2 (1392–1419 AH) and Era 3 (1420–1422 AH) are identical
-  across both datasets.
-
-  Since the first two dates are in the past, and the last one
-  is in the mid-future it is expected the discrepencies have
-  limited negative impact. However they are included here
-  as a reminder that not all data sets agree and astronomical
-  calculations are hard.
-
-  """
-
   # Each row = 12 entries = one Hijri year (Muharram through Dhul Hijjah).
   # Rows start at 1356 AH (row 1) through 1500 AH (row 145), plus one
   # trailing sentinel value.
@@ -267,20 +183,6 @@ defmodule Calendrical.Islamic.UmmAlQura.ReferenceData do
                  |> String.split()
                  |> Enum.map(&String.to_integer/1)
 
-  def van_gent_data, do: @van_gent_data
-
-  @doc """
-  Returns a table of days since epoch for Hikiri months
-  in the Umm al-Qura calendar.
-
-  The data is sourced from https://gist.github.com/akmalxxx/6492017 which claims
-  it was taken from Van Gent. However this data is different for 3 dates
-  from current Van Gent (see `van_gent_data/0` below).
-
-  Consecutive differences give the length (29 or 30 days) of each Hijri month, starting
-  at 1 Muharram 1356 AH (14 March 1937 CE).
-
-  """
   @akmal_data """
                 28607 28636 28665 28695 28724 28754 28783 28813 28843 28872 28901 28931
                 28960 28990 29019 29049 29078 29108 29137 29167 29196 29226 29255 29285
@@ -432,6 +334,136 @@ defmodule Calendrical.Islamic.UmmAlQura.ReferenceData do
               |> String.split()
               |> Enum.map(&String.to_integer/1)
 
+  @doc """
+  Returns the complete sequence of Umm al-Qura first-day dates as a list of maps.
+
+  ### Arguments
+
+  * `hijiri_list_of_days_since_epoch` is a list of integers
+    marking the start of each Hijri month. There are two sources
+    available in this module:
+
+    * `van_gent_data/0` (the default).
+
+    * `akmal_data/0`.
+
+  ### Returns
+
+  * A list of maps, one for each Hijri month, each with three keys:
+
+    * `:hijri_year` is the Hijri year (integer).
+
+    * `:hijri_month` is the Hijri month number, 1–12 (1 = Muharram).
+
+    * `:gregorian` is the `t:Calendar.date/0` of the 1st day of that
+      Hijri month.
+
+  The sequence starts at 1 Muharram #{@hijri_start_year} AH
+  (#{@hijri_start_date}) and covers approximately 145 years.
+
+  ### Examples
+
+      iex> [first | _rest] = Calendrical.Islamic.UmmAlQura.ReferenceData.umm_al_qura_dates()
+      iex> first
+      %{hijri_year: 1356, hijri_month: 1, gregorian: ~D[1937-03-14]}
+
+  """
+  @spec umm_al_qura_dates(hijiri_list_of_days_since_epoch :: [pos_integer]) :: [
+          %{hijri_year: pos_integer(), hijri_month: 1..12, gregorian: Date.t()}
+        ]
+  def umm_al_qura_dates(hijiri_list_of_days_since_epoch \\ van_gent_data()) do
+    dates =
+      to_gregorian(hijiri_list_of_days_since_epoch, [@hijri_start_date])
+      |> Enum.reverse()
+
+    dates
+    |> Enum.with_index()
+    |> Enum.map(fn {date, index} ->
+      hijri_year = @hijri_start_year + div(index, 12)
+      hijri_month = rem(index, 12) + @hijri_start_month
+      %{hijri_year: hijri_year, hijri_month: hijri_month, gregorian: date}
+    end)
+  end
+
+  @doc """
+  Returns a table of days since epoch for Hijri months
+  in the Umm al-Qura calendar sourced from R.H. van Gent's
+  Umm al-Qura tables at Utrecht University.
+
+  Source: <https://webspace.science.uu.nl/~gent0113/islam/ummalqura.htm>
+  on March 13th, 2026.
+
+  The <https://github.com/dralshehri/hijridate> library also uses the
+  van Gent data.
+
+  ## Comparison with `akmal_data/0`
+
+  The two datasets are identical for **1,738 of 1,741 months** (99.8 %).
+  All differences fall within Era 4 (≥ 1423 AH) and involve extreme
+  boundary cases where moonset and sunset at Mecca are within seconds
+  of each other:
+
+  | Hijri date | Month | akmal | ghent | Margin |
+  |---|---|---|---|---|
+  | 1427/6 | Jumada al-Thani | 2006-06-26 | 2006-06-27 | conjunction 75 s before sunset |
+  | 1446/6 | Jumada al-Thani | 2024-12-03 | 2024-12-02 | moonset 5 s before sunset |
+  | 1485/10 | **Shawwal (Eid al-Fitr)** | 2063-01-31 | 2063-01-30 | moonset 8 s before sunset |
+
+  The discrepancies are likely caused by differences in the underlying
+  astronomical algorithms (ephemeris model, atmospheric refraction,
+  lunar parallax). At these razor-thin margins a few arcseconds of
+  difference in the moon's computed position flips the binary
+  moonset-before/after-sunset decision.
+
+  The 1485/10 case is the most consequential: 1 Shawwal determines
+  **Eid al-Fitr** (end of Ramadan). However, it is a future date
+  (2063) and both values are predictions; the official determination
+  has not yet been made.
+
+  Era 2 (1392–1419 AH) and Era 3 (1420–1422 AH) are identical
+  across both datasets.
+
+  Since the first two dates are in the past, and the last one
+  is in the mid-future it is expected the discrepencies have
+  limited negative impact. However they are included here
+  as a reminder that not all data sets agree and astronomical
+  calculations are hard.
+
+  ### Returns
+
+  * A list of integers, the days since the epoch of the first day of
+    each Hijri month.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.UmmAlQura.ReferenceData.van_gent_data() |> Enum.take(3)
+      [28607, 28636, 28665]
+
+  """
+  def van_gent_data, do: @van_gent_data
+
+  @doc """
+  Returns a table of days since epoch for Hijri months
+  in the Umm al-Qura calendar.
+
+  The data is sourced from https://gist.github.com/akmalxxx/6492017 which claims
+  it was taken from Van Gent. However this data is different for 3 dates
+  from current Van Gent (see `van_gent_data/0` below).
+
+  Consecutive differences give the length (29 or 30 days) of each Hijri month, starting
+  at 1 Muharram 1356 AH (14 March 1937 CE).
+
+  ### Returns
+
+  * A list of integers, the days since the epoch of the first day of
+    each Hijri month.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.UmmAlQura.ReferenceData.akmal_data() |> Enum.take(3)
+      [28607, 28636, 28665]
+
+  """
   def akmal_data, do: @akmal_data
 
   defp to_gregorian([_last], acc) do

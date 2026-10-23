@@ -44,6 +44,10 @@ defmodule Calendrical.Reform.Sweden.Transitional do
   # In the (proleptic) Julian calendar that day is 29 February 1712.
   @february_30_1712 Calendrical.Julian.date_to_iso_days(1712, 2, 29)
 
+  # The ISO day of 1 March 1700, the window's first day; its last is
+  # `@february_30_1712`.
+  @first_ahead_day Calendrical.Julian.date_to_iso_days(1700, 3, 1) - 1
+
   @doc """
   Converts a `year`, `month` and `day` in the transitional Swedish calendar to
   an ISO day number.
@@ -82,10 +86,6 @@ defmodule Calendrical.Reform.Sweden.Transitional do
        do: -1
 
   defp offset(_year, _month, _day), do: 0
-
-  # The ISO day of 1 March 1700, the window's first day; its last is
-  # `@february_30_1712`.
-  @first_ahead_day Calendrical.Julian.date_to_iso_days(1700, 3, 1) - 1
 
   @doc """
   Converts an ISO day number to a `{year, month, day}` in the transitional
@@ -241,6 +241,9 @@ defmodule Calendrical.Reform.Sweden.Transitional do
 
   * A `{year_of_era, era}` tuple.
 
+  * `{:error, %Calendrical.MissingFieldsError{}}` when `year` is not
+    an integer, as for a partial date with no year.
+
   ### Examples
 
       iex> Calendrical.Reform.Sweden.Transitional.year_of_era(1712)
@@ -250,7 +253,8 @@ defmodule Calendrical.Reform.Sweden.Transitional do
       {1, 0}
 
   """
-  @spec year_of_era(Calendar.year()) :: {Calendar.year(), Calendar.era()}
+  @spec year_of_era(Calendar.year()) ::
+          {Calendar.year(), Calendar.era()} | Calendrical.date_error()
   def year_of_era(year) do
     Calendrical.Julian.year_of_era(year)
   end
@@ -266,6 +270,9 @@ defmodule Calendrical.Reform.Sweden.Transitional do
   ### Returns
 
   * A `{year_of_era, era}` tuple, or `{:error, :invalid_date}`.
+
+  * `{:error, %Calendrical.MissingFieldsError{}}` when `year` is not
+    an integer, as for a partial date with no year.
 
   ### Examples
 

@@ -74,9 +74,25 @@ defmodule Calendrical.Julian do
   use Calendrical.Compiler.StandardCallbacks
   @before_compile Calendrical.Compiler.DateCheck
 
+  @months_in_year 12
+  @months_in_quarter 3
+  @days_in_week 7
+  @epoch Calendrical.Gregorian.date_to_iso_days(0, 12, 30)
+  @months_with_30_days [4, 6, 9, 11]
+  @months_with_31_days [1, 3, 5, 7, 8, 10, 12]
+
   @doc """
   Returns the static facts about this calendar, as
   `t:Calendrical.Info.t/0`: the Julian calendar has no year 0.
+
+  ### Returns
+
+  * A `t:Calendrical.Info.t/0` struct.
+
+  ### Examples
+
+      iex> Calendrical.Julian.info().year_zero?
+      false
 
   """
   @impl true
@@ -97,12 +113,6 @@ defmodule Calendrical.Julian do
   @type year :: -9999..-1 | 1..9999
   @type month :: 1..12
   @type day :: 1..31
-
-  @months_in_year 12
-  @months_in_quarter 3
-  @days_in_week 7
-
-  @epoch Calendrical.Gregorian.date_to_iso_days(0, 12, 30)
 
   @doc false
   def epoch do
@@ -144,13 +154,11 @@ defmodule Calendrical.Julian do
     false
   end
 
-  @months_with_30_days [4, 6, 9, 11]
   def valid_date?(year, month, day)
       when is_integer(year) and month in @months_with_30_days and day in 1..30 do
     true
   end
 
-  @months_with_31_days [1, 3, 5, 7, 8, 10, 12]
   def valid_date?(year, month, day)
       when is_integer(year) and month in @months_with_31_days and day in 1..31 do
     true
@@ -183,6 +191,9 @@ defmodule Calendrical.Julian do
 
   * A two-tuple `{year_in_era, era}` where `era` is `0` or `1`.
 
+  * `{:error, %Calendrical.MissingFieldsError{}}` when `year` is not
+    an integer, as for a partial date with no year.
+
   ### Examples
 
       iex> Calendrical.Julian.year_of_era(2025)
@@ -192,7 +203,10 @@ defmodule Calendrical.Julian do
       {50, 0}
 
   """
-  @spec year_of_era(year) :: {year, era :: 0..1}
+  @spec year_of_era(year) :: {year, era :: 0..1} | Calendrical.date_error()
+  def year_of_era(year) when not is_integer(year),
+    do: {:error, Calendrical.missing_year_error("year_of_era", year)}
+
   def year_of_era(year) when year > 0 do
     {year, 1}
   end
@@ -217,6 +231,9 @@ defmodule Calendrical.Julian do
 
   * A two-tuple `{year_in_era, era}` where `era` is `0` or `1`.
 
+  * `{:error, %Calendrical.MissingFieldsError{}}` when `year` is not
+    an integer, as for a partial date with no year.
+
   ### Examples
 
       iex> Calendrical.Julian.year_of_era(2025, 1, 1)
@@ -224,7 +241,8 @@ defmodule Calendrical.Julian do
 
   """
   @impl Calendar
-  @spec year_of_era(year, month, day) :: {year :: Calendar.year(), era :: 0..1}
+  @spec year_of_era(year, month, day) ::
+          {year :: Calendar.year(), era :: 0..1} | Calendrical.date_error()
 
   def year_of_era(year, _month, _day) do
     year_of_era(year)
@@ -422,6 +440,20 @@ defmodule Calendrical.Julian do
   into a shorter month, can add to the earlier date without passing the
   later one; it is negative when `to` is before `from`. There is no year
   zero, so year -1 to year 1 is one year.
+
+  ### Arguments
+
+  * `from` is the starting `{year, month, day}`.
+
+  * `to` is the ending `{year, month, day}`.
+
+  * `date_part` is `:years`, `:quarters`, `:months`, `:weeks` or
+    `:days`.
+
+  ### Returns
+
+  * The whole number of `date_part`s from `from` to `to`, as an
+    integer.
 
   ### Examples
 

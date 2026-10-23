@@ -20,6 +20,8 @@ defmodule Calendrical.Format do
 
   @default_format_module Calendrical.Formatter.HTML.Basic
 
+  @default_calendar_css_class "cldr_calendar"
+
   @doc """
   Returns the default formatter module used when no `:formatter` option is
   given to `year/2` or `month/3`.
@@ -38,8 +40,6 @@ defmodule Calendrical.Format do
   def default_formatter_module do
     @default_format_module
   end
-
-  @default_calendar_css_class "cldr_calendar"
 
   @doc """
   Returns the default CSS class used by the HTML formatters when wrapping a

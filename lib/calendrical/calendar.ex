@@ -244,6 +244,15 @@ defmodule Calendrical.Calendar do
       Returns the static facts about this calendar, as
       `t:Calendrical.Info.t/0`.
 
+      ### Returns
+
+      * A `t:Calendrical.Info.t/0` describing this calendar.
+
+      ### Examples
+
+          iex> #{inspect(__MODULE__)}.info().calendar
+          #{inspect(__MODULE__)}
+
       """
       @impl Calendrical
       def info, do: @info
@@ -252,6 +261,20 @@ defmodule Calendrical.Calendar do
 
   defp identity_and_validity do
     quote location: :keep do
+      @doc """
+      Returns the epoch of this calendar: the ISO day number of
+      its first day.
+
+      ### Returns
+
+      * The epoch as an integer number of days since the ISO epoch.
+
+      ### Examples
+
+          iex> #{inspect(__MODULE__)}.epoch() |> is_integer()
+          true
+
+      """
       def epoch do
         @epoch
       end
@@ -259,6 +282,27 @@ defmodule Calendrical.Calendar do
       @doc """
       Determines if the `date` given is valid according to
       this calendar.
+
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      * `month` is a month of the year.
+
+      * `day` is a day of the month.
+
+      ### Returns
+
+      * `true` if the year, month and day are a date of this calendar,
+        otherwise `false`.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.valid_date?(date.year, date.month, date.day)
+          true
+          iex> #{inspect(__MODULE__)}.valid_date?(date.year, date.month, 0)
+          false
 
       """
       @impl true
@@ -283,6 +327,20 @@ defmodule Calendrical.Calendar do
       Returns the number of months in a
       given `year`.
 
+      ### Arguments
+
+      * `year` is the year in this calendar.
+
+      ### Returns
+
+      * The number of months in the year, as a positive integer.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.months_in_year(date.year) >= date.month
+          true
+
       """
       # A calendar with as many months in every year answers without asking
       # whether the year is leap, which a calendar reckoned from the sky
@@ -300,6 +358,22 @@ defmodule Calendrical.Calendar do
       @doc """
       Returns how many days there are in the given year
       and month.
+
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      * `month` is a month of the year.
+
+      ### Returns
+
+      * The number of days in the month.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.days_in_month(date.year, date.month) >= date.day
+          true
 
       """
       @spec days_in_month(Calendar.year(), Calendar.month()) :: Calendar.month()
@@ -333,6 +407,32 @@ defmodule Calendrical.Calendar do
       on from a date of this calendar, by position, with the traditional
       month kept across years and a day the resulting month lacks clamped
       to its last day unless `clamp: false` (`Calendrical.Shift.shift/7`).
+
+      ### Arguments
+
+      * `year`, `month` and `day` are a date of this calendar.
+
+      * `date_part` is one of `:years`, `:quarters`, `:months`, `:weeks`
+        or `:days`.
+
+      * `increment` is the number of units, which may be negative.
+
+      * `options` is a keyword list of options.
+
+      ### Options
+
+      * `:clamp` is whether a day the resulting month lacks becomes its
+        last day. The default is `true`.
+
+      ### Returns
+
+      * `{year, month, day}` of this calendar.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2024-06-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.shift(date.year, date.month, date.day, :days, 0)
+          {date.year, date.month, date.day}
 
       """
       @impl true
