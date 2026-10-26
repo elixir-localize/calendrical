@@ -172,39 +172,17 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
   @spec first_day_of_month(pos_integer(), 1..12) ::
           {:ok, Date.t()} | {:error, Exception.t()}
 
-  # Era 4: full Umm al-Qura rule (1423 AH onward)
+  # A month's first day is worked out once and kept
+  # (`Calendrical.YearCache`): each takes milliseconds of astronomy.
   def first_day_of_month(hijri_year, hijri_month)
-      when is_integer(hijri_year) and hijri_year >= @era4_start and
+      when is_integer(hijri_year) and hijri_year >= @era2_start and
              is_integer(hijri_month) and hijri_month in 1..12 do
-    with {:ok, candidate_29} <- approximate_29th(hijri_year, hijri_month) do
-      apply_umm_al_qura_rule(candidate_29)
-    end
-  end
-
-  # Era 3: moonset-only rule (1420–1422 AH)
-  def first_day_of_month(hijri_year, hijri_month)
-      when is_integer(hijri_year) and hijri_year >= @era3_start and hijri_year < @era4_start and
-             is_integer(hijri_month) and hijri_month in 1..12 do
-    with {:ok, candidate_29} <- approximate_29th(hijri_year, hijri_month) do
-      apply_moonset_only_rule(candidate_29)
-    end
-  end
-
-  # Era 2: conjunction-based rule (1392–1419 AH)
-  #
-  # Van Gent describes a rule based on whether the conjunction falls within
-  # 3 hours of 0 h UTC ("Saudi midnight").  Empirically, the best match to
-  # van Gent's data (96.7 % — 325 of 336 months) is obtained by
-  # taking the Gregorian date of the geocentric conjunction in UTC and
-  # adding one day.  The remaining ≈ 3 % of months (11 of 336) differ by
-  # one day, likely due to undocumented details in the historical KACST
-  # determination process.
-  def first_day_of_month(hijri_year, hijri_month)
-      when is_integer(hijri_year) and hijri_year >= @era2_start and hijri_year < @era3_start and
-             is_integer(hijri_month) and hijri_month in 1..12 do
-    with {:ok, conjunction_utc} <- find_conjunction_utc(hijri_year, hijri_month) do
-      {:ok, Date.add(DateTime.to_date(conjunction_utc), 1)}
-    end
+    Calendrical.YearCache.fetch_ok(
+      {__MODULE__, :first_day_of_month, hijri_year, hijri_month},
+      fn ->
+        rule_first_day_of_month(hijri_year, hijri_month)
+      end
+    )
   end
 
   def first_day_of_month(hijri_year, hijri_month)
@@ -224,6 +202,35 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
        value: hijri_year,
        range: {:from, @era2_start}
      )}
+  end
+
+  # Era 4: full Umm al-Qura rule (1423 AH onward)
+  defp rule_first_day_of_month(hijri_year, hijri_month) when hijri_year >= @era4_start do
+    with {:ok, candidate_29} <- approximate_29th(hijri_year, hijri_month) do
+      apply_umm_al_qura_rule(candidate_29)
+    end
+  end
+
+  # Era 3: moonset-only rule (1420–1422 AH)
+  defp rule_first_day_of_month(hijri_year, hijri_month) when hijri_year >= @era3_start do
+    with {:ok, candidate_29} <- approximate_29th(hijri_year, hijri_month) do
+      apply_moonset_only_rule(candidate_29)
+    end
+  end
+
+  # Era 2: conjunction-based rule (1392–1419 AH)
+  #
+  # Van Gent describes a rule based on whether the conjunction falls within
+  # 3 hours of 0 h UTC ("Saudi midnight").  Empirically, the best match to
+  # van Gent's data (96.7 % — 325 of 336 months) is obtained by
+  # taking the Gregorian date of the geocentric conjunction in UTC and
+  # adding one day.  The remaining ≈ 3 % of months (11 of 336) differ by
+  # one day, likely due to undocumented details in the historical KACST
+  # determination process.
+  defp rule_first_day_of_month(hijri_year, hijri_month) do
+    with {:ok, conjunction_utc} <- find_conjunction_utc(hijri_year, hijri_month) do
+      {:ok, Date.add(DateTime.to_date(conjunction_utc), 1)}
+    end
   end
 
   # ---------------------------------------------------------------------------

@@ -62,6 +62,7 @@ defmodule Calendrical.Lunisolar do
     ]
 
   alias Astro.{Lunar, Solar, Time}
+  alias Calendrical.YearCache
 
   @typedoc "A lunar month"
   @type lunar_month :: Calendar.month() | {Calendar.month(), :leap}
@@ -83,6 +84,18 @@ defmodule Calendrical.Lunisolar do
   # in the calendar (not the number
   # of new moons) for a normal year.
   @lunar_calendar_months_in_year 12
+
+  # How many years `cyclical_date_from_iso_days/3` steps from its estimate to
+  # the year a day is in before working the day out afresh. The estimate is
+  # the year or one beside it.
+  @year_walk_limit 4
+
+  # The days before a day that `year_beginning_on/2` is asked about to
+  # estimate the year the day is in. It answers the year a new year begins
+  # exactly, but changes at the turn of the mean year in August; asked half
+  # a year earlier, it changes near the new year, and names the year a day
+  # is in for 98 days of 100.
+  @year_estimate_shift 180
 
   # A day in the middle of a lunar year. Lunar new year falls between
   # 21 January and 20 February, so the mean new year is 5 February and
@@ -579,6 +592,11 @@ defmodule Calendrical.Lunisolar do
   # The new year that begins `year` and the ordinal of its leap month, `nil`
   # when the year has 12 months.
   defp new_year_and_leap_month(year, epoch, location_fun) do
+    key = {__MODULE__, :new_year_and_leap_month, location_fun, year_mid_year(year, epoch)}
+    YearCache.fetch(key, fn -> find_new_year_and_leap_month(year, epoch, location_fun) end)
+  end
+
+  defp find_new_year_and_leap_month(year, epoch, location_fun) do
     {{new_year, leap}, next_solstice, {next_new_year, next_leap}} =
       year_suis(year, epoch, location_fun)
 
@@ -720,7 +738,7 @@ defmodule Calendrical.Lunisolar do
     new_year =
       cycle
       |> mid_year(cyclical_year, epoch)
-      |> new_year_on_or_before(location_fun)
+      |> new_year_from_mid_year(location_fun)
 
     month_start(new_year, month, location_fun) + day - 1
   end
@@ -728,19 +746,36 @@ defmodule Calendrical.Lunisolar do
   # The first day of ordinal month `month` in the year that begins on
   # `new_year`: the new year itself for month 1, otherwise the first new moon
   # on or after 29 days a month later, which is always inside that month.
+  # Kept once found, as a year's other facts are.
   defp month_start(new_year, 1, _location_fun), do: new_year
 
   defp month_start(new_year, month, location_fun) do
-    new_moon_on_or_after(new_year + (month - 1) * 29, location_fun)
+    YearCache.fetch({__MODULE__, :month_start, location_fun, new_year, month}, fn ->
+      new_moon_on_or_after(new_year + (month - 1) * 29, location_fun)
+    end)
   end
 
   # The new year that begins `year`.
   defp new_year(year, epoch, location_fun) do
-    {cycle, cyclical_year} = cycle_and_year(year)
+    year
+    |> year_mid_year(epoch)
+    |> new_year_from_mid_year(location_fun)
+  end
 
-    cycle
-    |> mid_year(cyclical_year, epoch)
-    |> new_year_on_or_before(location_fun)
+  # What a calendar works out about a year (its new year, its suis and its
+  # leap month) depends on the year and the calendar's epoch only through
+  # the day it is found from, the year's mean middle (`mid_year/3`). So each
+  # is kept (`Calendrical.YearCache`) under that day and the calendar's
+  # place, and a year's every question after the first is a lookup.
+  defp year_mid_year(year, epoch) do
+    {cycle, cyclical_year} = cycle_and_year(year)
+    mid_year(cycle, cyclical_year, epoch)
+  end
+
+  defp new_year_from_mid_year(mid_year, location_fun) do
+    YearCache.fetch({__MODULE__, :new_year, location_fun, mid_year}, fn ->
+      new_year_on_or_before(mid_year, location_fun)
+    end)
   end
 
   # The two suis that `year` spans: the one its new year falls in and the one
@@ -748,12 +783,15 @@ defmodule Calendrical.Lunisolar do
   # the December solstice between them. The three solstices are found once
   # and shared by both suis.
   defp year_suis(year, epoch, location_fun) do
-    {cycle, cyclical_year} = cycle_and_year(year)
+    mid_year = year_mid_year(year, epoch)
 
-    solstice =
-      cycle
-      |> mid_year(cyclical_year, epoch)
-      |> december_solstice_on_or_before(location_fun)
+    YearCache.fetch({__MODULE__, :year_suis, location_fun, mid_year}, fn ->
+      find_year_suis(mid_year, location_fun)
+    end)
+  end
+
+  defp find_year_suis(mid_year, location_fun) do
+    solstice = december_solstice_on_or_before(mid_year, location_fun)
 
     next_solstice = next_december_solstice(solstice, location_fun)
     following_solstice = next_december_solstice(next_solstice, location_fun)
@@ -805,8 +843,100 @@ defmodule Calendrical.Lunisolar do
   # THis version returns the cyclical year and ordinal month
   @doc false
   def cyclical_date_from_iso_days(iso_days, epoch, location_fun) do
-    new_year = new_year_on_or_before(iso_days, location_fun)
-    start_of_month = new_moon_before(iso_days + 1, location_fun)
+    case kept_year_and_month(iso_days, epoch, location_fun) do
+      {:ok, new_year, start_of_month} ->
+        cyclical_date(iso_days, new_year, start_of_month, epoch)
+
+      :error ->
+        new_year = new_year_on_or_before(iso_days, location_fun)
+        start_of_month = new_moon_before(iso_days + 1, location_fun)
+        cyclical_date(iso_days, new_year, start_of_month, epoch)
+    end
+  end
+
+  # The new year on or before `iso_days` and the first day of its month,
+  # read from the kept years: the year whose new year is on or before the
+  # day and whose next is after it, found from the year `iso_days` would
+  # begin, and the last of its month starts on or before the day. Each is
+  # the day `new_year_on_or_before/2` and `new_moon_before/2` would find,
+  # as the new years and new moons are the same whichever day they are
+  # sought from. `:error` where the walk does not settle or reaches beyond
+  # the supported days, and the day is then worked out as before.
+  defp kept_year_and_month(iso_days, epoch, location_fun) do
+    year = year_beginning_on(iso_days - @year_estimate_shift, epoch)
+
+    with {:ok, new_year, next_new_year} <-
+           year_around(iso_days, year, epoch, location_fun, @year_walk_limit),
+         {:ok, start_of_month} <-
+           month_start_on_or_before(iso_days, new_year, next_new_year, location_fun) do
+      {:ok, new_year, start_of_month}
+    end
+  rescue
+    Calendrical.UnsupportedDateRangeError -> :error
+  end
+
+  defp year_around(_iso_days, _year, _epoch, _location_fun, 0), do: :error
+
+  # A day before the year's twelfth month is in the year, since every year
+  # has twelve months at least, so the next new year is worked out only for
+  # a day after it, where the year may have ended.
+  defp year_around(iso_days, year, epoch, location_fun, limit) do
+    new_year = new_year(year, epoch, location_fun)
+
+    cond do
+      iso_days < new_year ->
+        year_around(iso_days, year - 1, epoch, location_fun, limit - 1)
+
+      iso_days < month_start(new_year, @lunar_calendar_months_in_year, location_fun) ->
+        {:ok, new_year, :not_reached}
+
+      iso_days >= new_year(year + 1, epoch, location_fun) ->
+        year_around(iso_days, year + 1, epoch, location_fun, limit - 1)
+
+      true ->
+        {:ok, new_year, new_year(year + 1, epoch, location_fun)}
+    end
+  end
+
+  # The last of the year's month starts on or before `iso_days`, looked for
+  # from the month the day's distance from the new year gives, which is the
+  # month or the one before it, so a day's first lookup finds one or two new
+  # moons rather than every month's up to its own.
+  defp month_start_on_or_before(iso_days, new_year, next_new_year, location_fun) do
+    month =
+      min(
+        trunc((iso_days - new_year) / Time.mean_synodic_month()) + 1,
+        @lunar_calendar_months_in_year + 1
+      )
+
+    settle_month(iso_days, new_year, next_new_year, month, location_fun, @year_walk_limit)
+  end
+
+  defp settle_month(_iso_days, _new_year, _next_new_year, _month, _location_fun, 0), do: :error
+
+  defp settle_month(iso_days, new_year, next_new_year, month, location_fun, limit) do
+    start = month_start(new_year, month, location_fun)
+    next_start = month_start(new_year, month + 1, location_fun)
+
+    cond do
+      start > iso_days ->
+        settle_month(iso_days, new_year, next_new_year, month - 1, location_fun, limit - 1)
+
+      next_start <= iso_days and before_next_year?(next_start, next_new_year) ->
+        settle_month(iso_days, new_year, next_new_year, month + 1, location_fun, limit - 1)
+
+      true ->
+        {:ok, start}
+    end
+  end
+
+  # Whether a month start is in the year, before its next new year, which
+  # is `:not_reached` for a day before the year's twelfth month: every month
+  # start up to that day is in the year.
+  defp before_next_year?(_start, :not_reached), do: true
+  defp before_next_year?(start, next_new_year), do: start < next_new_year
+
+  defp cyclical_date(iso_days, new_year, start_of_month, epoch) do
     elapsed_years = year_beginning_on(new_year, epoch)
 
     month =
@@ -986,7 +1116,7 @@ defmodule Calendrical.Lunisolar do
          location_fun
        ) do
     mid_year = mid_year(cycle, cyclical_year, epoch)
-    new_year = new_year_on_or_before(mid_year, location_fun)
+    new_year = new_year_from_mid_year(mid_year, location_fun)
 
     p = month_start(new_year, lunar_month, location_fun)
     d = alt_cyclical_date_from_iso_days(p, epoch, location_fun)
@@ -1191,15 +1321,22 @@ defmodule Calendrical.Lunisolar do
 
   """
   def solar_term(index, gregorian_year, location_fun) when index in 1..24 do
+    YearCache.fetch_ok({__MODULE__, :solar_term, location_fun, index, gregorian_year}, fn ->
+      find_solar_term(index, gregorian_year, location_fun)
+    end)
+  end
+
+  def solar_term(index, _gregorian_year, _location_fun) do
+    {:error, Calendrical.InvalidSolarTermError.exception(index: index)}
+  end
+
+  # A year's solar term, kept once found (`Calendrical.YearCache`).
+  defp find_solar_term(index, gregorian_year, location_fun) do
     longitude = rem(300 + index * 15, 360)
     start = Calendrical.Gregorian.date_to_iso_days(gregorian_year, 1, 1)
     moment = solar_longitude_on_or_after(longitude, start, location_fun)
     {year, month, day} = Calendrical.Gregorian.date_from_iso_days(floor(moment))
     {:ok, %Date{year: year, month: month, day: day, calendar: Calendrical.Gregorian}}
-  end
-
-  def solar_term(index, _gregorian_year, _location_fun) do
-    {:error, Calendrical.InvalidSolarTermError.exception(index: index)}
   end
 
   @doc """

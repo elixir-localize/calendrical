@@ -22,7 +22,17 @@ defmodule Calendrical.Islamic.Visibility do
   # the most modern empirical fit and is the basis for several
   # national Islamic calendar committees.
 
+  alias Calendrical.YearCache
+
   @default_method :odeh
+
+  # The fewest days a month has: the crescent is first seen 29 or 30 days
+  # after it was last first seen.
+  @shortest_month 29
+
+  # The months a day's month is looked for in, from the one its distance
+  # from the epoch gives, which is the month or one beside it.
+  @month_walk_limit 4
 
   # The days before and after a date that a crescent search near it can
   # reach: back to the new moon that began its month, and on through a
@@ -73,7 +83,7 @@ defmodule Calendrical.Islamic.Visibility do
     moon_iso = prior_new_moon_iso_days(iso_days)
 
     with {:ok, tau} <- phasis_search_start(iso_days, moon_iso, location, method) do
-      next_visible_crescent(tau, location, method)
+      kept_next_visible_crescent(tau, location, method)
     end
   end
 
@@ -81,7 +91,7 @@ defmodule Calendrical.Islamic.Visibility do
   # crescent could be visible yet, the lunar month containing this date
   # must have started ~30 days earlier.
   defp phasis_search_start(iso_days, moon_iso, location, method) when iso_days - moon_iso <= 3 do
-    case crescent_visible(iso_days, location, method) do
+    case kept_crescent_visible(iso_days, location, method) do
       {:ok, true} -> {:ok, moon_iso}
       {:ok, false} -> {:ok, moon_iso - 30}
       {:error, _exception} = error -> error
@@ -89,6 +99,61 @@ defmodule Calendrical.Islamic.Visibility do
   end
 
   defp phasis_search_start(_iso_days, moon_iso, _location, _method), do: {:ok, moon_iso}
+
+  @doc false
+  # The first day of the month `iso_days` is in, `{:ok, iso_days}`, read
+  # from the months' first days: `first_day_of.(elapsed_months)` answers
+  # `{:ok, first_day}` or an error, as a calendar's kept month starts do.
+  # The search starts at `elapsed_months`, the month a day's distance from
+  # the epoch gives, and steps to the month the day is in. `:error` where
+  # it does not settle or a month's first day is not found, and the caller
+  # then seeks the crescent from the day itself, as it does for a day whose
+  # own search would reach days the ephemeris does not cover (the day, the
+  # day after, or the two months before it), so such a day raises as it
+  # did. A month has 29 days at
+  # least, from one first sighting to the next, so a day fewer than 29 days
+  # after its month's first day is in it, and the next month's first day is
+  # worked out only for the days after.
+  @spec month_start_on_or_before(integer(), integer(), (integer() -> {:ok, integer()} | term())) ::
+          {:ok, integer()} | :error
+  def month_start_on_or_before(iso_days, elapsed_months, first_day_of) do
+    if covered?(iso_days + 1) and covered?(iso_days - @search_before - 10),
+      do: settle_month(iso_days, elapsed_months, first_day_of, @month_walk_limit),
+      else: :error
+  end
+
+  defp settle_month(_iso_days, _elapsed_months, _first_day_of, 0), do: :error
+
+  defp settle_month(iso_days, elapsed_months, first_day_of, limit) do
+    case first_day_of.(elapsed_months) do
+      {:ok, first_day} when iso_days < first_day ->
+        settle_month(iso_days, elapsed_months - 1, first_day_of, limit - 1)
+
+      {:ok, first_day} when iso_days - first_day < @shortest_month ->
+        {:ok, first_day}
+
+      {:ok, first_day} ->
+        in_month_or_after(iso_days, elapsed_months, first_day, first_day_of, limit)
+
+      _not_found ->
+        :error
+    end
+  end
+
+  # A day a month or more after its month's first day is in that month only
+  # if the next month has not begun.
+  defp in_month_or_after(iso_days, elapsed_months, first_day, first_day_of, limit) do
+    case first_day_of.(elapsed_months + 1) do
+      {:ok, next_first_day} when iso_days >= next_first_day ->
+        settle_month(iso_days, elapsed_months + 1, first_day_of, limit - 1)
+
+      {:ok, _next_first_day} ->
+        {:ok, first_day}
+
+      _not_found ->
+        :error
+    end
+  end
 
   @doc """
   Returns the ISO day number of the next date on or after `iso_days`
@@ -120,7 +185,7 @@ defmodule Calendrical.Islamic.Visibility do
     moon_iso = prior_new_moon_iso_days(iso_days)
 
     with {:ok, tau} <- next_phasis_search_start(iso_days, moon_iso, location, method) do
-      next_visible_crescent(tau, location, method)
+      kept_next_visible_crescent(tau, location, method)
     end
   end
 
@@ -133,7 +198,7 @@ defmodule Calendrical.Islamic.Visibility do
        do: {:ok, moon_iso + 29}
 
   defp next_phasis_search_start(iso_days, moon_iso, location, method) do
-    case crescent_visible(iso_days - 1, location, method) do
+    case kept_crescent_visible(iso_days - 1, location, method) do
       {:ok, true} -> {:ok, moon_iso + 29}
       {:ok, false} -> {:ok, iso_days}
       {:error, _exception} = error -> error
@@ -171,6 +236,23 @@ defmodule Calendrical.Islamic.Visibility do
       {:error, :not_found} -> {:error, out_of_ephemeris(date)}
       _no_sighting -> {:ok, false}
     end
+  end
+
+  # The first crescent seen from where a month's search starts, and whether
+  # the crescent is seen on a day's eve, kept once found
+  # (`Calendrical.YearCache`). Each is milliseconds of astronomy, and every
+  # date of a month starts its search from the same day: the month's new
+  # moon, or the day a month before it.
+  defp kept_next_visible_crescent(iso_days, location, method) do
+    YearCache.fetch_ok({__MODULE__, :next_visible_crescent, location, method, iso_days}, fn ->
+      next_visible_crescent(iso_days, location, method)
+    end)
+  end
+
+  defp kept_crescent_visible(iso_days, location, method) do
+    YearCache.fetch_ok({__MODULE__, :crescent_visible, location, method, iso_days}, fn ->
+      crescent_visible(iso_days, location, method)
+    end)
   end
 
   # Walk forward day by day from `iso_days` until the crescent is

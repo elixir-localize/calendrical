@@ -364,10 +364,14 @@ defmodule Calendrical.Persian do
     end)
   end
 
-  # The ISO day of 1 Farvardin of `year`.
+  # The ISO day of 1 Farvardin of `year`. An astronomical year's is worked
+  # out once and kept (`Calendrical.YearCache`): every conversion asks for
+  # one to three new years, each an equinox and a true noon.
   defp new_year(year) when year in @astronomical_years do
-    {:ok, new_year} = new_year_gregorian(year + 621)
-    Date.to_gregorian_days(new_year)
+    Calendrical.YearCache.fetch({__MODULE__, :new_year, year}, fn ->
+      {:ok, new_year} = new_year_gregorian(year + 621)
+      Date.to_gregorian_days(new_year)
+    end)
   end
 
   defp new_year(year) do

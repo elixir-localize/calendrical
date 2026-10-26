@@ -12,6 +12,7 @@ defmodule Calendrical.Application do
     Localize.Calendar.register_provider(Calendrical)
 
     children = [
+      Calendrical.YearCache,
       Calendrical.Compiler
     ]
 

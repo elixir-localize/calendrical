@@ -310,7 +310,7 @@ defmodule Calendrical.Islamic.Rgsa do
   @spec date_from_iso_days(integer()) :: {year, month, day}
   @impl true
   def date_from_iso_days(iso_days) do
-    crescent = Visibility.phasis_on_or_before(iso_days, @mecca)
+    crescent = month_start_on_or_before(iso_days)
     elapsed_months = round((crescent - epoch()) / @mean_synodic_month)
     year = Integer.floor_div(elapsed_months, 12) + 1
     month = Integer.mod(elapsed_months, 12) + 1
@@ -321,7 +321,10 @@ defmodule Calendrical.Islamic.Rgsa do
   defp first_day_of_month(year, 13), do: first_day_of_month(year + 1, 1)
 
   defp first_day_of_month(year, month) when month in 1..12 do
-    Visibility.phasis_on_or_before(midmonth(year, month), @mecca)
+    case find_first_day_of_month(year, month) do
+      {:ok, first_day} -> first_day
+      {:error, exception} -> raise exception
+    end
   end
 
   # The month's length as `{:ok, days}`, or an error when the
@@ -334,10 +337,39 @@ defmodule Calendrical.Islamic.Rgsa do
     end
   end
 
+  # The first day of the month `iso_days` is in: placed between two kept
+  # month starts, from the month the day's distance from the epoch gives,
+  # and otherwise sought by the crescent from the day itself, which raises
+  # as it did for a day the ephemeris does not cover.
+  defp month_start_on_or_before(iso_days) do
+    elapsed_months = floor((iso_days - epoch()) / @mean_synodic_month)
+
+    case Visibility.month_start_on_or_before(
+           iso_days,
+           elapsed_months,
+           &find_first_day_of_elapsed_month/1
+         ) do
+      {:ok, first_day} -> first_day
+      :error -> Visibility.phasis_on_or_before(iso_days, @mecca)
+    end
+  end
+
+  defp find_first_day_of_elapsed_month(elapsed_months) do
+    find_first_day_of_month(
+      Integer.floor_div(elapsed_months, 12) + 1,
+      Integer.mod(elapsed_months, 12) + 1
+    )
+  end
+
   defp find_first_day_of_month(year, 13), do: find_first_day_of_month(year + 1, 1)
 
+  # A month's first day is kept once found (`Calendrical.YearCache`); the
+  # crescent search it starts from is kept too, but finding where that
+  # search starts takes a new moon.
   defp find_first_day_of_month(year, month) do
-    Visibility.find_phasis_on_or_before(midmonth(year, month), @mecca)
+    Calendrical.YearCache.fetch_ok({__MODULE__, :first_day_of_month, year, month}, fn ->
+      Visibility.find_phasis_on_or_before(midmonth(year, month), @mecca)
+    end)
   end
 
   defp midmonth(year, month) do
