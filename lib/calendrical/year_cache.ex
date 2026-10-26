@@ -12,8 +12,8 @@ defmodule Calendrical.YearCache do
   # same key at once store the same value. A computation that raises or
   # answers an error is not kept, so it is asked again next time.
   #
-  # The table belongs to this process, started with Calendrical. Without
-  # it (the application not started, as when a calendar is used while
+  # The table belongs to this process, a child of `Calendrical.Supervisor`.
+  # Without it (Calendrical not started, as when a calendar is used while
   # compiling) every value is worked out as before. The table is cleared
   # when it reaches `@max_entries`, a few megabytes, so a sweep across
   # thousands of years cannot grow it without bound.

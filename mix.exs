@@ -103,9 +103,12 @@ defmodule Calendrical.MixProject do
       formatters: ["html", "markdown"],
       groups_for_modules: groups_for_modules(),
       groups_for_extras: groups_for_extras(),
+      # `Calendrical.Supervisor` names the processes it owns, which are
+      # hidden from the documentation.
       skip_undefined_reference_warnings_on:
         [
-          "CHANGELOG.md"
+          "CHANGELOG.md",
+          "Calendrical.Supervisor"
         ] ++ Path.wildcard("guides/*.md")
     ]
   end
@@ -141,6 +144,7 @@ defmodule Calendrical.MixProject do
         Calendrical.Shift
       ],
       Behaviours: [Calendrical.Formatter],
+      Runtime: [Calendrical.Supervisor],
       Parsing: [
         Calendrical.Date,
         Calendrical.DateTime,
@@ -163,6 +167,7 @@ defmodule Calendrical.MixProject do
         "guides/calendar_behaviour.md",
         "guides/composite_calendars.md",
         "guides/parsing.md",
+        "guides/supervision.md",
         "guides/migration.md"
       ]
     ]
@@ -170,13 +175,7 @@ defmodule Calendrical.MixProject do
 
   def application do
     [
-      mod: {
-        Calendrical.Application,
-        [
-          strategy: :one_for_one,
-          name: Calendrical.Supervisor
-        ]
-      },
+      mod: {Calendrical.Application, []},
       extra_applications: [:logger]
     ]
   end

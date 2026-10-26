@@ -3,19 +3,11 @@ defmodule Calendrical.Application do
 
   use Application
 
+  # The application starts `Calendrical.Supervisor`, which owns every
+  # process Calendrical runs and does its one-time work, so an application
+  # that starts that supervisor in its own tree runs Calendrical the same.
+  @impl true
   def start(_type, _args) do
-    # A CLDR calendar type names no calendar module of its own, and Localize
-    # ships `Calendar.ISO` alone, so a value in that calendar has no family to
-    # ask for the calendar a locale's `-u-ca-` names. Registering here answers
-    # for it: `Calendrical.calendar_from_cldr_calendar_type/1` maps the type to
-    # the calendar that keeps it.
-    Localize.Calendar.register_provider(Calendrical)
-
-    children = [
-      Calendrical.YearCache,
-      Calendrical.Compiler
-    ]
-
-    Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
+    Calendrical.Supervisor.start_link([])
   end
 end

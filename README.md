@@ -52,6 +52,8 @@ Localize ships with the `en` locale. Download the data for any other locale your
 
 `Calendrical.TimeZone` resolves IANA time zone names through a `Calendar.TimeZoneDatabase`. Add one, such as [`tz`](https://hex.pm/packages/tz), which is used automatically once it is loaded, or configure one with `config :elixir, :time_zone_database, Tz.TimeZoneDatabase`. Without one, IANA names are rejected.
 
+Calendrical starts with your application. To start it in your own supervision tree instead, see the [supervision guide](https://hexdocs.pm/calendrical/supervision.html).
+
 ## Quick start
 
 ```elixir

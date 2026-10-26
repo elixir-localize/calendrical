@@ -8,4 +8,5 @@ defmodule Calendrical.Doc.Test do
   doctest Calendrical.Week
   doctest Calendrical.Kday
   doctest Calendrical.Preference
+  doctest Calendrical.Supervisor
 end
