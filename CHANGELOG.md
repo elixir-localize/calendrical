@@ -4,15 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.1] — Unreleased
+## [2.1.0] — 2026-10-26
 
 ### Added
 
-* `Calendrical.Supervisor` owns Calendrical's processes, `Calendrical.YearCache` and `Calendrical.Compiler`, and registers Calendrical as Localize's calendar provider, and the `:calendrical` application starts it. An application can start Calendrical in its own supervision tree instead: with the dependency marked `runtime: false`, list `Calendrical.Supervisor` among its children, with `Localize.Supervisor` and, from Astro 2.9.0, `Astro.Supervisor`, and name `calendrical: :load` in its release. The [supervision guide](https://hexdocs.pm/calendrical/supervision.html) describes it. Before, the application started the two processes itself under a supervisor named `Calendrical.Application`, and registered the provider before they started.
+* `Calendrical.Supervisor` owns Calendrical's processes and is the `:calendrical` application's supervisor. To start Calendrical in your own tree, mark the dependency `runtime: false` and list it among your children; it starts Astro if Astro is not started, as the [supervision guide](https://hexdocs.pm/calendrical/supervision.html) describes.
+
+### Changed
+
+* Requires Astro 2.9, whose JPL positions are faster with the same results, and whose `Astro.Supervisor` loads the ephemeris for an application that supervises Astro itself.
 
 ### Fixed
 
-* The calendars reckoned by astronomy keep what they work out about a year, where they worked it out again on every call, which on Astro 2.8's JPL ephemeris made them several times slower than on Astro 2.7. `Calendrical.Persian` keeps its new years; `Calendrical.Chinese`, `Korean`, `Vietnamese` and `LunarJapanese` a year's new year, its suis, its leap month and its month starts, and their solar terms; `Calendrical.Islamic.Observational` and `Rgsa` the first day of each month and the crescent searches it is found by; `Calendrical.Islamic.UmmAlQura.Astronomical.first_day_of_month/2` each month's first day. Once a year has been asked about, a conversion takes a few microseconds: a Chinese `days_in_month/2` 2 µs where it took 595, a Persian `date_to_iso_days/3` 0.02 µs where it took 60, an observational Islamic `date_to_iso_days/3` 0.05 µs and `date_from_iso_days/1` 7 µs where they took 11.6 ms, and `Localize.Date.to_string/1` of a Chinese date 61 µs where it took 5.2 ms, all on Astro 2.9.0. The first question about a year costs what it did, or for a lunisolar `date_from_iso_days/1` about a fifth more, since it finds the year's twelfth month too. Every answer is the same: compared before and after for every day and year of Gregorian 1900 to 2100, and for three centuries' days and every 37th year far outside them. The values are kept in an ETS table owned by a child of `Calendrical.Supervisor`, cleared when it reaches 100,000 entries; without Calendrical started, every value is worked out as before.
+* The calendars reckoned by astronomy (Persian, lunisolar, observational Islamic and astronomical Umm al-Qura) keep what they work out about a year, where they worked it out again on every call. Once a year has been asked about, a conversion takes microseconds where it took up to 12 ms, with every answer unchanged.
 
 ## [2.0.0] — 2026-10-24
 

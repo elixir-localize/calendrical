@@ -15,7 +15,7 @@ By default this supervisor is started when the `:calendrical` application starts
 ```elixir
 def deps do
   [
-    {:calendrical, "~> 2.0"}
+    {:calendrical, "~> 2.1"}
   ]
 end
 ```
@@ -29,7 +29,7 @@ Mark the dependency `runtime: false`, so that Mix compiles Calendrical but does 
 ```elixir
 def deps do
   [
-    {:calendrical, "~> 2.0", runtime: false}
+    {:calendrical, "~> 2.1", runtime: false}
   ]
 end
 ```
@@ -61,11 +61,11 @@ With Calendrical not started, neither are the applications it depends on, and it
 
 * **Localize** formats, parses and localizes dates. Start it with `Localize.Supervisor`, as above, or depend on `:localize` directly so its application starts. Its [supervision guide](https://hexdocs.pm/localize/supervision.html) describes the first.
 
-* **Astro** loads the JPL ephemeris that the calendars reckoned by astronomy compute from. From Astro 2.9.0, `Astro.Supervisor` loads it, as above. With an earlier Astro, start the `:astro` application instead, with `extra_applications: [:astro]` in `application/0`. Without either, a Persian, lunisolar or observational Islamic date raises `ArgumentError` as the ephemeris is not found, while the arithmetic calendars work.
+* **Astro** loads the JPL ephemeris that the calendars reckoned by astronomy compute from. List `Astro.Supervisor` before `Calendrical.Supervisor`, as above, to start it yourself. Otherwise `Calendrical.Supervisor` starts the `:astro` application as it starts, when neither that application nor `Astro.Supervisor` is running, and returns `{:error, {:astro_not_started, reason}}` if it cannot, as when the ephemeris cannot be found.
 
 ### Ordering
 
-List `Calendrical.Supervisor` before any process that uses a calendar as it starts. Starting it needs nothing from Localize or Astro, but using the calendars needs both, so list their supervisors before the processes that use them too.
+List `Calendrical.Supervisor` before any process that uses a calendar as it starts, and `Astro.Supervisor`, when you list it, before `Calendrical.Supervisor`. Starting Calendrical needs nothing from Localize, but using the calendars does, so list `Localize.Supervisor` before the processes that use them.
 
 ### Releases
 

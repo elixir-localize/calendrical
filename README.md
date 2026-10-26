@@ -43,7 +43,7 @@ Add `calendrical` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:calendrical, "~> 2.0"}
+    {:calendrical, "~> 2.1"}
   ]
 end
 ```
@@ -52,7 +52,30 @@ Localize ships with the `en` locale. Download the data for any other locale your
 
 `Calendrical.TimeZone` resolves IANA time zone names through a `Calendar.TimeZoneDatabase`. Add one, such as [`tz`](https://hex.pm/packages/tz), which is used automatically once it is loaded, or configure one with `config :elixir, :time_zone_database, Tz.TimeZoneDatabase`. Without one, IANA names are rejected.
 
-Calendrical starts with your application. To start it in your own supervision tree instead, see the [supervision guide](https://hexdocs.pm/calendrical/supervision.html).
+### Starting Calendrical in your own supervision tree
+
+Calendrical starts with your application, under `Calendrical.Supervisor`. To start it in your own supervision tree instead, mark the dependency `runtime: false`, list the supervisors among your application's children, and name Calendrical in your release:
+
+```elixir
+# mix.exs
+def project do
+  [
+    app: :my_app,
+    deps: [{:calendrical, "~> 2.1", runtime: false}],
+    releases: [my_app: [applications: [calendrical: :load]]]
+  ]
+end
+
+# lib/my_app/application.ex
+children = [
+  Localize.Supervisor,
+  Astro.Supervisor,
+  Calendrical.Supervisor,
+  MyApp.Worker
+]
+```
+
+Astro must start before Calendrical, since it loads the JPL ephemeris the astronomical calendars compute from: list `Astro.Supervisor` before `Calendrical.Supervisor`, or leave it out and `Calendrical.Supervisor` starts the `:astro` application itself. List `Localize.Supervisor` before any process that formats or parses dates. The [supervision guide](https://hexdocs.pm/calendrical/supervision.html) describes the setup in full.
 
 ## Quick start
 

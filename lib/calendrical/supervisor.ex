@@ -25,7 +25,7 @@ defmodule Calendrical.Supervisor do
       # mix.exs
       def deps do
         [
-          {:calendrical, "~> 2.0", runtime: false}
+          {:calendrical, "~> 2.1", runtime: false}
         ]
       end
 
@@ -44,18 +44,23 @@ defmodule Calendrical.Supervisor do
       end
 
   Calendrical's own dependencies are then not started either, and its
-  calendars need two of them: Localize, and Astro, whose application
-  loads the JPL ephemeris the calendars reckoned by astronomy use.
-  The [supervision guide](supervision.html) describes how to start
-  them, and what a release needs.
+  calendars need two of them. Astro loads the JPL ephemeris the
+  calendars reckoned by astronomy use: list `Astro.Supervisor` before
+  this supervisor, or let this supervisor start the `:astro`
+  application, which it does when Astro is not started. Localize
+  formats, parses and localizes dates: list `Localize.Supervisor`
+  before the processes that use them. The
+  [supervision guide](supervision.html) describes both, and what a
+  release needs.
 
   """
 
   @doc """
   Starts the Calendrical supervisor.
 
-  Starts `Calendrical.YearCache` and `Calendrical.Compiler`, then
-  registers `Calendrical` as Localize's calendar provider, which
+  Starts the `:astro` application when neither it nor `Astro.Supervisor`
+  is running, then `Calendrical.YearCache` and `Calendrical.Compiler`,
+  then registers `Calendrical` as Localize's calendar provider, which
   `Localize.Calendar.register_provider/1` describes. Registering again
   is harmless. The supervisor is registered as `Calendrical.Supervisor`.
 
@@ -71,6 +76,9 @@ defmodule Calendrical.Supervisor do
   ### Returns
 
   * `{:ok, pid}` on success.
+
+  * `{:error, {:astro_not_started, reason}}` if Astro was not started
+    and could not be, as when its ephemeris cannot be found.
 
   * `{:error, reason}` if the supervisor or a child could not be
     started.
@@ -96,7 +104,8 @@ defmodule Calendrical.Supervisor do
       Calendrical.Compiler
     ]
 
-    with {:ok, pid} <- Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__) do
+    with :ok <- ensure_astro_started(),
+         {:ok, pid} <- Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__) do
       after_start()
       {:ok, pid}
     end
@@ -138,6 +147,26 @@ defmodule Calendrical.Supervisor do
       start: {__MODULE__, :start_link, [options]},
       type: :supervisor
     }
+  end
+
+  # The calendars reckoned by astronomy need the JPL ephemeris, which Astro
+  # loads as its application or `Astro.Supervisor` starts. Where neither is
+  # running, as when an application supervises Calendrical itself and not
+  # Astro, Calendrical starts the `:astro` application.
+  defp ensure_astro_started do
+    if astro_started?() do
+      :ok
+    else
+      case Application.ensure_all_started(:astro) do
+        {:ok, _started} -> :ok
+        {:error, reason} -> {:error, {:astro_not_started, reason}}
+      end
+    end
+  end
+
+  defp astro_started? do
+    List.keymember?(Application.started_applications(), :astro, 0) or
+      Process.whereis(Astro.Supervisor) != nil
   end
 
   # A CLDR calendar type names no calendar module of its own, and Localize
