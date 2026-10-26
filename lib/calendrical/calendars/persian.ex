@@ -368,7 +368,7 @@ defmodule Calendrical.Persian do
   # out once and kept (`Calendrical.YearCache`): every conversion asks for
   # one to three new years, each an equinox and a true noon.
   defp new_year(year) when year in @astronomical_years do
-    Calendrical.YearCache.fetch({__MODULE__, :new_year, year}, fn ->
+    Calendrical.YearCache.fetch_integer({__MODULE__, :new_year, year}, fn ->
       {:ok, new_year} = new_year_gregorian(year + 621)
       Date.to_gregorian_days(new_year)
     end)

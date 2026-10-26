@@ -322,7 +322,7 @@ defmodule Calendrical.Islamic.Rgsa do
 
   defp first_day_of_month(year, month) when month in 1..12 do
     case find_first_day_of_month(year, month) do
-      {:ok, first_day} -> first_day
+      {:ok, first_day} when is_integer(first_day) -> first_day
       {:error, exception} -> raise exception
     end
   end

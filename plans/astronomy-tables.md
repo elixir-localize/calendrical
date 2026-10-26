@@ -43,7 +43,7 @@ The user began the tables (step 1, the generator and the Persian table) and then
 
 ### Astro 2.9.0 (unreleased)
 
-Faster with results unchanged to the last bit: a coverage check by segment lookup, the nutation computed once for an ecliptic position, rise and set scans that stop at the first bracket, and the last decoded Chebyshev record of each segment reused. A solar longitude at times hours apart costs 10 µs where it cost 16, but Calendrical's lunisolar calendars ask for them weeks apart, and a JPL position cannot approach the Meeus series' 1.2 µs. Calendrical gained 10 to 40 %.
+Faster with results unchanged to the last bit: a coverage check by segment lookup, the nutation computed once for an ecliptic position, and rise and set scans that stop at the first bracket. A JPL position cannot approach the Meeus series' 1.2 µs, and Calendrical gained 10 to 45 %. A reuse of each segment's last decoded Chebyshev record, kept in the calling process's dictionary, was tried and removed: the process dictionary is never used (user, 2026-10-26).
 
 ### The cache
 
@@ -58,21 +58,21 @@ Two answers are found from the kept values rather than by keeping their own, sin
 
 ### Measured
 
-On Astro `main` with the bundled kernel, Elixir 1.20.4 / OTP 29, µs a call. Cold is the first question about a year, the cache cleared before it; warm a later one.
+On Astro 2.9.0 (`main`) with the bundled kernel, Elixir 1.20.4 / OTP 29, µs a call. Cold is the first question about a year, the cache cleared before it; warm a later one.
 
 | Call | Astro 2.7.0 | 2.8.0 | 2.9.0 | 2.9.0 + cache, cold | warm |
 |---|---|---|---|---|---|
-| Persian `date_to_iso_days/3` | 22 | 104 | 55 | 58 | 0.03 |
-| Persian `date_from_iso_days/1` | 77 | 413 | 230 | 184 | 1.1 |
-| Chinese `days_in_month/2` | 262 | 664 | 610 | 616 | 1.8 |
-| Chinese `date_to_iso_days/3` | 92 | 255 | 233 | 231 | 0.7 |
-| Chinese `date_from_iso_days/1` | 124 | 303 | 284 | 357 | 2.6 |
-| `Localize.Date.to_string/1`, Chinese | | | 5,460 | 877 | 64 |
-| `Date.shift(date, month: 1)`, Chinese | | | 4,840 | 803 | 22 |
-| Observational `date_to_iso_days/3` | — | 16,700 | 9,540 | 9,150 | 0.1 |
-| Observational `date_from_iso_days/1` | — | 16,800 | 9,370 | 9,280 | 6.4 |
-| `Localize.Date.to_string/1`, Observational | — | | 530,000 | 31,900 | 80 |
-| Astronomical Umm al-Qura month | — | 5,850 | 3,360 | 3,380 | 0.05 |
+| Persian `date_to_iso_days/3` | 22 | 104 | 60 | 61 | 0.02 |
+| Persian `date_from_iso_days/1` | 77 | 413 | 237 | 183 | 1.0 |
+| Chinese `days_in_month/2` | 262 | 664 | 595 | 610 | 1.7 |
+| Chinese `date_to_iso_days/3` | 92 | 255 | 222 | 231 | 0.8 |
+| Chinese `date_from_iso_days/1` | 124 | 303 | 273 | 346 | 2.9 |
+| `Localize.Date.to_string/1`, Chinese | | | 5,150 | 823 | 61 |
+| `Date.shift(date, month: 1)`, Chinese | | | 4,460 | 778 | 20 |
+| Observational `date_to_iso_days/3` | — | 16,700 | 11,580 | 11,650 | 0.05 |
+| Observational `date_from_iso_days/1` | — | 16,800 | 11,560 | 11,820 | 6.6 |
+| `Localize.Date.to_string/1`, Observational | — | | 654,000 | 39,100 | 74 |
+| Astronomical Umm al-Qura month | — | 5,850 | 4,150 | 4,530 | 0.1 |
 
 The observational calendars cannot run on Astro 2.7.0, which has no coverage check. A cold lunisolar `date_from_iso_days/1` works out the day's year, its twelfth month's start and the month or two around the day, about a fifth more than before; every later day of the year is a lookup. A cold observational day finds only its own month where it is fewer than 29 days into it, every month being 29 or 30 days, and the next month too otherwise; a day whose own crescent search would leave the ephemeris is sought as before, so it raises as it did.
 

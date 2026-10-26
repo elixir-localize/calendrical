@@ -593,7 +593,11 @@ defmodule Calendrical.Lunisolar do
   # when the year has 12 months.
   defp new_year_and_leap_month(year, epoch, location_fun) do
     key = {__MODULE__, :new_year_and_leap_month, location_fun, year_mid_year(year, epoch)}
-    YearCache.fetch(key, fn -> find_new_year_and_leap_month(year, epoch, location_fun) end)
+
+    # The guard tells the type checker the kept value's type.
+    case YearCache.fetch(key, fn -> find_new_year_and_leap_month(year, epoch, location_fun) end) do
+      {new_year, _leap_month} = kept when is_integer(new_year) -> kept
+    end
   end
 
   defp find_new_year_and_leap_month(year, epoch, location_fun) do
@@ -750,7 +754,7 @@ defmodule Calendrical.Lunisolar do
   defp month_start(new_year, 1, _location_fun), do: new_year
 
   defp month_start(new_year, month, location_fun) do
-    YearCache.fetch({__MODULE__, :month_start, location_fun, new_year, month}, fn ->
+    YearCache.fetch_integer({__MODULE__, :month_start, location_fun, new_year, month}, fn ->
       new_moon_on_or_after(new_year + (month - 1) * 29, location_fun)
     end)
   end
@@ -773,7 +777,7 @@ defmodule Calendrical.Lunisolar do
   end
 
   defp new_year_from_mid_year(mid_year, location_fun) do
-    YearCache.fetch({__MODULE__, :new_year, location_fun, mid_year}, fn ->
+    YearCache.fetch_integer({__MODULE__, :new_year, location_fun, mid_year}, fn ->
       new_year_on_or_before(mid_year, location_fun)
     end)
   end
@@ -785,9 +789,17 @@ defmodule Calendrical.Lunisolar do
   defp year_suis(year, epoch, location_fun) do
     mid_year = year_mid_year(year, epoch)
 
-    YearCache.fetch({__MODULE__, :year_suis, location_fun, mid_year}, fn ->
-      find_year_suis(mid_year, location_fun)
-    end)
+    kept =
+      YearCache.fetch({__MODULE__, :year_suis, location_fun, mid_year}, fn ->
+        find_year_suis(mid_year, location_fun)
+      end)
+
+    # The guard tells the type checker the kept value's type.
+    case kept do
+      {{new_year, _leap}, next_solstice, {next_new_year, _next_leap}}
+      when is_integer(new_year) and is_integer(next_solstice) and is_integer(next_new_year) ->
+        kept
+    end
   end
 
   defp find_year_suis(mid_year, location_fun) do

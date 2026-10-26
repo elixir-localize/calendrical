@@ -58,6 +58,16 @@ defmodule Calendrical.YearCache do
   end
 
   @doc false
+  # As `fetch/2`, for a value that is an integer, such as an ISO day, which
+  # the guard tells the type checker: a fetched value is otherwise any term.
+  @spec fetch_integer(term(), (-> integer())) :: integer()
+  def fetch_integer(key, fun) do
+    case fetch(key, fun) do
+      value when is_integer(value) -> value
+    end
+  end
+
+  @doc false
   # As `fetch/2`, for a `fun` answering `{:ok, value}` or an error: only the
   # value of `{:ok, value}` is kept, and an error is answered as it is.
   @spec fetch_ok(term(), (-> {:ok, value} | error)) :: {:ok, value} | error
