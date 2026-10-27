@@ -102,21 +102,6 @@ defmodule Calendrical.LunarJapanese do
   @japan_1888 Calendrical.Gregorian.date_to_iso_days(1888, 1, 1)
 
   @doc false
-  def cycle_and_year(iso_days) do
-    Lunisolar.cycle_and_year(iso_days)
-  end
-
-  @doc false
-  def elapsed_years({cycle, cyclical_year}) do
-    Lunisolar.elapsed_years(cycle, cyclical_year)
-  end
-
-  @doc false
-  def elapsed_years(cycle, cyclical_year) do
-    Lunisolar.elapsed_years(cycle, cyclical_year)
-  end
-
-  @doc false
   def new_moon_on_or_after(iso_days) do
     Lunisolar.new_moon_on_or_after(iso_days, &location/1)
   end

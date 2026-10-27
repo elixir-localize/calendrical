@@ -123,21 +123,6 @@ defmodule Calendrical.Chinese do
     gregorian_date_for_lunar(gregorian_year, @dragon_month, @dragon_day)
   end
 
-  @doc false
-  def cycle_and_year(iso_days) do
-    Lunisolar.cycle_and_year(iso_days)
-  end
-
-  @doc false
-  def elapsed_years({cycle, cyclical_year}) do
-    Lunisolar.elapsed_years(cycle, cyclical_year)
-  end
-
-  @doc false
-  def elapsed_years(cycle, cyclical_year) do
-    Lunisolar.elapsed_years(cycle, cyclical_year)
-  end
-
   # Since the Chinese calendar is a lunisolar
   # calendar, a reference longitude is required
   # in order to calculate sunset and sunrise.

@@ -56,8 +56,8 @@ defmodule Calendrical.Chinese.RoundTrip.Test do
     to = 5000
 
     for year <- from..to do
-      cycle_and_year = Calendrical.Chinese.cycle_and_year(year)
-      assert Calendrical.Chinese.elapsed_years(cycle_and_year) == year
+      {cycle, cyclic_year} = Calendrical.Chinese.cycle_and_year(year)
+      assert Calendrical.Chinese.elapsed_years(cycle, cyclic_year) == year
     end
   end
 

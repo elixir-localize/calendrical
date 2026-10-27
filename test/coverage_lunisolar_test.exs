@@ -1,8 +1,8 @@
 defmodule Calendrical.Coverage.LunisolarTest do
   @moduledoc """
   Coverage tests for the lunisolar calendar family: `Calendrical.Chinese`,
-  `Calendrical.Korean`, `Calendrical.LunarJapanese` and the shared
-  `Calendrical.Lunisolar` base implementation.
+  `Calendrical.Korean`, `Calendrical.Vietnamese`, `Calendrical.LunarJapanese`
+  and the shared `Calendrical.Lunisolar` base implementation.
 
   Every expected value in this file was probed against the implementation
   on Elixir 1.20.1 / OTP 29 and cross-checked against the published
@@ -13,7 +13,7 @@ defmodule Calendrical.Coverage.LunisolarTest do
   """
   use ExUnit.Case, async: true
 
-  alias Calendrical.{Chinese, Korean, LunarJapanese, Lunisolar}
+  alias Calendrical.{Chinese, Korean, LunarJapanese, Lunisolar, Vietnamese}
 
   # Beijing observation point and Chinese epoch, as used by
   # Calendrical.Chinese, for exercising the Lunisolar base module
@@ -22,16 +22,44 @@ defmodule Calendrical.Coverage.LunisolarTest do
 
   defp epoch, do: Calendrical.Chinese.epoch()
 
-  describe "Chinese cycle_and_year/1 and elapsed_years" do
+  describe "cycle_and_year/1 and elapsed_years/2" do
     test "cycle_and_year/1 returns the sexagesimal cycle and cyclic year" do
       assert Chinese.cycle_and_year(4663) == {78, 43}
       assert Chinese.cycle_and_year(4662) == {78, 42}
     end
 
-    test "elapsed_years/1 and elapsed_years/2 invert cycle_and_year/1" do
-      assert Chinese.elapsed_years({78, 43}) == 4663
+    test "elapsed_years/2 inverts cycle_and_year/1" do
+      assert Chinese.elapsed_years(78, 43) == 4663
       assert Chinese.elapsed_years(78, 42) == 4662
       assert Lunisolar.elapsed_years({78, 43}) == 4663
+    end
+
+    test "every lunisolar calendar counts the cycles from 2637 BCE, whatever its epoch" do
+      # 2026 is the 43rd year of the 78th cycle in each of them.
+      for calendar <- [Chinese, Korean, Vietnamese, LunarJapanese] do
+        {:ok, date} = Date.convert(~D[2026-03-01], calendar)
+
+        assert calendar.cycle_and_year(date.year) == {78, 43}
+        assert calendar.elapsed_years(78, 43) == date.year
+      end
+    end
+
+    test "the cyclic year is the one Calendrical.Era.cyclic_year/4 gives" do
+      for calendar <- [Chinese, Korean, Vietnamese, LunarJapanese],
+          gregorian_year <- 1900..2100//7 do
+        {:ok, gregorian_date} = Date.new(gregorian_year, 3, 1)
+        {:ok, date} = Date.convert(gregorian_date, calendar)
+        {_cycle, cyclic_year} = calendar.cycle_and_year(date.year)
+
+        assert cyclic_year == Calendrical.Era.cyclic_year(calendar, date.year, 1, 1)
+      end
+    end
+
+    test "a cyclic year outside 1 to 60, or what is no year, is an error" do
+      assert {:error, %Calendrical.InvalidDateError{}} = Korean.elapsed_years(78, 61)
+      assert {:error, %Calendrical.InvalidDateError{}} = Korean.elapsed_years(78, 0)
+      assert {:error, %Calendrical.InvalidDateError{}} = Vietnamese.elapsed_years(nil, 1)
+      assert {:error, %Calendrical.InvalidDateError{}} = Vietnamese.cycle_and_year("4663")
     end
   end
 
@@ -366,10 +394,11 @@ defmodule Calendrical.Coverage.LunisolarTest do
   end
 
   describe "LunarJapanese cycles and years" do
-    test "cycle_and_year/1 and elapsed_years" do
-      assert LunarJapanese.cycle_and_year(1382) == {24, 2}
-      assert LunarJapanese.elapsed_years({24, 2}) == 1382
-      assert LunarJapanese.elapsed_years(24, 2) == 1382
+    # The cycles are counted from 2637 BCE, as for the Chinese calendar, so
+    # Lunar Japanese 1382, which began in 2026, is the 43rd year of the 78th.
+    test "cycle_and_year/1 and elapsed_years/2" do
+      assert LunarJapanese.cycle_and_year(1382) == {78, 43}
+      assert LunarJapanese.elapsed_years(78, 43) == 1382
     end
 
     # Lunar Japanese 1382 began in 2026 (丙午, 43) and 1381 in 2025

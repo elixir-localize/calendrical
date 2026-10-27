@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] — Unreleased
+
+### Added
+
+* `cycle_and_year/1` and `elapsed_years/2` on every lunisolar calendar (`Calendrical.Chinese`, `Calendrical.Korean`, `Calendrical.Vietnamese`, `Calendrical.LunarJapanese`): the sexagenary cycle and year of a year, and the year a cycle and year name, with the cycles counted from 2637 BCE whatever the calendar's epoch.
+
 ## [2.1.0] — 2026-10-26
 
 ### Added

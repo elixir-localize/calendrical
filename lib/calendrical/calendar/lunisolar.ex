@@ -9,8 +9,9 @@ defmodule Calendrical.Calendar.Lunisolar do
   is parametrised by the calendar's epoch and the place it is reckoned
   at, and the functions a lunisolar calendar is asked beyond the kernel:
   a date from a traditional month, the Gregorian date of a lunar date,
-  and the new year of a Gregorian year. A module keeps its own extras, as
-  the festivals, beside them.
+  the new year of a Gregorian year, and the sexagenary cycle and year of
+  a year and the year they name. A module keeps its own extras, as the
+  festivals, beside them.
 
   ### Options
 
@@ -70,6 +71,11 @@ defmodule Calendrical.Calendar.Lunisolar do
   # beyond, its higher-order terms move it by thousands of months.
   @supported_gregorian_years -20_000..20_000
 
+  # The sexagenary cycles are counted from the Gregorian year -2636
+  # (2637 BCE), the first year of the first cycle, as Dershowitz and
+  # Reingold count them and as the Chinese calendar's default epoch falls.
+  @first_cycle_gregorian_year -2636
+
   defmacro __using__(options) do
     refuse_unknown_options!(options, @known_options)
     cldr_calendar_type = Keyword.get(options, :cldr_calendar_type, :chinese)
@@ -96,9 +102,13 @@ defmodule Calendrical.Calendar.Lunisolar do
                            unquote(Keyword.fetch!(options, :epoch)),
                            @supported_gregorian_years
                          )
+        @cycle_offset Calendrical.Calendar.Lunisolar.cycle_offset(
+                        unquote(Keyword.fetch!(options, :epoch))
+                      )
       end,
       traditional_dates(),
       gregorian_dates(),
+      cycles(),
       kernel(),
       checks(),
       supported_range(),
@@ -288,6 +298,86 @@ defmodule Calendrical.Calendar.Lunisolar do
       """
       def new_year_for_gregorian_year(gregorian_year) do
         gregorian_date_for_lunar(gregorian_year, 1, 1)
+      end
+    end
+  end
+
+  # The sexagenary cycle and year of a year, and the year they name.
+  defp cycles do
+    quote location: :keep do
+      @doc """
+      Returns the sexagenary cycle a year of this calendar is in, and the
+      year of the cycle it is.
+
+      ### Arguments
+
+      * `year` is a year of this calendar.
+
+      ### Returns
+
+      * `{cycle, cyclic_year}`, the cycle counted from 2637 BCE, the first
+        year of the first cycle, and the year of it, 1 to 60, as
+        `Calendrical.Era.cyclic_year/4` gives it, or
+
+      * `{:error, %Calendrical.InvalidDateError{}}` for a year that is not
+        an integer.
+
+      ### Examples
+
+          iex> {:ok, date} = Date.convert(~D[2026-03-01], #{inspect(__MODULE__)})
+          iex> #{inspect(__MODULE__)}.cycle_and_year(date.year)
+          {78, 43}
+
+      """
+      @spec cycle_and_year(Calendar.year()) :: {integer(), 1..60} | {:error, Exception.t()}
+      def cycle_and_year(year) when is_integer(year) do
+        Lunisolar.cycle_and_year(year + @cycle_offset)
+      end
+
+      def cycle_and_year(year) do
+        {:error,
+         Calendrical.InvalidDateError.exception(calendar: __MODULE__, value: [year: year])}
+      end
+
+      @doc """
+      Returns the year of this calendar that a sexagenary cycle and a year
+      of it name: the inverse of `cycle_and_year/1`.
+
+      ### Arguments
+
+      * `cycle` is a sexagenary cycle, counted from 2637 BCE, the first
+        year of the first cycle.
+
+      * `cyclic_year` is a year of the cycle, 1 to 60.
+
+      ### Returns
+
+      * The year of this calendar, or
+
+      * `{:error, %Calendrical.InvalidDateError{}}` for a cycle that is not
+        an integer or a cyclic year that is not one of 1 to 60.
+
+      ### Examples
+
+          iex> year = #{inspect(__MODULE__)}.elapsed_years(78, 43)
+          iex> {:ok, new_year} = #{inspect(__MODULE__)}.new(year, 1, 1)
+          iex> Date.convert!(new_year, Calendar.ISO).year
+          2026
+
+          iex> {:error, %Calendrical.InvalidDateError{}} = #{inspect(__MODULE__)}.elapsed_years(78, 61)
+
+      """
+      @spec elapsed_years(integer(), integer()) :: Calendar.year() | {:error, Exception.t()}
+      def elapsed_years(cycle, cyclic_year) when is_integer(cycle) and cyclic_year in 1..60 do
+        Lunisolar.elapsed_years(cycle, cyclic_year) - @cycle_offset
+      end
+
+      def elapsed_years(cycle, cyclic_year) do
+        {:error,
+         Calendrical.InvalidDateError.exception(
+           calendar: __MODULE__,
+           value: [cycle: cycle, cyclic_year: cyclic_year]
+         )}
       end
     end
   end
@@ -598,6 +688,14 @@ defmodule Calendrical.Calendar.Lunisolar do
   def supported_years(%Date{} = epoch, first..last//1) do
     %Date{year: epoch_year} = Date.convert!(epoch, Calendar.ISO)
     (first - epoch_year + 1)..(last - epoch_year + 1)//1
+  end
+
+  @doc false
+  # The years from the first year of the first sexagenary cycle to a
+  # calendar's year 1, which begins in the Gregorian year of its epoch.
+  def cycle_offset(%Date{} = epoch) do
+    %Date{year: epoch_year} = Date.convert!(epoch, Calendar.ISO)
+    epoch_year - @first_cycle_gregorian_year
   end
 
   @doc false
