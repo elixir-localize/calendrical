@@ -43,7 +43,7 @@ Add `calendrical` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:calendrical, "~> 2.1"}
+    {:calendrical, "~> 2.2"}
   ]
 end
 ```
@@ -61,7 +61,7 @@ Calendrical starts with your application, under `Calendrical.Supervisor`. To sta
 def project do
   [
     app: :my_app,
-    deps: [{:calendrical, "~> 2.1", runtime: false}],
+    deps: [{:calendrical, "~> 2.2", runtime: false}],
     releases: [my_app: [applications: [calendrical: :load]]]
   ]
 end
