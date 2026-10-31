@@ -116,9 +116,11 @@ defmodule Calendrical.CalendarArithmetic.Test do
 
   describe "calendars with a limited range" do
     test "a date outside the range is not valid rather than an exception" do
-      refute Calendrical.Islamic.Observational.valid_date?(5000, 1, 1)
-      refute Calendrical.Islamic.Rgsa.valid_date?(5000, 1, 1)
-      assert {:error, :invalid_date} = Date.new(5000, 1, 1, Calendrical.Islamic.Observational)
+      # 60,000 AH is about 58,800 CE, beyond the 50,000 years either side of
+      # 2000 that Astro answers for.
+      refute Calendrical.Islamic.Observational.valid_date?(60_000, 1, 1)
+      refute Calendrical.Islamic.Rgsa.valid_date?(60_000, 1, 1)
+      assert {:error, :invalid_date} = Date.new(60_000, 1, 1, Calendrical.Islamic.Observational)
     end
 
     test "the Persian calendar has dates outside its astronomical years" do

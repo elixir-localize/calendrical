@@ -52,8 +52,6 @@ The rules: a lunisolar month without a major solar term is the leap month; the y
 
 * [ ] **Astro's new functions** — see Astro's `plans/calendar-support.md`.
 
-* [ ] **Islamic on Astro's crescent search and local days** — and delete the coverage code; fix the match-bang.
-
 * [ ] **`DayStart` on `:utc_offset`** — with a test west of 30°W.
 
 * [ ] **Persian, Ecclesiastical, Hebrew and `Base.Astro`** — Persian from the equinox for every year, `year_and_new_year/1`'s 33-year estimate replaced by the Gregorian year and `Astro.equinox/3`.
@@ -63,3 +61,5 @@ The rules: a lunisolar month without a major solar term is the leap month; the y
 ### Done
 
 * [x] **Lunisolar on day-level searches** — new moons, the December solstice and solar terms from `Astro.Lunar.new_moon_day_*` and `Astro.Solar.solar_longitude_day_*`; the day-by-day solstice walk is gone; the ±20,005-year day guard stays as the calendars' supported range, and the `rescue` in `kept_year_and_month/3` is replaced by a clause for days inside ±20,000 years. The Chinese solar term of −3000 takes Astro 2.10's day. 2026-10-31.
+
+* [x] **Islamic on Astro's crescent search and local days** — `Visibility` is the phasis rules on `Astro.first_visible_crescent_*` (the walk, its anchors, the coverage code and the match-bang are gone); Umm al-Qura's conjunction day, centre-of-disk sunset and moonset come from Astro. All 2,436 RGSA, observational and astronomical Umm al-Qura month starts of 1318–1520 AH are unchanged. `Base.Astro` drops `:not_found` and labels `:year_out_of_range` with Astro's years. 2026-10-31.

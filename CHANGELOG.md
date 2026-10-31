@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+* The observational Islamic calendars (`Calendrical.Islamic.Observational`, `Calendrical.Islamic.Rgsa`) find a month's first sighting with Astro's `first_visible_crescent_on_or_before/4`, and with Astro's answers beyond the JPL ephemeris they answer for any date within 50,000 years of 2000; the astronomical Umm al-Qura rules take the conjunction's day, and the sunset and moonset of the disk's centre, from Astro.
+
 * Requires Astro 2.10. The lunisolar calendars take the local day of each new moon, December solstice and solar term from Astro's day searches, and compute no astronomy of their own; an uncached year takes about 0.2 ms.
 
 ## [2.2.0] — 2026-10-27

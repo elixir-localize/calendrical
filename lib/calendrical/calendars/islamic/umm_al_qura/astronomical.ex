@@ -27,9 +27,9 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
     If either condition fails, the current month is extended to 30 days.
 
   Years before 1392 AH are not supported because no reliable astronomical
-  rule has been established for that period. After them the calendar
-  reaches as far as the installed JPL ephemeris: to about 1524 AH with the
-  ephemeris Astro bundles, and about 1575 AH with the full one.
+  rule has been established for that period. From 1392 AH the rules are
+  computed for any year, from the JPL ephemeris where it covers the month
+  and from Astro's analytical series beyond it.
 
   ## Accuracy
 
@@ -115,6 +115,9 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
   # as verified against the KACST reference dataset for 1423–1448 AH.
   #
   # Calibration basis: 1 Muharram 1423 AH = 2002-03-15 (Gregorian).
+  # Mecca keeps UTC+3 all year, as a fraction of a day.
+  @mecca_utc_offset 3 / 24
+
   @hijri_epoch_jdn 1_948_410
 
   # Mean length of a synodic month in days (used for seed estimates)
@@ -152,7 +155,7 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
     first day of the month.
 
   * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a year before
-    1392 AH, or a month the installed ephemeris does not cover, or
+    1392 AH, or
 
   * `{:error, %Calendrical.InvalidMonthError{}}` for a month not from 1
     to 12.
@@ -228,8 +231,8 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
   # one day, likely due to undocumented details in the historical KACST
   # determination process.
   defp rule_first_day_of_month(hijri_year, hijri_month) do
-    with {:ok, conjunction_utc} <- find_conjunction_utc(hijri_year, hijri_month) do
-      {:ok, Date.add(DateTime.to_date(conjunction_utc), 1)}
+    with {:ok, conjunction_day} <- conjunction_day(hijri_year, hijri_month, 0) do
+      {:ok, Date.add(conjunction_day, 1)}
     end
   end
 
@@ -241,47 +244,23 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
   # the given Hijri month — i.e., the 29th day of the *previous* Hijri month,
   # which is the day the astronomical new moon occurs (in Mecca local time).
   #
-  # Strategy: compute a rough JDN that lands within ±1 day of the target, then
-  # anchor to the *actual* geocentric conjunction using
-  # `Astro.date_time_new_moon_nearest/1`.  Converting the conjunction instant
-  # to Mecca local time (permanently UTC+3) gives the exact Gregorian date on
-  # which the rule is evaluated, with no dependence on `round/1` rounding.
+  # The 29th is the day of the geocentric conjunction in Mecca, which keeps
+  # UTC+3 all year.
   defp approximate_29th(hijri_year, hijri_month) do
-    # 0-based count of months elapsed since 1 Muharram 1 AH.
-    months_since_epoch =
-      (hijri_year - 1) * 12 + (hijri_month - 1)
-
-    # Rough JDN near the 29th of the previous Hijri month.  The ±1-day
-    # rounding error from `round/1` is harmless — we use it only as a seed
-    # for the conjunction search below.
-    rough_jdn =
-      @hijri_epoch_jdn + round(months_since_epoch * @mean_synodic_month) + 28
-
-    with {:ok, rough_date} <- jdn_to_date(rough_jdn),
-         # Use at_or_after(rough_date - 2) to reliably capture the
-         # conjunction even when rough_jdn is ±1 day off.
-         {:ok, conjunction} <- Astro.date_time_new_moon_at_or_after(Date.add(rough_date, -2)) do
-      # Convert the UTC conjunction instant to Mecca local time. Saudi
-      # Arabia is permanently UTC+3 with no daylight savings, so a
-      # straight 3-hour offset is exact and avoids depending on a tz
-      # database.
-      mecca_dt = DateTime.add(conjunction, 3 * 3600, :second)
-      {:ok, DateTime.to_date(mecca_dt)}
-    end
+    conjunction_day(hijri_year, hijri_month, @mecca_utc_offset)
   end
 
-  # Era 2 helper: find the UTC DateTime of the geocentric conjunction for the
-  # given Hijri month.  Uses the same epoch/synodic approximation as
-  # `approximate_29th/2` but returns the conjunction instant directly.
-  defp find_conjunction_utc(hijri_year, hijri_month) do
-    months_since_epoch =
-      (hijri_year - 1) * 12 + (hijri_month - 1)
-
-    rough_jdn =
-      @hijri_epoch_jdn + round(months_since_epoch * @mean_synodic_month) + 28
+  # The day, at `offset` days from UTC, of the conjunction that ends the month
+  # before the given Hijri month. A day near the 29th of that month is found
+  # from the mean synodic month, within a day of the conjunction, and Astro
+  # finds the conjunction's day from two days before it.
+  defp conjunction_day(hijri_year, hijri_month, offset) do
+    months_since_epoch = (hijri_year - 1) * 12 + (hijri_month - 1)
+    rough_jdn = @hijri_epoch_jdn + round(months_since_epoch * @mean_synodic_month) + 28
 
     with {:ok, rough_date} <- jdn_to_date(rough_jdn) do
-      Astro.date_time_new_moon_at_or_after(Date.add(rough_date, -2))
+      search_from = Date.to_gregorian_days(Date.add(rough_date, -2))
+      {:ok, Date.from_gregorian_days(Astro.Lunar.new_moon_day_on_or_after(search_from, offset))}
     end
   end
 
@@ -295,8 +274,7 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
       moonset_after_sunset? =
         case moonset_result do
           {:ok, moonset} ->
-            DateTime.compare(moonset, sunset) == :gt &&
-              DateTime.to_date(moonset) == candidate_29
+            DateTime.compare(moonset, sunset) == :gt
 
           _ ->
             false
@@ -358,9 +336,6 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
     * `:new_month_starts_next_day?` is `true` when both conditions
       are met, otherwise `false`.
 
-  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a date the
-    installed ephemeris does not cover, or
-
   * `{:error, %Calendrical.AstronomyError{}}` where the sun does not set
     at Mecca that day.
 
@@ -385,8 +360,7 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
       moonset_after_sunset? =
         case moonset_at_mecca do
           {:ok, moonset} ->
-            DateTime.compare(moonset, sunset_at_mecca) == :gt &&
-              DateTime.to_date(moonset) == date
+            DateTime.compare(moonset, sunset_at_mecca) == :gt
 
           {:error, :no_time} ->
             false
@@ -415,44 +389,17 @@ defmodule Calendrical.Islamic.UmmAlQura.Astronomical do
     end
   end
 
-  # Returns the UTC DateTime of sunset in Mecca on `date`.
-  #
-  # We use the JPL DE440s-based `Astro.Solar.SunRiseSet.sunset` here rather
-  # than the Chapront-series `Astro.sunset`.  Experiments against van Gent's
-  # reference dataset (1423–1500 AH) showed that the Chapront algorithm gives
-  # sunset times that are systematically 2.5–4 minutes *later* than the true
-  # astronomical sunset for Mecca's geometry.  That bias caused 68 boundary
-  # months to report moonset-before-sunset when the moon had in fact already
-  # cleared the (true) sun.  Switching to the JPL-based computation collapses
-  # those 68 failures to zero.
+  # Sunset and moonset in Mecca on `date`, in UTC, for the centre of the
+  # disk on the refracted horizon, the convention van Gent uses and Skyfield's
+  # `risings_and_settings(radius_degrees=0)` follows.
   defp sunset_utc_at_mecca(date) do
-    # Centre-of-disk sunset: h0 = -(34'/60) = -0.5667° (refraction only,
-    # no solar semi-diameter). This matches the convention used by van
-    # Gent and Skyfield's `risings_and_settings(radius_degrees=0)`.
-    #
-    # solar_elevation: 90.5667 → h0 = -(90.5667 - 90) = -0.5667°
-    #
-    # Pass `time_zone: :utc` so the result is already in UTC and we do
-    # not depend on a time zone database for resolution.
-    moment = Astro.Time.date_time_to_moment(date)
-
     @mecca_location
-    |> Astro.Solar.SunRiseSet.sunset(moment, solar_elevation: 90.5667, time_zone: :utc)
+    |> Astro.sunset(date, limb: :center, time_zone: :utc)
     |> Calendrical.Base.Astro.result(__MODULE__, date)
   end
 
-  # Returns the UTC DateTime of moonset in Mecca on `date`.
-  #
-  # Centre-of-disk moonset: the moon's centre crosses the refraction-corrected
-  # horizon (no semi-diameter correction).  This matches the convention used by
-  # van Gent and Skyfield's `risings_and_settings(radius_degrees=0)`.
   defp moonset_utc_at_mecca(date) do
-    moment = Astro.Time.date_time_to_moment(date)
-
-    Astro.Lunar.MoonRiseSet.moonset(@mecca_location, moment,
-      limb: :center,
-      time_zone: :utc
-    )
+    Astro.moonset(@mecca_location, date, limb: :center, time_zone: :utc)
   end
 
   # Converts a Julian Day Number (integer) to a proleptic Gregorian Date.

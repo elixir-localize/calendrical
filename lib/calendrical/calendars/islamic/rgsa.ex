@@ -122,8 +122,8 @@ defmodule Calendrical.Islamic.Rgsa do
   * `{:error, %Calendrical.InvalidOptionValueError{}}` for an invalid
     `:day_start` or `:nightfall_angle`.
 
-  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a date outside
-    the range the calendar or the installed JPL ephemeris covers.
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a date more
+    than 50,000 years from 2000, beyond the range Astro answers for.
 
   * `{:error, %Calendrical.NoDuskError{}}` where the sun does not set, or
     nightfall does not occur, at the location on that day.
@@ -185,8 +185,8 @@ defmodule Calendrical.Islamic.Rgsa do
 
   * The number of days in the month (`29` or `30`), or
 
-  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a month the
-    installed ephemeris does not cover, or
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a month more
+    than 50,000 years from 2000, or
 
   * `{:error, %Calendrical.InvalidMonthError{}}` for a month that is not
     `1..12`, or
@@ -244,7 +244,7 @@ defmodule Calendrical.Islamic.Rgsa do
              year >= 1 and month in 1..12 and day in 1..30 do
     case month_length(year, month) do
       {:ok, days} -> day <= days
-      {:error, _out_of_ephemeris} -> false
+      {:error, _no_first_sighting} -> false
     end
   end
 
@@ -268,8 +268,8 @@ defmodule Calendrical.Islamic.Rgsa do
 
   * An integer count of days since the proleptic ISO epoch.
 
-  * Raises `Calendrical.UnsupportedDateRangeError` if the date falls
-    outside the range of the underlying JPL ephemeris.
+  * Raises `Calendrical.UnsupportedDateRangeError` if the date is more
+    than 50,000 years from 2000, beyond the range Astro answers for.
 
   ### Examples
 
@@ -298,8 +298,8 @@ defmodule Calendrical.Islamic.Rgsa do
   * A three-tuple `{year, month, day}` in the Saudi sighting-based
     Islamic calendar.
 
-  * Raises `Calendrical.UnsupportedDateRangeError` if `iso_days`
-    falls outside the range of the underlying JPL ephemeris.
+  * Raises `Calendrical.UnsupportedDateRangeError` if `iso_days` is
+    more than 50,000 years from 2000, beyond the range Astro answers for.
 
   ### Examples
 
@@ -327,9 +327,9 @@ defmodule Calendrical.Islamic.Rgsa do
     end
   end
 
-  # The month's length as `{:ok, days}`, or an error when the
-  # installed ephemeris does not cover the month — which is then no date
-  # at all, so `valid_date?/3` answers false rather than raising.
+  # The month's length as `{:ok, days}`, or an error when Astro cannot find
+  # the month's first sighting — which is then no date at all, so
+  # `valid_date?/3` answers false rather than raising.
   defp month_length(year, month) do
     with {:ok, first} <- find_first_day_of_month(year, month),
          {:ok, next} <- find_first_day_of_month(year, month + 1) do
@@ -339,8 +339,7 @@ defmodule Calendrical.Islamic.Rgsa do
 
   # The first day of the month `iso_days` is in: placed between two kept
   # month starts, from the month the day's distance from the epoch gives,
-  # and otherwise sought by the crescent from the day itself, which raises
-  # as it did for a day the ephemeris does not cover.
+  # and otherwise sought by the crescent from the day itself.
   defp month_start_on_or_before(iso_days) do
     elapsed_months = floor((iso_days - epoch()) / @mean_synodic_month)
 

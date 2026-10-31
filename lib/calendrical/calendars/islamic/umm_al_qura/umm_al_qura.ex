@@ -166,7 +166,7 @@ defmodule Calendrical.Islamic.UmmAlQura do
     `:day_start` or `:nightfall_angle`.
 
   * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a date outside
-    the range the calendar or the installed JPL ephemeris covers.
+    the range the calendar or Astro covers.
 
   * `{:error, %Calendrical.NoDuskError{}}` where the sun does not set, or
     nightfall does not occur, at the location on that day.
