@@ -48,7 +48,7 @@ defmodule Calendrical.YearCacheCalendarsTest do
   end
 
   test "the Persian calendar" do
-    years = Enum.concat(1275..1485//3, [-500, 1278, 1279, 1479, 1480, 3000])
+    years = Enum.concat(1275..1485//3, [-500, 0, 1, 1469, 1470, 2879, 3000])
 
     assert_same_from_kept_and_fresh(
       for(
@@ -113,8 +113,8 @@ defmodule Calendrical.YearCacheCalendarsTest do
 
   @tag :full
   test "an observational Islamic day's month begins on the crescent found from the day itself" do
-    # Days spread over the ephemeris, and the days at its ends, where a
-    # day's own crescent search can leave it and raise.
+    # Days spread over 1900 to 2100, and days around 1900 and 2100, where
+    # Astro moves between the bundled ephemeris and its series.
     edges =
       Enum.concat(
         Date.to_gregorian_days(~D[1900-01-01])..Date.to_gregorian_days(~D[1900-03-15])//3,
@@ -141,7 +141,8 @@ defmodule Calendrical.YearCacheCalendarsTest do
   @tag :full
   test "the observational Islamic calendars" do
     for calendar <- [Calendrical.Islamic.Observational, Calendrical.Islamic.Rgsa] do
-      # The ephemeris's first and last months, and days outside it.
+      # The months at the ends of the bundled ephemeris, and days beyond it,
+      # where Astro answers from its series.
       days =
         days(60, ~D[1900-01-01], ~D[2100-12-31]) ++
           for date <- [

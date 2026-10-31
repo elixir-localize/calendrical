@@ -3,51 +3,41 @@ defmodule Calendrical.UnsupportedDateRangeTest do
   Regression tests for out-of-domain date handling in the
   astronomical calendars.
 
-  The Persian calendar's equinox, from `Astro.equinox/2`, can be
-  computed only for Gregorian years 1000 to 3000, and its functions of
-  the equinox answer an error outside them; its dates outside them are
-  arithmetic (`test/persian_arithmetic_test.exs`). The observational
-  Islamic calendars depend on the JPL ephemeris, which covers a
-  bounded span of years. Dates outside that domain must raise
-  `Calendrical.UnsupportedDateRangeError` (from conversion
-  callbacks, which cannot return error tuples) or return tagged
-  errors (from ordinary public functions) — never crash with
-  `FunctionClauseError` or `MatchError`.
+  Astro answers equinoxes, new moons and crescent sightings for the
+  50,000 years either side of 2000. Dates beyond them must raise
+  `Calendrical.UnsupportedDateRangeError` (from conversion callbacks,
+  which cannot return error tuples) or return tagged errors (from
+  ordinary public functions) — never crash with `FunctionClauseError`
+  or `MatchError`.
 
   """
 
   use ExUnit.Case, async: true
 
-  describe "Calendrical.Persian's new year outside Gregorian years 1900..2100" do
-    test "new_year_gregorian/1 returns a tagged error" do
-      assert {:error, %Calendrical.UnsupportedDateRangeError{}} =
-               Calendrical.Persian.new_year_gregorian(900)
-
-      assert {:error, %Calendrical.UnsupportedDateRangeError{}} =
-               Calendrical.Persian.new_year_gregorian(3500)
-
-      assert {:error, %Calendrical.UnsupportedDateRangeError{}} =
-               Calendrical.Persian.new_year_gregorian(1899)
-
-      assert {:error, %Calendrical.UnsupportedDateRangeError{}} =
-               Calendrical.Persian.new_year_gregorian(2101)
-    end
-
-    test "new_year_gregorian/1 still succeeds inside the range" do
+  describe "Calendrical.Persian's new year" do
+    test "new_year_gregorian/1 answers from the equinox far from the present" do
+      assert {:ok, ~D[0900-03-21]} = Calendrical.Persian.new_year_gregorian(900)
+      assert {:ok, %Date{year: 3500}} = Calendrical.Persian.new_year_gregorian(3500)
       assert {:ok, ~D[2025-03-21]} = Calendrical.Persian.new_year_gregorian(2025)
     end
 
-    test "year_end_gregorian/1 returns a tagged error when year + 1 is out of range" do
+    test "new_year_gregorian/1 returns a tagged error beyond Astro's years" do
+      assert {:error, %Calendrical.UnsupportedDateRangeError{range: -48_000..52_000}} =
+               Calendrical.Persian.new_year_gregorian(60_000)
+
       assert {:error, %Calendrical.UnsupportedDateRangeError{}} =
-               Calendrical.Persian.year_end_gregorian(3000)
+               Calendrical.Persian.year_end_gregorian(52_000)
     end
 
-    test "Date.convert/2 answers inside and outside the range" do
-      assert {:ok, %Date{calendar: Calendrical.Persian}} =
-               Date.convert(~D[2026-07-05], Calendrical.Persian)
+    test "Date.convert/2 answers far from the present and raises beyond Astro's years" do
+      for date <- [~D[2026-07-05], ~D[0900-06-01], ~D[3500-06-01]] do
+        assert {:ok, %Date{calendar: Calendrical.Persian}} =
+                 Date.convert(date, Calendrical.Persian)
+      end
 
-      assert {:ok, %Date{calendar: Calendrical.Persian}} =
-               Date.convert(~D[0900-06-01], Calendrical.Persian)
+      assert_raise Calendrical.UnsupportedDateRangeError, fn ->
+        Date.convert(Date.new!(60_000, 1, 1), Calendrical.Persian)
+      end
     end
   end
 
@@ -101,12 +91,12 @@ defmodule Calendrical.UnsupportedDateRangeTest do
     test "message/1 without a calendar names the value and what bounds it" do
       error =
         Calendrical.UnsupportedDateRangeError.exception(
-          value: ~D[0500-06-01],
-          range: :jpl_ephemeris
+          value: Date.new!(60_000, 1, 1),
+          range: -48_000..52_000
         )
 
       assert Exception.message(error) ==
-               "The date ~D[0500-06-01] is outside the dates the installed JPL ephemeris covers"
+               "The date Date.new!(60000, 1, 1) is outside the supported range of -48000..52000"
     end
   end
 end

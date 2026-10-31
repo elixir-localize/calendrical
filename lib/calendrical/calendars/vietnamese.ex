@@ -23,7 +23,7 @@ defmodule Calendrical.Vietnamese do
 
   * **Before 1968** Vietnam followed the Chinese calendar, so this
     implementation uses the Chinese calendar's meridian for that era —
-    Beijing's local apparent time before 1929 and China Standard Time
+    Beijing's local mean time before 1929 and China Standard Time
     (UTC+8) from 1929 — and every pre-1968 date is therefore identical to
     `Calendrical.Chinese`.
 

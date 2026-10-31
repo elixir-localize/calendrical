@@ -1,16 +1,13 @@
 defmodule Calendrical.PersianArithmeticTest do
   @moduledoc """
-  The Persian calendar outside the years whose new year is computed from
-  the equinox (Persian 1279 to 1479) follows ICU's arithmetic Persian
-  calendar, and joins the astronomical years without a gap or overlap.
+  The Persian calendar begins every year from the equinox, computed by
+  Astro for the 50,000 years either side of 2000. ICU's Persian calendar
+  is arithmetic, by a 33-year cycle, and the two agree on most years near
+  the present.
 
-  The oracles are ICU4C's: the day counts of `persianTestCases1` in
+  The oracle is ICU4C's: the day counts of `persianTestCases1` in
   `test/intltest/incaltst.cpp` (from ICU4X, by Reingold's fixed days, so
-  ISO days are fixed days plus 365), and ICU's leap-year rule from
-  `PersianCalendar::isLeapYear`, a different formula from the year
-  starts the calendar is built on. ICU's rule takes the remainder with
-  C's `%`, which calls every year before 0 leap against ICU's own year
-  starts; the floored remainder is used here.
+  ISO days are fixed days plus 365).
 
   """
 
@@ -46,117 +43,36 @@ defmodule Calendrical.PersianArithmeticTest do
     {1_317_875, 2988, 1, 2}
   ]
 
-  # ICU's years that its 33-year cycle makes leap and are common.
-  @icu_common_years [
-    1502,
-    1601,
-    1634,
-    1667,
-    1700,
-    1733,
-    1766,
-    1799,
-    1832,
-    1865,
-    1898,
-    1931,
-    1964,
-    1997,
-    2030,
-    2059,
-    2063,
-    2096,
-    2129,
-    2158,
-    2162,
-    2191,
-    2195,
-    2224,
-    2228,
-    2257,
-    2261,
-    2290,
-    2294,
-    2323,
-    2327,
-    2356,
-    2360,
-    2389,
-    2393,
-    2422,
-    2426,
-    2455,
-    2459,
-    2488,
-    2492,
-    2521,
-    2525,
-    2554,
-    2558,
-    2587,
-    2591,
-    2620,
-    2624,
-    2653,
-    2657,
-    2686,
-    2690,
-    2719,
-    2723,
-    2748,
-    2752,
-    2756,
-    2781,
-    2785,
-    2789,
-    2818,
-    2822,
-    2847,
-    2851,
-    2855,
-    2880,
-    2884,
-    2888,
-    2913,
-    2917,
-    2921,
-    2946,
-    2950,
-    2954,
-    2979,
-    2983,
-    2987
-  ]
-
-  defp icu_leap_year?(year) do
-    cond do
-      year in @icu_common_years -> false
-      (year - 1) in @icu_common_years -> true
-      true -> Integer.mod(25 * year + 11, 33) < 8
-    end
-  end
+  # The March 2091 equinox falls within seconds of true noon in Tehran, so
+  # seconds of ΔT decide whether 1470 begins on 20 or 21 March: ICU begins
+  # it on the 21st, and Astro's equinox, just before noon, on the 20th.
+  @decided_by_seconds [{763_436, 1469, 12, 30}, {763_437, 1470, 1, 1}]
 
   test "ICU's test dates, both ways" do
-    for {fixed_days, year, month, day} <- @icu_test_cases do
+    for {fixed_days, year, month, day} = test_case <- @icu_test_cases,
+        test_case not in @decided_by_seconds do
       assert Persian.date_from_iso_days(fixed_days + 365) == {year, month, day}
       assert Persian.date_to_iso_days(year, month, day) == fixed_days + 365
     end
+
+    assert Persian.date_from_iso_days(763_436 + 365) == {1470, 1, 1}
+    assert Persian.date_from_iso_days(763_437 + 365) == {1470, 1, 2}
   end
 
-  test "the arithmetic years are leap as ICU has them" do
-    for year <- Enum.concat(-1000..1278, 1480..3100) do
-      assert Persian.leap_year?(year) == icu_leap_year?(year), "year #{year}"
-      assert Persian.days_in_year(year) == if(icu_leap_year?(year), do: 366, else: 365)
+  test "every year has 365 or 366 days" do
+    for year <- -1000..3100 do
+      assert Persian.days_in_year(year) in [365, 366], "year #{year}"
+      assert Persian.leap_year?(year) == (Persian.days_in_year(year) == 366)
     end
   end
 
-  test "year 1 begins on 21 March 622 and the year before it is year 0" do
-    assert Date.convert(~D[0622-03-21], Persian) == {:ok, Date.new!(1, 1, 1, Persian)}
-    assert Date.convert(~D[0622-03-20], Persian) == {:ok, Date.new!(0, 12, 29, Persian)}
+  test "year 1 begins on 22 March 622 and the year before it is year 0" do
+    assert Date.convert(~D[0622-03-22], Persian) == {:ok, Date.new!(1, 1, 1, Persian)}
+    assert Date.convert(~D[0622-03-21], Persian) == {:ok, Date.new!(0, 12, 30, Persian)}
     assert Date.convert(Date.new!(0, 1, 1, Persian), Calendar.ISO) == {:ok, ~D[0621-03-21]}
   end
 
-  test "every day across both joins follows the day before" do
+  test "every day follows the day before, in the twentieth and twenty-first centuries" do
     for {first, last} <- [{~D[1898-01-01], ~D[1902-12-31]}, {~D[2098-01-01], ~D[2103-12-31]}] do
       days = Date.to_gregorian_days(first)..Date.to_gregorian_days(last)
 
@@ -172,7 +88,7 @@ defmodule Calendrical.PersianArithmeticTest do
     end
   end
 
-  test "years far from the astronomical ones begin the day after the year before ends" do
+  test "years far from the present begin the day after the year before ends" do
     for year <- Enum.concat(-5000..-4900, 9900..10_000) do
       last_day = Persian.days_in_month(year, 12)
 
@@ -183,7 +99,20 @@ defmodule Calendrical.PersianArithmeticTest do
     end
   end
 
-  test "a date outside the astronomical years converts and parses" do
+  # Near the ends of Astro's years, ΔT puts the equinox in universal time
+  # months from March: year 51,378 begins on 2 December 51,998.
+  test "every day round-trips near the first and last years Astro answers for" do
+    for year <- Enum.concat(-48_621..-48_617, 51_374..51_378),
+        day <- 0..(Persian.days_in_year(year) - 1) do
+      iso_days = Persian.date_to_iso_days(year, 1, 1) + day
+      {^year, month, day_of_month} = Persian.date_from_iso_days(iso_days)
+      assert Persian.date_to_iso_days(year, month, day_of_month) == iso_days
+    end
+
+    assert Persian.new_year_gregorian(51_999) == {:ok, Date.new!(51_998, 12, 2)}
+  end
+
+  test "a date far from the present converts and parses" do
     assert {:ok, %Date{year: 279, calendar: Persian}} = Date.convert(~D[0900-06-01], Persian)
     assert {:ok, %Date{year: 2879, calendar: Persian}} = Date.convert(~D[3500-06-01], Persian)
 

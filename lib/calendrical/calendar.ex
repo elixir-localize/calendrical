@@ -146,6 +146,18 @@ defmodule Calendrical.Calendar do
     ]
   end
 
+  @doc false
+  # Whether `day` is within a month of `days`. `days_in_month/2` answers an
+  # error for a year a calendar does not reckon, and an integer compares
+  # below any tuple, so a month that is not a number of days holds no day.
+  def day_in_month?(day, days) when is_integer(days) do
+    day <= days
+  end
+
+  def day_in_month?(_day, _not_a_month) do
+    false
+  end
+
   defp refuse_unknown_options!(options) do
     case Keyword.keys(options) -- @known_options do
       [] ->
@@ -317,7 +329,8 @@ defmodule Calendrical.Calendar do
       def valid_date?(year, month, day)
           when is_integer(year) and is_integer(month) and is_integer(day) and month >= 1 and
                  day >= 1 do
-        month <= months_in_year(year) && day <= days_in_month(year, month)
+        month <= months_in_year(year) &&
+          Calendrical.Calendar.day_in_month?(day, days_in_month(year, month))
       end
 
       def valid_date?(_year, _month, _day), do: false

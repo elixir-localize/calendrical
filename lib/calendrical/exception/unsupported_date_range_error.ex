@@ -4,9 +4,8 @@ defmodule Calendrical.UnsupportedDateRangeError do
   can compute.
 
   Astronomical calendars depend on underlying solar or lunar
-  computations that are only valid over a bounded span of years,
-  such as the ephemeris data used by the observational Islamic
-  calendars.
+  computations that are only valid over a bounded span of years:
+  Astro answers for 50,000 years either side of 2000.
   Dates outside that span raise this error rather than crashing
   inside the underlying computation.
 
@@ -16,11 +15,10 @@ defmodule Calendrical.UnsupportedDateRangeError do
 
   * `:value` — the out-of-range date, year, or day count as given.
 
-  * `:range` — what bounds the supported range, as data: `:jpl_ephemeris`
-    for the dates the installed JPL ephemeris covers, or `{:from, year}`
-    for the years from `year` on. Each is written in the message as a
-    whole translated sentence. Any other value, such as a range of years,
-    is written as it is given.
+  * `:range` — what bounds the supported range, as data: `{:from, year}`
+    for the years from `year` on, written in the message as a whole
+    translated sentence. Any other value, such as a range of years, is
+    written as it is given.
 
   """
 
@@ -36,19 +34,6 @@ defmodule Calendrical.UnsupportedDateRangeError do
   end
 
   @impl true
-  def message(%__MODULE__{calendar: nil, value: value, range: :jpl_ephemeris}) do
-    value = inspect(value)
-
-    ~t"The date #{value} is outside the dates the installed JPL ephemeris covers"
-  end
-
-  def message(%__MODULE__{calendar: calendar, value: value, range: :jpl_ephemeris}) do
-    calendar = inspect(calendar)
-    value = inspect(value)
-
-    ~t"The #{calendar} calendar supports only the dates the installed JPL ephemeris covers. Found #{value}"
-  end
-
   def message(%__MODULE__{calendar: calendar, value: value, range: {:from, first}}) do
     calendar = inspect(calendar)
     value = inspect(value)

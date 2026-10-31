@@ -323,12 +323,12 @@ defmodule Calendrical.EcclesiasticalTest do
       end
     end
 
-    test "is an error for years outside the supported range" do
-      assert {:error, %Calendrical.UnsupportedDateRangeError{range: 1000..3000}} =
-               Ecclesiastical.astronomical_easter_sunday(999)
+    test "answers far from the present and is an error beyond Astro's years" do
+      assert {:ok, ~D[0999-04-14]} = Ecclesiastical.astronomical_easter_sunday(999)
+      assert {:ok, ~D[3001-04-05]} = Ecclesiastical.astronomical_easter_sunday(3001)
 
-      assert {:error, %Calendrical.UnsupportedDateRangeError{range: 1000..3000}} =
-               Ecclesiastical.astronomical_easter_sunday(3001)
+      assert {:error, %Calendrical.UnsupportedDateRangeError{range: -48_000..52_000}} =
+               Ecclesiastical.astronomical_easter_sunday(52_001)
     end
   end
 
@@ -348,9 +348,11 @@ defmodule Calendrical.EcclesiasticalTest do
       end
     end
 
-    test "is an error for years outside the supported range" do
-      assert {:error, %Calendrical.UnsupportedDateRangeError{range: 1000..3000}} =
-               Ecclesiastical.astronomical_good_friday(999)
+    test "answers far from the present and is an error beyond Astro's years" do
+      assert {:ok, ~D[0999-04-12]} = Ecclesiastical.astronomical_good_friday(999)
+
+      assert {:error, %Calendrical.UnsupportedDateRangeError{range: -48_000..52_000}} =
+               Ecclesiastical.astronomical_good_friday(-48_001)
     end
   end
 
@@ -461,12 +463,12 @@ defmodule Calendrical.EcclesiasticalTest do
       end
     end
 
-    test "is an error for years outside the supported range" do
-      assert {:error, %Calendrical.UnsupportedDateRangeError{range: 1000..3000}} =
-               Ecclesiastical.paschal_full_moon(999)
+    test "answers far from the present and is an error beyond Astro's years" do
+      assert {:ok, ~D[0999-04-08]} = Ecclesiastical.paschal_full_moon(999)
+      assert {:ok, ~D[3001-03-31]} = Ecclesiastical.paschal_full_moon(3001)
 
-      assert {:error, %Calendrical.UnsupportedDateRangeError{range: 1000..3000}} =
-               Ecclesiastical.paschal_full_moon(3001)
+      assert {:error, %Calendrical.UnsupportedDateRangeError{range: -48_000..52_000}} =
+               Ecclesiastical.paschal_full_moon(52_001)
     end
 
     test "raises for non-integer input" do

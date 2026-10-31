@@ -470,9 +470,26 @@ defmodule Calendrical.HebrewTest do
       end
     end
 
-    test "a dusk outside the ephemeris is an UnsupportedDateRangeError" do
-      assert {:error, %Calendrical.UnsupportedDateRangeError{range: :jpl_ephemeris}} =
+    # Astro answers outside the JPL ephemeris too, from its analytical series.
+    test "a dusk outside the JPL ephemeris is found" do
+      assert {:ok, ~D[1266-08-11 Calendrical.Islamic.UmmAlQura]} =
                Calendrical.Islamic.UmmAlQura.date_at(~U[1850-06-21 20:00:00Z], day_start: :sunset)
+    end
+
+    # West of about 30°W a local evening's sunset is on the next UTC day. The
+    # day starts at that evening's sunset, about 20:08 in Los Angeles on 20
+    # June 2024, not the evening before's.
+    test "a sunset day starts at the local evening's sunset west of Greenwich" do
+      los_angeles = %Geo.PointZ{coordinates: {-118.2437, 34.0522, 0.0}}
+
+      for {instant, day} <- [
+            {~U[2024-06-20 23:00:00Z], 14},
+            {~U[2024-06-21 02:00:00Z], 14},
+            {~U[2024-06-21 04:00:00Z], 15}
+          ] do
+        assert {:ok, %Date{year: 5784, month: 10, day: ^day}} =
+                 Hebrew.date_at(instant, day_start: :sunset, location: los_angeles)
+      end
     end
   end
 end

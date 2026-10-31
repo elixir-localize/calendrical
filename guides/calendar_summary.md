@@ -4,15 +4,15 @@ This guide describes every CLDR-aligned calendar that ships with Calendrical, gr
 
 The 17 CLDR-acceptable calendar types are all implemented. Each section below cites the corresponding CLDR identifier and the Calendrical module that exposes it.
 
-> #### The astronomical calendars and the ephemeris
+> #### The astronomical calendars
 >
-> Several calendars are **astronomical**, computing month and year starts from the positions of the sun and moon via the [Astro](https://hex.pm/packages/astro) library, and each answers for its own range of years:
+> Several calendars are **astronomical**, computing month and year starts from the positions of the sun and moon via the [Astro](https://hex.pm/packages/astro) library. Astro answers from the JPL ephemeris where it covers a date (1900–2100 as bundled, 1849–2150 after `mix astro.download_ephemeris`) and from analytical series beyond it, for the 50,000 years either side of 2000:
 >
-> * The observational Islamic calendars (`Observational`, `Rgsa`) and `UmmAlQura.Astronomical` judge each month's crescent from the JPL ephemeris. Since Astro 2.5 a compact ephemeris covering **1900–2100** ships with the package, so they work immediately after installation; outside it the observational calendars' conversions raise `Calendrical.UnsupportedDateRangeError`, and `UmmAlQura.Astronomical` returns `{:error, %Calendrical.UnsupportedDateRangeError{}}`. Running `mix astro.download_ephemeris` installs the full **1849–2150** ephemeris and widens their range accordingly.
+> * The observational Islamic calendars (`Observational`, `Rgsa`) and `UmmAlQura.Astronomical` judge each month's crescent by Astro's crescent visibility criteria and answer for every year Astro does. Beyond them the observational calendars' conversions raise `Calendrical.UnsupportedDateRangeError`, and `UmmAlQura.Astronomical` returns `{:error, %Calendrical.UnsupportedDateRangeError{}}`.
 >
-> * The Persian calendar takes its new year from the ephemeris for Persian years 1279 to 1479 (Gregorian 1900 to 2100) and from ICU's arithmetic 33-year cycle outside them, so it answers for every year.
+> * The Persian calendar begins each year from the equinox in Tehran for Persian years -48,621 to 51,378 (Gregorian -48,000 to 52,000).
 >
-> * The Chinese, Korean, Lunar Japanese and Vietnamese calendars compute new moons and solar terms from Astro's series rather than the ephemeris, and answer for the 40,001 years counted from their epoch as Gregorian years -20,000 to 20,000, raising `Calendrical.UnsupportedDateRangeError` beyond them.
+> * The Chinese, Korean, Lunar Japanese and Vietnamese calendars compute new moons and solar terms from Astro and answer for the 40,001 years counted from their epoch as Gregorian years -20,000 to 20,000, raising `Calendrical.UnsupportedDateRangeError` beyond them.
 
 ---
 
@@ -138,7 +138,7 @@ The Islamic family is the only CLDR-supported lunar calendar family. All five va
 | `Calendrical.Islamic.Civil` | `:islamic_civil` | **Tabular**, *civil* (Friday) epoch | Friday 16 July 622 Julian = 19 July 622 proleptic Gregorian | Standard arithmetic Hijri calendar. 30-year cycle with 11 leap years (Type II *Kūshyār*: 2, 5, 7, 10, 13, 16, 18, 21, 24, 26, 29). |
 | `Calendrical.Islamic.Tbla` | `:islamic_tbla` | **Tabular**, *astronomical* (Thursday) epoch | Thursday 15 July 622 Julian = 18 July 622 proleptic Gregorian | Same algorithm as `Civil` but the epoch is one day earlier. *TBLA* = "tabular based on lunar astronomy". |
 | `Calendrical.Islamic.UmmAlQura` | `:islamic_umalqura` | **Precomputed table** of KACST's official month lengths | 1 Muharram 1 AH = 19 July 622 | The official Saudi civil calendar. The table covers 1 AH–1600 AH (622–2174 CE), KACST's months to 1500 AH and ICU's after; other years are those of `Calendrical.Islamic.Civil`, as in ICU. From 1300 AH it is ICU's day for day. `mix calendrical.umm_al_qura.verify --kacst` compares the table with KACST's current data. |
-| `Calendrical.Islamic.UmmAlQura.Astronomical` | (alternative for `:islamic_umalqura`) | **Astronomical** (sunset/moonset at Mecca) using the Umm al-Qura rules documented by R.H. van Gent | (notional) | Computes the published rule from astronomy, from 1392 AH to the end of the installed ephemeris. It matches KACST's table through 1450 AH; from 1451 AH KACST's projected months, and ICU's which carry them, begin a third of months a day later, always where the moon sets less than about 20 minutes after the sun, by a criterion KACST has not published. Use `UmmAlQura` for official dates. |
+| `Calendrical.Islamic.UmmAlQura.Astronomical` | (alternative for `:islamic_umalqura`) | **Astronomical** (sunset/moonset at Mecca) using the Umm al-Qura rules documented by R.H. van Gent | (notional) | Computes the published rule from astronomy, for any year from 1392 AH. It matches KACST's table through 1450 AH; from 1451 AH KACST's projected months, and ICU's which carry them, begin a third of months a day later, always where the moon sets less than about 20 minutes after the sun, by a criterion KACST has not published. Use `UmmAlQura` for official dates. |
 | `Calendrical.Islamic.Observational` | `:islamic` | **Astronomical** (crescent visibility at Cairo) using `Astro.new_visible_crescent/3` (Odeh 2006) | (notional) | The "generic" CLDR `:islamic` calendar. Implements `phasis-on-or-before` from Reingold but uses the modern Odeh visibility model rather than Shaukat. |
 | `Calendrical.Islamic.Rgsa` | `:islamic_rgsa` | **Astronomical** (crescent visibility at Mecca) | (notional) | The Saudi *religious sighting* calendar. Same algorithm as `Observational` but observed at al-Masjid al-Ḥarām. May diverge from `UmmAlQura` in months where the astronomical prediction does not match the KACST table. |
 
@@ -267,7 +267,7 @@ All return `Calendrical.Julian` dates so the calendar context is visible in the 
 
 ### Movable feasts (astronomical, WCC 1997)
 
-The World Council of Churches' 1997 Aleppo proposal for unifying Western and Eastern Easter. **No Church currently follows it.** All return `Calendar.ISO` dates and are restricted to year range 1000..3000.
+The World Council of Churches' 1997 Aleppo proposal for unifying Western and Eastern Easter. **No Church currently follows it.** All return `Calendar.ISO` dates and answer for the Gregorian years -48,000 to 52,000.
 
 | Function | Returns | Notes |
 |---|---|---|

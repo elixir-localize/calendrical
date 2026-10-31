@@ -163,7 +163,7 @@ defmodule Calendrical.Hebrew do
     `:day_start`, `:nightfall_angle` or `:location`.
 
   * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a date outside
-    the range the calendar or the installed JPL ephemeris covers.
+    the range the calendar covers.
 
   * `{:error, %Calendrical.NoDuskError{}}` where the sun does not set, or
     nightfall does not occur, at the location on that day.
@@ -187,20 +187,24 @@ defmodule Calendrical.Hebrew do
     end
   end
 
-  # The reference offset is the location's mean solar time: 240 seconds per
-  # degree of (east-positive) longitude.
+  # The reference offset is the location's local mean time, from Astro, in
+  # whole seconds.
   defp resolve_location(%Geo.PointZ{coordinates: {longitude, _lat, _elev}} = location)
        when is_number(longitude) do
-    {:ok, location, round(longitude * 240)}
+    {:ok, location, local_mean_time_offset(location)}
   end
 
   defp resolve_location(%Geo.Point{coordinates: {longitude, _lat}} = location)
        when is_number(longitude) do
-    {:ok, location, round(longitude * 240)}
+    {:ok, location, local_mean_time_offset(location)}
   end
 
   defp resolve_location(other) do
     {:error, Calendrical.InvalidOptionValueError.exception(option: :location, value: other)}
+  end
+
+  defp local_mean_time_offset(location) do
+    round(Astro.Time.offset_from_longitude(location) * 86_400)
   end
 
   # ── Configuration overrides ──────────────────────────────────────────────

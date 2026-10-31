@@ -52,14 +52,14 @@ The rules: a lunisolar month without a major solar term is the leap month; the y
 
 * [ ] **Astro's new functions** — see Astro's `plans/calendar-support.md`.
 
-* [ ] **`DayStart` on `:utc_offset`** — with a test west of 30°W.
-
-* [ ] **Persian, Ecclesiastical, Hebrew and `Base.Astro`** — Persian from the equinox for every year, `year_and_new_year/1`'s 33-year estimate replaced by the Gregorian year and `Astro.equinox/3`.
-
-* [ ] **Tests, docs and guides** — remove the 2.9 assertions and the old ranges (`guides/calendar_summary.md` 13, 270), and depend on `{:astro, "~> 2.10"}`.
+* [ ] **Depend on the released Astro** — `mix.exs` returns from the path dependency to `{:astro, "~> 2.10"}` once Astro 2.10 is on hex.
 
 ### Done
+
+* [x] **Persian, Ecclesiastical, Hebrew, tests, docs and guides** — Persian begins every year from the equinox, its year found by stepping from the Gregorian year (near ±50,000 years ΔT moves the equinox into the December before); Ecclesiastical answers for Astro's years; Hebrew's local mean time is `Astro.Time.offset_from_longitude/1`; the 2.9 assertions and ranges are gone from tests, the README and the guide; the default `valid_date?/3` no longer compares a day with an error tuple. 2026-10-31.
 
 * [x] **Lunisolar on day-level searches** — new moons, the December solstice and solar terms from `Astro.Lunar.new_moon_day_*` and `Astro.Solar.solar_longitude_day_*`; the day-by-day solstice walk is gone; the ±20,005-year day guard stays as the calendars' supported range, and the `rescue` in `kept_year_and_month/3` is replaced by a clause for days inside ±20,000 years. The Chinese solar term of −3000 takes Astro 2.10's day. 2026-10-31.
 
 * [x] **Islamic on Astro's crescent search and local days** — `Visibility` is the phasis rules on `Astro.first_visible_crescent_*` (the walk, its anchors, the coverage code and the match-bang are gone); Umm al-Qura's conjunction day, centre-of-disk sunset and moonset come from Astro. All 2,436 RGSA, observational and astronomical Umm al-Qura month starts of 1318–1520 AH are unchanged. `Base.Astro` drops `:not_found` and labels `:year_out_of_range` with Astro's years. 2026-10-31.
+
+* [x] **`DayStart` on `:utc_offset`** — the dusk is the reference date's evening at the reference offset; the `:not_found` clause and the `:jpl_ephemeris` error (messages, template entries, tests) are gone; a Los Angeles test covers the day starting at the local sunset. 2026-10-31.

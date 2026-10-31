@@ -416,20 +416,20 @@ defmodule Calendrical.Ecclesiastical do
   with the Western (`easter_sunday/1`) and Eastern Orthodox
   (`orthodox_easter_sunday/1`) computus calculations.
 
-  Uses `paschal_full_moon/1` (which in turn uses the `Astro`
-  library) and so is restricted to the year range `1000..3000`.
+  Uses `paschal_full_moon/1`, which in turn uses the `Astro`
+  library, and so answers for the Gregorian years -48,000 to 52,000.
 
   ### Arguments
 
   * `gregorian_year` is the Gregorian year for which to compute
-    Astronomical Easter. Must be in the range `1000..3000`.
+    Astronomical Easter.
 
   ### Returns
 
   * `{:ok, date}` where `date` is a `Calendar.ISO` `t:Date.t/0`, or
 
-  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a year outside
-    `1000..3000`, or for a date the installed ephemeris does not cover.
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a year more
+    than 50,000 years from 2000, beyond the years Astro answers for.
 
   ### Examples
 
@@ -457,14 +457,14 @@ defmodule Calendrical.Ecclesiastical do
   ### Arguments
 
   * `gregorian_year` is the Gregorian year for which to compute
-    Astronomical Good Friday. Must be in the range `1000..3000`.
+    Astronomical Good Friday.
 
   ### Returns
 
   * `{:ok, date}` where `date` is a `Calendar.ISO` `t:Date.t/0`, or
 
-  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a year outside
-    `1000..3000`, or for a date the installed ephemeris does not cover.
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a year more
+    than 50,000 years from 2000, beyond the years Astro answers for.
 
   ### Examples
 
@@ -502,16 +502,15 @@ defmodule Calendrical.Ecclesiastical do
   ### Arguments
 
   * `gregorian_year` is the Gregorian year for which to compute the
-    Paschal Full Moon. Must be in the range `1000..3000` due to the
-    underlying equinox-calculation precision.
+    Paschal Full Moon.
 
   ### Returns
 
   * `{:ok, date}` where `date` is the `t:Calendar.date/0` of the
     Paschal Full Moon in UTC, or
 
-  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a year outside
-    `1000..3000`, or for a date the installed ephemeris does not cover.
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a year more
+    than 50,000 years from 2000, beyond the years Astro answers for.
 
   ### Examples
 

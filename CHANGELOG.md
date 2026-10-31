@@ -6,7 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [2.3.0] — Unreleased
 
+### Fixed
+
+* A day that starts at sunset or nightfall west of about 30°W started at the previous evening's dusk: in Los Angeles, `Calendrical.Hebrew.date_at/2` with `day_start: :sunset` moved to the next day at 16:00. The dusk is now the local evening's, through Astro's `:utc_offset`.
+
+* A calendar's default `valid_date?/3` answered `true` for any day of a month whose `days_in_month/2` is an error, such as a month beyond the calendar's supported years.
+
 ### Changed
+
+* `Calendrical.Persian` begins every year from the equinox in Tehran, for Persian years -48,621 to 51,378, where it followed ICU's 33-year cycle outside 1279 to 1479. Year 1 begins on 22 March 622, and years far from the present can differ from ICU's by a day.
+
+* The astronomical Ecclesiastical functions (`astronomical_easter_sunday/1`, `astronomical_good_friday/1`, `paschal_full_moon/1`) answer for the Gregorian years -48,000 to 52,000, where they answered for 1000 to 3000.
+
+* `Calendrical.UnsupportedDateRangeError` no longer has a `:jpl_ephemeris` range: no calendar is limited by the JPL ephemeris.
 
 * The observational Islamic calendars (`Calendrical.Islamic.Observational`, `Calendrical.Islamic.Rgsa`) find a month's first sighting with Astro's `first_visible_crescent_on_or_before/4`, and with Astro's answers beyond the JPL ephemeris they answer for any date within 50,000 years of 2000; the astronomical Umm al-Qura rules take the conjunction's day, and the sunset and moonset of the disk's centre, from Astro.
 

@@ -95,18 +95,6 @@ msgctxt "style"
 msgid "The date style {$style} is not known. Valid styles are {$valid_styles}"
 msgstr ""
 
-#: lib/calendrical/exception/unsupported_date_range_error.ex:42
-#, elixir-autogen, icu-format
-msgctxt "date"
-msgid "The date {$value} is outside the dates the installed JPL ephemeris covers"
-msgstr ""
-
-#: lib/calendrical/exception/unsupported_date_range_error.ex:49
-#, elixir-autogen, icu-format
-msgctxt "date"
-msgid "The {$calendar} calendar supports only the dates the installed JPL ephemeris covers. Found {$value}"
-msgstr ""
-
 #: lib/calendrical/exception/invalid_month_error.ex:37
 #, elixir-autogen, icu-format
 msgctxt "calendar"

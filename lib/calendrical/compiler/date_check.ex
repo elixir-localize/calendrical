@@ -303,7 +303,7 @@ defmodule Calendrical.Compiler.DateCheck do
 
   # Asked through `valid_date?/3` alone, which answers false rather than
   # raising for a year a calendar cannot reckon (an observational calendar
-  # outside the ephemeris), where `days_in_month/2` would raise.
+  # beyond the years Astro answers for), where `days_in_month/2` would raise.
   defp month_holds_days?(calendar, year, month) do
     case calendar.days_in_month_bounds(month) do
       {fewest, most} when is_integer(fewest) and is_integer(most) ->

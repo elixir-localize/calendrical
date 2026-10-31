@@ -12,130 +12,34 @@ defmodule Calendrical.Persian do
   used. It specifies the origin of the calendar to be
   the Hegira of Muhammad from Mecca to Medina in 622 CE).
 
-  ### Astronomical and arithmetic years
+  ### Astronomical years
 
   This calendar is observational: each year begins on the day of the
   vernal equinox in Tehran (the day after, when the equinox falls after
-  true noon there), computed by `Astro.equinox/2` and `Astro.solar_noon/2`.
-  True noon comes from the JPL ephemeris Astro bundles, which covers
-  Gregorian years 1900 to 2100, so Persian years 1279 to 1479 begin
-  there.
+  true noon there), computed by `Astro.equinox/3` and `Astro.solar_noon/2`
+  for every year within the 50,000 years either side of 2000 that Astro
+  answers for: Persian years -48,621 to 51,378. Years are numbered
+  astronomically, as ICU numbers them: the year before 1 is 0.
 
-  Every other year begins as ICU's Persian calendar has it: by the
-  33-year arithmetic cycle, with ICU's table of corrections. The two
-  agree on when every year from 1279 to 1479 begins, so no year at
-  either join is lengthened or shortened. Years
-  are numbered astronomically, as ICU numbers them: the year before 1
-  is 0.
+  ICU's Persian calendar is arithmetic instead, by a 33-year cycle with a
+  table of corrections. The two agree on every year's start from 1279 to
+  1479 and on most years near them, and part as the cycle and the sky
+  drift apart.
 
   """
 
-  # The first day of year 1 by ICU's arithmetic rule, which the calendar
-  # follows outside the years it reckons from the ephemeris: 21 March 622
-  # in the proleptic Gregorian calendar, the day before Dershowitz and
-  # Reingold's epoch of 19 March 622 (Julian).
+  # The first day of year 1 by the equinox: 19 March 622 (Julian), 22 March
+  # in the proleptic Gregorian calendar, Dershowitz and Reingold's epoch.
+  # ICU's arithmetic calendar has the day before.
   use Calendrical.Calendar,
-    epoch: ~D[0622-03-18 Calendrical.Julian],
+    epoch: ~D[0622-03-19 Calendrical.Julian],
     cldr_calendar_type: :persian,
     weeks: [first_day: 6]
 
-  # The Gregorian years whose Nowruz is computed: `Astro.solar_noon/2`
-  # finds true noon in Tehran from the JPL ephemeris Astro bundles, which
-  # covers these years, and `Astro.equinox/2` is accurate within them.
-  @supported_gregorian_years 1900..2100
-
-  # The Persian years whose start is computed from the equinox: year `y`
-  # begins in Gregorian year `y + 621`.
-  @astronomical_years 1279..1479
-
-  # ICU's arithmetic Persian calendar (`persncal.cpp`): 1 Farvardin 1 is
-  # its julian day 1948320, Gregorian 21 March 622, and year `y` begins
-  # `365 * (y - 1) + floor((8 * y + 21) / 33)` days later, a day earlier
-  # when ICU lists `y - 1` as a common year the cycle makes leap. Only
-  # the corrections outside the astronomical years matter, and ICU lists
-  # none before 1502.
-  @arithmetic_epoch 227_260
-
-  @arithmetic_common_years MapSet.new([
-                             1502,
-                             1601,
-                             1634,
-                             1667,
-                             1700,
-                             1733,
-                             1766,
-                             1799,
-                             1832,
-                             1865,
-                             1898,
-                             1931,
-                             1964,
-                             1997,
-                             2030,
-                             2059,
-                             2063,
-                             2096,
-                             2129,
-                             2158,
-                             2162,
-                             2191,
-                             2195,
-                             2224,
-                             2228,
-                             2257,
-                             2261,
-                             2290,
-                             2294,
-                             2323,
-                             2327,
-                             2356,
-                             2360,
-                             2389,
-                             2393,
-                             2422,
-                             2426,
-                             2455,
-                             2459,
-                             2488,
-                             2492,
-                             2521,
-                             2525,
-                             2554,
-                             2558,
-                             2587,
-                             2591,
-                             2620,
-                             2624,
-                             2653,
-                             2657,
-                             2686,
-                             2690,
-                             2719,
-                             2723,
-                             2748,
-                             2752,
-                             2756,
-                             2781,
-                             2785,
-                             2789,
-                             2818,
-                             2822,
-                             2847,
-                             2851,
-                             2855,
-                             2880,
-                             2884,
-                             2888,
-                             2913,
-                             2917,
-                             2921,
-                             2946,
-                             2950,
-                             2954,
-                             2979,
-                             2983,
-                             2987
-                           ])
+  # The Persian years whose start and length Astro can compute: year `y`
+  # begins in Gregorian year `y + 621`, and Astro finds the equinox for the
+  # Gregorian years -48,000 to 52,000. A year outside them has no days.
+  @supported_years -48_621..51_378
 
   @tehran %Geo.PointZ{coordinates: {51.3890, 35.6892, 1100}}
 
@@ -170,6 +74,59 @@ defmodule Calendrical.Persian do
   end
 
   @doc """
+  Returns the number of days in a Persian month.
+
+  The first six months have 31 days, the next five 30, and Esfand, the
+  twelfth, 30 in a leap year and 29 otherwise.
+
+  ### Arguments
+
+  * `year` is any Persian year as an integer.
+
+  * `month` is a Persian month in the range `1..12`.
+
+  ### Returns
+
+  * The number of days in the month, or
+
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a year
+    outside those Astro answers for, or
+
+  * `{:error, %Calendrical.InvalidMonthError{}}` for a month that is not
+    `1..12`.
+
+  ### Examples
+
+      iex> Calendrical.Persian.days_in_month(1403, 12)
+      30
+
+      iex> Calendrical.Persian.days_in_month(1404, 12)
+      29
+
+  """
+  @impl true
+  def days_in_month(_year, month) when month in 1..6 do
+    31
+  end
+
+  def days_in_month(_year, month) when month in 7..11 do
+    30
+  end
+
+  def days_in_month(year, 12) do
+    if leap_year?(year) do
+      30
+    else
+      29
+    end
+  end
+
+  def days_in_month(year, month) do
+    {:error,
+     Calendrical.InvalidMonthError.exception(calendar: __MODULE__, year: year, month: month)}
+  end
+
+  @doc """
   Returns the number of days since the ISO calendar epoch for a given
   Persian `year`, `month`, and `day`.
 
@@ -191,14 +148,23 @@ defmodule Calendrical.Persian do
       739696
 
       iex> Calendrical.Persian.date_to_iso_days(1, 1, 1)
-      227260
+      227261
 
   """
   @spec date_to_iso_days(Calendar.year(), Calendar.month(), Calendar.day()) :: integer()
   @impl true
   def date_to_iso_days(year, month, day)
       when is_integer(year) and is_integer(month) and is_integer(day) do
-    new_year(year) - 1 + if(month <= 7, do: 31 * (month - 1), else: 30 * (month - 1) + 6) + day
+    new_year(year) - 1 + days_before_month(month) + day
+  end
+
+  # Months 1 to 6 have 31 days and months 7 to 11 have 30.
+  defp days_before_month(month) when month <= 7 do
+    31 * (month - 1)
+  end
+
+  defp days_before_month(month) do
+    30 * (month - 1) + 6
   end
 
   @doc """
@@ -254,8 +220,7 @@ defmodule Calendrical.Persian do
   * `{:ok, date}` where `date` is a `t:Date.t/0` in `Calendar.ISO`.
 
   * `{:error, %Calendrical.UnsupportedDateRangeError{}}` if `year` is
-    outside the Gregorian years 1900 to 2100 the ephemeris Astro bundles
-    covers.
+    more than 50,000 years from 2000, beyond the years Astro answers for.
 
   ### Examples
 
@@ -263,28 +228,24 @@ defmodule Calendrical.Persian do
       {:ok, ~D[2025-03-21]}
 
       iex> Calendrical.Persian.new_year_gregorian(900)
-      {:error, %Calendrical.UnsupportedDateRangeError{calendar: Calendrical.Persian, value: 900, range: 1900..2100}}
+      {:ok, ~D[0900-03-21]}
+
+      iex> Calendrical.Persian.new_year_gregorian(60_000)
+      {:error, %Calendrical.UnsupportedDateRangeError{calendar: Calendrical.Persian, value: 60_000, range: -48_000..52_000}}
 
   """
   @spec new_year_gregorian(Calendar.year()) :: {:ok, Date.t()} | {:error, Exception.t()}
-  def new_year_gregorian(year) when year in @supported_gregorian_years do
+  def new_year_gregorian(year) when is_integer(year) do
     with {:ok, equinox} <- vernal_equinox(year),
          {:ok, solar_noon} <- midday_in_tehran(equinox, year) do
       day = DateTime.to_date(equinox)
 
-      if Time.compare(equinox, solar_noon) in [:gt, :eq],
-        do: {:ok, Date.add(day, 1)},
-        else: {:ok, day}
+      if Time.compare(equinox, solar_noon) in [:gt, :eq] do
+        {:ok, Date.add(day, 1)}
+      else
+        {:ok, day}
+      end
     end
-  end
-
-  def new_year_gregorian(year) when is_integer(year) do
-    {:error,
-     Calendrical.UnsupportedDateRangeError.exception(
-       calendar: __MODULE__,
-       value: year,
-       range: @supported_gregorian_years
-     )}
   end
 
   @doc """
@@ -301,8 +262,7 @@ defmodule Calendrical.Persian do
     one day before the next Persian new year.
 
   * `{:error, %Calendrical.UnsupportedDateRangeError{}}` if `year + 1` is
-    outside the Gregorian years 1900 to 2100 the ephemeris Astro bundles
-    covers.
+    more than 50,000 years from 2000.
 
   ### Examples
 
@@ -352,30 +312,37 @@ defmodule Calendrical.Persian do
     new_year
   end
 
-  # The Persian year `iso_days` falls in, and the ISO day it begins on.
-  # ICU's cycle places the day within a year of its year, since an
-  # astronomical year begins at most a day from the cycle's.
+  # The Persian year `iso_days` falls in, and the ISO day it begins on. The
+  # search starts from the year that begins in the day's Gregorian year and
+  # steps to the year the day is in. Near the present that is the year
+  # itself or the one before it, but tens of thousands of years away ΔT and
+  # the slow change in the year's length move the equinox, in universal
+  # time, months from March and into the Gregorian year before.
   defp year_and_new_year(iso_days) do
-    estimate = Integer.floor_div(33 * (iso_days - @arithmetic_epoch) + 3, 12_053) + 1
-
-    Enum.find_value([estimate - 1, estimate, estimate + 1], fn year ->
-      new_year = new_year(year)
-      if new_year <= iso_days and iso_days < new_year(year + 1), do: {year, new_year}
-    end)
+    {gregorian_year, _month, _day} = Calendar.ISO.date_from_iso_days(iso_days)
+    settle_year(iso_days, gregorian_year - 621)
   end
 
-  # The ISO day of 1 Farvardin of `year`. An astronomical year's is worked
-  # out once and kept (`Calendrical.YearCache`): every conversion asks for
-  # one to three new years, each an equinox and a true noon.
-  defp new_year(year) when year in @astronomical_years do
-    Calendrical.YearCache.fetch_integer({__MODULE__, :new_year, year}, fn ->
-      {:ok, new_year} = new_year_gregorian(year + 621)
-      Date.to_gregorian_days(new_year)
-    end)
+  defp settle_year(iso_days, year) do
+    new_year = new_year(year)
+
+    cond do
+      iso_days < new_year -> settle_year(iso_days, year - 1)
+      iso_days >= new_year(year + 1) -> settle_year(iso_days, year + 1)
+      true -> {year, new_year}
+    end
   end
 
+  # The ISO day of 1 Farvardin of `year`, worked out once and kept
+  # (`Calendrical.YearCache`): every conversion asks for one or two new
+  # years, each an equinox and a true noon. A year beyond Astro's range
+  # raises, as a conversion callback cannot return an error.
   defp new_year(year) do
-    correction = if MapSet.member?(@arithmetic_common_years, year - 1), do: 1, else: 0
-    @arithmetic_epoch + 365 * (year - 1) + Integer.floor_div(8 * year + 21, 33) - correction
+    Calendrical.YearCache.fetch_integer({__MODULE__, :new_year, year}, fn ->
+      case new_year_gregorian(year + 621) do
+        {:ok, new_year} -> Date.to_gregorian_days(new_year)
+        {:error, exception} -> raise exception
+      end
+    end)
   end
 end

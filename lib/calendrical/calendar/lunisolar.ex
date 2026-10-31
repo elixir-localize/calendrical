@@ -49,7 +49,7 @@ defmodule Calendrical.Calendar.Lunisolar do
     Gregorian year outside -20,000 to
     20,000, `gregorian_date_for_lunar/3` raise
     `Calendrical.UnsupportedDateRangeError`, as the sighting Islamic
-    calendars do outside their ephemeris.
+    calendars do beyond the years Astro answers for.
 
   ### Examples
 

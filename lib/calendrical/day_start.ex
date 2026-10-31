@@ -27,7 +27,14 @@ defmodule Calendrical.DayStart do
   def date_at(%DateTime{} = datetime, calendar, location, utc_offset_seconds, options) do
     day_start = Keyword.get(options, :day_start, :midnight)
     {reference_date, reference_time, instant} = reference_wall_clock(datetime, utc_offset_seconds)
-    dusk = %{calendar: calendar, location: location, date: reference_date, instant: instant}
+
+    dusk = %{
+      calendar: calendar,
+      location: location,
+      date: reference_date,
+      instant: instant,
+      utc_offset: utc_offset_seconds
+    }
 
     with :ok <- validate_day_start(day_start),
          {:ok, roll} <- day_roll(day_start, dusk, reference_time, options) do
@@ -75,20 +82,16 @@ defmodule Calendrical.DayStart do
     end
   end
 
-  # Astro answers `:not_found` for a date outside the installed ephemeris
-  # and `:no_time` where the sun does not reach the altitude that day.
+  # The dusk of the reference date at the reference offset, in UTC: Astro
+  # chooses the evening whose date at `:utc_offset` is the reference date, so
+  # far from Greenwich it is that day's evening and not the one before. Astro
+  # answers `:no_time` where the sun does not reach the altitude that day.
   defp dusk_roll(day_start, dusk, astro_options) do
-    case Astro.sunset(dusk.location, dusk.date, [{:time_zone, :utc} | astro_options]) do
+    options = [time_zone: :utc, utc_offset: dusk.utc_offset] ++ astro_options
+
+    case Astro.sunset(dusk.location, dusk.date, options) do
       {:ok, moment} ->
         rolled(DateTime.compare(dusk.instant, moment) in [:eq, :gt])
-
-      {:error, :not_found} ->
-        {:error,
-         Calendrical.UnsupportedDateRangeError.exception(
-           calendar: dusk.calendar,
-           value: dusk.date,
-           range: :jpl_ephemeris
-         )}
 
       {:error, _no_dusk} ->
         {:error,
