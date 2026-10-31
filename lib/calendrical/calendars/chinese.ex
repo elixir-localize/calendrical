@@ -123,16 +123,14 @@ defmodule Calendrical.Chinese do
     gregorian_date_for_lunar(gregorian_year, @dragon_month, @dragon_day)
   end
 
-  # Since the Chinese calendar is a lunisolar
-  # calendar, a reference longitude is required
-  # in order to calculate sunset and sunrise.
-  #
-  # Prior to 1929, the longitude of Beijing was
-  # used. Since 1929, the longitude of the
-  # standard China timezone (GMT+8) is used.
+  # The place and the time the calendar is reckoned in: `{latitude,
+  # longitude, altitude, offset}`, the offset from UTC in days. Only the
+  # offset is used, to place new moons and solar terms on a civil day:
+  # Beijing local mean time before 1929, and China Standard Time (UTC+8)
+  # from 1929.
 
   @doc false
-  @spec location(Time.time()) :: {Astro.angle(), Astro.angle(), Astro.meters(), Time.hours()}
+  @spec location(Time.time()) :: {Astro.angle(), Astro.angle(), Astro.meters(), number()}
   def location(iso_days) do
     if iso_days < @china_1929 do
       {angle(39, 55, 0), angle(116, 25, 0), mt(43.5), @beijing_local_offset}

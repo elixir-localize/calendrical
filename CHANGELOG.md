@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] — Unreleased
+
+### Changed
+
+* Requires Astro 2.10. The lunisolar calendars take the local day of each new moon, December solstice and solar term from Astro's day searches, and compute no astronomy of their own; an uncached year takes about 0.2 ms.
+
 ## [2.2.0] — 2026-10-27
 
 ### Added

@@ -170,11 +170,11 @@ defmodule Calendrical.Vietnamese do
   # solar terms on a civil day. From 1968 the Vietnamese calendar is computed
   # for the 105° East (Hanoi) meridian, UTC+7. Before 1968 it followed the
   # Chinese calendar, so it delegates to `Calendrical.Chinese.location/1` for
-  # that era — Beijing's meridian, local apparent time before 1929 and China
+  # that era — Beijing's meridian, local mean time before 1929 and China
   # Standard Time (UTC+8) from 1929 — keeping the two calendars identical for
   # every pre-1968 date.
   @doc false
-  @spec location(Time.time()) :: {Astro.angle(), Astro.angle(), Astro.meters(), Time.hours()}
+  @spec location(Time.time()) :: {Astro.angle(), Astro.angle(), Astro.meters(), number()}
   def location(iso_days) do
     if iso_days < @vietnam_1968 do
       Calendrical.Chinese.location(iso_days)

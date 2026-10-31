@@ -197,16 +197,14 @@ defmodule Calendrical.LunarJapanese do
     Lunisolar.new_moon_before(iso_days, &location/1)
   end
 
-  # Since the Japanese calendar is a lunisolar
-  # calendar, a reference longitude is required
-  # in order to calculate sunset and sunrise.
-  #
-  # Prior to 1888, the longitude of Tokyo was
-  # used. Since 1889, the longitude of the
-  # standard Japan timezone (GMT+8) is used.
+  # The place and the time the calendar is reckoned in: `{latitude,
+  # longitude, altitude, offset}`, the offset from UTC in days. Only the
+  # offset is used, to place new moons and solar terms on a civil day: Tokyo
+  # local mean time before 1888, and Japan Standard Time (UTC+9) from
+  # 1888-01-01.
 
   @doc false
-  @spec location(Time.time()) :: {Astro.angle(), Astro.angle(), Astro.meters(), Time.hours()}
+  @spec location(Time.time()) :: {Astro.angle(), Astro.angle(), Astro.meters(), number()}
   def location(iso_days) do
     if iso_days < @japan_1888 do
       {deg(35.7), angle(139, 46, 0), mt(24), @tokyo_local_offset}

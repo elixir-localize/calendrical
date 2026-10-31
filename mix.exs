@@ -183,7 +183,9 @@ defmodule Calendrical.MixProject do
   defp deps do
     [
       {:localize, "~> 1.4"},
-      {:astro, "~> 2.9"},
+      # Astro 2.10 is unreleased: build against the local checkout until it is
+      # on hex, then return to `{:astro, "~> 2.10"}`.
+      {:astro, path: "../../astro"},
       {:tz_world, "~> 2.3", optional: true},
       {:tz, "~> 0.26", optional: true},
       {:gettext, "~> 1.0"},

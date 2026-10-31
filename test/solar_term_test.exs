@@ -38,12 +38,14 @@ defmodule Calendrical.SolarTermTest do
                {:ok, ~D[2026-02-04 Calendrical.Gregorian]}
     end
 
-    # A term's day is the day its moment is in, before the epoch too: Qingming
-    # in -3000 falls at day -1095631.11, which is 6 April. Rounding the moment
-    # towards zero gave the day after it, 7 April.
+    # A term's day is the day its moment is in, before the epoch too, not the
+    # day the moment rounds to towards zero. Qingming in -3000 falls on 7 April
+    # with Astro 2.10's ΔT, and fell on 6 April with Astro 2.9's: the two
+    # models differ there by about 3.7 hours, inside ΔT's uncertainty of hours
+    # at that era, so the day is decided by the model rather than the sky.
     test "is the day its moment is in, in a year before 0" do
       assert Calendrical.Chinese.solar_term(5, -3000) ==
-               {:ok, ~D[-3000-04-06 Calendrical.Gregorian]}
+               {:ok, ~D[-3000-04-07 Calendrical.Gregorian]}
 
       location = &Calendrical.Chinese.location/1
 

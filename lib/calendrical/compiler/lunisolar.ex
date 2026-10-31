@@ -4,20 +4,27 @@ defmodule Calendrical.Lunisolar do
 
   A lunisolar calendar approximates the tropical year using lunar months,
   inserting an intercalary (leap) month roughly every three years to keep the
-  calendar aligned with the seasons. Calendrical implements three lunisolar
+  calendar aligned with the seasons. Calendrical implements four lunisolar
   calendars on top of this module:
 
-  * `Calendrical.Chinese` — observation point Beijing.
+  * `Calendrical.Chinese` — reckoned in Beijing time.
 
-  * `Calendrical.Korean` (Dangi) — observation point Seoul.
+  * `Calendrical.Korean` (Dangi) — reckoned in Seoul time.
 
-  * `Calendrical.LunarJapanese` — observation point Tokyo.
+  * `Calendrical.Vietnamese` — reckoned in Hanoi time from 1968, and as the
+    Chinese calendar before.
 
-  Each implementation is a thin wrapper that supplies its epoch and an
-  observation-location function (latitude, longitude, altitude, time-zone
-  offset). All of the astronomical heavy lifting — winter solstice, mean and
-  true new moon, leap-month detection, sexagesimal cycle calculations — is
-  delegated to `Astro` and lives in this module.
+  * `Calendrical.LunarJapanese` — reckoned in Tokyo time.
+
+  Each implementation is a thin wrapper that supplies its epoch and a
+  location function whose offset from UTC places events on civil days. The
+  astronomy comes from `Astro`: the local day of each new moon
+  (`Astro.Lunar.new_moon_day_before/2`, `new_moon_day_on_or_after/2`) and of
+  each solar term and December solstice
+  (`Astro.Solar.solar_longitude_day_on_or_after/3`,
+  `solar_longitude_day_on_or_before/3`). This module keeps the calendar's
+  rules: the year counted from the December solstice, the leap month as the
+  first without a major solar term, and the sexagenary cycle.
 
   This module is **not** intended to be called directly from application code.
   Use one of the lunisolar calendar modules above and the standard `Date` and
@@ -57,8 +64,7 @@ defmodule Calendrical.Lunisolar do
     only: [
       mod: 2,
       amod: 2,
-      deg: 1,
-      next: 2
+      deg: 1
     ]
 
   alias Astro.{Lunar, Solar, Time}
@@ -140,11 +146,17 @@ defmodule Calendrical.Lunisolar do
   # The Gregorian years whose days the new moon searches answer for: a few
   # beyond the 40,001 years a lunisolar calendar answers for (see
   # `Calendrical.Calendar.Lunisolar`), as the searches for a year at its edge
-  # look a little past it. Far beyond them the series for a new moon's moment
-  # drifts from its mean timing faster than a search can follow.
+  # look a little past it. A day beyond them is refused, so that a date far
+  # outside the calendars' years is an error rather than a search.
   @supported_gregorian_years -20_005..20_005
   @first_supported_day Calendar.ISO.date_to_iso_days(-20_005, 1, 1)
   @last_supported_day Calendar.ISO.date_to_iso_days(20_005, 12, 31)
+
+  # The days whose year and month are read from the kept years: those of the
+  # calendars' years, whose walks stay within the supported days. A day
+  # beyond is worked out directly, and refused if it is outside them.
+  @first_kept_day Calendar.ISO.date_to_iso_days(-20_000, 1, 1)
+  @last_kept_day Calendar.ISO.date_to_iso_days(20_000, 12, 31)
 
   # Reingold's day name epoch is R.D. 45, 14 February 1 CE, counted from
   # R.D. 1, 1 January 1 CE. ISO days count from 1 January 0, 365 days
@@ -874,7 +886,8 @@ defmodule Calendrical.Lunisolar do
   # as the new years and new moons are the same whichever day they are
   # sought from. `:error` where the walk does not settle or reaches beyond
   # the supported days, and the day is then worked out as before.
-  defp kept_year_and_month(iso_days, epoch, location_fun) do
+  defp kept_year_and_month(iso_days, epoch, location_fun)
+       when iso_days >= @first_kept_day and iso_days <= @last_kept_day do
     year = year_beginning_on(iso_days - @year_estimate_shift, epoch)
 
     with {:ok, new_year, next_new_year} <-
@@ -883,8 +896,10 @@ defmodule Calendrical.Lunisolar do
            month_start_on_or_before(iso_days, new_year, next_new_year, location_fun) do
       {:ok, new_year, start_of_month}
     end
-  rescue
-    Calendrical.UnsupportedDateRangeError -> :error
+  end
+
+  defp kept_year_and_month(_iso_days, _epoch, _location_fun) do
+    :error
   end
 
   defp year_around(_iso_days, _year, _epoch, _location_fun, 0), do: :error
@@ -1346,8 +1361,11 @@ defmodule Calendrical.Lunisolar do
   defp find_solar_term(index, gregorian_year, location_fun) do
     longitude = rem(300 + index * 15, 360)
     start = Calendrical.Gregorian.date_to_iso_days(gregorian_year, 1, 1)
-    moment = solar_longitude_on_or_after(longitude, start, location_fun)
-    {year, month, day} = Calendrical.Gregorian.date_from_iso_days(floor(moment))
+
+    term_day =
+      Solar.solar_longitude_day_on_or_after(longitude, start, offset_function(location_fun))
+
+    {year, month, day} = Calendrical.Gregorian.date_from_iso_days(term_day)
     {:ok, %Date{year: year, month: month, day: day, calendar: Calendrical.Gregorian}}
   end
 
@@ -1547,14 +1565,7 @@ defmodule Calendrical.Lunisolar do
       do: raise(out_of_range(iso_days))
 
   def new_moon_before(iso_days, location_fun) do
-    new_moon =
-      iso_days
-      |> midnight_in_location(location_fun)
-      |> Lunar.date_time_new_moon_before()
-
-    {_lat, _lng, _alt, offset} = location_fun.(new_moon)
-
-    Time.standard_from_universal(new_moon, offset) |> floor()
+    Lunar.new_moon_day_before(iso_days, offset_function(location_fun))
   end
 
   @doc """
@@ -1588,14 +1599,7 @@ defmodule Calendrical.Lunisolar do
       do: raise(out_of_range(iso_days))
 
   def new_moon_on_or_after(iso_days, location_fun) do
-    new_moon =
-      iso_days
-      |> midnight_in_location(location_fun)
-      |> Lunar.date_time_new_moon_at_or_after()
-
-    {_lat, _lng, _alt, offset} = location_fun.(new_moon)
-
-    Time.standard_from_universal(new_moon, offset) |> floor()
+    Lunar.new_moon_day_on_or_after(iso_days, offset_function(location_fun))
   end
 
   defp out_of_range(iso_days) do
@@ -1689,16 +1693,16 @@ defmodule Calendrical.Lunisolar do
 
   """
   def december_solstice_on_or_before(iso_days, location_fun) do
-    approx =
-      Solar.estimate_prior_solar_ecliptic_longitude(
-        @winter,
-        midnight_in_location(iso_days + 1, location_fun)
-      )
+    Solar.solar_longitude_day_on_or_before(@winter, iso_days, offset_function(location_fun))
+  end
 
-    next(
-      floor(approx) - 1,
-      &(@winter < Solar.solar_ecliptic_longitude(midnight_in_location(1 + &1, location_fun)))
-    )
+  # The calendar's offset from UTC, in days, at a moment, as the day searches
+  # take it: the fourth element of what `location_fun` returns.
+  defp offset_function(location_fun) do
+    fn moment ->
+      {_latitude, _longitude, _altitude, offset} = location_fun.(moment)
+      offset
+    end
   end
 
   @doc """

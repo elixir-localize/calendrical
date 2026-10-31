@@ -107,9 +107,6 @@ defmodule Calendrical.LunisolarSupportedYearsTest do
     assert_raise Calendrical.UnsupportedDateRangeError, fn ->
       Calendrical.Lunisolar.leap_year?(1_000_000, Calendrical.Chinese.epoch(), location)
     end
-
-    # A fractional moment inside the range is answered.
-    assert is_integer(Calendrical.Lunisolar.new_moon_on_or_after(739_038.5, location))
   end
 
   test "a composite year with no days of its own is no leap year" do

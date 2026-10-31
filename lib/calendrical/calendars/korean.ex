@@ -115,12 +115,13 @@ defmodule Calendrical.Korean do
     Lunisolar.new_moon_on_or_after(iso_days, &location/1)
   end
 
-  # Since the Korean (dangi) calendar is a lunisolar
-  # calendar, a reference longitude is required
-  # in order to calculate sunset and sunrise.
+  # The place and the time the calendar is reckoned in: `{latitude,
+  # longitude, altitude, offset}`, the offset from UTC in days. Only the
+  # offset is used, to place new moons and solar terms on a civil day: Seoul
+  # local mean time, then the offsets Korea has kept since 1908.
 
   @doc false
-  @spec location(Time.time()) :: {Astro.angle(), Astro.angle(), Astro.meters(), Time.hours()}
+  @spec location(Time.time()) :: {Astro.angle(), Astro.angle(), Astro.meters(), number()}
   def location(iso_days) do
     offset = korean_offset(iso_days)
     {angle(37, 34, 0), angle(126, 58, 0), mt(0), Astro.Time.hours_to_days(offset)}
