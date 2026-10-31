@@ -3,8 +3,11 @@
 Calendrical provides locale-aware parsers for user-typed date and time strings. There's a unified entry point — `Calendrical.parse/2` — that figures out what shape the input has, plus four targeted parsers for when the shape is known:
 
 * `Calendrical.Date.parse/2`
+
 * `Calendrical.Time.parse/2`
+
 * `Calendrical.DateTime.parse/2`
+
 * `Calendrical.Date.parse_range/2`
 
 Parsing is implemented by Localize, and each of these functions delegates to its Localize counterpart — `Localize.DateTime.Parser.parse/2`, `Localize.Date.parse/2`, `Localize.Time.parse/2`, `Localize.DateTime.parse/2` and `Localize.Interval.parse/2` — so the two give identical results and errors. Calendrical supplies the calendar modules the results are returned in; Localize resolves the time zones it reads, and `Calendrical.TimeZone.resolve/3` is the same resolver.
@@ -130,9 +133,13 @@ iex> Calendrical.parse("١٧ رمضان ١٤٣٥ هـ", locale: :"ar-SA", calend
 The parsers follow CLDR's lenient-parsing rules:
 
 * **Case-insensitive name matching** — `"23 MAI"`, `"23 Mai"`, and `"23 mai"` all parse identically in French.
+
 * **Equivalent separators** — `5/16/26`, `5-16-26`, and `5.16.26` all parse as `~D[2026-05-16]` in `:en` because CLDR's lenient-scope class treats `/`, `-`, and `.` interchangeably.
+
 * **Non-Latin digits transliterated** — `٢٤` (Arabic-Indic 24) and `24` both parse identically.
+
 * **Two-digit year pivoting** — `5/16/26` pivots into the 80-back/20-forward window relative to today (or `:reference_date` if you pass one). Era-aware calendars (Japanese, ROC) skip pivoting because the year is meant literally.
+
 * **M↔d order swap for name months** — `"May 23"` parses in French (where CLDR's pattern is `d MMM`) and `"23 May"` parses in English (where it's `MMM d, y`). The swap applies only when the month is in name form (`MMM`/`MMMM`/`MMMMM`); numeric `M`/`MM` is excluded because the swap would be ambiguous with `d`.
 
 ## Lenient input pre-processing
@@ -282,8 +289,11 @@ Calendrical *deliberately* accepts inputs that CLDR doesn't strictly publish, wh
 `Calendrical.parse/2` tries the sub-parsers in this order:
 
 1. **Interval** — only when an interval-shaped separator is present (the locale's `intervalFormatFallback`, or `–`, `—`, `−`, `〜`, `~`, ` to `, ` - `, ` / `). Cheap fail-fast.
+
 2. **Date** — whole-string anchored; date-only input.
+
 3. **Time** — whole-string anchored; time-only input.
+
 4. **DateTime** — splits on every glue separator position; the most expensive parser, run last as a fallback for inputs with both date and time.
 
 The returned struct discloses what was parsed:

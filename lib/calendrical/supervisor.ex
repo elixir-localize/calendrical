@@ -25,7 +25,7 @@ defmodule Calendrical.Supervisor do
       # mix.exs
       def deps do
         [
-          {:calendrical, "~> 2.1", runtime: false}
+          {:calendrical, "~> 2.3", runtime: false}
         ]
       end
 

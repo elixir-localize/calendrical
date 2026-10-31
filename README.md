@@ -43,7 +43,7 @@ Add `calendrical` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:calendrical, "~> 2.2"}
+    {:calendrical, "~> 2.3"}
   ]
 end
 ```
@@ -61,7 +61,7 @@ Calendrical starts with your application, under `Calendrical.Supervisor`. To sta
 def project do
   [
     app: :my_app,
-    deps: [{:calendrical, "~> 2.2", runtime: false}],
+    deps: [{:calendrical, "~> 2.3", runtime: false}],
     releases: [my_app: [applications: [calendrical: :load]]]
   ]
 end
@@ -240,6 +240,12 @@ For Calendrical's underlying locale, default-locale, and locale-cache configurat
 
 * [`guides/calendar_behaviour.md`](https://hexdocs.pm/calendrical/calendar_behaviour.html) — how to make your own calendar with the five makers: the kernel, every option, what may be overridden, and worked examples.
 
+* [`guides/composite_calendars.md`](https://hexdocs.pm/calendrical/composite_calendars.html) — composite calendars that change from one calendar to another at historical cut-over dates, such as the Julian to Gregorian reform.
+
+* [`guides/parsing.md`](https://hexdocs.pm/calendrical/parsing.html) — parsing locale-formatted dates, times, date-times and intervals with `Calendrical.parse/2` and the targeted parsers.
+
+* [`guides/supervision.md`](https://hexdocs.pm/calendrical/supervision.html) — the processes Calendrical runs, starting them in your own supervision tree, and the order Astro and Localize must start in.
+
 * [`guides/migration.md`](https://hexdocs.pm/calendrical/migration.html) — migrating from `ex_cldr_calendars` and the related `cldr_calendars_*` libraries.
 
 * [`CHANGELOG.md`](https://hexdocs.pm/calendrical/changelog.html) — release history.
@@ -248,5 +254,5 @@ Full API documentation is available on [HexDocs](https://hexdocs.pm/calendrical)
 
 ## License
 
-Apache License 2.0. See the [LICENSE](https://hexdocs.pm/calendrical/license.html) file for details. The Umm al-Qura month lengths for 1501 to 1600 AH are derived from ICU and are under the [Unicode License V3](https://hexdocs.pm/calendrical/license-unicode.html).
+Calendrical is released under the Apache License 2.0, and the Umm al-Qura month lengths for 1501 to 1600 AH it derives from ICU under the Unicode License V3; see [LICENSE.md](https://github.com/elixir-localize/calendrical/blob/v2.3.0/LICENSE.md).
 

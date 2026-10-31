@@ -1,7 +1,7 @@
 defmodule Calendrical.MixProject do
   use Mix.Project
 
-  @version "2.2.0"
+  @version "2.3.0"
 
   def project do
     [
@@ -97,7 +97,6 @@ defmodule Calendrical.MixProject do
         [
           "README.md",
           "LICENSE.md",
-          "LICENSE-UNICODE.md",
           "CHANGELOG.md"
         ] ++ Path.wildcard("guides/*.md"),
       formatters: ["html", "markdown"],
@@ -116,7 +115,7 @@ defmodule Calendrical.MixProject do
   def groups_for_modules do
     [
       "Gregorian Month-based Calendars":
-        ~r/^Calendrical\.(Gregorian|Buddhist|Japanese|Roc|Indian)$/,
+        ~r/^Calendrical\.(Gregorian|ISO|Buddhist|Japanese|Roc|Indian)$/,
       "Gregorian Week-based Calendars": ~r/^Calendrical\.(ISOWeek|NRF)$/,
       "Julian Calendars": ~r/^Calendrical\.Julian(\.(Jan1|March1|March25|Sept1|Dec25))?$/,
       "Lunisolar Calendars":
@@ -156,7 +155,8 @@ defmodule Calendrical.MixProject do
       "K-day Calculations": ~r/^Calendrical\.Kday$/,
       Preference: ~r/^Calendrical\.Preference$/,
       Eras: ~r/^Calendrical\.Era/,
-      Exceptions: ~r/^Calendrical\..*Error$/
+      Exceptions: ~r/^Calendrical\..*Error$/,
+      "Mix tasks": [Mix.Tasks.Calendrical.UmmAlQura.Verify]
     ]
   end
 
@@ -183,7 +183,7 @@ defmodule Calendrical.MixProject do
   defp deps do
     [
       {:localize, "~> 1.5"},
-      {:astro, "~> 2.2"},
+      {:astro, "~> 2.10"},
       {:tz_world, "~> 2.3", optional: true},
       {:tz, "~> 0.26", optional: true},
       {:gettext, "~> 1.0"},
