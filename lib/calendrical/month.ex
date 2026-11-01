@@ -89,12 +89,25 @@ defmodule Calendrical.Month do
   end
 
   defp cldr_month!(calendar, year, month) do
-    if calendar.info().cldr_calendar_type == :hebrew do
+    info = calendar.info()
+
+    if info.cldr_calendar_type == :hebrew do
       hebrew_cldr_month(calendar, year, month)
     else
       {_year, written_month, _day} = calendar.written_date(year, month, 1)
-      written_month
+      named_as(info.cldr_months, written_month)
     end
+  end
+
+  # The CLDR month a written month is named as: itself, unless the
+  # calendar names its months from a calendar whose year begins at another
+  # month (`c:Calendrical.info/0`'s `cldr_months`).
+  defp named_as(cldr_months, month) when is_tuple(cldr_months) and is_integer(month) do
+    elem(cldr_months, month - 1)
+  end
+
+  defp named_as(_cldr_months, month) do
+    month
   end
 
   defp hebrew_cldr_month(calendar, year, month) do

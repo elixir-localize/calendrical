@@ -2,6 +2,10 @@
 
 Calendrical's open work. Design documents live in `plans/`.
 
+## In progress
+
+* [ ] **The Bangla calendar of Bangladesh** — the 1987 and 2019 revisions and their composite, named from CLDR's Indian calendar through the new `:cldr_months` option; landed in the tree. Open: the era's name outside `bn`, which borrows the Indian "Śaka".
+
 ## Deferred
 
 * [ ] **Decide the astronomical Umm al-Qura rule after 1450 AH** — reviewed: it is KACST's rule to 1450 AH (335 of 336 months), and from 1451 AH KACST's projected table and ICU's follow a stricter one, moonset at least 19.5 minutes after sunset or a moon at least 18 hours old (598 of 600 and 287 of 287 months). It is not a crescent-visibility criterion (Yallop and Odeh fail), and ICU carries KACST's table without a rule; deferred (user, 2026-10-06) until the criterion behind KACST's projected months is found. Analysis in [plans/umm-al-qura-astronomical.md](plans/umm-al-qura-astronomical.md).

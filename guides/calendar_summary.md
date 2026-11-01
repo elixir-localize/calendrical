@@ -112,6 +112,8 @@ A **solar** calendar tracks the tropical year (the time between successive verna
 |---|---|---|---|
 | `Calendrical.Persian` | `:persian` | Astronomical: each Hijri-Shamsi year starts on the Gregorian day on which the vernal equinox occurs in Tehran. Uses `Astro.equinox/2`. | 365 or 366 days |
 | `Calendrical.Indian` | `:indian` | Algorithmic, year-offset over Gregorian. Saka year = Gregorian year − 78, but with custom month names and a distinct month structure (Chaitra–Phalguna). | 365 or 366 days |
+| `Calendrical.Bangla.Revised1987` | `:indian` (names) | Algorithmic, pinned to Gregorian: the Bangla Academy's 1987 rules. 1 Boishakh is 14 April, the year is the Gregorian year less 593, Boishakh–Bhadro have 31 days and Falgun 31 in a leap year. The rules date-holidays writes Bangladesh's national days in. | 365 or 366 days |
+| `Calendrical.Bangla.Revised2019` | `:indian` (names) | The 2019 revision, in force from 16 October 2019: Boishakh–Ashwin have 31 days and Falgun 29, or 30 in a leap year, so 16 December is 1 Poush. | 365 or 366 days |
 | `Calendrical.Coptic` | `:coptic` | 13-month year (12 × 30 days + Pi Kogi Enavot of 5 or 6 days). Tabular: leap years are `rem(year, 4) == 3`. Day 1 of year 1 is 29 August 284 CE Julian. | 365 or 366 days |
 | `Calendrical.Ethiopic` | `:ethiopic` | Same 13-month layout and leap-year rule as Coptic. Era of Mercy starts 29 August 8 CE Julian. | 365 or 366 days |
 | `Calendrical.Ethiopic.AmeteAlem` | `:ethiopic_amete_alem` | Same algorithm as `Calendrical.Ethiopic` with a year offset of +5500 (the *Era of the World*). | 365 or 366 days |
@@ -212,6 +214,7 @@ A **composite** calendar uses one base calendar before a specified date and a di
 | User-defined | `Calendrical.Composite` | The `defmacro __using__` template that builds a composite calendar from a list of transition dates. |
 | Pre-built | `Calendrical.Reform.Sweden` | Sweden's aborted 1700 reform, its unique 30 February 1712, and the final Julian → Gregorian switch in 1753. |
 | Pre-built | `Calendrical.Reform.Japan` | Japan's 1873 switch from the lunisolar calendar to the Gregorian calendar. |
+| Pre-built | `Calendrical.Bangla` | Bangladesh's Bangla calendar: the 1987 rules until 15 October 2019 and the 2019 revision from the 16th, the first day on which they differ. |
 | Pre-built | `Calendrical.Reform.England` | England's three transitions: 1155 (March 25 year-start), 1751 (January 1 year-start), 1752 (Julian → Gregorian, dropping 11 days). |
 
 **Worked example (Sweden, 1753 transition).**

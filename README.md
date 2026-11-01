@@ -6,7 +6,7 @@ Calendrical extends Elixir's standard `Calendar` and `Date` modules with compreh
 
 ## Features
 
-* **21 calendar implementations** — Gregorian, Persian, Coptic, Ethiopic (two eras), Japanese, Chinese, Korean (Dangi), Lunar Japanese, Vietnamese, six Islamic variants (Civil, TBLA, tabular and astronomical Umm al-Qura, and the observational calendars of Cairo and Mecca), Hebrew, Buddhist, Republic of China (Minguo), Indian National (Saka), and Julian: every calendar CLDR defines, and more.
+* **23 calendar implementations** — Gregorian, Persian, Coptic, Ethiopic (two eras), Japanese, Chinese, Korean (Dangi), Lunar Japanese, Vietnamese, six Islamic variants (Civil, TBLA, tabular and astronomical Umm al-Qura, and the observational calendars of Cairo and Mecca), Hebrew, Buddhist, Republic of China (Minguo), Indian National (Saka), the Bangla calendar of Bangladesh (its 1987 and 2019 revisions), and Julian: every calendar CLDR defines, and more.
 
 * **Five makers** — `use Calendrical.Calendar` for a hand-written calendar, `Calendrical.Calendar.Shifted` for a year begun elsewhere in a base calendar's year, `Calendrical.Calendar.Weeks` for a year of whole weeks, `Calendrical.Calendar.Lunisolar` for a calendar reckoned from the sky and `Calendrical.Composite` for calendars in sequence. Each implements a kernel of eight callbacks from its options, and every other answer is derived from the kernel, so a new calendar is its spine and a handful of facts.
 
@@ -137,11 +137,11 @@ Calendrical implements every calendar system exposed by CLDR, plus lunisolar var
 |---|---|
 | **Gregorian-based** (Gregorian months, or whole weeks of them) | `Calendrical.Gregorian`, `Calendrical.ISO`, `Calendrical.ISOWeek`, `Calendrical.NRF`, `Calendrical.Buddhist`, `Calendrical.Roc`, `Calendrical.Japanese` |
 | **Julian-based** (proleptic Julian + variants) | `Calendrical.Julian`, `Calendrical.Julian.Jan1`, `Calendrical.Julian.March1`, `Calendrical.Julian.March25`, `Calendrical.Julian.Sept1`, `Calendrical.Julian.Dec25` |
-| **Solar (non-Gregorian)** | `Calendrical.Persian` (astronomical), `Calendrical.Indian`, `Calendrical.Coptic`, `Calendrical.Ethiopic`, `Calendrical.Ethiopic.AmeteAlem` |
+| **Solar (non-Gregorian)** | `Calendrical.Persian` (astronomical), `Calendrical.Indian`, `Calendrical.Bangla.Revised1987`, `Calendrical.Bangla.Revised2019`, `Calendrical.Coptic`, `Calendrical.Ethiopic`, `Calendrical.Ethiopic.AmeteAlem` |
 | **Lunar (tabular)** | `Calendrical.Islamic.Civil`, `Calendrical.Islamic.Tbla`, `Calendrical.Islamic.UmmAlQura` |
 | **Lunar (observational/astronomical)** | `Calendrical.Islamic.Observational` (Cairo), `Calendrical.Islamic.Rgsa` (Mecca), `Calendrical.Islamic.UmmAlQura.Astronomical` |
 | **Lunisolar** | `Calendrical.Hebrew` (arithmetic), `Calendrical.Chinese`, `Calendrical.Korean` (Dangi), `Calendrical.LunarJapanese`, `Calendrical.Vietnamese` (Hanoi meridian) |
-| **Composite** | `Calendrical.Composite` (user-defined; e.g. England with Julian-to-Gregorian transition) |
+| **Composite** | `Calendrical.Composite` (user-defined; e.g. England with Julian-to-Gregorian transition), `Calendrical.Bangla` (the two Bangla revisions, each in its own time) |
 | **Fiscal-year** | `Calendrical.FiscalYear.US`, `.AU`, `.GB`, … (50+ territories, built by `Calendrical.FiscalYear.calendar_for/1`) |
 
 ## Defining your own calendar

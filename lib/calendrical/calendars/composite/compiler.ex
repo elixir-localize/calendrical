@@ -78,6 +78,18 @@ defmodule Calendrical.Composite.Compiler do
         end
       end
 
+      # The CLDR month each month is named as, where every member names its
+      # months alike, as the two Bangla revisions do.
+      defp cldr_months_of_members do
+        @member_calendars
+        |> Enum.map(& &1.info().cldr_months)
+        |> Enum.uniq()
+        |> case do
+          [cldr_months] -> cldr_months
+          _cldr_months -> nil
+        end
+      end
+
       # The fewest and the most months a year of any member has.
       defp months_of_members do
         bounds = Enum.map(@member_calendars, & &1.info().months_in_year)
@@ -115,6 +127,7 @@ defmodule Calendrical.Composite.Compiler do
         Calendrical.Info.new(__MODULE__,
           cldr_calendar_type: @cldr_calendar_type,
           era_calendar_type: era_of_members(),
+          cldr_months: cldr_months_of_members(),
           structure: :months,
           months_in_year: months_of_members(),
           parsing_calendar: __MODULE__,

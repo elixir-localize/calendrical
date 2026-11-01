@@ -125,6 +125,7 @@ defmodule Calendrical.MixProject do
         ~r/^Calendrical\.Islamic\.(Civil|Tbla|Observational|Rgsa|UmmAlQura(\.Astronomical|\.ReferenceData)?)$/,
       "Ecclesiastical Calendars": ~r/^Calendrical\.Ecclesiastical$/,
       "Other Calendars": ~r/^Calendrical\.(Persian|Composite|Coptic)$/,
+      "Bangla Calendars": ~r/^Calendrical\.Bangla(\.(Revised1987|Revised2019))?$/,
       "Reform Calendars": ~r/^Calendrical\.Reform(\.(Sweden(\.Transitional)?|Japan|England))?$/,
       "Fiscal-year Calendars": ~r/^Calendrical\.FiscalYear$/,
       Makers: [

@@ -5,7 +5,7 @@ defmodule Calendrical.Info do
   Every calendar answers `info/0` with one of these structs, built once
   when the calendar is compiled. The facts are what a calendar is rather
   than what it computes: the CLDR calendars that name its months and its
-  eras, its epoch, whether it has a year 0, what its year is built of,
+  eras, the CLDR month each of its months is named as, its epoch, whether it has a year 0, what its year is built of,
   the fewest and most months a year has, the rule its own weeks follow,
   the cycles its years run in, the place an astronomical calendar is
   reckoned at, the lengths its months can have, the calendar its dates
@@ -56,10 +56,19 @@ defmodule Calendrical.Info do
   """
   @type member :: {integer() | nil, module()}
 
+  @typedoc """
+  The CLDR month each month of the year is named as, by month, where a
+  calendar names its months from another calendar whose year begins at
+  another month: the Bangla calendar's Boishakh, its first month, is
+  the Indian calendar's second, `{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1}`.
+  """
+  @type cldr_months :: tuple()
+
   @type t :: %__MODULE__{
           calendar: module(),
           cldr_calendar_type: atom(),
           era_calendar_type: atom(),
+          cldr_months: cldr_months() | nil,
           epoch: integer() | nil,
           year_zero?: boolean(),
           structure: :months | :weeks,
@@ -77,6 +86,7 @@ defmodule Calendrical.Info do
   defstruct calendar: nil,
             cldr_calendar_type: :gregorian,
             era_calendar_type: nil,
+            cldr_months: nil,
             epoch: nil,
             year_zero?: true,
             structure: :months,

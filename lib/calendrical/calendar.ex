@@ -40,6 +40,14 @@ defmodule Calendrical.Calendar do
   * `:era_calendar_type` is the CLDR calendar whose eras the calendar
     counts years in, the CLDR calendar type by default.
 
+  * `:cldr_months` is the CLDR month each month of the year is named
+    as, in order, where the calendar takes its names from a calendar
+    whose year begins at another month: the Bangla calendar names its
+    first month, Boishakh, as the Indian calendar's second,
+    `[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1]`. A month is still
+    written with its own number. The default names month `n` as CLDR
+    month `n`.
+
   * `:months_in_year` is the number of months in a year, or
     `{fewest, most}` where a leap year has more, as the Hebrew calendar's
     `{12, 13}`. The default is `12`.
@@ -85,6 +93,7 @@ defmodule Calendrical.Calendar do
     :epoch,
     :cldr_calendar_type,
     :era_calendar_type,
+    :cldr_months,
     :months_in_year,
     :weeks,
     :year_zero?,
@@ -112,6 +121,7 @@ defmodule Calendrical.Calendar do
     cldr_calendar_type = Keyword.get(options, :cldr_calendar_type, :gregorian)
     era_calendar_type = Keyword.get(options, :era_calendar_type, cldr_calendar_type)
     {months_in_ordinary_year, months_in_leap_year} = months_in_year!(options)
+    cldr_months = cldr_months!(options, months_in_ordinary_year, months_in_leap_year)
 
     # Each section is an independent quoted block; evaluating the
     # list injects them in order, which matters — the attributes in
@@ -131,6 +141,7 @@ defmodule Calendrical.Calendar do
         parsing_calendar: parsing_calendar,
         cldr_calendar_type: cldr_calendar_type,
         era_calendar_type: era_calendar_type,
+        cldr_months: cldr_months,
         year_zero?: year_zero?,
         year_cycle: year_cycle,
         location: location,
@@ -206,6 +217,39 @@ defmodule Calendrical.Calendar do
     end
   end
 
+  # A permutation of the months of a year whose months are all named, so
+  # every name is used once and each month has one.
+  defp cldr_months!(options, months, months) do
+    case Keyword.get(options, :cldr_months) do
+      nil ->
+        nil
+
+      cldr_months when is_list(cldr_months) ->
+        if Enum.sort(cldr_months) == Enum.to_list(1..months) do
+          List.to_tuple(cldr_months)
+        else
+          invalid_cldr_months!(cldr_months)
+        end
+
+      other ->
+        invalid_cldr_months!(other)
+    end
+  end
+
+  defp cldr_months!(options, _fewest, _most) do
+    case Keyword.get(options, :cldr_months) do
+      nil -> nil
+      other -> invalid_cldr_months!(other)
+    end
+  end
+
+  defp invalid_cldr_months!(value) do
+    raise Calendrical.InvalidOptionValueError,
+      option: :cldr_months,
+      value: value,
+      maker: Calendrical.Calendar
+  end
+
   defp prelude(
          epoch_iso_days,
          first_day_of_week,
@@ -237,6 +281,7 @@ defmodule Calendrical.Calendar do
     parsing_calendar = Keyword.fetch!(facts, :parsing_calendar)
     cldr_calendar_type = Keyword.fetch!(facts, :cldr_calendar_type)
     era_calendar_type = Keyword.fetch!(facts, :era_calendar_type)
+    cldr_months = Keyword.fetch!(facts, :cldr_months)
     year_zero? = Keyword.fetch!(facts, :year_zero?)
     year_cycle = Keyword.fetch!(facts, :year_cycle)
     location = Keyword.fetch!(facts, :location)
@@ -247,6 +292,7 @@ defmodule Calendrical.Calendar do
       @info Calendrical.Info.new(__MODULE__,
               cldr_calendar_type: unquote(cldr_calendar_type),
               era_calendar_type: unquote(era_calendar_type),
+              cldr_months: unquote(Macro.escape(cldr_months)),
               epoch: @epoch,
               year_zero?: unquote(year_zero?),
               structure: :months,

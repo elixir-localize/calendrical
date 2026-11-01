@@ -334,16 +334,20 @@ defmodule Calendrical do
 
   # Every calendar Calendrical implements that no CLDR calendar type
   # resolves to: those with no CLDR/BCP 47 identifier (Julian and its
-  # year-start variants, the reform calendars, NRF, ISO week dates, and the
+  # year-start variants, the reform calendars, NRF, ISO week dates, the
   # Vietnamese and Japanese lunisolar calendars, which share CLDR's
-  # `chinese`), and `iso8601`, which CLDR does define, the Gregorian
-  # calendar with ISO 8601's week rules. Localize stays strictly
+  # `chinese`, and the Bangla calendars, which share CLDR's `indian`), and
+  # `iso8601`, which CLDR does define, the Gregorian calendar with ISO
+  # 8601's week rules. Localize stays strictly
   # CLDR-compliant and never validates most of these, so Calendrical
   # resolves them here, ahead of the CLDR lookup. Each key is the IXDTF
   # `[u-ca=…]` identifier as an atom, written with hyphens in the suffix
   # (`julian_march25` is `[u-ca=julian-march25]`), as CLDR's
   # `islamic_civil` is `islamic-civil`.
   @additional_calendars %{
+    bangla: Calendrical.Bangla,
+    bangla_1987: Calendrical.Bangla.Revised1987,
+    bangla_2019: Calendrical.Bangla.Revised2019,
     iso8601: Calendrical.ISO,
     iso_week: Calendrical.ISOWeek,
     julian: Calendrical.Julian,
@@ -4879,6 +4883,9 @@ defmodule Calendrical do
 
   @typedoc "The calendars `additional_calendars/0` returns, by IXDTF identifier."
   @type additional_calendars :: %{
+          bangla: Calendrical.Bangla,
+          bangla_1987: Calendrical.Bangla.Revised1987,
+          bangla_2019: Calendrical.Bangla.Revised2019,
           iso8601: Calendrical.ISO,
           iso_week: Calendrical.ISOWeek,
           julian: Calendrical.Julian,
@@ -4902,8 +4909,10 @@ defmodule Calendrical do
   identifier.
 
   Most have no CLDR/BCP 47 calendar identifier: Julian and its year-start
-  variants, the reform calendars, NRF, ISO week dates, and the Vietnamese and
-  Japanese lunisolar calendars, which CLDR files under `chinese`. `:iso8601`,
+  variants, the reform calendars, NRF, ISO week dates, the Vietnamese and
+  Japanese lunisolar calendars, which CLDR files under `chinese`, and the
+  Bangla calendar of Bangladesh and its two revisions, named from CLDR's
+  `indian`. `:iso8601`,
   which CLDR does define, is the Gregorian calendar with ISO 8601's week
   rules, `Calendrical.ISO`. The identifiers are resolved by
   `calendar_from_cldr_calendar_type/1` ahead of the CLDR lookup, so consumers
@@ -4921,6 +4930,9 @@ defmodule Calendrical do
 
       iex> Calendrical.additional_calendars()[:julian_march25]
       Calendrical.Julian.March25
+
+      iex> Calendrical.additional_calendars()[:bangla]
+      Calendrical.Bangla
 
   """
   @spec additional_calendars() :: additional_calendars()

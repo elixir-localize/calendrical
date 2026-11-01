@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] — Unreleased
+
+### Added
+
+* The Bangla calendar of Bangladesh: `Calendrical.Bangla.Revised1987` (the Bangla Academy's 1987 rules), `Calendrical.Bangla.Revised2019` and the composite `Calendrical.Bangla`, which changes at 16 October 2019; `[u-ca=bangla]`, `bangla-1987` and `bangla-2019`.
+
+* `use Calendrical.Calendar` takes `:cldr_months`, the CLDR month each month is named as, so the Bangla calendars name their months from CLDR's Indian calendar while writing each with its own number.
+
 ## [2.4.0] — 2026-11-01
 
 ### Added
