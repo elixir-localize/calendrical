@@ -77,7 +77,7 @@ end
 # New
 defp deps do
   [
-    {:calendrical, "~> 2.4"},
+    {:calendrical, "~> 2.5"},
   ]
 end
 ```

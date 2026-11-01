@@ -10,13 +10,22 @@ defmodule Calendrical.Bangla.Rules do
 
   alias Calendrical.Gregorian
 
+  @typedoc "The lengths of a year's twelve months."
+  @type lengths ::
+          {pos_integer(), pos_integer(), pos_integer(), pos_integer(), pos_integer(),
+           pos_integer(), pos_integer(), pos_integer(), pos_integer(), pos_integer(),
+           pos_integer(), pos_integer()}
+
+  @typedoc "A calendar's month lengths in an ordinary year and in a leap year."
+  @type month_lengths :: {lengths(), lengths()}
+
   @gregorian_offset 593
   @boishakh_1 {4, 14}
   @months_in_year 12
 
   @doc "The Gregorian year a Bangla year begins in."
   @spec gregorian_year(integer()) :: integer()
-  def gregorian_year(year) do
+  def gregorian_year(year) when is_integer(year) do
     year + @gregorian_offset
   end
 
@@ -27,7 +36,7 @@ defmodule Calendrical.Bangla.Rules do
   end
 
   @doc "The days in a month of a year, from the calendar's month lengths."
-  @spec days_in_month({tuple(), tuple()}, integer(), 1..12) :: pos_integer()
+  @spec days_in_month(month_lengths(), integer(), 1..12) :: pos_integer()
   def days_in_month(month_lengths, year, month) do
     month_lengths
     |> lengths(year)
@@ -35,14 +44,15 @@ defmodule Calendrical.Bangla.Rules do
   end
 
   @doc "The ISO day number of a date."
-  @spec date_to_iso_days({tuple(), tuple()}, integer(), 1..12, pos_integer()) :: integer()
-  def date_to_iso_days(month_lengths, year, month, day) do
+  @spec date_to_iso_days(month_lengths(), integer(), 1..12, pos_integer()) :: integer()
+  def date_to_iso_days(month_lengths, year, month, day)
+      when is_integer(year) and is_integer(month) and is_integer(day) do
     table = lengths(month_lengths, year)
     boishakh_1(year) + days_before(table, month - 1, 0, 0) + day - 1
   end
 
   @doc "The date of an ISO day number."
-  @spec date_from_iso_days({tuple(), tuple()}, integer()) :: {integer(), 1..12, pos_integer()}
+  @spec date_from_iso_days(month_lengths(), integer()) :: {integer(), 1..12, pos_integer()}
   def date_from_iso_days(month_lengths, iso_days) do
     year = year_of(iso_days)
     table = lengths(month_lengths, year)
@@ -81,7 +91,16 @@ defmodule Calendrical.Bangla.Rules do
   end
 
   defp days_before(table, count, index, sum) do
-    days_before(table, count, index + 1, sum + elem(table, index))
+    days_before(table, count, index + 1, sum + days_of(table, index))
+  end
+
+  # A month's length, read as the count of days it is.
+  defp days_of(table, index) do
+    days(elem(table, index))
+  end
+
+  defp days(count) when is_integer(count) do
+    count
   end
 
   defp month_and_day(_table, @months_in_year, day_of_year) do

@@ -45,7 +45,7 @@ Add `calendrical` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:calendrical, "~> 2.4"}
+    {:calendrical, "~> 2.5"}
   ]
 end
 ```
@@ -63,7 +63,7 @@ Calendrical starts with your application, under `Calendrical.Supervisor`. To sta
 def project do
   [
     app: :my_app,
-    deps: [{:calendrical, "~> 2.4", runtime: false}],
+    deps: [{:calendrical, "~> 2.5", runtime: false}],
     releases: [my_app: [applications: [calendrical: :load]]]
   ]
 end
@@ -256,5 +256,5 @@ Full API documentation is available on [HexDocs](https://hexdocs.pm/calendrical)
 
 ## License
 
-Calendrical is released under the Apache License 2.0, and the Umm al-Qura month lengths for 1501 to 1600 AH it derives from ICU under the Unicode License V3; see [LICENSE.md](https://github.com/elixir-localize/calendrical/blob/v2.4.0/LICENSE.md).
+Calendrical is released under the Apache License 2.0, and the Umm al-Qura month lengths for 1501 to 1600 AH it derives from ICU under the Unicode License V3; see [LICENSE.md](https://github.com/elixir-localize/calendrical/blob/v2.5.0/LICENSE.md).
 

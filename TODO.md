@@ -2,15 +2,13 @@
 
 Calendrical's open work. Design documents live in `plans/`.
 
-## In progress
-
-* [ ] **The Bangla calendar of Bangladesh** — the 1987 and 2019 revisions and their composite, named from CLDR's Indian calendar through `:cldr_months`, with their own era through `:era_names` (Localize 1.6). In the tree, on a Localize path dependency; Tempo's `bengali-revised` reader and tempo_holidays follow.
-
 ## Deferred
 
 * [ ] **Decide the astronomical Umm al-Qura rule after 1450 AH** — reviewed: it is KACST's rule to 1450 AH (335 of 336 months), and from 1451 AH KACST's projected table and ICU's follow a stricter one, moonset at least 19.5 minutes after sunset or a moon at least 18 hours old (598 of 600 and 287 of 287 months). It is not a crescent-visibility criterion (Yallop and Odeh fail), and ICU carries KACST's table without a rule; deferred (user, 2026-10-06) until the criterion behind KACST's projected months is found. Analysis in [plans/umm-al-qura-astronomical.md](plans/umm-al-qura-astronomical.md).
 
 ## Done
+
+* [x] **The Bangla calendar of Bangladesh** — the 1987 and 2019 revisions and their composite (`[u-ca=bangla]`), months named from CLDR's Indian calendar (`:cldr_months`) and their own era (`:era_names`, Localize 1.6). 2026-11-01, v2.5.0.
 
 * [x] **Astro as the only source of astronomy** — Calendrical computes no astronomy of its own on Astro 2.10, the Astro 2.9 workarounds are gone, and `DayStart` takes the local evening's sunset west of 30°W. Plan in [plans/astro-only.md](plans/astro-only.md). 2026-11-01, v2.3.0.
 

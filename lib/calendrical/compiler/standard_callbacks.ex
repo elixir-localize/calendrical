@@ -455,7 +455,9 @@ defmodule Calendrical.Compiler.StandardCallbacks do
           true
 
       """
-      def era_names(locale), do: Calendrical.Era.Names.era_names(__MODULE__, locale)
+      def era_names(locale) do
+        Calendrical.Era.Names.era_names(__MODULE__, locale)
+      end
 
       @doc """
       Returns the month a CLDR month is written with in a year

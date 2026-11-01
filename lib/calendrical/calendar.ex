@@ -290,6 +290,7 @@ defmodule Calendrical.Calendar do
     invalid_era_names!(other)
   end
 
+  @spec invalid_era_names!(term()) :: no_return()
   defp invalid_era_names!(value) do
     raise Calendrical.InvalidOptionValueError,
       option: :era_names,
@@ -297,6 +298,7 @@ defmodule Calendrical.Calendar do
       maker: Calendrical.Calendar
   end
 
+  @spec invalid_cldr_months!(term()) :: no_return()
   defp invalid_cldr_months!(value) do
     raise Calendrical.InvalidOptionValueError,
       option: :cldr_months,
