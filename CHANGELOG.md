@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] — Unreleased
+
+### Added
+
+* `day_bounds/1` on `Calendrical.Hebrew`, `Calendrical.Islamic.UmmAlQura`, `Calendrical.Islamic.Rgsa` and `Calendrical.Islamic.Observational`: a day's UTC bounds, from the sunset of the evening before to its own, at the calendar's own place (Jerusalem, Mecca, Mecca, Cairo) — the inverse of `date_at/2` with `day_start: :sunset`.
+
 ## [2.3.0] — 2026-11-01
 
 ### Fixed

@@ -12,6 +12,11 @@ defmodule Calendrical.DayStart do
   # day whose boundary delimits the calendar day. `:sunset` is upper-limb
   # Maghrib and `:nightfall` is a solar-depression dusk, both computed via
   # `Astro` as real instants at the location (independent of daylight saving).
+  #
+  # `day_bounds/4` is the inverse for `:sunset`, calendar-relative: the
+  # calendar passes its own place and offset, and the bounds of a day are the
+  # sunsets of the evening before and of the day, found as `date_at/5` finds
+  # its boundary, so `date_at/5` of the start is the date.
 
   @evening_day_start ~T[18:00:00]
   @default_nightfall_angle 8.5
@@ -101,6 +106,50 @@ defmodule Calendrical.DayStart do
            date: dusk.date
          )}
     end
+  end
+
+  @doc false
+  @spec day_bounds(Date.t(), module(), Geo.PointZ.t() | Geo.Point.t(), integer()) ::
+          {:ok, {DateTime.t(), DateTime.t()}} | {:error, Exception.t()}
+  def day_bounds(%Date{calendar: calendar} = date, calendar, location, utc_offset_seconds) do
+    with {:ok, gregorian} <- to_gregorian(date),
+         {:ok, start} <- sunset_on(Date.add(gregorian, -1), location, utc_offset_seconds),
+         {:ok, stop} <- sunset_on(gregorian, location, utc_offset_seconds) do
+      {:ok, {start, stop}}
+    end
+  end
+
+  def day_bounds(%Date{calendar: other}, calendar, _location, _utc_offset_seconds) do
+    {:error, Calendrical.IncompatibleCalendarError.exception(from: other, to: calendar)}
+  end
+
+  def day_bounds(other, calendar, _location, _utc_offset_seconds) do
+    {:error, Calendrical.IncompatibleCalendarError.exception(from: other, to: calendar)}
+  end
+
+  # The sunset of a Gregorian date at the location, the evening whose date at
+  # the offset is that date, as `dusk_roll/3` asks Astro for it.
+  defp sunset_on(date, location, utc_offset_seconds) do
+    case Astro.sunset(location, date, time_zone: :utc, utc_offset: utc_offset_seconds) do
+      {:ok, moment} ->
+        {:ok, moment}
+
+      {:error, _no_sunset} ->
+        {:error,
+         Calendrical.NoDuskError.exception(day_start: :sunset, location: location, date: date)}
+    end
+  end
+
+  # The Gregorian date of a calendar's date; one outside the calendar's
+  # range raises from deep in the calculation, and is returned as its error.
+  defp to_gregorian(%Date{calendar: calendar} = date) do
+    Calendrical.convert_date(date, Calendar.ISO)
+  rescue
+    error in Calendrical.UnsupportedDateRangeError ->
+      {:error, %{error | calendar: calendar, value: date}}
+
+    error in Calendrical.IslamicYearOutOfRangeError ->
+      {:error, error}
   end
 
   defp rolled(true), do: {:ok, 1}

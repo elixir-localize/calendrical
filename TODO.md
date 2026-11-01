@@ -4,9 +4,6 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Open
 
-* [ ] **`day_bounds/2`, an evening in a zone, and an Islamic `:location`** — for Tempo's `Tempo.day_start/3` (Tempo's decision 91, `tempo/plans/day-start.md`), which places a Hebrew or Islamic day on the UTC line. Three parts, on `Calendrical.Hebrew`, `Calendrical.Islamic.UmmAlQura`, `Calendrical.Islamic.Rgsa` and `Calendrical.Islamic.Observational`, through `Calendrical.DayStart`:
-  `day_bounds(date, options)` → `{:ok, {start, stop}}`, the UTC instants the day and the next begin, the inverse of `date_at/2` with its options (`date_at` of `start` is the date, of the instant before it the day before); a `:time_zone` option on `date_at/2` and `day_bounds/2`, so `:evening` is 18:00 on that zone's wall clock with its daylight saving (a fixed offset, as today, without one); and `:location` (a `Geo.Point` or `Geo.PointZ`, default Mecca) on the three Islamic calendars for `:sunset` and `:nightfall`.
-
 * [ ] **Astro as the only source of astronomy** — move Calendrical's own astronomy into Astro 2.10, delete the workarounds for Astro 2.9, and fix `DayStart`'s sunset west of 30°W. Plan in [plans/astro-only.md](plans/astro-only.md).
 
 ## Deferred
@@ -14,6 +11,8 @@ Calendrical's open work. Design documents live in `plans/`.
 * [ ] **Decide the astronomical Umm al-Qura rule after 1450 AH** — reviewed: it is KACST's rule to 1450 AH (335 of 336 months), and from 1451 AH KACST's projected table and ICU's follow a stricter one, moonset at least 19.5 minutes after sunset or a moon at least 18 hours old (598 of 600 and 287 of 287 months). It is not a crescent-visibility criterion (Yallop and Odeh fail), and ICU carries KACST's table without a rule; deferred (user, 2026-10-06) until the criterion behind KACST's projected months is found. Analysis in [plans/umm-al-qura-astronomical.md](plans/umm-al-qura-astronomical.md).
 
 ## Done
+
+* [x] **`day_bounds/1`, a day's bounds, calendar-relative** — on the Hebrew calendar and the three Islamic ones, the inverse of `date_at/2` with `day_start: :sunset`, for Tempo's `Tempo.day_start/1`. 2026-11-01.
 
 * [x] **A year's astronomy, worked out once** — the calendars reckoned by astronomy keep what they work out about a year, on Astro 2.9's faster positions, with every answer unchanged. Analysis in [plans/astronomy-tables.md](plans/astronomy-tables.md). 2026-10-26, v2.1.0.
 

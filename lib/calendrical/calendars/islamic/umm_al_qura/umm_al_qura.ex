@@ -194,6 +194,46 @@ defmodule Calendrical.Islamic.UmmAlQura do
   end
 
   @doc """
+  Returns the bounds of a Umm al-Qura day: the UTC instants of the
+  sunset it begins at, on the evening before, and of the sunset it ends at.
+
+  A day start is the calendar's own: it begins at sunset (upper-limb, as
+  `date_at/2` with `day_start: :sunset` takes it) at Mecca, and takes no
+  location, time zone or boundary. It is the inverse of `date_at/2` with
+  `day_start: :sunset`: `date_at/2` of the start is the date, and of any
+  instant before it the day before.
+
+  ### Arguments
+
+  * `date` is a `t:Date.t/0` of this calendar.
+
+  ### Returns
+
+  * `{:ok, {start, stop}}`, two UTC `t:DateTime.t/0`: the day is the
+    half-open span from `start` to `stop`.
+
+  * `{:error, %Calendrical.IncompatibleCalendarError{}}` for a date of
+    another calendar.
+
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a date outside
+    the range the calendar or Astro covers.
+
+  ### Examples
+
+      # 1 Shawwal 1446, Eid al-Fitr, begins at sunset in Mecca on the evening before.
+      iex> {:ok, date} = Date.convert(~D[2025-03-30], Calendrical.Islamic.UmmAlQura)
+      iex> {:ok, {start, stop}} = Calendrical.Islamic.UmmAlQura.day_bounds(date)
+      iex> {DateTime.truncate(start, :second), DateTime.truncate(stop, :second)}
+      {~U[2025-03-29 15:34:37Z], ~U[2025-03-30 15:34:56Z]}
+      iex> Calendrical.Islamic.UmmAlQura.date_at(start, day_start: :sunset) == {:ok, date}
+      true
+  """
+  @spec day_bounds(Date.t()) :: {:ok, {DateTime.t(), DateTime.t()}} | {:error, Exception.t()}
+  def day_bounds(date) do
+    Calendrical.DayStart.day_bounds(date, __MODULE__, @mecca_location, @mecca_utc_offset_seconds)
+  end
+
+  @doc """
   Returns the first Hijri year covered by the embedded Umm al-Qura
   tables.
 

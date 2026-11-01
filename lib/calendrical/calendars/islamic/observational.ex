@@ -150,6 +150,46 @@ defmodule Calendrical.Islamic.Observational do
     Calendrical.DayStart.date_at(datetime, __MODULE__, location(), 2 * 60 * 60, options)
   end
 
+  @doc """
+  Returns the bounds of a observational Hijri day: the UTC instants of the
+  sunset it begins at, on the evening before, and of the sunset it ends at.
+
+  A day start is the calendar's own: it begins at sunset (upper-limb, as
+  `date_at/2` with `day_start: :sunset` takes it) at Cairo, the calendar's reference location, where it predicts each month's crescent, and takes no
+  location, time zone or boundary. It is the inverse of `date_at/2` with
+  `day_start: :sunset`: `date_at/2` of the start is the date, and of any
+  instant before it the day before.
+
+  ### Arguments
+
+  * `date` is a `t:Date.t/0` of this calendar.
+
+  ### Returns
+
+  * `{:ok, {start, stop}}`, two UTC `t:DateTime.t/0`: the day is the
+    half-open span from `start` to `stop`.
+
+  * `{:error, %Calendrical.IncompatibleCalendarError{}}` for a date of
+    another calendar.
+
+  * `{:error, %Calendrical.UnsupportedDateRangeError{}}` for a date outside
+    the range the calendar or Astro covers.
+
+  ### Examples
+
+      # The day begins at sunset in Cairo on the evening before.
+      iex> {:ok, date} = Date.convert(~D[2025-03-30], Calendrical.Islamic.Observational)
+      iex> {:ok, {start, stop}} = Calendrical.Islamic.Observational.day_bounds(date)
+      iex> {DateTime.truncate(start, :second), DateTime.truncate(stop, :second)}
+      {~U[2025-03-29 16:11:45Z], ~U[2025-03-30 16:12:21Z]}
+      iex> Calendrical.Islamic.Observational.date_at(start, day_start: :sunset) == {:ok, date}
+      true
+  """
+  @spec day_bounds(Date.t()) :: {:ok, {DateTime.t(), DateTime.t()}} | {:error, Exception.t()}
+  def day_bounds(date) do
+    Calendrical.DayStart.day_bounds(date, __MODULE__, location(), 2 * 60 * 60)
+  end
+
   # ── Configuration overrides ──────────────────────────────────────────────
 
   @doc """
