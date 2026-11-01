@@ -4,6 +4,9 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## Open
 
+* [ ] **`day_bounds/2`, an evening in a zone, and an Islamic `:location`** — for Tempo's `Tempo.day_start/3` (Tempo's decision 91, `tempo/plans/day-start.md`), which places a Hebrew or Islamic day on the UTC line. Three parts, on `Calendrical.Hebrew`, `Calendrical.Islamic.UmmAlQura`, `Calendrical.Islamic.Rgsa` and `Calendrical.Islamic.Observational`, through `Calendrical.DayStart`:
+  `day_bounds(date, options)` → `{:ok, {start, stop}}`, the UTC instants the day and the next begin, the inverse of `date_at/2` with its options (`date_at` of `start` is the date, of the instant before it the day before); a `:time_zone` option on `date_at/2` and `day_bounds/2`, so `:evening` is 18:00 on that zone's wall clock with its daylight saving (a fixed offset, as today, without one); and `:location` (a `Geo.Point` or `Geo.PointZ`, default Mecca) on the three Islamic calendars for `:sunset` and `:nightfall`.
+
 * [ ] **Astro as the only source of astronomy** — move Calendrical's own astronomy into Astro 2.10, delete the workarounds for Astro 2.9, and fix `DayStart`'s sunset west of 30°W. Plan in [plans/astro-only.md](plans/astro-only.md).
 
 ## Deferred
