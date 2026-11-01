@@ -234,6 +234,26 @@ defmodule Calendrical.Islamic.UmmAlQura do
   end
 
   @doc """
+  Returns the IANA time zone of the calendar's own place, Mecca: the
+  clock its days' bounds (`day_bounds/1`) are read on, and the zone a civil
+  day beside them is a day in.
+
+  ### Returns
+
+  * The zone, a string.
+
+  ### Examples
+
+      iex> Calendrical.Islamic.UmmAlQura.time_zone()
+      "Asia/Riyadh"
+
+  """
+  @spec time_zone() :: String.t()
+  def time_zone do
+    "Asia/Riyadh"
+  end
+
+  @doc """
   Returns the first Hijri year covered by the embedded Umm al-Qura
   tables.
 

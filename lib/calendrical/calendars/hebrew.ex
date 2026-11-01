@@ -232,6 +232,26 @@ defmodule Calendrical.Hebrew do
     )
   end
 
+  @doc """
+  Returns the IANA time zone of the calendar's own place, Jerusalem: the
+  clock its days' bounds (`day_bounds/1`) are read on, and the zone a civil
+  day beside them is a day in.
+
+  ### Returns
+
+  * The zone, a string.
+
+  ### Examples
+
+      iex> Calendrical.Hebrew.time_zone()
+      "Asia/Jerusalem"
+
+  """
+  @spec time_zone() :: String.t()
+  def time_zone do
+    "Asia/Jerusalem"
+  end
+
   # The reference offset is the location's local mean time, from Astro, in
   # whole seconds.
   defp resolve_location(%Geo.PointZ{coordinates: {longitude, _lat, _elev}} = location)

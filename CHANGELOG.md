@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-* `day_bounds/1` on `Calendrical.Hebrew`, `Calendrical.Islamic.UmmAlQura`, `Calendrical.Islamic.Rgsa` and `Calendrical.Islamic.Observational`: a day's UTC bounds, from the sunset of the evening before to its own, at the calendar's own place (Jerusalem, Mecca, Mecca, Cairo) — the inverse of `date_at/2` with `day_start: :sunset`.
+* `day_bounds/1` on `Calendrical.Hebrew`, `Calendrical.Islamic.UmmAlQura`, `Calendrical.Islamic.Rgsa` and `Calendrical.Islamic.Observational`: a day's UTC bounds, from the sunset of the evening before to its own, at the calendar's own place (Jerusalem, Mecca, Mecca, Cairo) — the inverse of `date_at/2` with `day_start: :sunset`. `time_zone/0` on each names its place's zone.
 
 ## [2.3.0] — 2026-11-01
 
