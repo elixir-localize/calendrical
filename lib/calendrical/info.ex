@@ -5,7 +5,8 @@ defmodule Calendrical.Info do
   Every calendar answers `info/0` with one of these structs, built once
   when the calendar is compiled. The facts are what a calendar is rather
   than what it computes: the CLDR calendars that name its months and its
-  eras, the CLDR month each of its months is named as, its epoch, whether it has a year 0, what its year is built of,
+  eras, the CLDR month each of its months is named as, the names of its
+  own eras where CLDR's name another calendar's, its epoch, whether it has a year 0, what its year is built of,
   the fewest and most months a year has, the rule its own weeks follow,
   the cycles its years run in, the place an astronomical calendar is
   reckoned at, the lengths its months can have, the calendar its dates
@@ -64,11 +65,22 @@ defmodule Calendrical.Info do
   """
   @type cldr_months :: tuple()
 
+  @typedoc """
+  A calendar's own names for its eras, where the CLDR calendar its eras
+  are counted in names another's: by era, its `:wide`, `:abbreviated`
+  and `:narrow` names in English, each a message of Calendrical's
+  `"eras"` Gettext domain that `era_names/1` translates for a locale.
+  """
+  @type era_names :: %{
+          integer() => %{wide: String.t(), abbreviated: String.t(), narrow: String.t()}
+        }
+
   @type t :: %__MODULE__{
           calendar: module(),
           cldr_calendar_type: atom(),
           era_calendar_type: atom(),
           cldr_months: cldr_months() | nil,
+          era_names: era_names() | nil,
           epoch: integer() | nil,
           year_zero?: boolean(),
           structure: :months | :weeks,
@@ -87,6 +99,7 @@ defmodule Calendrical.Info do
             cldr_calendar_type: :gregorian,
             era_calendar_type: nil,
             cldr_months: nil,
+            era_names: nil,
             epoch: nil,
             year_zero?: true,
             structure: :months,

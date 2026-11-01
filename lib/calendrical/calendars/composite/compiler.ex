@@ -90,6 +90,17 @@ defmodule Calendrical.Composite.Compiler do
         end
       end
 
+      # The names of the eras, where every member names its eras alike.
+      defp era_names_of_members do
+        @member_calendars
+        |> Enum.map(& &1.info().era_names)
+        |> Enum.uniq()
+        |> case do
+          [era_names] -> era_names
+          _era_names -> nil
+        end
+      end
+
       # The fewest and the most months a year of any member has.
       defp months_of_members do
         bounds = Enum.map(@member_calendars, & &1.info().months_in_year)
@@ -128,6 +139,7 @@ defmodule Calendrical.Composite.Compiler do
           cldr_calendar_type: @cldr_calendar_type,
           era_calendar_type: era_of_members(),
           cldr_months: cldr_months_of_members(),
+          era_names: era_names_of_members(),
           structure: :months,
           months_in_year: months_of_members(),
           parsing_calendar: __MODULE__,

@@ -1,0 +1,16 @@
+## The names calendars give their own eras where CLDR's data names
+## another calendar's (`era_names` in `use Calendrical.Calendar`),
+## written in English and translated by locale in `<locale>/LC_MESSAGES/eras.po`.
+msgid ""
+msgstr ""
+
+## The Bangla calendars' era (`Calendrical.Bangla`).
+#, icu-format
+msgctxt "era"
+msgid "Bangabda"
+msgstr ""
+
+#, icu-format
+msgctxt "era"
+msgid "BS"
+msgstr ""

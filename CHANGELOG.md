@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 * `use Calendrical.Calendar` takes `:cldr_months`, the CLDR month each month is named as, so the Bangla calendars name their months from CLDR's Indian calendar while writing each with its own number.
 
+* `use Calendrical.Calendar` takes `:era_names`, a calendar's own era names, translated from Calendrical's catalog by the new `era_names/1` every calendar answers; the Bangla calendars' era is "BS" (বঙ্গাব্দ) where CLDR's Indian data would name it Śaka. Needs Localize 1.6.
+
 ## [2.4.0] — 2026-11-01
 
 ### Added

@@ -1,0 +1,15 @@
+## Bengali names of the eras calendars name themselves (`eras.pot`).
+msgid ""
+msgstr ""
+"Language: bn\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#, icu-format
+msgctxt "era"
+msgid "Bangabda"
+msgstr "বঙ্গাব্দ"
+
+#, icu-format
+msgctxt "era"
+msgid "BS"
+msgstr "বঙ্গাব্দ"

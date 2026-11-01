@@ -432,6 +432,32 @@ defmodule Calendrical.Compiler.StandardCallbacks do
       def cardinal_month(month), do: Calendrical.Month.cldr_month(__MODULE__, month)
 
       @doc """
+      Returns this calendar's own names for its eras in a locale, or
+      `:cldr` where CLDR's data names them.
+
+      ### Arguments
+
+      * `locale` is a locale identifier or a `t:Localize.LanguageTag.t/0`.
+
+      ### Returns
+
+      * `{:ok, names}`, by style (`:wide`, `:abbreviated`, `:narrow`) then
+        era, where the calendar names its own eras, or
+
+      * `:cldr` where CLDR's data for its era calendar type names them, or
+
+      * `{:error, exception}` for a locale that cannot be read.
+
+      ### Examples
+
+          iex> #{inspect(__MODULE__)}.era_names(:en) in [:cldr] or
+          ...>   match?({:ok, %{wide: %{}}}, #{inspect(__MODULE__)}.era_names(:en))
+          true
+
+      """
+      def era_names(locale), do: Calendrical.Era.Names.era_names(__MODULE__, locale)
+
+      @doc """
       Returns the month a CLDR month is written with in a year
       (`Calendrical.Month.written_month_from_cldr_month/3`).
 

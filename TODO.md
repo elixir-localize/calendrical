@@ -4,7 +4,7 @@ Calendrical's open work. Design documents live in `plans/`.
 
 ## In progress
 
-* [ ] **The Bangla calendar of Bangladesh** — the 1987 and 2019 revisions and their composite, named from CLDR's Indian calendar through the new `:cldr_months` option; landed in the tree. Open: the era's name outside `bn`, which borrows the Indian "Śaka".
+* [ ] **The Bangla calendar of Bangladesh** — the 1987 and 2019 revisions and their composite, named from CLDR's Indian calendar through `:cldr_months`, with their own era through `:era_names` (Localize 1.6). In the tree, on a Localize path dependency; Tempo's `bengali-revised` reader and tempo_holidays follow.
 
 ## Deferred
 

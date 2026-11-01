@@ -148,14 +148,14 @@ defmodule Calendrical.BanglaTest do
       date = ~D[1432-01-01 Calendrical.Bangla]
 
       assert Localize.Date.to_string(date, locale: :bn, format: :long) ==
-               {:ok, "১ বৈশাখ, ১৪৩২ সাল"}
+               {:ok, "১ বৈশাখ, ১৪৩২ বঙ্গাব্দ"}
 
       assert Localize.Date.to_string(date, locale: :bn, format: :short) ==
-               {:ok, "১/১/১৪৩২ সাল"}
+               {:ok, "১/১/১৪৩২ বঙ্গাব্দ"}
     end
 
     test "Choitro, the last month, is named as the Indian calendar's first" do
-      assert {:ok, "১২ চৈত্র, ১৪৩১ সাল"} =
+      assert {:ok, "১২ চৈত্র, ১৪৩১ বঙ্গাব্দ"} =
                Localize.Date.to_string(~D[1431-12-12 Calendrical.Bangla],
                  locale: :bn,
                  format: :long
@@ -179,6 +179,69 @@ defmodule Calendrical.BanglaTest do
                format: :long
              ) ==
                {:ok, "১ চৈত্র, ১৯৪৭ সাল"}
+    end
+  end
+
+  describe "the era, named by the calendar" do
+    test "is the Bangla era, not the Indian calendar's Śaka" do
+      date = ~D[1432-01-01 Calendrical.Bangla]
+
+      assert Localize.Date.to_string(date, locale: :en, format: :long) ==
+               {:ok, "Vaisakha 1, 1432 BS"}
+
+      assert Localize.Date.to_string(date, locale: :en, format: "y GGGG") ==
+               {:ok, "1432 Bangabda"}
+
+      assert Localize.Date.to_string(date, locale: :bn, format: "y GGGG") ==
+               {:ok, "১৪৩২ বঙ্গাব্দ"}
+    end
+
+    test "is the English name in a locale with no translation of it" do
+      assert {:ok, "lundi 14 avril 2025" <> _} =
+               Localize.Date.to_string(~D[2025-04-14], locale: :fr, format: :full)
+
+      assert {:ok, "01/01/1432 BS"} =
+               Localize.Date.to_string(~D[1432-01-01 Calendrical.Bangla],
+                 locale: :fr,
+                 format: :short
+               )
+    end
+
+    test "is answered by every Bangla calendar, at each width" do
+      for calendar <- [Revised1987, Revised2019, Bangla] do
+        assert calendar.era_names(:en) ==
+                 {:ok,
+                  %{wide: %{0 => "Bangabda"}, abbreviated: %{0 => "BS"}, narrow: %{0 => "BS"}}}
+
+        assert {:ok, %{wide: %{0 => "বঙ্গাব্দ"}}} = calendar.era_names(:bn)
+      end
+    end
+
+    test "a calendar that names no era of its own leaves it to CLDR" do
+      assert Calendrical.Indian.era_names(:en) == :cldr
+      assert Calendrical.Gregorian.era_names(:bn) == :cldr
+
+      assert Localize.Date.to_string(~D[1947-01-01 Calendrical.Indian],
+               locale: :en,
+               format: :long
+             ) ==
+               {:ok, "Chaitra 1, 1947 Śaka"}
+    end
+
+    test "a locale that cannot be read is an error" do
+      assert {:error, _exception} = Revised1987.era_names("not a locale!")
+    end
+
+    test "names that are not the three styles are refused when the calendar compiles" do
+      assert_raise Calendrical.InvalidOptionValueError, fn ->
+        Code.compile_string("""
+        defmodule Validation.BadEraNames do
+          use Calendrical.Calendar,
+            epoch: ~D[0001-01-01 Calendrical.Gregorian],
+            era_names: %{0 => [wide: "Era"]}
+        end
+        """)
+      end
     end
   end
 

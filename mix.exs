@@ -183,7 +183,7 @@ defmodule Calendrical.MixProject do
 
   defp deps do
     [
-      {:localize, "~> 1.5"},
+      {:localize, path: "../localize", override: true},
       {:astro, "~> 2.10"},
       {:tz_world, "~> 2.3", optional: true},
       {:tz, "~> 0.26", optional: true},

@@ -34,7 +34,10 @@ defmodule Calendrical.Bangla.Revised2019 do
 
   Month names are CLDR's for the Indian national calendar, whose
   months are the same months begun one earlier, at Choitro; days begin
-  at midnight.
+  at midnight. The era is
+  the Bangla era, which CLDR does not name: "BS" and "Bangabda" in
+  English and বঙ্গাব্দ in Bengali, from Calendrical's own catalog
+  (`era_names/1`).
 
   ### Examples
 
@@ -58,6 +61,7 @@ defmodule Calendrical.Bangla.Revised2019 do
     epoch: ~D[0594-04-14 Calendrical.Gregorian],
     cldr_calendar_type: :indian,
     cldr_months: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1],
+    era_names: %{0 => [wide: "Bangabda", abbreviated: "BS", narrow: "BS"]},
     months_in_year: 12,
     years_in_cycle: 400
 

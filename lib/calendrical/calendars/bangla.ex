@@ -19,7 +19,10 @@ defmodule Calendrical.Bangla do
   * **2019-10-16** — `Calendrical.Bangla.Revised2019`.
 
   Month names are CLDR's for the Indian national calendar, whose
-  months are the same months begun one earlier, at Choitro.
+  months are the same months begun one earlier, at Choitro. The era is
+  the Bangla era, which CLDR does not name: "BS" and "Bangabda" in
+  English and বঙ্গাব্দ in Bengali, from Calendrical's own catalog
+  (`era_names/1`).
 
   ### Examples
 
