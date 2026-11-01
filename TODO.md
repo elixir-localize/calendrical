@@ -2,15 +2,13 @@
 
 Calendrical's open work. Design documents live in `plans/`.
 
-## Open
-
-* [ ] **Astro as the only source of astronomy** — move Calendrical's own astronomy into Astro 2.10, delete the workarounds for Astro 2.9, and fix `DayStart`'s sunset west of 30°W. Plan in [plans/astro-only.md](plans/astro-only.md).
-
 ## Deferred
 
 * [ ] **Decide the astronomical Umm al-Qura rule after 1450 AH** — reviewed: it is KACST's rule to 1450 AH (335 of 336 months), and from 1451 AH KACST's projected table and ICU's follow a stricter one, moonset at least 19.5 minutes after sunset or a moon at least 18 hours old (598 of 600 and 287 of 287 months). It is not a crescent-visibility criterion (Yallop and Odeh fail), and ICU carries KACST's table without a rule; deferred (user, 2026-10-06) until the criterion behind KACST's projected months is found. Analysis in [plans/umm-al-qura-astronomical.md](plans/umm-al-qura-astronomical.md).
 
 ## Done
+
+* [x] **Astro as the only source of astronomy** — Calendrical computes no astronomy of its own on Astro 2.10, the Astro 2.9 workarounds are gone, and `DayStart` takes the local evening's sunset west of 30°W. Plan in [plans/astro-only.md](plans/astro-only.md). 2026-11-01, v2.3.0.
 
 * [x] **`day_bounds/1`, a day's bounds, calendar-relative** — on the Hebrew calendar and the three Islamic ones, the inverse of `date_at/2` with `day_start: :sunset`, for Tempo's `Tempo.day_start/1`. 2026-11-01.
 

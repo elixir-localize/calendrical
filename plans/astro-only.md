@@ -1,6 +1,6 @@
 # Astro as the only source of astronomy
 
-**Status:** in progress, 2026-10-31
+**Status:** implemented (v2.3.0), 2026-11-01
 
 From Astro 2.10, Calendrical computes no astronomy of its own: Astro answers every astronomical question, and Calendrical keeps the calendar rules. This also removes everything that existed to work around Astro 2.9, which answered only within the JPL ephemeris (1900–2100 for the bundled kernel) and only computed equinoxes for 1000–3000. The Astro functions this needs are planned in Astro's `plans/calendar-support.md`.
 
@@ -50,11 +50,13 @@ The rules: a lunisolar month without a major solar term is the leap month; the y
 
 ## Tasks
 
-* [ ] **Astro's new functions** — see Astro's `plans/calendar-support.md`.
-
-* [ ] **Depend on the released Astro** — `mix.exs` returns from the path dependency to `{:astro, "~> 2.10"}` once Astro 2.10 is on hex.
-
 ### Done
+
+* [x] **Astro's new functions** — Astro's `plans/calendar-support.md`, implemented in Astro 2.10.0. 2026-10-31.
+
+* [x] **Depend on the released Astro** — `{:astro, "~> 2.10"}` from hex, locked at 2.11.0. 2026-11-01, v2.3.0.
+
+* [x] **The defects found** — `DayStart` west of 30°W (below), and the comments and specs: `location/1`'s spec, the 1888 and UTC+9 switch in `lunar_japanese.ex`, local mean time in `vietnamese.ex`, and the unused sunset coordinates. 2026-11-01, v2.3.0.
 
 * [x] **Persian, Ecclesiastical, Hebrew, tests, docs and guides** — Persian begins every year from the equinox, its year found by stepping from the Gregorian year (near ±50,000 years ΔT moves the equinox into the December before); Ecclesiastical answers for Astro's years; Hebrew's local mean time is `Astro.Time.offset_from_longitude/1`; the 2.9 assertions and ranges are gone from tests, the README and the guide; the default `valid_date?/3` no longer compares a day with an error tuple. 2026-10-31.
 
