@@ -15,7 +15,7 @@ By default this supervisor is started when the `:calendrical` application starts
 ```elixir
 def deps do
   [
-    {:calendrical, "~> 2.3"}
+    {:calendrical, "~> 2.4"}
   ]
 end
 ```
@@ -29,7 +29,7 @@ Mark the dependency `runtime: false`, so that Mix compiles Calendrical but does 
 ```elixir
 def deps do
   [
-    {:calendrical, "~> 2.3", runtime: false}
+    {:calendrical, "~> 2.4", runtime: false}
   ]
 end
 ```

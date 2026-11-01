@@ -77,7 +77,7 @@ end
 # New
 defp deps do
   [
-    {:calendrical, "~> 2.3"},
+    {:calendrical, "~> 2.4"},
   ]
 end
 ```
@@ -184,7 +184,7 @@ New exceptions introduced by this refactor (replacing inline `{ArgumentError, ".
 | `Calendrical.InvalidOptionValueError` | `:option`, `:value`, `:maker` | the calendar makers, `Calendrical.new/3`, `date_at/2`, `Calendrical.strftime/3` |
 | `Calendrical.InvalidCompositeError` | `:reason`, `:value` | `use Calendrical.Composite`, `Calendrical.Composite.new/2` |
 | `Calendrical.RemovedOptionError` | `:option` | the parse functions, for `:return_calendar` |
-| `Calendrical.NoDuskError` | `:day_start`, `:location`, `:date` | `date_at/2` |
+| `Calendrical.NoDuskError` | `:day_start`, `:location`, `:date` | `date_at/2`, `day_bounds/1` |
 | `Calendrical.InvalidSolarTermError` | `:index` | `solar_term/2`, `Calendrical.Lunisolar.solar_term_name/1` |
 | `Calendrical.InvalidDateError` | `:calendar`, `:value` | every function given a date, a week or a day of the year the calendar does not have |
 | `Calendrical.NotDefinedError` | `:calendar`, `:question`, `:value` | `days_in_month/1`, `months_in_year/0`, `Calendrical.Info.years_in_cycle/1` |

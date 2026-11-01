@@ -26,6 +26,8 @@ Calendrical extends Elixir's standard `Calendar` and `Date` modules with compreh
 
 * **Astronomical calendar support** — observational lunar calendars (Persian, Chinese, Korean, Lunar Japanese, observational Islamic, Saudi Rgsa, astronomical Umm al-Qura) use the [Astro](https://hex.pm/packages/astro) library for equinox, lunar phase, and crescent visibility calculations. Astro computes from a bundled JPL ephemeris for **1900–2100** and from analytical series beyond it, so these calendars answer for thousands of years either side of the present with no download step.
 
+* **Days that begin at sunset** — the Hebrew calendar and the Umm al-Qura, RGSA and observational Islamic calendars give `date_at/2`, the date in effect at an instant, and `day_bounds/1`, the UTC instants a day runs between, from the sunset of the evening before to its own, at the calendar's own place.
+
 * **Sigils** — every Calendrical calendar works with Elixir's native `~D`/`~U`/`~N` sigils via the standard calendar suffix: `~D[2024-09-01 Calendrical.Hebrew]`, `~D[1446-09-01 Calendrical.Islamic.UmmAlQura]`.
 
 * **Ecclesiastical calendars** — `Calendrical.Ecclesiastical` provides Reingold-style algorithms for the movable and fixed Christian feasts of three different traditions: **Western** (`easter_sunday/1`, `good_friday/1`, `pentecost/1`, `advent/1`, `christmas/1`, `epiphany/1`), **Eastern Orthodox** (`orthodox_easter_sunday/1`, `orthodox_good_friday/1`, `orthodox_pentecost/1`, `orthodox_advent/1`, `eastern_orthodox_christmas/1`), and **astronomical** (`astronomical_easter_sunday/1`, `astronomical_good_friday/1`, `paschal_full_moon/1` — the WCC 1997 proposed reckoning).
@@ -43,7 +45,7 @@ Add `calendrical` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:calendrical, "~> 2.3"}
+    {:calendrical, "~> 2.4"}
   ]
 end
 ```
@@ -61,7 +63,7 @@ Calendrical starts with your application, under `Calendrical.Supervisor`. To sta
 def project do
   [
     app: :my_app,
-    deps: [{:calendrical, "~> 2.3", runtime: false}],
+    deps: [{:calendrical, "~> 2.4", runtime: false}],
     releases: [my_app: [applications: [calendrical: :load]]]
   ]
 end
@@ -254,5 +256,5 @@ Full API documentation is available on [HexDocs](https://hexdocs.pm/calendrical)
 
 ## License
 
-Calendrical is released under the Apache License 2.0, and the Umm al-Qura month lengths for 1501 to 1600 AH it derives from ICU under the Unicode License V3; see [LICENSE.md](https://github.com/elixir-localize/calendrical/blob/v2.3.0/LICENSE.md).
+Calendrical is released under the Apache License 2.0, and the Umm al-Qura month lengths for 1501 to 1600 AH it derives from ICU under the Unicode License V3; see [LICENSE.md](https://github.com/elixir-localize/calendrical/blob/v2.4.0/LICENSE.md).
 
